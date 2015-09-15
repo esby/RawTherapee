@@ -30,24 +30,24 @@ BatchToolPanelCoordinator::BatchToolPanelCoordinator (FilePanel* parent) : ToolP
 
     blockedUpdate = false;
     // remove exif panel and iptc panel
-    std::vector<ToolPanel*>::iterator epi = std::find (toolPanels.begin(), toolPanels.end(), exifpanel);
+    std::vector<ToolPanel*>::iterator epi = std::find (env->panelBegin(), env->panelEnd(), exifpanel);
 
-    if (epi != toolPanels.end()) {
-        toolPanels.erase (epi);
+    if (epi != env->panelEnd()) {
+        env->erasePanel (epi);
     }
 
-    std::vector<ToolPanel*>::iterator ipi = std::find (toolPanels.begin(), toolPanels.end(), iptcpanel);
+    std::vector<ToolPanel*>::iterator ipi = std::find (env->panelBegin(), env->panelEnd(), iptcpanel);
 
-    if (ipi != toolPanels.end()) {
-        toolPanels.erase (ipi);
+    if (ipi != env->panelEnd()) {
+        env->erasePanel (ipi);
     }
 
     toolPanelNotebook->remove_page (*metadataPanel);
     metadataPanel = 0;
     toiM = 0;
 
-    for (size_t i = 0; i < toolPanels.size(); i++) {
-        toolPanels[i]->setBatchMode (true);
+    for (size_t i = 0; i < env->countPanel(); i++) {
+        env->getPanel(i)->setBatchMode (true);
     }
 }
 
@@ -79,8 +79,8 @@ void BatchToolPanelCoordinator::closeSession (bool save)
     if (somethingChanged && save) {
 
         // read new values from the gui
-        for (size_t i = 0; i < toolPanels.size(); i++) {
-            toolPanels[i]->write (&pparams, &pparamsEdited);
+        for (size_t i = 0; i < env->countPanel(); i++) {
+            env->getPanel(i)->write (&pparams, &pparamsEdited);
         }
 
         // combine with initial parameters and set
@@ -91,8 +91,8 @@ void BatchToolPanelCoordinator::closeSession (bool save)
             pparamsEdited.combine (newParams, pparams, selected.size() == 1);
 
             // trim new adjuster's values to the adjuster's limits
-            for (unsigned int j = 0; j < toolPanels.size(); j++) {
-                toolPanels[j]->trimValues (&newParams);
+            for (unsigned int j = 0; j < env->countPanel(); j++) {
+                env->getPanel(j)->trimValues (&newParams);
             }
 
             selected[i]->setProcParams (newParams, NULL, BATCHEDITOR, true);
@@ -124,9 +124,9 @@ void BatchToolPanelCoordinator::initSession ()
 
     /*    if (!selected.empty()) {
             pparams = selected[0]->getProcParams ();
-            for (int i=0; i<toolPanels.size(); i++) {
-                toolPanels[i]->setDefaults (&pparams, &pparamsEdited);
-                toolPanels[i]->read (&pparams, &pparamsEdited);
+            for (int i=0; i<env->countPanel(); i++) {
+                env->getPanel(i)->setDefaults (&pparams, &pparamsEdited);
+                env->getPanel(i)->read (&pparams, &pparamsEdited);
             }
             for (int i=0; i<paramcListeners.size(); i++)
                 paramcListeners[i]->procParamsChanged (&pparams, rtengine::EvPhotoLoaded, "batch processing", &pparamsEdited);
@@ -142,8 +142,8 @@ void BatchToolPanelCoordinator::initSession ()
 
         if (selected.size() == 1) {
 
-            for (size_t i = 0; i < toolPanels.size(); i++) {
-                toolPanels.at(i)->setMultiImage(false);
+            for (size_t i = 0; i < env->countPanel(); i++) {
+                env->getPanel(i)->setMultiImage(false);
             }
 
             toneCurve->setAdjusterBehavior (false, false, false, false, false, false, false, false);
@@ -180,8 +180,8 @@ void BatchToolPanelCoordinator::initSession ()
             xtransrawexposure->setAdjusterBehavior (false);
         } else {
 
-            for (size_t i = 0; i < toolPanels.size(); i++) {
-                toolPanels.at(i)->setMultiImage(true);
+            for (size_t i = 0; i < env->countPanel(); i++) {
+                env->getPanel(i)->setMultiImage(true);
             }
 
             toneCurve->setAdjusterBehavior (options.baBehav[ADDSET_TC_EXPCOMP], options.baBehav[ADDSET_TC_HLCOMPAMOUNT], options.baBehav[ADDSET_TC_HLCOMPTHRESH], options.baBehav[ADDSET_TC_BRIGHTNESS], options.baBehav[ADDSET_TC_BLACKLEVEL], options.baBehav[ADDSET_TC_SHCOMP], options.baBehav[ADDSET_TC_CONTRAST], options.baBehav[ADDSET_TC_SATURATION]);
@@ -628,12 +628,12 @@ void BatchToolPanelCoordinator::initSession ()
             }
         }
 
-        for (size_t i = 0; i < toolPanels.size(); i++) {
-            toolPanels[i]->setDefaults (&pparams, &pparamsEdited);
-            toolPanels[i]->read (&pparams, &pparamsEdited);
+        for (size_t i = 0; i < env->countPanel(); i++) {
+            env->getPanel(i)->setDefaults (&pparams, &pparamsEdited);
+            env->getPanel(i)->read (&pparams, &pparamsEdited);
             // TODO: autoOpenCurve has been disabled because initSession is called on each parameter change from the editor panel,
             // if the thumbnail remains selected in the DirectoryBrowser (i.e. always, unless the user think about deselecting it)
-            //toolPanels[i]->autoOpenCurve();
+            //env->getPanel(i)->autoOpenCurve();
         }
 
         for (size_t i = 0; i < paramcListeners.size(); i++)
@@ -656,8 +656,8 @@ void BatchToolPanelCoordinator::panelChanged (rtengine::ProcEvent event, const G
     pparamsEdited.set (false);
 
     // read new values from the gui
-    for (size_t i = 0; i < toolPanels.size(); i++) {
-        toolPanels[i]->write (&pparams, &pparamsEdited);
+    for (size_t i = 0; i < env->countPanel(); i++) {
+        env->getPanel(i)->write (&pparams, &pparamsEdited);
     }
 
     // If only a single item is selected, we emulate the behaviour of the editor tool panel coordinator,
@@ -803,8 +803,8 @@ void BatchToolPanelCoordinator::panelChanged (rtengine::ProcEvent event, const G
         pparamsEdited.combine (newParams, pparams, selected.size() == 1);
 
         // trim new adjuster's values to the adjuster's limits
-        for (unsigned int j = 0; j < toolPanels.size(); j++) {
-            toolPanels[j]->trimValues (&newParams);
+        for (unsigned int j = 0; j < env->countPanel(); j++) {
+            env->getPanel(j)->trimValues (&newParams);
         }
 
         selected[i]->setProcParams (newParams, NULL, BATCHEDITOR, false);
@@ -888,10 +888,10 @@ void BatchToolPanelCoordinator::profileChange  (const rtengine::procparams::Part
     }
 
 
-    for (size_t i = 0; i < toolPanels.size(); i++)
+    for (size_t i = 0; i < env->countPanel(); i++)
         // writing the values to the GUI
     {
-        toolPanels[i]->read (&pparams, &pparamsEdited);
+        env->getPanel(i)->read (&pparams, &pparamsEdited);
     }
 
     // I guess we don't want to automatically unfold curve editors here...
@@ -899,8 +899,8 @@ void BatchToolPanelCoordinator::profileChange  (const rtengine::procparams::Part
     somethingChanged = true;
 
     // read new values from the gui
-    for (size_t i = 0; i < toolPanels.size(); i++) {
-        toolPanels[i]->write (&pparams, &pparamsEdited);
+    for (size_t i = 0; i < env->countPanel(); i++) {
+        env->getPanel(i)->write (&pparams, &pparamsEdited);
     }
 
     // combine with initial parameters of each image and set
