@@ -244,6 +244,8 @@ public:
     /// Add a Gtk::Container for the content of the expander
     /// Warning: do not manually Show/Hide the widget, because this parameter is handled by the click on the Expander's title
     void add  (Gtk::Container& widget);
+
+   Gtk::HBox* getHeaderHBox() {return headerHBox; }
 };
 
 

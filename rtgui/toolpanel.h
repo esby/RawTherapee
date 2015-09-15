@@ -28,8 +28,63 @@
 #include "paramsedited.h"
 #include "edit.h"
 
+#define ENV_STATE_IN_FAV    1
+#define ENV_STATE_IN_NORM   2
+#define ENV_STATE_IN_TRASH  3
+
+
 class ToolPanel;
 class FoldableToolPanel;
+
+class DummyToolPanel;
+class ToolVBox;
+
+
+class Environment {
+  protected:
+     std::vector<ToolPanel*> toolPanels;
+     std::vector<MyExpander*> expList;
+     std::vector<ToolVBox*> boxList;
+     ToolVBox* favoritePanel;
+     ToolVBox* trashPanel;
+
+  public:
+     int state;
+     int prevState;
+     bool moveLeftToBottom;
+     bool moveRightToTop;
+     bool disableSwitchPageReaction;
+
+     Environment(){ 
+       state = ENV_STATE_IN_FAV;
+       prevState = ENV_STATE_IN_FAV;
+       moveLeftToBottom = false;
+       moveRightToTop = true;
+       disableSwitchPageReaction = true;
+     }
+
+     ToolPanel*  getPanel(Glib::ustring name);
+     ToolPanel*  getPanel(int pos);     
+     std::vector<ToolPanel*> getPanels() { return toolPanels; }
+     std::vector<ToolPanel*>::iterator panelBegin();
+     std::vector<ToolPanel*>::iterator panelEnd();  
+     void erasePanel(std::vector<ToolPanel*>::iterator it);
+     void panelPushBack(ToolPanel* p);
+
+     MyExpander* getExpander(int pos);
+     int countExpander();
+     
+     int countPanel();
+     void setFavoritePanel(ToolVBox* p);
+     void setTrashPanel(ToolVBox* p);
+     void registerPanel(Gtk::Box* where, ToolPanel* panel);
+     void addVBox(ToolVBox* box);
+     std::vector<ToolVBox*> getVBoxList() { return boxList; }
+    
+     void reAttachPanel(ToolPanel *panel, ToolVBox* box, int pos);
+     void setFavoritePos(ToolPanel *panel, int pos);
+};
+
 
 class ToolPanelListener
 {
@@ -40,8 +95,52 @@ public:
     virtual void panelChanged   (rtengine::ProcEvent event, const Glib::ustring& descr) {}
 };
 
+class ToolCounter 
+{
+   protected:
+
+     // this is a reference to the object itself, because i am lazy -- esby
+     Gtk::VBox* box; 
+     std::vector<Gtk::Widget*> panelList;
+
+     Glib::ustring boxName;
+     Gtk::Container* parentContainer;
+     Gtk::Container* parentSWContainer;
+ 
+     // references to other boxes
+     Gtk::VBox* prevBox;
+     Gtk::VBox* nextBox;
+
+   public:
+      ToolCounter();
+      virtual void setPrevBox(Gtk::VBox* _box);
+      virtual void setNextBox(Gtk::VBox* _box);
+
+      virtual void setParent (Gtk::Container* parent) { parentContainer = parent; }
+      virtual Gtk::Container* getParent () { return parentContainer; }
+
+      virtual void setParentSW (Gtk::Container* parent) { parentSWContainer = parent; }
+      virtual Gtk::Container* getParentSW () { return parentSWContainer; }
+
+
+      virtual void setBoxName(Glib::ustring _name) { boxName = _name; }
+      virtual Glib::ustring getBoxName() { return boxName; }
+
+      virtual int size();
+
+      virtual int getPos(ToolPanel* panel);
+      virtual ToolPanel* getPanel(int pos);
+
+      virtual Gtk::VBox* getPrevBox();
+      virtual Gtk::VBox* getNextBox();
+
+      virtual void remPanel(ToolPanel* t);
+      virtual void addPanel(ToolPanel* t, int pos);
+
+};
+
 /// @brief This class control the space around the group of tools inside a tab, as well as the space separating each tool. */
-class ToolVBox : public Gtk::VBox
+class ToolVBox : public Gtk::VBox, public ToolCounter 
 {
 private:
     void updateStyle();
@@ -52,7 +151,7 @@ public:
 };
 
 /// @brief This class control the space around a tool's block of parameter. */
-class ToolParamBlock : public Gtk::VBox
+class ToolParamBlock : public Gtk::VBox, public ToolCounter 
 {
 private:
     void updateStyle();
@@ -69,13 +168,49 @@ protected:
     Glib::ustring toolName;
     ToolPanelListener* listener;
     ToolPanelListener* tmp;
+    Environment* env;
     bool batchMode;  // True if the ToolPanel is used in Batch mode
     bool multiImage; // True if more than one image are being edited at the same time (also imply that batchMode=true), false otherwise
     bool need100Percent;
 
+    ToolVBox* originalBox;
+    ToolVBox* favoriteBox;
+    ToolVBox* trashBox;
+    DummyToolPanel* originalDummy;
+    DummyToolPanel* favoriteDummy;
+
+    Glib::ustring uilabel;
+
+//        int positionOriginal;
+//        int positionFavorite;
+    Gtk::Label* labelWidget;
+    Gtk::Label* labelInfo;  
+    Gtk::Button* labelInfoNotifier;
+    Gtk::HBox* fudlrBox; // Favorite Up Down Left Right 
+
+    Gtk::ToggleButton* favoriteButton;
+    Gtk::ToggleButton* trashButton;
+    // this is retrieved dynamically for now...
+    Gtk::CheckButton* enabledButtonRef;
+    Gtk::HBox* labelBox;
+
+    Gtk::Button* moveUButton;
+    Gtk::Button* moveDButton;
+    Gtk::Button* moveLButton;
+    Gtk::Button* moveRButton;
+
+
+    virtual void cleanBox();
+    virtual void moveToFavorite(int posFav, int posOri);
+    virtual void moveToOriginal(int posFav, int posOri);
+    virtual void moveToTrash(int posFav, int posOri);
+
 public:
 
-    ToolPanel (Glib::ustring toolName = "", bool need11 = false) : toolName(toolName), listener(nullptr), tmp(nullptr), batchMode(false), multiImage(false), need100Percent(need11) {}
+    ToolPanel (Glib::ustring toolName = "", bool need11 = false) : toolName(toolName), listener(NULL), tmp(NULL), batchMode(false), multiImage(false), need100Percent(need11) 
+    { 
+          labelBox = NULL;
+    }
     virtual ~ToolPanel() {}
 
     virtual void           setParent       (Gtk::Box* parent) {}
@@ -110,6 +245,35 @@ public:
     virtual void           setDefaults     (const rtengine::procparams::ProcParams* defParams, const ParamsEdited* pedited = nullptr) {}
     virtual void           autoOpenCurve   () {}
 
+    virtual bool                 canBeIgnored()      { return true; } // useful for determining if the panel is skippable or not.
+    int                  getPosOri();
+    int                  getPosFav();
+    int                  getPosTra();
+    virtual Gtk::CheckButton*    getEnabledButton()  { return enabledButtonRef;}
+    virtual Gtk::ToggleButton*   getFavoriteButton() { return favoriteButton;}
+    virtual Gtk::ToggleButton*   getTrashButton()    { return trashButton;}
+    virtual Gtk::HBox*           getLabelBox()       { return labelBox;}
+    virtual Gtk::Button*         getLabelInfoNotifier() { return labelInfoNotifier;}
+    Gtk::HBox*           getFUDLRBox()  { return fudlrBox; }                
+    Gtk::Button*         getMoveUButton() { return moveUButton; }
+    Gtk::Button*         getMoveDButton() { return moveDButton; }
+    Gtk::Button*         getMoveLButton() { return moveLButton; }
+    Gtk::Button*         getMoveRButton() { return moveRButton; }
+    ToolCounter*         getOriginalBox() { return originalBox; }
+    DummyToolPanel*      getFavoriteDummy() { return originalDummy;}
+    ToolVBox*            getFavoriteBox() { return favoriteBox;}
+
+    virtual bool                 canBeEnabled() {return false;}  // this must be implemented to true to automatically deploy and add an enable button by default...
+    virtual void                 deploy()       {} // used to handle post constructor steps.
+
+    void                setUILabel(Glib::ustring l) { uilabel = l;}
+    virtual Glib::ustring       getUILabel()         {return uilabel; } // should be reimplemented 
+
+    void                setName(Glib::ustring _name) { toolName = _name; }
+    Glib::ustring               getName() { return toolName; } // filters should reimplement it
+  
+    void                setNeed100Percent(bool b) { need100Percent = b; }
+
     /** @brief Disable the event broadcasting mechanism
      *
      * @return Return the previous state of the broadcast (true: enabled ; false: disabled)
@@ -140,6 +304,18 @@ public:
     {
         this->batchMode = batchMode;
     }
+
+    Glib::ustring getThemeInfo ();
+    void favorite_others_tabs_switch();
+    void initVBox(ToolVBox* _originalBox, ToolVBox* _favoriteBox, ToolVBox* _trashBox, Environment* _env);
+    void on_toggle_button_favorite();
+    void on_toggle_button_trash();
+
+    void moveUp(); 
+    void moveDown();
+    void moveLeft();
+    void moveRight();
+    void updateLabelInfo ();
 
 };
 
@@ -202,6 +378,9 @@ public:
     bool get_inconsistent();  // related to the enabled/disabled state
     void set_inconsistent(bool isInconsistent);  // related to the enabled/disabled state
 
+    void deploy();
+    bool canBeIgnored() {return false;}
+
     // Functions that want to receive an enabled/disabled event from this class
     // will have to receive it from MyExpander directly, we do not create
     // a relaying event
@@ -210,5 +389,29 @@ public:
         return exp->signal_enabled_toggled();
     }
 };
+
+
+class DummyToolPanel : public ToolParamBlock , public FoldableToolPanel {
+
+  protected:
+//        Gtk::Box* parentContainer;
+//        Expander* exp;
+
+
+  public:
+
+        DummyToolPanel(Glib::ustring, Environment* _env);
+
+//        Expander* getExpander() { return exp; }
+//        void setExpanded (bool expanded) {  }
+//        bool getExpanded () { return false; }
+//        void setParent (Gtk::Box* parent) { parentContainer = parent; }
+//        Gtk::Box* getParent () { return parentContainer; }
+
+        bool   canBeIgnored() { return true; }
+};
+
+Glib::ustring IntToString(int iVal);
+
 
 #endif

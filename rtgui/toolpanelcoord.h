@@ -79,6 +79,15 @@
 #include "filmsimulation.h"
 #include "prsharpening.h"
 #include "guiutils.h"
+#include "ttsaver.h"
+#include "ttfavoritecolorer.h"
+#include "ttpanelcolorer.h"
+#include "ttudlrhider.h"
+
+//defining the number of panels for once.
+#define NB_PANEL 9
+#define NB_PANEL_SWITCHABLE 7
+#define PANEL_SWITCHABLE_START 1
 
 class ImageEditorCoordinator;
 
@@ -96,6 +105,8 @@ class ToolPanelCoordinator :    public ToolPanelListener,
 {
 
 protected:
+
+    Environment* env;
 
     WhiteBalance* whitebalance;
     Vignetting* vignetting;
@@ -149,18 +160,22 @@ protected:
 
     rtengine::StagedImageProcessor* ipc;
 
-    std::vector<ToolPanel*> toolPanels;
+    //std::vector<ToolPanel*> toolPanels;
+    ToolVBox* favoritePanel;
     ToolVBox* exposurePanel;
     ToolVBox* detailsPanel;
     ToolVBox* colorPanel;
     ToolVBox* transformPanel;
     ToolVBox* rawPanel;
     ToolVBox* waveletPanel;
+    ToolVBox* trashPanel;
+    ToolVBox* usefulPanel;
     Gtk::Notebook* metadataPanel;
     ExifPanel* exifpanel;
     IPTCPanel* iptcpanel;
     ToolBar* toolBar;
 
+    TextOrIcon* toiF;
     TextOrIcon* toiE;
     TextOrIcon* toiD;
     TextOrIcon* toiC;
@@ -168,35 +183,49 @@ protected:
     TextOrIcon* toiR;
     TextOrIcon* toiM;
     TextOrIcon* toiW;
+    TextOrIcon* toiP;
+    TextOrIcon* toiU;
 
+    Gtk::Label* labelF;
     Gtk::Label* labelE;
     Gtk::Label* labelD;
     Gtk::Label* labelC;
     Gtk::Label* labelT;
     Gtk::Label* labelR;
     Gtk::Label* labelM;
+    Gtk::Label* labelP;
+    Gtk::Label* labelU;
 
+    Gtk::Image* imgIconF;
     Gtk::Image* imgIconE;
     Gtk::Image* imgIconD;
     Gtk::Image* imgIconC;
     Gtk::Image* imgIconT;
     Gtk::Image* imgIconR;
     Gtk::Image* imgIconM;
-    Gtk::Image* imgPanelEnd[6];
-    Gtk::VBox* vbPanelEnd[6];
+    Gtk::Image* imgIconP;
+    Gtk::Image* imgIconU;
 
+    Gtk::Image* imgPanelEnd[NB_PANEL]; // note: maybe we should not be using static arrays...
+    Gtk::VBox* vbPanelEnd[NB_PANEL];
+    Gtk::HSeparator* hsPanelEnd[NB_PANEL]; // this was missing
+    Gtk::VBox* vbPanel[NB_PANEL]; // seriously? this was not defined ?
+
+    Gtk::ScrolledWindow* favoritePanelSW;
     Gtk::ScrolledWindow* exposurePanelSW;
     Gtk::ScrolledWindow* detailsPanelSW;
     Gtk::ScrolledWindow* colorPanelSW;
     Gtk::ScrolledWindow* transformPanelSW;
     Gtk::ScrolledWindow* rawPanelSW;
     Gtk::ScrolledWindow* waveletPanelSW;
+    Gtk::ScrolledWindow* trashPanelSW;
+    Gtk::ScrolledWindow* usefulPanelSW;
 
     std::vector<MyExpander*> expList;
 
     bool hasChanged;
 
-    void addPanel (Gtk::Box* where, FoldableToolPanel* panel);
+    void handlePanel(Gtk::VBox* vbox, Gtk::ScrolledWindow* panelSW, int panelIterator, int spacing);
     void foldThemAll (GdkEventButton* event);
     void updateVScrollbars (bool hide);
     void updateTabsHeader (bool useIcons);
@@ -309,6 +338,8 @@ public:
     void editModeSwitchedOff ();
 
     void setEditProvider(EditDataProvider *provider);
+
+    void on_notebook_switch_page(GtkNotebookPage* page, guint page_num);
 };
 
 #endif
