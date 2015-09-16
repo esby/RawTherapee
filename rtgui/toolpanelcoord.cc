@@ -208,7 +208,8 @@ ToolPanelCoordinator::ToolPanelCoordinator () : ipc(NULL)
     env->registerPanel (rawPanel, rawexposure);
     env->registerPanel (rawPanel, preprocess);
     env->registerPanel (rawPanel, darkframe);
-    env->registerPanel (rawPanel, flatfield);
+    env->registerPanel (rawPanel, flatfield); 
+    env->registerPanel (waveletPanel, wavelet);
 
   // new panels are registered diffently
     env->registerPanel (usefulPanel, Gtk::manage (new TTSaver()));
@@ -221,9 +222,10 @@ ToolPanelCoordinator::ToolPanelCoordinator () : ipc(NULL)
     env->panelPushBack (exifpanel);
     env->panelPushBack (iptcpanel);
  
-    coarse->setName("coarse");
-    exifpanel->setName("exifpanel");  
-    iptcpanel->setName("iptcpanel");  
+    //todo: this might not be necessary anymore
+    coarse->setToolName("coarse");
+    exifpanel->setToolName("exifpanel");  
+    iptcpanel->setToolName("iptcpanel");  
 
     metadataPanel = Gtk::manage (new Gtk::Notebook ());
     toolPanelNotebook = new Gtk::Notebook ();

@@ -26,7 +26,7 @@
 using namespace rtengine;
 using namespace rtengine::procparams;
 
-TTUDLRHider::TTUDLRHider () : FoldableToolPanel(this,"ttudlrhider",M("TP_UDLR_HIDER_LABEL"),false,false)
+TTUDLRHider::TTUDLRHider () : FoldableToolPanel(this,"ttudlrhider",M("TP_UDLR_HIDER_LABEL"),false,true)
 {
   themeBox1 = Gtk::manage(new Gtk::HBox());
   themeBox1->set_spacing(4);
@@ -60,16 +60,16 @@ void TTUDLRHider::deploy()
       if ( (p != NULL)
       && (!(p->canBeIgnored())))
       {
-        printf("connecting to %s \n", p->getName().c_str());
+        printf("connecting to %s \n", p->getToolName().c_str());
         actOnPanel(p, true);
         actOnPanel(p, true);
       }
    }
 
   // button enable / disable
-   getEnabledButton()->signal_clicked().connect( sigc::mem_fun(this, &TTUDLRHider::on_toggle_button));
-   cbLockFav->signal_clicked().connect( sigc::mem_fun(this, &TTUDLRHider::on_toggle_button));
-   cbHideArrow->signal_clicked().connect( sigc::mem_fun(this, &TTUDLRHider::on_toggle_button));
+//   getEnabledButton()->signal_clicked().connect( sigc::mem_fun(this, &TTUDLRHider::on_toggle_button));
+   cbLockFav->signal_clicked().connect( sigc::mem_fun(this, &TTUDLRHider::enabledChanged));
+   cbHideArrow->signal_clicked().connect( sigc::mem_fun(this, &TTUDLRHider::enabledChanged));
 
 }
 
@@ -83,9 +83,11 @@ void TTUDLRHider::write( rtengine::procparams::ProcParams* pp, ParamsEdited* ped
 
 }
 
-void TTUDLRHider::on_toggle_button()
+//void TTUDLRHider::on_toggle_button()
+void TTUDLRHider::enabledChanged  () 
 {  
-   if (getEnabledButton()->get_active()) 
+   //  if (getEnabledButton()->get_active()) 
+   if (getExpander()->getEnabled())
    for (size_t i=0; i< env->countPanel() ; i++)
    {
       FoldableToolPanel* p = static_cast<FoldableToolPanel*> (env->getPanel(i));
@@ -111,7 +113,8 @@ void  TTUDLRHider::actOnPanel(ToolPanel* panel, bool deactivate)
 {  
   if (panel != NULL)
   {
-    if((!deactivate) && (getEnabledButton()->get_active()))
+    //if((!deactivate) && (getEnabledButton()->get_active()))
+    if((!deactivate) && (getExpander()->getEnabled()))
     {
       if (!deactivate && cbHideArrow->get_active())
       {

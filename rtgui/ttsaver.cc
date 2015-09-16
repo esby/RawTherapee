@@ -28,7 +28,7 @@
 using namespace rtengine;
 using namespace rtengine::procparams;
 
-TTSaver::TTSaver () : FoldableToolPanel(this,"ttsaver",M("TP_THEMETOOL_LABEL"),false,false)
+TTSaver::TTSaver () : FoldableToolPanel(this,"ttsaver",M("TP_THEMETOOL_LABEL"),false,true)
 {
 	themeBox = Gtk::manage(new Gtk::HBox());
 	themeBox->set_spacing(4);
@@ -129,7 +129,7 @@ void TTSaver::themeImport(Glib::ustring lines)
     if (getline(tokensplitter, token, ':'))
     {
  //     printf("%s\n", token.c_str());
-      if (token == getName())
+      if (token == getToolName())
       {
         if (getline(tokensplitter, token, ':'))
         {
@@ -171,7 +171,7 @@ void TTSaver::themeImport(Glib::ustring lines)
   {
     if (!panels.at(i)->canBeIgnored())
     {
-      map[panels.at(i)->getName()] = panels.at(i);
+      map[panels.at(i)->getToolName()] = panels.at(i);
     }
   }
  
@@ -212,7 +212,7 @@ void TTSaver::themeImport(Glib::ustring lines)
   for (size_t i=0; i<favoriteItems.size(); i++)
   {
     map[favoriteItems.at(i)]->getFavoriteButton()->set_active(true);
-    printf("favorite:%s at:%i \n",map[favoriteItems.at(i)]->getName().c_str(), i);
+    printf("favorite:%s at:%i \n",map[favoriteItems.at(i)]->getToolName().c_str(), i);
     if (map.count( map[favoriteItems.at(i)]->getOriginalBox()->getBoxName())>0)
     {
       //  hack : when the panel is in a collapsed container, 
@@ -236,9 +236,9 @@ void TTSaver::themeImport(Glib::ustring lines)
 
 Glib::ustring TTSaver::themeExport()
 {
-  Glib::ustring favSettings = getName() + ":"  + "favorite:";
-  Glib::ustring oriSettings = getName() + ":"  + "original:";
-  Glib::ustring traSettings = getName() + ":"  + "trash:";
+  Glib::ustring favSettings = getToolName() + ":"  + "favorite:";
+  Glib::ustring oriSettings = getToolName() + ":"  + "original:";
+  Glib::ustring traSettings = getToolName() + ":"  + "trash:";
 
   std::vector<ToolPanel*> panels = env->getPanels();
 
@@ -252,7 +252,7 @@ Glib::ustring TTSaver::themeExport()
     {
       int posFav = p->getPosOri();
       if (p->getFavoriteButton()->get_active())
-        favSettings += p->getName() + " ";
+        favSettings += p->getToolName() + " ";
     }
   }
 
@@ -266,10 +266,10 @@ Glib::ustring TTSaver::themeExport()
     {
       int posOri = p->getPosOri();
       if (!(p->getTrashButton()->get_active()))
-         oriSettings += p->getName()+ "(" + p->getOriginalBox()->getBoxName() + ":" + IntToString(posOri) + ") ";
+         oriSettings += p->getToolName()+ "(" + p->getOriginalBox()->getBoxName() + ":" + IntToString(posOri) + ") ";
 
       if (p->getTrashButton()->get_active())
-        traSettings += p->getName() + " ";
+        traSettings += p->getToolName() + " ";
     }
   }
   return favSettings + "\n" +  oriSettings + "\n" + traSettings + "\n";

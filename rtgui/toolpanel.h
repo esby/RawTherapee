@@ -191,7 +191,7 @@ protected:
     Gtk::ToggleButton* favoriteButton;
     Gtk::ToggleButton* trashButton;
     // this is retrieved dynamically for now...
-    Gtk::CheckButton* enabledButtonRef;
+ //   Gtk::CheckButton* enabledButtonRef;
     Gtk::HBox* labelBox;
 
     Gtk::Button* moveUButton;
@@ -249,7 +249,7 @@ public:
     int                  getPosOri();
     int                  getPosFav();
     int                  getPosTra();
-    virtual Gtk::CheckButton*    getEnabledButton()  { return enabledButtonRef;}
+ //   virtual Gtk::CheckButton*    getEnabledButton()  { return enabledButtonRef;}
     virtual Gtk::ToggleButton*   getFavoriteButton() { return favoriteButton;}
     virtual Gtk::ToggleButton*   getTrashButton()    { return trashButton;}
     virtual Gtk::HBox*           getLabelBox()       { return labelBox;}
@@ -263,14 +263,11 @@ public:
     DummyToolPanel*      getFavoriteDummy() { return originalDummy;}
     ToolVBox*            getFavoriteBox() { return favoriteBox;}
 
-    virtual bool                 canBeEnabled() {return false;}  // this must be implemented to true to automatically deploy and add an enable button by default...
+   
     virtual void                 deploy()       {} // used to handle post constructor steps.
 
-    void                setUILabel(Glib::ustring l) { uilabel = l;}
-    virtual Glib::ustring       getUILabel()         {return uilabel; } // should be reimplemented 
-
-    void                setName(Glib::ustring _name) { toolName = _name; }
-    Glib::ustring               getName() { return toolName; } // filters should reimplement it
+    void                setToolName(Glib::ustring _name) { toolName = _name; }
+    Glib::ustring               getToolName() { return toolName; } // filters should reimplement it
   
     void                setNeed100Percent(bool b) { need100Percent = b; }
 
