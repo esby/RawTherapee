@@ -30,7 +30,7 @@ ToolPanel* Environment::getPanel(Glib::ustring name)
    {
       FoldableToolPanel* p = static_cast<FoldableToolPanel*> (toolPanels[i]);
       if (p != NULL)
-        if (p->getName() == name)
+        if (p->getToolName() == name)
           return (ToolPanel*)p;
    }
   return NULL;
@@ -122,7 +122,7 @@ void Environment::setFavoritePos(ToolPanel *panel, int pos)
 {
   panel->getFavoriteBox()->remPanel(panel->getFavoriteDummy());
   panel->getOriginalBox()->remPanel(panel);
-  printf("panel:%s box:%s \n", panel->getName().c_str(), panel->getOriginalBox()->getBoxName().c_str());
+  printf("panel:%s box:%s \n", panel->getToolName().c_str(), panel->getOriginalBox()->getBoxName().c_str());
   if (pos > -1)
     panel->getFavoriteBox()->addPanel(panel, pos);
 }
@@ -184,10 +184,10 @@ void ToolCounter::remPanel(ToolPanel* t)
   ToolVBox* v = (ToolVBox*) this;
   MyExpander* exp = t->getExpander();
   int i = getPos(t);
-  printf("Attempting to remove panel: %s from: %s at pos:%i \n", t->getName().c_str(), this->getBoxName().c_str(), i);
+  printf("Attempting to remove panel: %s from: %s at pos:%i \n", t->getToolName().c_str(), this->getBoxName().c_str(), i);
   if (i>-1)
   {
-    printf("Removing panel: %s from: %s \n", t->getName().c_str(), this->getBoxName().c_str());
+    printf("Removing panel: %s from: %s \n", t->getToolName().c_str(), this->getBoxName().c_str());
     v->remove(*exp);
   }
 }
@@ -200,7 +200,7 @@ void ToolCounter::addPanel(ToolPanel* t, int pos)
   int i = getPos(t);
   if (i==-1)
   {
-    printf("adding Panel: %s to %s \n", t->getName().c_str(), this->getBoxName().c_str());
+    printf("adding Panel: %s to %s \n", t->getToolName().c_str(), this->getBoxName().c_str());
     v->pack_start(*exp, false,false);
     v->reorder_child(*exp, pos);
   }
@@ -343,7 +343,7 @@ void ToolPanel::moveLeft() {
 
   if (env->state == ENV_STATE_IN_NORM)
   {
-    printf("Moving %s from %s to %s \n", this->getName().c_str(), box->getBoxName().c_str(), nbox->getBoxName().c_str());
+    printf("Moving %s from %s to %s \n", this->getToolName().c_str(), box->getBoxName().c_str(), nbox->getBoxName().c_str());
 
     //getting the page number where the object will be moved 
     Gtk::Notebook* notebook = (Gtk::Notebook*)nbox->getParent();
@@ -385,7 +385,7 @@ void ToolPanel::moveRight() {
 
   if (env->state == ENV_STATE_IN_NORM)
   {
-    printf("Moving %s from %s to %s \n", this->getName().c_str(), box->getBoxName().c_str(), nbox->getBoxName().c_str());
+    printf("Moving %s from %s to %s \n", this->getToolName().c_str(), box->getBoxName().c_str(), nbox->getBoxName().c_str());
 
     //getting the page number where the object will be moved 
     Gtk::Notebook* notebook = (Gtk::Notebook*) nbox->getParent();
@@ -478,9 +478,9 @@ int  ToolPanel::getPosFav()
   int posFav = favoriteBox->getPos(this);
   if (posFav == -1) posFav = favoriteBox->getPos(favoriteDummy);
 
-  if (this->getName() == "distortion")
+  if (this->getToolName() == "distortion")
   { 
-    printf("posFav=%i for %s - %s \n", posFav, getName().c_str(), favoriteDummy->getName().c_str());
+    printf("posFav=%i for %s - %s \n", posFav, getToolName().c_str(), favoriteDummy->getToolName().c_str());
 
   }
 
@@ -665,7 +665,7 @@ Glib::ustring IntToString(int iVal)
 
 Glib::ustring ToolPanel::getThemeInfo() {
   Glib::ustring res;
-  res = getName();
+  res = getToolName();
   res += "|" + originalBox->getBoxName();
   res += "|" + IntToString(originalBox->getPos(this));
   res += "=" ;
@@ -683,11 +683,11 @@ Glib::ustring ToolPanel::getThemeInfo() {
 
 
 void ToolPanel::initVBox(ToolVBox* _originalBox, ToolVBox* _favoriteBox, ToolVBox* _trashBox, Environment* _env){
-     printf("initVBox for name=%s \n", getName().c_str());
+     printf("initVBox for name=%s \n", getToolName().c_str());
 
      env = _env;
-     originalDummy = Gtk::manage (new DummyToolPanel("normal_PosSaver_of_" + this->getName(), env));
-     favoriteDummy = Gtk::manage (new DummyToolPanel("favorite_PosSaver_of_" + this->getName(), env));
+     originalDummy = Gtk::manage (new DummyToolPanel("normal_PosSaver_of_" + this->getToolName(), env));
+     favoriteDummy = Gtk::manage (new DummyToolPanel("favorite_PosSaver_of_" + this->getToolName(), env));
 
      originalBox = _originalBox;
      favoriteBox = _favoriteBox;
@@ -699,10 +699,13 @@ void ToolPanel::initVBox(ToolVBox* _originalBox, ToolVBox* _favoriteBox, ToolVBo
 
      Gtk::Box* b = getFUDLRBox(); //// adynamic_cast<Gtk::Box*> (panelList.at(0)); // hldr Box.
 
+     //enabledButtonRef = exp->
+ //    return;
+/*
      if (b!=NULL)
      {
        if (canBeEnabled())
-         enabledButtonRef = Gtk::manage (new Gtk::CheckButton(M("GENERAL_ENABLED"))); 
+  //       enabledButtonRef = Gtk::manage (new Gtk::CheckButton(M("GENERAL_ENABLED"))); 
        else
        { 
          //trying to find enabledButton (first CheckBoxbutton after the element added generically.
@@ -715,7 +718,7 @@ void ToolPanel::initVBox(ToolVBox* _originalBox, ToolVBox* _favoriteBox, ToolVBo
            if (enabledButtonRef != NULL)
            {
              t->remove(*enabledButtonRef);              
-             printf("  %s has an enabledButton... retrieving it...\n",this->getName().c_str());
+             printf("  %s has an enabledButton... retrieving it...\n",this->getToolName().c_str());
            }
            else // case when a Gtk::HBox is present
            {    // this is a bit ugly, oce could just rewrite the filter concerned...
@@ -756,8 +759,9 @@ void ToolPanel::initVBox(ToolVBox* _originalBox, ToolVBox* _favoriteBox, ToolVBo
          enabledButtonRef->signal_clicked().connect( sigc::mem_fun(*this, &FoldableToolPanel::updateLabelInfo));
        }
      }
+ */
 
-     printf("name=%s  ", getName().c_str());
+     printf("name=%s  ", getToolName().c_str());
      printf("positionOriginal=%i\n", originalBox->getPos(this));
      updateLabelInfo();
 
@@ -918,7 +922,7 @@ void FoldableToolPanel::deploy() {
 
 DummyToolPanel::DummyToolPanel(Glib::ustring name, Environment* _env) : FoldableToolPanel(NULL,name,name,false,false)
 {
-  setName(name);
+  setToolName(name);
   env = _env;
  // exp->show();
 //  exp->hide();

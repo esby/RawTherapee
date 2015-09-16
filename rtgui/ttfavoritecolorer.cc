@@ -26,7 +26,7 @@
 using namespace rtengine;
 using namespace rtengine::procparams;
 
-TTFavoriteColorChooser::TTFavoriteColorChooser () : FoldableToolPanel(this,"ttfavoritecolorer",M("TP_FAVORITE_COLORER_LABEL"),false,false)
+TTFavoriteColorChooser::TTFavoriteColorChooser () : FoldableToolPanel(this,"ttfavoritecolorer",M("TP_FAVORITE_COLORER_LABEL"),false,true)
 {
   themeBox1 = Gtk::manage(new Gtk::HBox());
   themeBox1->set_spacing(4);
@@ -66,7 +66,7 @@ void TTFavoriteColorChooser::deploy()
       if ( (p != NULL)
       && (!(p->canBeIgnored())))
       {
-        printf("connecting to %s \n", p->getName().c_str());
+        printf("connecting to %s \n", p->getToolName().c_str());
         p->getFavoriteButton()->signal_clicked().connect( sigc::bind<ToolPanel*>( sigc::mem_fun(this, &TTFavoriteColorChooser::colorFavorite), p, false  ));
         p->getTrashButton()->signal_clicked().connect( sigc::bind<ToolPanel*>( sigc::mem_fun(this, &TTFavoriteColorChooser::colorTrash), p, false  ));
         colorFavorite(p, true);
@@ -75,7 +75,7 @@ void TTFavoriteColorChooser::deploy()
    }
 
   // button enable / disable
-   getEnabledButton()->signal_clicked().connect( sigc::mem_fun(this, &TTFavoriteColorChooser::on_toggle_button));
+   // getEnabledButton()->signal_clicked().connect( sigc::mem_fun(this, &TTFavoriteColorChooser::on_toggle_button));
 }
 
 void TTFavoriteColorChooser::read(const rtengine::procparams::ProcParams* pp, const ParamsEdited* pedited)
@@ -88,9 +88,11 @@ void TTFavoriteColorChooser::write( rtengine::procparams::ProcParams* pp, Params
 
 }
 
-void TTFavoriteColorChooser::on_toggle_button()
+//void TTFavoriteColorChooser::on_toggle_button()
+void TTFavoriteColorChooser::enabledChanged()
 {  
-   if (getEnabledButton()->get_active()) 
+   //  if (getEnabledButton()->get_active()) 
+   if (getExpander()->getEnabled())
    for (size_t i=0; i< env->countPanel() ; i++)
    {
       FoldableToolPanel* p = static_cast<FoldableToolPanel*> (env->getPanel(i));
@@ -122,7 +124,8 @@ void  TTFavoriteColorChooser::colorButton(Gtk::ToggleButton* button, Gdk::Color 
   w  = (Gtk::Widget*) button;
   state = button->get_active();
   
-  if((!deactivate) && (getEnabledButton()->get_active()))
+ // if((!deactivate) && (getEnabledButton()->get_active()))
+  if((!deactivate) && (getExpander()->getEnabled()))
   {
 
 

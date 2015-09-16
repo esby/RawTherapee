@@ -102,12 +102,12 @@ void TTPanelColorChooser::deploy()
       if ( (p != NULL)
       && (!(p->canBeIgnored())))
       {
-        printf("connecting to %s \n", p->getName().c_str());
-        if (p->getEnabledButton() != NULL)
-        {
+        printf("connecting to %s \n", p->getToolName().c_str());
+//        if (p->getEnabledButton() != NULL)
+//        {
           // we react on click
-          p->getEnabledButton()->signal_clicked()      .connect( sigc::bind<ToolPanel*>( sigc::mem_fun(this, &TTPanelColorChooser::colorer) , p )); 
-        }
+ //         p->getEnabledButton()->signal_clicked()      .connect( sigc::bind<ToolPanel*>( sigc::mem_fun(this, &TTPanelColorChooser::colorer) , p )); 
+//        }
 
         // we also react on update on the info box. (this means the label in the top part of the expander
         p->getLabelInfoNotifier()->signal_activate()  .connect( sigc::bind<ToolPanel*>( sigc::mem_fun(this, &TTPanelColorChooser::pangorer), p ));
@@ -117,12 +117,13 @@ void TTPanelColorChooser::deploy()
       }
    }
    // button enable / disable
-   getEnabledButton()->signal_clicked().connect( sigc::mem_fun(this, &TTPanelColorChooser::on_toggle_button));
+//   getEnabledButton()->signal_clicked().connect( sigc::mem_fun(this, &TTPanelColorChooser::on_toggle_button));
 }
 
 void TTPanelColorChooser::on_toggle_button() 
 {
-   if (getEnabledButton()->get_active())
+   if (getExpander()->getEnabled())
+   // if (getEnabledButton()->get_active())
    for (size_t i=0; i< env->countPanel() ; i++)
    {
       FoldableToolPanel* p = static_cast<FoldableToolPanel*> (env->getPanel(i));
@@ -162,7 +163,19 @@ int TTPanelColorChooser::getState(ToolPanel* panel)
   int state;
   state = -1;
   // checking for this tt to be active
-  if (getEnabledButton()->get_active())
+  if (getExpander()->getEnabled())
+  {
+    state = 0;
+    if (!panel->getExpander()->getUseEnabled())
+      state = 2;
+    else
+    if (panel->getExpander()->getEnabled())
+      state = 1;
+    }
+  return state;
+
+/*
+//getEnabledButton()->get_active())
   {
     state = 0;
     if (panel->getEnabledButton() == NULL)
@@ -172,6 +185,7 @@ int TTPanelColorChooser::getState(ToolPanel* panel)
       state = 1;
   }
   return state;
+*/
 }
 
 Gdk::Color TTPanelColorChooser::getColor(ToolPanel* panel, int state)

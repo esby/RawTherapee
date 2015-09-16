@@ -45,7 +45,9 @@ public:
     void read           (const rtengine::procparams::ProcParams* pp, const ParamsEdited* pedited=NULL);
     void write          (rtengine::procparams::ProcParams* pp, ParamsEdited* pedited=NULL);
     void deploy();
-    void on_toggle_button();
+   
+   // void on_toggle_button();
+   void enabledChanged  ();
 
     void colorButton(Gtk::ToggleButton* button, Gdk::Color color, bool deactivate=false);
     void colorFavorite(ToolPanel* panel, bool deactivate=false);
