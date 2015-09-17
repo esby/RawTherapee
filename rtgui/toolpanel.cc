@@ -920,12 +920,10 @@ void FoldableToolPanel::deploy() {
 }
 
 
-DummyToolPanel::DummyToolPanel(Glib::ustring name, Environment* _env) : FoldableToolPanel(NULL,name,name,false,false)
+DummyToolPanel::DummyToolPanel(Glib::ustring name, Environment* _env) : FoldableToolPanel(this,name,name,false,true)
 {
   setToolName(name);
   env = _env;
- // exp->show();
-//  exp->hide();
 }
 
 
