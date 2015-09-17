@@ -827,9 +827,11 @@ FoldableToolPanel::FoldableToolPanel(Gtk::Box* content, Glib::ustring toolName, 
         labelBox = exp->getHeaderHBox();
         labelBox->pack_start(*labelInfo, false, false,0);
         labelBox->pack_start(*fudlrBox, Gtk::PACK_EXPAND_WIDGET, true, 0);
-        labelWidget = Gtk::manage (new Gtk::Label("this will be updated later"));
+//todo: this might not be necessary anymore
+/*        labelWidget = Gtk::manage (new Gtk::Label("this will be updated later"));
         labelWidget->set_use_markup();
         labelBox->pack_start(*labelWidget, false, false, 0);
+*/
 
 
     exp->signal_button_release_event().connect_notify( sigc::mem_fun(this, &FoldableToolPanel::foldThemAll) );
@@ -908,13 +910,14 @@ void FoldableToolPanel::setEnabledTooltipText(Glib::ustring tooltipText)
 
 
 void FoldableToolPanel::deploy() {
-  labelWidget->set_markup(Glib::ustring("<b>") + uilabel + Glib::ustring("</b>"));
+//todo: check that this method should be called or not.
+//  labelWidget->set_markup(Glib::ustring("<b>") + uilabel + Glib::ustring("</b>"));
 
-  if (need100Percent){
-    RTImage *image = Gtk::manage (new RTImage("zoom-100-identifier.png"));
-    image->set_tooltip_text(M("TP_GENERAL_11SCALE_TOOLTIP"));
-    labelBox->pack_end(*image, false, false, 0);
-  }
+//  if (need100Percent){
+//    RTImage *image = Gtk::manage (new RTImage("zoom-100-identifier.png"));
+//    image->set_tooltip_text(M("TP_GENERAL_11SCALE_TOOLTIP"));
+//    labelBox->pack_end(*image, false, false, 0);
+//  }
  // exp->set_label_widget(*hbox);
  // exp->set_label_fill();
 }
