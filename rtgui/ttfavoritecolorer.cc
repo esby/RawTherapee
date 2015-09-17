@@ -75,7 +75,7 @@ void TTFavoriteColorChooser::deploy()
    }
 
   // button enable / disable
-   // getEnabledButton()->signal_clicked().connect( sigc::mem_fun(this, &TTFavoriteColorChooser::on_toggle_button));
+  getExpander()->signal_enabled_toggled().connect( sigc::mem_fun(this, &TTFavoriteColorChooser::enabledChanged));
 }
 
 void TTFavoriteColorChooser::read(const rtengine::procparams::ProcParams* pp, const ParamsEdited* pedited)
@@ -141,6 +141,12 @@ void  TTFavoriteColorChooser::colorButton(Gtk::ToggleButton* button, Gdk::Color 
       w->unset_bg(Gtk::STATE_ACTIVE);
       w->unset_bg(Gtk::STATE_PRELIGHT);
     }
+  }
+  else
+  {
+      w->unset_bg(Gtk::STATE_NORMAL);
+      w->unset_bg(Gtk::STATE_ACTIVE);
+      w->unset_bg(Gtk::STATE_PRELIGHT);
   }
    
 }

@@ -103,11 +103,12 @@ void TTPanelColorChooser::deploy()
       && (!(p->canBeIgnored())))
       {
         printf("connecting to %s \n", p->getToolName().c_str());
-//        if (p->getEnabledButton() != NULL)
-//        {
+        p->getExpander()->signal_enabled_toggled().connect( sigc::bind(sigc::mem_fun(*this, &TTPanelColorChooser::colorer) , p ));
+        if (p->getExpander()->getEnabled())
+        {
           // we react on click
- //         p->getEnabledButton()->signal_clicked()      .connect( sigc::bind<ToolPanel*>( sigc::mem_fun(this, &TTPanelColorChooser::colorer) , p )); 
-//        }
+          p->getExpander()->signal_enabled_toggled().connect( sigc::bind<ToolPanel*>( sigc::mem_fun(this, &TTPanelColorChooser::colorer) , p )); 
+        }
 
         // we also react on update on the info box. (this means the label in the top part of the expander
         p->getLabelInfoNotifier()->signal_activate()  .connect( sigc::bind<ToolPanel*>( sigc::mem_fun(this, &TTPanelColorChooser::pangorer), p ));
@@ -117,7 +118,7 @@ void TTPanelColorChooser::deploy()
       }
    }
    // button enable / disable
-//   getEnabledButton()->signal_clicked().connect( sigc::mem_fun(this, &TTPanelColorChooser::on_toggle_button));
+   getExpander()->signal_enabled_toggled().connect( sigc::mem_fun(this, &TTPanelColorChooser::on_toggle_button));
 }
 
 void TTPanelColorChooser::on_toggle_button() 
@@ -172,7 +173,7 @@ int TTPanelColorChooser::getState(ToolPanel* panel)
     if (panel->getExpander()->getEnabled())
       state = 1;
     }
-  return state;
+  return state;  
 
 /*
 //getEnabledButton()->get_active())
@@ -200,16 +201,19 @@ Gdk::Color TTPanelColorChooser::getColor(ToolPanel* panel, int state)
 void TTPanelColorChooser::pangoPanel(ToolPanel* panel, bool deactivate)
 {
   Gtk::Label* l0;
-  Gtk::Label* l1;
+ // Gtk::Label* l1;
   Gtk::HBox* b = (Gtk::HBox*) panel->getLabelBox();
   std::vector<Gtk::Widget*> v = b->get_children();
-  l0 = (Gtk::Label*) v.at(1);
-  l1 = (Gtk::Label*) v.at(3);
+  //l1 = (Gtk::Label*) v.at(2);
+
 
   //todo fix issue and disable return
-  return; 
+  if (!panel->getNeed100Percent())
+  {
+  l0 = (Gtk::Label*) v.at(1);
   Glib::ustring s0 = l0->get_text();
-  Glib::ustring s1 = l1->get_text();
+//  Glib::ustring s1 = l1->get_text();
+ 
   
   int state;
   state = getState(panel);
@@ -222,13 +226,14 @@ void TTPanelColorChooser::pangoPanel(ToolPanel* panel, bool deactivate)
       color = getColor(panel, state);
       Glib::ustring colorName = color.to_string();
       l0->set_markup("<tt><span color=\"" + colorName + "\">" +  s0 + "</span></tt>");
-      l1->set_markup("<b><span color=\"" + colorName + "\">" +  s1 + "</span></b>");
+//      l1->set_markup("<b><span color=\"" + colorName + "\">" +  s1 + "</span></b>");
     }
     else
     {
       l0->set_markup("<tt><span>" + s0 + "</span></tt>");
-      l1->set_markup("<b><span>" + s1 + "</span></b>");
+//      l1->set_markup("<b><span>" + s1 + "</span></b>");
     }
+  }
   }
 }
 
@@ -240,6 +245,8 @@ void  TTPanelColorChooser::colorPanel(ToolPanel* panel, bool deactivate)
   Gtk::Label* l0;
   Gtk::Label* l1;
 
+
+//todo: fix colorer whic does not work anymore
    
   w = (Gtk::Widget*) panel->getExpander();
 
@@ -284,6 +291,7 @@ void TTPanelColorChooser::colorer(ToolPanel* panel)
   if (panel!=NULL)
   {
     colorPanel(panel);
+    pangoPanel(panel);
   }
 }
 

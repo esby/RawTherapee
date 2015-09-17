@@ -270,6 +270,7 @@ public:
     Glib::ustring               getToolName() { return toolName; } // filters should reimplement it
   
     void                setNeed100Percent(bool b) { need100Percent = b; }
+    bool                getNeed100Percent() { return need100Percent; }
 
     /** @brief Disable the event broadcasting mechanism
      *

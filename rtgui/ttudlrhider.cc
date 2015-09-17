@@ -67,7 +67,7 @@ void TTUDLRHider::deploy()
    }
 
   // button enable / disable
-//   getEnabledButton()->signal_clicked().connect( sigc::mem_fun(this, &TTUDLRHider::on_toggle_button));
+   getExpander()->signal_enabled_toggled().connect(sigc::mem_fun(this, &TTUDLRHider::enabledChanged));
    cbLockFav->signal_clicked().connect( sigc::mem_fun(this, &TTUDLRHider::enabledChanged));
    cbHideArrow->signal_clicked().connect( sigc::mem_fun(this, &TTUDLRHider::enabledChanged));
 
