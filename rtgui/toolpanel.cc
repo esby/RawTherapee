@@ -109,6 +109,7 @@ void Environment::addVBox(ToolVBox* box)
 
 void Environment::reAttachPanel(ToolPanel *panel, ToolVBox* box, int pos)
 {
+  printf("reattaching panel %s from %s to %s \n", panel->getToolName().c_str(), panel->getOriginalBox()->getBoxName().c_str(), box->getBoxName().c_str());
   Gtk::Container* c = (Gtk::Container*)box;
   panel->getOriginalBox()->remPanel(panel);
 //  box->remPanel(panel);
@@ -154,10 +155,19 @@ int ToolCounter::getPos(ToolPanel* panel) {
 }
 
 ToolPanel* ToolCounter::getPanel(int pos) {
-   panelList = box->get_children ();
-   //todo: ensure that getPanel is the same as getChild()
-   ToolPanel* p = (ToolPanel*)(((MyExpander*)panelList[pos])->getChild());
-   return p;
+//todo:
+/// in the old code it was
+// panelList = box->get_children ();
+//   ToolPanel* p = ((Expander*)panelList[pos])->getPanel();
+//   return p;
+    size_t i;
+    for (i=0; i<envTC->countPanel();i++)
+      if (panelList.at(pos) == envTC->getPanel(i)->getExpander())
+        return envTC->getPanel(i);
+
+     printf("returning NULL when searching for panel at pos=%i", pos);
+       return NULL;
+
 }
 
 // we initiate the nextBox too sinec it's circular
@@ -184,7 +194,6 @@ void ToolCounter::remPanel(ToolPanel* t)
   ToolVBox* v = (ToolVBox*) this;
   MyExpander* exp = t->getExpander();
   int i = getPos(t);
-  printf("Attempting to remove panel: %s from: %s at pos:%i \n", t->getToolName().c_str(), this->getBoxName().c_str(), i);
   if (i>-1)
   {
     printf("Removing panel: %s from: %s \n", t->getToolName().c_str(), this->getBoxName().c_str());
@@ -249,9 +258,11 @@ void ToolParamBlock::on_style_changed (const Glib::RefPtr<Gtk::Style>& style)
 }
 
 void ToolPanel::updateLabelInfo() {
-
+ //todo: check
  if ((this->getExpander() != NULL)
   && ((!this->canBeIgnored()))) {
+
+    printf("toolName=%s \n",this->getToolName().c_str());
 
     int pos = originalBox->getPos(this);
 
