@@ -101,6 +101,18 @@ ToolPanelCoordinator::ToolPanelCoordinator () : ipc(NULL)
     waveletPanel->setBoxName("waveletPanel");
     trashPanel->setBoxName("trashPanel");
     usefulPanel->setBoxName("usefulPanel");
+
+    favoritePanel->setEnvironment(env);
+    exposurePanel->setEnvironment(env);
+    detailsPanel->setEnvironment(env);
+    colorPanel->setEnvironment(env);
+    transformPanel->setEnvironment(env);
+    rawPanel->setEnvironment(env);
+    waveletPanel->setEnvironment(env);
+
+    trashPanel->setEnvironment(env);
+    usefulPanel->setEnvironment(env);
+
  
     env->setFavoritePanel(favoritePanel);
     env->setTrashPanel(trashPanel);
@@ -170,7 +182,7 @@ ToolPanelCoordinator::ToolPanelCoordinator () : ipc(NULL)
     env->registerPanel (colorPanel, whitebalance);
     env->registerPanel (exposurePanel, toneCurve);
     env->registerPanel (colorPanel, vibrance);
-    env->registerPanel (colorPanel, chmixer);
+    env->registerPanel (colorPanel, chmixer); // TODO: Add "Enabled"
     env->registerPanel (colorPanel, blackwhite);
     env->registerPanel (exposurePanel, shadowshighlights);
     env->registerPanel (detailsPanel, sharpening);
@@ -178,19 +190,21 @@ ToolPanelCoordinator::ToolPanelCoordinator () : ipc(NULL)
     env->registerPanel (detailsPanel, sharpenMicro);
     env->registerPanel (colorPanel, hsvequalizer);
     env->registerPanel (colorPanel, filmSimulation);
-    env->registerPanel (colorPanel, rgbcurves);
+    env->registerPanel (colorPanel, rgbcurves); // << TODO: Add "Enabled"
     env->registerPanel (colorPanel, colortoning);
     env->registerPanel (exposurePanel, epd);
     env->registerPanel (exposurePanel, pcvignette);
     env->registerPanel (exposurePanel, gradient);
-    env->registerPanel (exposurePanel, lcurve);
+    env->registerPanel (exposurePanel, lcurve); // << TODO: Add "Enabled" ???
     env->registerPanel (exposurePanel, colorappearance);
     env->registerPanel (detailsPanel, impulsedenoise);
     env->registerPanel (detailsPanel, dirpyrdenoise);
     env->registerPanel (detailsPanel, defringe);
     env->registerPanel (detailsPanel, dirpyrequalizer);
+    env->registerPanel (waveletPanel, wavelet);
     env->registerPanel (transformPanel, crop);
     env->registerPanel (transformPanel, resize);
+    env->registerPanel (resize->getPackBox(), prsharpening);
     env->registerPanel (transformPanel, lensgeom);
     env->registerPanel (lensgeom->getPackBox(), rotate);
     env->registerPanel (lensgeom->getPackBox(), perspective);
@@ -210,8 +224,9 @@ ToolPanelCoordinator::ToolPanelCoordinator () : ipc(NULL)
     env->registerPanel (rawPanel, rawexposure);
     env->registerPanel (rawPanel, preprocess);
     env->registerPanel (rawPanel, darkframe);
-    env->registerPanel (rawPanel, flatfield); 
-    env->registerPanel (waveletPanel, wavelet);
+    env->registerPanel (rawPanel, flatfield);
+
+
 
   // new panels are registered diffently
     env->registerPanel (usefulPanel, Gtk::manage (new TTSaver()));

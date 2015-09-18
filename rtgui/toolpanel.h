@@ -98,7 +98,7 @@ public:
 class ToolCounter 
 {
    protected:
-
+     Environment* envTC;
      // this is a reference to the object itself, because i am lazy -- esby
      Gtk::VBox* box; 
      std::vector<Gtk::Widget*> panelList;
@@ -113,6 +113,9 @@ class ToolCounter
 
    public:
       ToolCounter();
+  
+      virtual void setEnvironment(Environment* _env) { envTC = _env; }
+      
       virtual void setPrevBox(Gtk::VBox* _box);
       virtual void setNextBox(Gtk::VBox* _box);
 
@@ -267,7 +270,7 @@ public:
     virtual void                 deploy()       {} // used to handle post constructor steps.
 
     void                setToolName(Glib::ustring _name) { toolName = _name; }
-    Glib::ustring               getToolName() { return toolName; } // filters should reimplement it
+    Glib::ustring               getToolName() { return toolName; } 
   
     void                setNeed100Percent(bool b) { need100Percent = b; }
     bool                getNeed100Percent() { return need100Percent; }
