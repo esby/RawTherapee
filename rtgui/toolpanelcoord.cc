@@ -85,10 +85,9 @@ ToolPanelCoordinator::ToolPanelCoordinator () : ipc(NULL)
     exposurePanel   = Gtk::manage (new ToolVBox ());
     detailsPanel    = Gtk::manage (new ToolVBox ());
     colorPanel      = Gtk::manage (new ToolVBox ());
+    waveletPanel    = Gtk::manage (new ToolVBox ());
     transformPanel  = Gtk::manage (new ToolVBox ());
     rawPanel        = Gtk::manage (new ToolVBox ());
-    waveletPanel    = Gtk::manage (new ToolVBox ());
-
     trashPanel      = Gtk::manage (new ToolVBox ());
     usefulPanel     = Gtk::manage (new ToolVBox ());
 
@@ -96,9 +95,9 @@ ToolPanelCoordinator::ToolPanelCoordinator () : ipc(NULL)
     exposurePanel->setBoxName("exposurePanel");
     detailsPanel->setBoxName("detailsPanel");
     colorPanel->setBoxName("colorPanel");
+    waveletPanel->setBoxName("waveletPanel");
     transformPanel->setBoxName("transformPanel");
     rawPanel->setBoxName("rawPanel");
-    waveletPanel->setBoxName("waveletPanel");
     trashPanel->setBoxName("trashPanel");
     usefulPanel->setBoxName("usefulPanel");
 
@@ -106,9 +105,9 @@ ToolPanelCoordinator::ToolPanelCoordinator () : ipc(NULL)
     exposurePanel->setEnvironment(env);
     detailsPanel->setEnvironment(env);
     colorPanel->setEnvironment(env);
+    waveletPanel->setEnvironment(env);
     transformPanel->setEnvironment(env);
     rawPanel->setEnvironment(env);
-    waveletPanel->setEnvironment(env);
 
     trashPanel->setEnvironment(env);
     usefulPanel->setEnvironment(env);
@@ -254,9 +253,9 @@ ToolPanelCoordinator::ToolPanelCoordinator () : ipc(NULL)
     exposurePanelSW    = Gtk::manage (new MyScrolledWindow ());
     detailsPanelSW     = Gtk::manage (new MyScrolledWindow ());
     colorPanelSW       = Gtk::manage (new MyScrolledWindow ());
+    waveletPanelSW     = Gtk::manage (new MyScrolledWindow ());
     transformPanelSW   = Gtk::manage (new MyScrolledWindow ());
     rawPanelSW         = Gtk::manage (new MyScrolledWindow ());
-    waveletPanelSW     = Gtk::manage (new MyScrolledWindow ());
     trashPanelSW       = Gtk::manage (new MyScrolledWindow ());
     usefulPanelSW      = Gtk::manage (new MyScrolledWindow ());
     updateVScrollbars (options.hideTPVScrollbar);
@@ -277,8 +276,8 @@ ToolPanelCoordinator::ToolPanelCoordinator () : ipc(NULL)
     handlePanel(exposurePanel, exposurePanelSW, panelIter++, 4);
     handlePanel(detailsPanel, detailsPanelSW, panelIter++, 4);
     handlePanel(colorPanel, colorPanelSW, panelIter++, 4);
-    handlePanel(transformPanel, transformPanelSW, panelIter++, 4);
     handlePanel(waveletPanel, waveletPanelSW, panelIter++,4);
+    handlePanel(transformPanel, transformPanelSW, panelIter++, 4);
     handlePanel(rawPanel, rawPanelSW, panelIter++, 0);
     handlePanel(usefulPanel, usefulPanelSW, panelIter++, 4);
     handlePanel(trashPanel, trashPanelSW, panelIter++, 4);

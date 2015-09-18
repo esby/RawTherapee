@@ -376,13 +376,13 @@ void ToolPanel::moveLeft() {
       nbox->reorder_child(*this->getExpander(), nbox->size()-1);
 
     printf("page %i \n" , page_num);
-    notebook->set_current_page (page_num);
 
     // the original box is changed
     this->originalBox = nbox;
     // updating panel infos
     int pos = nbox->getPos(this);
     nbox->getPanel(pos)->updateLabelInfo(); 
+    notebook->set_current_page (page_num);
   }
 }
 
@@ -419,13 +419,14 @@ void ToolPanel::moveRight() {
       
 
     printf("page %i \n" , page_num);
-    notebook->set_current_page (page_num);
 
     // the original box is changed
     this->originalBox = nbox;
   // updating panel infos
     int pos = nbox->getPos(this);
     nbox->getPanel(pos)->updateLabelInfo();
+    notebook->set_current_page (page_num);
+
   }
 }
 
