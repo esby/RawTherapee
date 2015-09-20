@@ -28,12 +28,11 @@
 using namespace rtengine;
 using namespace rtengine::procparams;
 
+
 TTSaver::TTSaver () : FoldableToolPanel(this,"ttsaver",M("TP_THEMETOOL_LABEL"),false,true)
 {
 	themeBox = Gtk::manage(new Gtk::HBox());
 	themeBox->set_spacing(4);
-	themeFile = Gtk::manage(new MyFileChooserButton(M("TP_THEME_LABEL"), Gtk::FILE_CHOOSER_ACTION_OPEN));
-	themeFilePersister.reset(new FileChooserLastFolderPersister(themeFile, options.lastTTSaverDir));
 	themeLabel = Gtk::manage(new Gtk::Label(M("GENERAL_FILE")));
 	buttonReset = Gtk::manage(new Gtk::Button());
 	buttonReset->set_image (*Gtk::manage(new RTImage ("gtk-cancel.png")));
@@ -41,7 +40,10 @@ TTSaver::TTSaver () : FoldableToolPanel(this,"ttsaver",M("TP_THEMETOOL_LABEL"),f
         buttonSave->set_image (*Gtk::manage(new RTImage ("saved.png")));
 
 	themeBox->pack_start(*themeLabel, Gtk::PACK_SHRINK, 0);
-	themeBox->pack_start(*themeFile);
+
+        profilbox = Gtk::manage (new MyComboBoxText ());
+        profilbox->set_tooltip_text (M("TP_WAVELET_TILES_TOOLTIP"));
+        themeBox->pack_start(*profilbox); //, Gtk::PACK_SHRINK, 0);
 	themeBox->pack_start(*buttonReset, Gtk::PACK_SHRINK, 0);
         themeBox->pack_start(*buttonSave, Gtk::PACK_SHRINK, 0);
      
@@ -49,25 +51,7 @@ TTSaver::TTSaver () : FoldableToolPanel(this,"ttsaver",M("TP_THEMETOOL_LABEL"),f
 	buttonReset->signal_clicked().connect( sigc::mem_fun(*this, &TTSaver::themeReset), true );
         s = buttonSave->signal_clicked().connect( sigc::mem_fun(*this, &TTSaver::themeSave), true );
 
-	
-	// Set filename filters
-	Gtk::FileFilter *filter_any = Gtk::manage(new Gtk::FileFilter);
-        filter_any->add_pattern("*");
-        filter_any->set_name(M("TP_FLATFIELD_FILEDLGFILTERANY"));
-        themeFile->add_filter (*filter_any);
-    
-    // filters for all supported non-raw extensions       
-    for (size_t i=0; i<options.parseExtensions.size(); i++) {
-        if (options.parseExtensionsEnabled[i] && options.parseExtensions[i].uppercase()!="THE" )
-        {    
-	        Gtk::FileFilter *filter_tt = Gtk::manage(new Gtk::FileFilter);
-	        filter_tt->add_pattern("*." + options.parseExtensions[i]);
-   	        filter_tt->add_pattern("*." + options.parseExtensions[i].uppercase());
-	        filter_tt->set_name(options.parseExtensions[i].uppercase());
-	        themeFile->add_filter (*filter_tt);
-	        //printf("adding filter %s \n",options.parseExtensions[i].uppercase().c_str());
-        }
-    }
+        parseProfileFolder();
 }
 
 bool sortByFav(ToolPanel* t1, ToolPanel* t2)
@@ -88,6 +72,61 @@ bool sortByOri(ToolPanel* t1, ToolPanel* t2)
   if (t1->getOriginalBox()->getBoxName() == t2->getOriginalBox()->getBoxName())
     return (t1->getPosOri() < t2->getPosOri());
   else return (t1->getOriginalBox()->getBoxName() < t2->getOriginalBox()->getBoxName());
+}
+
+
+void TTSaver::parseProfileFolder()
+{
+        Glib::ustring p1 = options.getUserProfilePath();
+        Glib::ustring p2 = options.getGlobalProfilePath();
+
+        printf("p1=%s \n",p1.c_str());
+        printf("p2=%s \n",p2.c_str());
+    
+        Glib::ustring realPath;
+        Glib::ustring currDir;
+        Glib::ustring virtualPath;
+        Glib::ustring folder;
+      
+
+
+        // walking through the directory
+        Glib::Dir* dir = NULL;
+        realPath = p2;
+        dir = new Glib::Dir (realPath);
+
+        for (Glib::DirIterator i = dir->begin(); i != dir->end(); ++i) {
+            currDir = *i;
+
+            if (currDir == "." || currDir == "..") {
+                continue;
+            }
+
+            Glib::ustring fname = Glib::build_filename(realPath, currDir);
+
+            if (safe_file_test (fname, Glib::FILE_TEST_IS_DIR)) {
+             //   Glib::ustring vp(Glib::build_filename(virtualPath, currDir));
+             //   Glib::ustring rp(Glib::build_filename(realPath,    currDir));
+             //   fileFound = parseDir (rp, vp, currDir, folder, level + 1, 0);
+            } else {
+                size_t lastdot = currDir.find_last_of ('.');
+
+                if (lastdot != Glib::ustring::npos && lastdot <= currDir.size() - 4 && !currDir.casefold().compare (lastdot, 4, ".ttp")) {
+                    // file found
+                    printf ("ttp profile detected %s...", fname.c_str());
+                    if( options.rtSettings.verbose ) {
+                        printf ("ttp profile detected %s...", fname.c_str());
+                    }
+
+                    Glib::ustring name = currDir.substr(0, lastdot);
+                    printf("name=%s",name.c_str());
+                    profilbox->append_text(name);
+
+                }
+            }
+        }
+
+        delete dir;
 }
 
 void TTSaver::resetFavoriteAndTrashState() 

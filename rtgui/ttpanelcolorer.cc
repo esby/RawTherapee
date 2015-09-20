@@ -102,7 +102,7 @@ void TTPanelColorChooser::deploy()
       if ( (p != NULL)
       && (!(p->canBeIgnored())))
       {
-        printf("connecting to %s \n", p->getToolName().c_str());
+//        printf("connecting to %s \n", p->getToolName().c_str());
         p->getExpander()->signal_enabled_toggled().connect( sigc::bind(sigc::mem_fun(*this, &TTPanelColorChooser::colorer) , p ));
         if (p->getExpander()->getEnabled())
         {

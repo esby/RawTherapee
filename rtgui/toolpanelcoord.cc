@@ -347,6 +347,13 @@ ToolPanelCoordinator::ToolPanelCoordinator () : ipc(NULL)
     toolPanelNotebook->set_scrollable ();
     toolPanelNotebook->show_all ();
 
+    //todo
+    printf("deploying panels \n");
+
+    for (size_t i=0; i<env->countPanel(); i++)
+    {
+//      printf("panel nb=%i \n",  i);
+      env->getPanel(i)->deploy();
     }
 
 

@@ -196,7 +196,7 @@ void ToolCounter::remPanel(ToolPanel* t)
   int i = getPos(t);
   if (i>-1)
   {
-    printf("Removing panel: %s from: %s \n", t->getToolName().c_str(), this->getBoxName().c_str());
+//    printf("Removing panel: %s from: %s \n", t->getToolName().c_str(), this->getBoxName().c_str());
     v->remove(*exp);
   }
 }
@@ -209,7 +209,7 @@ void ToolCounter::addPanel(ToolPanel* t, int pos)
   int i = getPos(t);
   if (i==-1)
   {
-    printf("adding Panel: %s to %s \n", t->getToolName().c_str(), this->getBoxName().c_str());
+//    printf("adding Panel: %s to %s \n", t->getToolName().c_str(), this->getBoxName().c_str());
     v->pack_start(*exp, false,false);
     v->reorder_child(*exp, pos);
   }
@@ -262,7 +262,7 @@ void ToolPanel::updateLabelInfo() {
  if ((this->getExpander() != NULL)
   && ((!this->canBeIgnored()))) {
 
-    printf("toolName=%s \n",this->getToolName().c_str());
+//    printf("toolName=%s \n",this->getToolName().c_str());
 
     int pos = originalBox->getPos(this);
 
@@ -695,7 +695,7 @@ Glib::ustring ToolPanel::getThemeInfo() {
 
 
 void ToolPanel::initVBox(ToolVBox* _originalBox, ToolVBox* _favoriteBox, ToolVBox* _trashBox, Environment* _env){
-     printf("initVBox for name=%s \n", getToolName().c_str());
+//     printf("initVBox for name=%s \n", getToolName().c_str());
 
      env = _env;
      originalDummy = Gtk::manage (new DummyToolPanel("normal_PosSaver_of_" + this->getToolName(), env));
@@ -773,8 +773,8 @@ void ToolPanel::initVBox(ToolVBox* _originalBox, ToolVBox* _favoriteBox, ToolVBo
      }
  */
 
-     printf("name=%s  ", getToolName().c_str());
-     printf("positionOriginal=%i\n", originalBox->getPos(this));
+//     printf("name=%s  ", getToolName().c_str());
+//     printf("positionOriginal=%i\n", originalBox->getPos(this));
      updateLabelInfo();
 
 }

@@ -60,7 +60,7 @@ void TTUDLRHider::deploy()
       if ( (p != NULL)
       && (!(p->canBeIgnored())))
       {
-        printf("connecting to %s \n", p->getToolName().c_str());
+//        printf("connecting to %s \n", p->getToolName().c_str());
         actOnPanel(p, true);
         actOnPanel(p, true);
       }
