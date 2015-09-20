@@ -30,14 +30,13 @@ class TTSaver : public ToolParamBlock, public FoldableToolPanel {
 
 protected:
 
-    MyFileChooserButton* themeFile;
-    std::auto_ptr<FileChooserLastFolderPersister> themeFilePersister;
     Gtk::HBox* themeBox;
     Gtk::Label* themeLabel;
     Gtk::Button* buttonLoad;
     Gtk::Button* buttonReset;
     Gtk::Button* buttonSave;
     sigc::connection s;
+    MyComboBoxText* profilbox;
 
 public:
 
@@ -51,6 +50,7 @@ public:
     void themeSave();
     void resetFavoriteAndTrashState();
     void test(Glib::ustring name);
+    void parseProfileFolder();
 };
 
 #endif

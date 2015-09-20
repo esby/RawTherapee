@@ -350,7 +350,7 @@ ToolPanelCoordinator::ToolPanelCoordinator () : ipc(NULL)
 
     for (size_t i=0; i<env->countPanel(); i++)
     {
-      printf("panel nb=%i \n",  i);
+//      printf("panel nb=%i \n",  i);
       env->getPanel(i)->deploy();
     }
 

@@ -66,7 +66,7 @@ void TTFavoriteColorChooser::deploy()
       if ( (p != NULL)
       && (!(p->canBeIgnored())))
       {
-        printf("connecting to %s \n", p->getToolName().c_str());
+ //       printf("connecting to %s \n", p->getToolName().c_str());
         p->getFavoriteButton()->signal_clicked().connect( sigc::bind<ToolPanel*>( sigc::mem_fun(this, &TTFavoriteColorChooser::colorFavorite), p, false  ));
         p->getTrashButton()->signal_clicked().connect( sigc::bind<ToolPanel*>( sigc::mem_fun(this, &TTFavoriteColorChooser::colorTrash), p, false  ));
         colorFavorite(p, true);
