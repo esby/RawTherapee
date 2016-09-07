@@ -386,7 +386,7 @@ public:
     ShutterSpeedInterpreter () {}
     virtual std::string toString (Tag* t)
     {
-        char buffer[1024];
+        char buffer[32];
         double d = pow (2.0, -t->toDouble());
 
         if (d > 0.0 && d < 0.9) {
@@ -406,7 +406,7 @@ public:
     ExposureTimeInterpreter () {}
     virtual std::string toString (Tag* t)
     {
-        char buffer[1024];
+        char buffer[32];
         double d = t->toDouble();
 
         if (d > 0.0 && d < 0.9) {
@@ -540,6 +540,7 @@ const TagAttrib exifAttribs[] = {
     {0, AC_WRITE,     0, 0, 0x8824, AUTO, "SpectralSensitivity", &stdInterpreter},
     {0, AC_WRITE,     0, 0, 0x8827, AUTO, "ISOSpeedRatings", &stdInterpreter},
     {0, AC_WRITE,     0, 0, 0x8828, AUTO, "OECF", &stdInterpreter},
+    {0, AC_WRITE,     0, 0, 0x8832, AUTO, "RecommendedExposureIndex", &stdInterpreter},
     {0, AC_WRITE,     0, 0, 0x9000, AUTO, "ExifVersion", &stdInterpreter},
     {0, AC_WRITE,     0, 0, 0x9003, AUTO, "DateTimeOriginal", &stdInterpreter},
     {0, AC_WRITE,     0, 0, 0x9004, AUTO, "DateTimeDigitized", &stdInterpreter},

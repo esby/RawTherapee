@@ -19,7 +19,6 @@
 #include "flatfield.h"
 #include "options.h"
 #include "guiutils.h"
-#include "../rtengine/safegtk.h"
 #include <sstream>
 #include "rtimage.h"
 
@@ -31,7 +30,7 @@ FlatField::FlatField () : FoldableToolPanel(this, "flatfield", M("TP_FLATFIELD_L
     hbff = Gtk::manage(new Gtk::HBox());
     hbff->set_spacing(2);
     flatFieldFile = Gtk::manage(new MyFileChooserButton(M("TP_FLATFIELD_LABEL"), Gtk::FILE_CHOOSER_ACTION_OPEN));
-    flatFieldFilePersister.reset(new FileChooserLastFolderPersister(flatFieldFile, options.lastFlatfieldDir));
+    bindCurrentFolder (*flatFieldFile, options.lastFlatfieldDir);
     ffLabel = Gtk::manage(new Gtk::Label(M("GENERAL_FILE")));
     flatFieldFileReset = Gtk::manage(new Gtk::Button());
     flatFieldFileReset->set_image (*Gtk::manage(new RTImage ("gtk-cancel.png")));
@@ -44,8 +43,8 @@ FlatField::FlatField () : FoldableToolPanel(this, "flatfield", M("TP_FLATFIELD_L
     flatFieldBlurRadius = Gtk::manage(new Adjuster (M("TP_FLATFIELD_BLURRADIUS"), 0, 200, 2, 32));
     flatFieldBlurRadius->setAdjusterListener (this);
 
-    if (flatFieldBlurRadius->delay < 1000) {
-        flatFieldBlurRadius->delay = 1000;
+    if (flatFieldBlurRadius->delay < options.adjusterMaxDelay) {
+        flatFieldBlurRadius->delay = options.adjusterMaxDelay;
     }
 
     flatFieldBlurRadius->show();
@@ -65,8 +64,8 @@ FlatField::FlatField () : FoldableToolPanel(this, "flatfield", M("TP_FLATFIELD_L
     flatFieldClipControl->setAdjusterListener(this);
     flatFieldClipControl->addAutoButton("");
 
-    if (flatFieldClipControl->delay < 1000) {
-        flatFieldClipControl->delay = 1000;
+    if (flatFieldClipControl->delay < options.adjusterMaxDelay) {
+        flatFieldClipControl->delay = options.adjusterMaxDelay;
     }
 
     flatFieldClipControl->show();
@@ -140,7 +139,7 @@ void FlatField::read(const rtengine::procparams::ProcParams* pp, const ParamsEdi
         }
     }
 
-    if (safe_file_test (pp->raw.ff_file, Glib::FILE_TEST_EXISTS)) {
+    if (Glib::file_test (pp->raw.ff_file, Glib::FILE_TEST_EXISTS)) {
         flatFieldFile->set_filename (pp->raw.ff_file);
     } else {
         flatFieldFile_Reset();
@@ -392,28 +391,21 @@ void FlatField::flatFieldAutoSelectChanged()
 
 }
 
-void FlatField::setShortcutPath(Glib::ustring path)
+void FlatField::setShortcutPath(const Glib::ustring& path)
 {
-    if (path == "") {
+    if (path.empty ()) {
         return;
     }
 
-#ifdef WIN32
+    try {
 
-    // Dirty workaround, waiting for a clean solution by using exceptions!
-    if (!safe_is_shortcut_dir(path))
-#endif
-    {
-        if (lastShortcutPath != "") {
-            try {
-                flatFieldFile->remove_shortcut_folder(lastShortcutPath);
-            } catch (Glib::Error &err) {}
+        if (!lastShortcutPath.empty ()) {
+            flatFieldFile->remove_shortcut_folder (lastShortcutPath);
         }
+
+        flatFieldFile->add_shortcut_folder (path);
 
         lastShortcutPath = path;
 
-        try {
-            flatFieldFile->add_shortcut_folder(path);
-        } catch (Glib::Error &err) {}
-    }
+    } catch (Glib::Error&) {}
 }

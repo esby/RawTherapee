@@ -126,6 +126,10 @@ public:
     void redo ();
 
     bool blistenerLock;
+    void resetSnapShotNumber()
+    {
+        bmnum = 1;
+    };
 };
 
 #endif

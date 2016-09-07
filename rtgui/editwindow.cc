@@ -24,8 +24,6 @@
 #include "rtimage.h"
 #include "threadutils.h"
 
-static EditWindow* editWnd = NULL;
-
 // Check if the system has more than one display and option is set
 bool EditWindow::isMultiDisplayEnabled()
 {
@@ -35,29 +33,26 @@ bool EditWindow::isMultiDisplayEnabled()
 // Should only be created once, auto-creates window on correct display
 EditWindow* EditWindow::getInstance(RTWindow* p)
 {
+    struct EditWindowInstance
+    {
+        EditWindow editWnd;
 
-    if (editWnd == NULL) {
-        static MyMutex smutex_;
-        MyMutex::MyLock lock(smutex_);
-
-        if ( editWnd == 0 ) {
-            editWnd = new EditWindow(p);
-
+        EditWindowInstance(RTWindow* p) : editWnd(p)
+        {
             // Determine the other display and maximize the window on that
             const Glib::RefPtr< Gdk::Window >& wnd = p->get_window();
             int monNo = p->get_screen()->get_monitor_at_window (wnd);
 
             Gdk::Rectangle lMonitorRect;
-            editWnd->get_screen()->get_monitor_geometry(isMultiDisplayEnabled() ? (monNo == 0 ?  1 : 0) : monNo, lMonitorRect);
-            editWnd->move(lMonitorRect.get_x(), lMonitorRect.get_y());
-            editWnd->maximize();
-            editWnd->show();
-        } else {
-            editWnd->show_all();
+            editWnd.get_screen()->get_monitor_geometry(isMultiDisplayEnabled() ? (monNo == 0 ?  1 : 0) : monNo, lMonitorRect);
+            editWnd.move(lMonitorRect.get_x(), lMonitorRect.get_y());
+            editWnd.maximize();
         }
-    }
+    };
 
-    return editWnd;
+    static EditWindowInstance instance_(p);
+    instance_.editWnd.show_all();
+    return &instance_.editWnd;
 }
 
 EditWindow::EditWindow (RTWindow* p) : parent(p) , isFullscreen(false)
@@ -66,20 +61,12 @@ EditWindow::EditWindow (RTWindow* p) : parent(p) , isFullscreen(false)
     Glib::ustring fName = "rt-logo.png";
     Glib::ustring fullPath = RTImage::findIconAbsolutePath(fName);
 
-#ifdef GLIBMM_EXCEPTIONS_ENABLED
-
     try {
         set_default_icon_from_file (fullPath);
     } catch(Glib::Exception& ex) {
         printf ("%s\n", ex.what().c_str());
     }
 
-#else
-    {
-        std::auto_ptr<Glib::Error> error;
-        set_default_icon_from_file (fullPath, error);
-    }
-#endif //GLIBMM_EXCEPTIONS_ENABLED
     set_title_decorated("");
     property_allow_shrink() = true;
     set_modal(false);
@@ -240,7 +227,7 @@ bool EditWindow::on_delete_event(GdkEventAny* event)
     // Check if any editor is still processing, and do NOT quit if so. Otherwise crashes and inconsistent caches
     bool isProcessing = false;
 
-    for ( std::set <Glib::ustring>::iterator iter = filesEdited.begin(); iter != filesEdited.end() && !isProcessing; iter++ ) {
+    for ( std::set <Glib::ustring>::iterator iter = filesEdited.begin(); iter != filesEdited.end() && !isProcessing; ++iter ) {
         if (epanels[*iter]->getIsProcessing()) {
             isProcessing = true;
         }
@@ -250,7 +237,7 @@ bool EditWindow::on_delete_event(GdkEventAny* event)
         return true;
     }
 
-    for ( std::set <Glib::ustring>::iterator iter = filesEdited.begin(); iter != filesEdited.end(); iter++ ) {
+    for ( std::set <Glib::ustring>::iterator iter = filesEdited.begin(); iter != filesEdited.end(); ++iter ) {
         mainNB->remove_page (*epanels[*iter]);
     }
 

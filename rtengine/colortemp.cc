@@ -70,7 +70,7 @@ static const double cie_colour_match_jd[97][3] = {//350nm to 830nm   5 nm J.Desm
     {0.000001251141, 0.00000045181, 0.000000}
 };
 
-ColorTemp::ColorTemp (double t, double g, double e, Glib::ustring m) : temp(t), green(g), equal(e), method(m)
+ColorTemp::ColorTemp (double t, double g, double e, const Glib::ustring &m) : temp(t), green(g), equal(e), method(m)
 {
 
     clip (temp, green, equal);
@@ -114,13 +114,12 @@ void ColorTemp::clip (double &temp, double &green, double &equal)
     }
 }
 
-ColorTemp::ColorTemp (double mulr, double mulg, double mulb, double e) : equal(e)
+ColorTemp::ColorTemp (double mulr, double mulg, double mulb, double e) : equal(e), method("Custom")
 {
-    method = "Custom";
     mul2temp (mulr, mulg, mulb, equal, temp, green);
 }
 
-void ColorTemp::mul2temp (const double rmul, const double gmul, const double bmul, const double equal, double& temp, double& green)
+void ColorTemp::mul2temp (const double rmul, const double gmul, const double bmul, const double equal, double& temp, double& green) const
 {
 
     double maxtemp = double(MAXTEMP), mintemp = double(MINTEMP);
@@ -849,7 +848,7 @@ const double ColorTemp::ColabSky42_0_m24_spect[97] = {
 
 /* LERP(a,b,c) = linear interpolation macro, is 'a' when c == 0.0 and 'b' when c == 1.0 */
 #define LERP(a,b,c)     (((b) - (a)) * (c) + (a))
-int ColorTemp::XYZtoCorColorTemp(double x0, double y0, double z0, double &temp)
+int ColorTemp::XYZtoCorColorTemp(double x0, double y0, double z0, double &temp) const
 {
 
     typedef struct UVT {
@@ -1128,7 +1127,7 @@ void ColorTemp::temp2mulxyz (double tem, double gree, std::string method , doubl
     //printf("Xxyz=%f Zxyz=%f\n",Xxyz,Zxyz);
 }
 
-void ColorTemp::temp2mul (double temp, double green, double equal, double& rmul, double& gmul, double& bmul)
+void ColorTemp::temp2mul (double temp, double green, double equal, double& rmul, double& gmul, double& bmul) const
 {
 
     clip (temp, green, equal);
@@ -1414,19 +1413,19 @@ void ColorTemp::temp2mul (double temp, double green, double equal, double& rmul,
 
             // xr, yr , zr > epsilon
             if(xr[i] > epsilon) {
-                fx[i] = pow(xr[i], 0.333);
+                fx[i] = std::cbrt(xr[i]);
             } else {
                 fx[i] = (903.3 * xr[i] + 16.0) / 116.0;
             }
 
             if(yr[i] > epsilon) {
-                fy[i] = pow(yr[i], 0.333);
+                fy[i] = std::cbrt(yr[i]);
             } else {
                 fy[i] = (903.3 * yr[i] + 16.0) / 116.0;
             }
 
             if(zr[i] > epsilon) {
-                fz[i] = pow(zr[i], 0.333);
+                fz[i] = std::cbrt(zr[i]);
             } else {
                 fz[i] = (903.3 * zr[i] + 16.0) / 116.0;
             }
@@ -1663,19 +1662,19 @@ void ColorTemp::temp2mul (double temp, double green, double equal, double& rmul,
 
                 // xr, yr , zr > epsilon
                 if(xr[i] > epsilon) {
-                    fx[i] = pow(xr[i], 0.333);
+                    fx[i] = std::cbrt(xr[i]);
                 } else {
                     fx[i] = (903.3 * xr[i] + 16.0) / 116.0;
                 }
 
                 if(yr[i] > epsilon) {
-                    fy[i] = pow(yr[i], 0.333);
+                    fy[i] = std::cbrt(yr[i]);
                 } else {
                     fy[i] = (903.3 * yr[i] + 16.0) / 116.0;
                 }
 
                 if(zr[i] > epsilon) {
-                    fz[i] = pow(zr[i], 0.333);
+                    fz[i] = std::cbrt(zr[i]);
                 } else {
                     fz[i] = (903.3 * zr[i] + 16.0) / 116.0;
                 }
@@ -1695,19 +1694,19 @@ void ColorTemp::temp2mul (double temp, double green, double equal, double& rmul,
 
                 //
                 if(xr[i] > epsilon) {
-                    fx[i] = pow(xr[i], 0.333);
+                    fx[i] = std::cbrt(xr[i]);
                 } else {
                     fx[i] = (903.3 * xr[i] + 16.0) / 116.0;
                 }
 
                 if(yr[i] > epsilon) {
-                    fy[i] = pow(yr[i], 0.333);
+                    fy[i] = std::cbrt(yr[i]);
                 } else {
                     fy[i] = (903.3 * yr[i] + 16.0) / 116.0;
                 }
 
                 if(zr[i] > epsilon) {
-                    fz[i] = pow(zr[i], 0.333);
+                    fz[i] = std::cbrt(zr[i]);
                 } else {
                     fz[i] = (903.3 * zr[i] + 16.0) / 116.0;
                 }
@@ -1794,7 +1793,7 @@ The next 3 methods are inspired from:
       This program is in the public domain.
 
    b) Bruce Lindbloom
-      Adapted to Rawtherapee by J.Desmis
+      Adapted to RawTherapee by J.Desmis
 
 this values are often called xBar yBar zBar and are characteristics of a color / illuminant
 

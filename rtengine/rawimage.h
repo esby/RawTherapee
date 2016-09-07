@@ -44,7 +44,7 @@ public:
     PixelsMap(int width, int height )
         : h(height)
     {
-        w = (width + base_t_size - 1) / base_t_size;
+        w = (width / (base_t_size * 8)) + 1;
         pm = new base_t [h * w ];
         memset(pm, 0, h * w * base_t_size );
     }
@@ -99,7 +99,7 @@ class RawImage: public DCraw
 {
 public:
 
-    RawImage(  const Glib::ustring name );
+    RawImage(  const Glib::ustring &name );
     ~RawImage();
 
     int loadRaw (bool loadData = true, bool closeFile = true, ProgressListener *plistener = 0, double progressRange = 1.0);
@@ -275,6 +275,8 @@ public:
         return ifp;
     }
     bool is_supportedThumb() const ;
+    bool is_jpegThumb() const ;
+    bool is_ppmThumb() const ;
     int get_thumbOffset()
     {
         return int(thumb_offset);

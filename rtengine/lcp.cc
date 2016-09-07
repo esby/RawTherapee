@@ -19,7 +19,6 @@
 #include <cstring>
 
 #include "lcp.h"
-#include "safegtk.h"
 #include "iccmatrices.h"
 #include "iccstore.h"
 #include "rawimagesource.h"
@@ -303,7 +302,7 @@ LCPProfile::LCPProfile(Glib::ustring fname)
     persModelCount = 0;
     *inInvalidTag = 0;
 
-    FILE *pFile = safe_g_fopen(fname, "rb");
+    FILE *pFile = g_fopen(fname.c_str (), "rb");
 
     bool done;
 
@@ -781,18 +780,8 @@ void XMLCALL LCPProfile::XmlEndHandler(void *pLCPProfile, const char *el)
 // Generates as singleton
 LCPStore* LCPStore::getInstance()
 {
-    static LCPStore* instance_ = 0;
-
-    if ( instance_ == 0 ) {
-        static MyMutex smutex_;
-        MyMutex::MyLock lock(smutex_);
-
-        if ( instance_ == 0 ) {
-            instance_ = new LCPStore();
-        }
-    }
-
-    return instance_;
+    static LCPStore instance_;
+    return &instance_;
 }
 
 LCPProfile* LCPStore::getProfile (Glib::ustring filename)
@@ -817,7 +806,7 @@ LCPProfile* LCPStore::getProfile (Glib::ustring filename)
 
 bool LCPStore::isValidLCPFileName(Glib::ustring filename) const
 {
-    if (!safe_file_test (filename, Glib::FILE_TEST_EXISTS) || safe_file_test (filename, Glib::FILE_TEST_IS_DIR)) {
+    if (!Glib::file_test (filename, Glib::FILE_TEST_EXISTS) || Glib::file_test (filename, Glib::FILE_TEST_IS_DIR)) {
         return false;
     }
 
@@ -838,7 +827,7 @@ Glib::ustring LCPStore::getDefaultCommonDirectory() const
         WideCharToMultiByte(CP_UTF8, 0, pathW, -1, pathA, MAX_PATH, 0, 0);
         Glib::ustring fullDir = Glib::ustring(pathA) + Glib::ustring("\\Adobe\\CameraRaw\\LensProfiles\\1.0");
 
-        if (safe_file_test(fullDir, Glib::FILE_TEST_IS_DIR)) {
+        if (Glib::file_test (fullDir, Glib::FILE_TEST_IS_DIR)) {
             dir = fullDir;
         }
     }

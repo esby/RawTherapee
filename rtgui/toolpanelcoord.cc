@@ -132,12 +132,14 @@ ToolPanelCoordinator::ToolPanelCoordinator () : ipc(NULL)
     colortoning         = Gtk::manage (new ColorToning ());
     lensgeom            = Gtk::manage (new LensGeometry ());
     lensProf            = Gtk::manage (new LensProfilePanel ());
+    lensProf->setLensGeomRef(lensgeom);
     distortion          = Gtk::manage (new Distortion ());
     rotate              = Gtk::manage (new Rotate ());
     vibrance            = Gtk::manage (new Vibrance ());
     colorappearance     = Gtk::manage (new ColorAppearance ());
     whitebalance        = Gtk::manage (new WhiteBalance ());
     vignetting          = Gtk::manage (new Vignetting ());
+    retinex               = Gtk::manage (new Retinex ());
     gradient            = Gtk::manage (new Gradient ());
     pcvignette          = Gtk::manage (new PCVignette ());
     perspective         = Gtk::manage (new PerspCorrection ());
@@ -438,6 +440,23 @@ void ToolPanelCoordinator::panelChanged (rtengine::ProcEvent event, const Glib::
         }
     }
 
+    int tr = TR_NONE;
+    if (params->coarse.rotate == 90) {
+        tr = TR_R90;
+    } else if (params->coarse.rotate == 180) {
+        tr = TR_R180;
+    } else if (params->coarse.rotate == 270) {
+        tr = TR_R270;
+    }
+
+    // Update "on preview" geometry
+    if (event == rtengine::EvPhotoLoaded || event == rtengine::EvProfileChanged || event == rtengine::EvHistoryBrowsed || event == rtengine::EvCTRotate) {
+        // updating the "on preview" geometry
+        int fw, fh;
+        ipc->getInitialImage()->getImageSource()->getFullSize (fw, fh, tr);
+        gradient->updateGeometry (params->gradient.centerX, params->gradient.centerY, params->gradient.feather, params->gradient.degree, fw, fh);
+    }
+
     // some transformations make the crop change for convenience
     if (event == rtengine::EvCTHFlip) {
         crop->hFlipCrop ();
@@ -459,8 +478,8 @@ void ToolPanelCoordinator::panelChanged (rtengine::ProcEvent event, const Glib::
 
     hasChanged = true;
 
-    for (size_t i = 0; i < paramcListeners.size(); i++) {
-        paramcListeners[i]->procParamsChanged (params, event, descr);
+    for (auto paramcListener : paramcListeners) {
+        paramcListener->procParamsChanged (params, event, descr);
     }
 }
 
@@ -498,29 +517,23 @@ void ToolPanelCoordinator::profileChange  (const PartialProfile *nparams, rtengi
         lParams[1] = *mergedParams;
         pe.initFrom (lParams);
 
-        filterRawRefresh = pe.raw.isUnchanged() && pe.lensProf.isUnchanged();
+        filterRawRefresh = pe.raw.isUnchanged() && pe.lensProf.isUnchanged() && pe.retinex.isUnchanged();
     }
 
     *params = *mergedParams;
     delete mergedParams;
 
     tr = TR_NONE;
-
     if (params->coarse.rotate == 90) {
-        tr |= TR_R90;
-    }
-
-    if (params->coarse.rotate == 180) {
-        tr |= TR_R180;
-    }
-
-    if (params->coarse.rotate == 270) {
-        tr |= TR_R270;
+        tr = TR_R90;
+    } else if (params->coarse.rotate == 180) {
+        tr = TR_R180;
+    } else if (params->coarse.rotate == 270) {
+        tr = TR_R270;
     }
 
     // trimming overflowing cropped area
-    rtengine::ImageSource *ii = (rtengine::ImageSource*)ipc->getInitialImage();
-    ii->getFullSize (fw, fh, tr);
+    ipc->getInitialImage()->getImageSource()->getFullSize (fw, fh, tr);
     crop->trim(params, fw, fh);
 
     // updating the GUI with updated values
@@ -529,6 +542,11 @@ void ToolPanelCoordinator::profileChange  (const PartialProfile *nparams, rtengi
         if (event==rtengine::EvPhotoLoaded || event==rtengine::EvProfileChanged)
             env->getPanel(i)->autoOpenCurve();
         }
+
+    if (event == rtengine::EvPhotoLoaded || event == rtengine::EvProfileChanged || event == rtengine::EvHistoryBrowsed || event == rtengine::EvCTRotate) {
+        // updating the "on preview" geometry
+        gradient->updateGeometry (params->gradient.centerX, params->gradient.centerY, params->gradient.feather, params->gradient.degree, fw, fh);
+    }
 
     // start the IPC processing
     if (filterRawRefresh) {
@@ -539,8 +557,8 @@ void ToolPanelCoordinator::profileChange  (const PartialProfile *nparams, rtengi
 
     hasChanged = event != rtengine::EvProfileChangeNotification;
 
-    for (size_t i = 0; i < paramcListeners.size(); i++) {
-        paramcListeners[i]->procParamsChanged (params, event, descr);
+    for (auto paramcListener : paramcListeners) {
+        paramcListener->procParamsChanged (params, event, descr);
     }
 }
 
@@ -577,6 +595,7 @@ void ToolPanelCoordinator::initImage (rtengine::StagedImageProcessor* ipc_, bool
         ipc->setAutoColorTonListener (colortoning);
         ipc->setAutoChromaListener (dirpyrdenoise);
         ipc->setWaveletListener (wavelet);
+        ipc->setRetinexListener (retinex);
 
         ipc->setSizeListener (crop);
         ipc->setSizeListener (resize);
@@ -664,6 +683,7 @@ void ToolPanelCoordinator::writeOptions ()
         options.tpOpen.push_back (env->getExpander(i)->get_expanded ());
 
     wavelet->writeOptions(options.tpOpen);
+    retinex->writeOptions(options.tpOpen);
 }
 
 
@@ -837,12 +857,14 @@ int ToolPanelCoordinator::getSpotWBRectSize ()
     return whitebalance->getSize ();
 }
 
-void ToolPanelCoordinator::updateCurveBackgroundHistogram (LUTu & histToneCurve, LUTu & histLCurve, LUTu & histCCurve, /*LUTu & histCLurve, LUTu & histLLCurve,*/ LUTu & histLCAM, LUTu & histCCAM, LUTu & histRed, LUTu & histGreen, LUTu & histBlue, LUTu & histLuma)
+void ToolPanelCoordinator::updateCurveBackgroundHistogram (LUTu & histToneCurve, LUTu & histLCurve, LUTu & histCCurve, /*LUTu & histCLurve, LUTu & histLLCurve,*/ LUTu & histLCAM, LUTu & histCCAM, LUTu & histRed, LUTu & histGreen, LUTu & histBlue, LUTu & histLuma, LUTu & histLRETI)
 {
-    colorappearance->updateCurveBackgroundHistogram (histToneCurve, histLCurve, histCCurve, /*histCLurve, histLLCurve,*/ histLCAM,  histCCAM, histRed, histGreen, histBlue, histLuma);
-    toneCurve->updateCurveBackgroundHistogram (histToneCurve, histLCurve, histCCurve,/* histCLurve, histLLCurve,*/ histLCAM,  histCCAM, histRed, histGreen, histBlue, histLuma);
-    lcurve->updateCurveBackgroundHistogram (histToneCurve, histLCurve, histCCurve, /*histCLurve, histLLCurve,*/ histLCAM, histCCAM, histRed, histGreen, histBlue, histLuma);
-    rgbcurves->updateCurveBackgroundHistogram(histToneCurve, histLCurve, histCCurve,/* histCLurve, histLLCurve, */histLCAM, histCCAM, histRed, histGreen, histBlue, histLuma);
+    colorappearance->updateCurveBackgroundHistogram (histToneCurve, histLCurve, histCCurve, /*histCLurve, histLLCurve,*/ histLCAM,  histCCAM, histRed, histGreen, histBlue, histLuma, histLRETI);
+    toneCurve->updateCurveBackgroundHistogram (histToneCurve, histLCurve, histCCurve,/* histCLurve, histLLCurve,*/ histLCAM,  histCCAM, histRed, histGreen, histBlue, histLuma, histLRETI);
+    lcurve->updateCurveBackgroundHistogram (histToneCurve, histLCurve, histCCurve, /*histCLurve, histLLCurve,*/ histLCAM, histCCAM, histRed, histGreen, histBlue, histLuma, histLRETI);
+    rgbcurves->updateCurveBackgroundHistogram(histToneCurve, histLCurve, histCCurve,/* histCLurve, histLLCurve, */histLCAM, histCCAM, histRed, histGreen, histBlue, histLuma, histLRETI);
+    retinex->updateCurveBackgroundHistogram(histToneCurve, histLCurve, histCCurve,/* histCLurve, histLLCurve, */histLCAM, histCCAM, histRed, histGreen, histBlue, histLuma, histLRETI);
+
 }
 
 void ToolPanelCoordinator::foldAllButOne (Gtk::Box* parent, FoldableToolPanel* openedSection)

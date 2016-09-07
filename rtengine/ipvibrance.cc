@@ -59,9 +59,7 @@ void fillCurveArrayVib(DiagonalCurve* diagCurve, LUTf &outCurve)
             outCurve[i] = 65535.f * diagCurve->getVal( double(i) / 65535.0 );
         }
     } else {
-        for (int i = 0; i <= 0xffff; i++) {
-            outCurve[i] = float(i);
-        }
+        outCurve.makeIdentity();
     }
 }
 
@@ -188,7 +186,7 @@ void ImProcFunctions::vibrance (LabImage* lab)
         MunsDebugInfo = new MunsellDebugInfo();
     }
 
-    #pragma omp parallel default(shared) firstprivate(lab, width, height, chromaPastel, chromaSatur, highlight, limitpastelsatur, transitionweighting, protectskins, avoidcolorshift, MunsDebugInfo) reduction(+: negat, moreRGB, negsat, moresat) if (multiThread)
+    #pragma omp parallel default(shared) firstprivate(lab, MunsDebugInfo) reduction(+: negat, moreRGB, negsat, moresat) if (multiThread)
 #else
     #pragma omp parallel default(shared) if (multiThread)
 #endif

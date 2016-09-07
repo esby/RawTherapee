@@ -19,6 +19,7 @@
  *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "filebrowser.h"
+#include <map>
 #include <glibmm.h>
 #include "options.h"
 #include "multilangmgr.h"
@@ -31,6 +32,98 @@
 #include "threadutils.h"
 
 extern Options options;
+
+namespace
+{
+
+const Glib::ustring* getOriginalExtension (const ThumbBrowserEntryBase* entry)
+{
+    // We use the parsed extensions as a priority list,
+    // i.e. what comes earlier in the list is considered an original of what comes later.
+    typedef std::vector<Glib::ustring> ExtensionVector;
+    typedef ExtensionVector::const_iterator ExtensionIterator;
+
+    const ExtensionVector& originalExtensions = options.parsedExtensions;
+
+    // Extract extension from basename
+    const Glib::ustring basename = Glib::path_get_basename (entry->filename.lowercase());
+
+    const Glib::ustring::size_type pos = basename.find_last_of ('.');
+    if (pos >= basename.length () - 1) {
+        return NULL;
+    }
+
+    const Glib::ustring extension = basename.substr (pos + 1);
+
+    // Try to find a matching original extension
+    for (ExtensionIterator originalExtension = originalExtensions.begin(); originalExtension != originalExtensions.end(); ++originalExtension) {
+        if (*originalExtension == extension) {
+            return &*originalExtension;
+        }
+    }
+
+    return NULL;
+}
+
+ThumbBrowserEntryBase* selectOriginalEntry (ThumbBrowserEntryBase* original, ThumbBrowserEntryBase* candidate)
+{
+    if (original == NULL) {
+        return candidate;
+    }
+
+    // The candidate will become the new original, if it has an original extension
+    // and if its extension is higher in the list than the old original.
+    if (const Glib::ustring* candidateExtension = getOriginalExtension (candidate)) {
+        if (const Glib::ustring* originalExtension = getOriginalExtension (original)) {
+            return candidateExtension < originalExtension ? candidate : original;
+        }
+    }
+
+    return original;
+}
+
+void findOriginalEntries (const std::vector<ThumbBrowserEntryBase*>& entries)
+{
+    typedef std::vector<ThumbBrowserEntryBase*> EntryVector;
+    typedef EntryVector::const_iterator EntryIterator;
+    typedef std::map<Glib::ustring, EntryVector> BasenameMap;
+    typedef BasenameMap::const_iterator BasenameIterator;
+
+    // Sort all entries into buckets by basename without extension
+    BasenameMap byBasename;
+
+    for (EntryIterator entry = entries.begin (); entry != entries.end (); ++entry) {
+        const Glib::ustring basename = Glib::path_get_basename ((*entry)->filename.lowercase());
+
+        const Glib::ustring::size_type pos = basename.find_last_of ('.');
+        if (pos >= basename.length () - 1) {
+            (*entry)->setOriginal (NULL);
+            continue;
+        }
+
+        const Glib::ustring withoutExtension = basename.substr (0, pos);
+
+        byBasename[withoutExtension].push_back (*entry);
+    }
+
+    // Find the original image for each bucket
+    for (BasenameIterator bucket = byBasename.begin (); bucket != byBasename.end (); ++bucket) {
+        const EntryVector& entries = bucket->second;
+        ThumbBrowserEntryBase* original = NULL;
+
+        // Select the most likely original in a first pass...
+        for (EntryIterator entry = entries.begin (); entry != entries.end (); ++entry) {
+            original = selectOriginalEntry (original, *entry);
+        }
+
+        // ...and link all other images to it in a second pass.
+        for (EntryIterator entry = entries.begin (); entry != entries.end (); ++entry) {
+            (*entry)->setOriginal (*entry != original ? original : NULL);
+        }
+    }
+}
+
+}
 
 FileBrowser::FileBrowser ()
     : tbl(NULL), numFiltered(0), partialPasteDlg(M("PARTIALPASTE_DIALOGLABEL"))
@@ -129,7 +222,7 @@ FileBrowser::FileBrowser ()
     /***********************
      * external programs
      * *********************/
-#if defined(WIN32) && defined(PROTECT_VECTORS)
+#if defined(WIN32)
     Gtk::manage(miOpenDefaultViewer = new Gtk::MenuItem (M("FILEBROWSER_OPENDEFAULTVIEWER")));
 #else
     miOpenDefaultViewer = NULL;
@@ -139,11 +232,9 @@ FileBrowser::FileBrowser ()
     mMenuExtProgs.clear();
     amiExtProg = NULL;
 
-    for (std::list<ExtProgAction*>::iterator it = extProgStore->lActions.begin(); it != extProgStore->lActions.end(); it++) {
-        ExtProgAction* pAct = *it;
-
-        if (pAct->target == 1 || pAct->target == 2) {
-            mMenuExtProgs[pAct->GetFullName()] = pAct;
+    for (const auto& action : extProgStore->getActions ()) {
+        if (action.target == 1 || action.target == 2) {
+            mMenuExtProgs[action.getFullName ()] = &action;
         }
     }
 
@@ -162,7 +253,7 @@ FileBrowser::FileBrowser ()
                 p++;
             }
 
-            for (std::map<Glib::ustring, ExtProgAction*>::iterator it = mMenuExtProgs.begin(); it != mMenuExtProgs.end(); it++, itemNo++) {
+            for (auto it = mMenuExtProgs.begin(); it != mMenuExtProgs.end(); it++, itemNo++) {
                 submenuExtProg->attach (*Gtk::manage(amiExtProg[itemNo] = new Gtk::MenuItem ((*it).first)), 0, 1, p, p + 1);
                 p++;
             }
@@ -175,7 +266,7 @@ FileBrowser::FileBrowser ()
                 p++;
             }
 
-            for (std::map<Glib::ustring, ExtProgAction*>::iterator it = mMenuExtProgs.begin(); it != mMenuExtProgs.end(); it++, itemNo++) {
+            for (auto it = mMenuExtProgs.begin(); it != mMenuExtProgs.end(); it++, itemNo++) {
                 pmenu->attach (*Gtk::manage(amiExtProg[itemNo] = new Gtk::MenuItem ((*it).first)), 0, 1, p, p + 1);
                 p++;
             }
@@ -390,9 +481,7 @@ void FileBrowser::rightClicked (ThumbBrowserEntryBase* entry)
 {
 
     {
-#if PROTECT_VECTORS
         MYREADERLOCK(l, entryRW);
-#endif
 
         trash->set_sensitive (false);
         untrash->set_sensitive (false);
@@ -529,14 +618,12 @@ void FileBrowser::addEntry_ (FileBrowserEntry* entry)
 
     // find place in abc order
     {
-#if PROTECT_VECTORS
         MYWRITERLOCK(l, entryRW);
-#endif
 
         std::vector<ThumbBrowserEntryBase*>::iterator i = fd.begin();
 
         while (i != fd.end() && *entry < * ((FileBrowserEntry*)*i)) {
-            i++;
+            ++i;
         }
 
         fd.insert (i, entry);
@@ -551,20 +638,16 @@ void FileBrowser::addEntry_ (FileBrowserEntry* entry)
 
 FileBrowserEntry* FileBrowser::delEntry (const Glib::ustring& fname)
 {
-#if PROTECT_VECTORS
     MYWRITERLOCK(l, entryRW);
-#endif
 
-    for (std::vector<ThumbBrowserEntryBase*>::iterator i = fd.begin(); i != fd.end(); i++)
+    for (std::vector<ThumbBrowserEntryBase*>::iterator i = fd.begin(); i != fd.end(); ++i)
         if ((*i)->filename == fname) {
             ThumbBrowserEntryBase* entry = *i;
             entry->selected = false;
             fd.erase (i);
             std::vector<ThumbBrowserEntryBase*>::iterator j = std::find (selected.begin(), selected.end(), entry);
 
-#if PROTECT_VECTORS
             MYWRITERLOCK_RELEASE(l);
-#endif
 
             if (j != selected.end()) {
                 if (checkFilter (*j)) {
@@ -601,21 +684,15 @@ void FileBrowser::close ()
     fbih->pending = 0;
 
     {
-#if PROTECT_VECTORS
         MYWRITERLOCK(l, entryRW);
-#endif
 
         selected.clear ();
 
-#if PROTECT_VECTORS
         MYWRITERLOCK_RELEASE(l); // notifySelectionListener will need read access!
-#endif
 
         notifySelectionListener ();
 
-#if PROTECT_VECTORS
         MYWRITERLOCK_ACQUIRE(l);
-#endif
 
         // The listener merges parameters with old values, so delete afterwards
         for (size_t i = 0; i < fd.size(); i++) {
@@ -647,9 +724,7 @@ void FileBrowser::menuItemActivated (Gtk::MenuItem* m)
     std::vector<FileBrowserEntry*> mselected;
 
     {
-#if PROTECT_VECTORS
         MYREADERLOCK(l, entryRW);
-#endif
 
         for (size_t i = 0; i < selected.size(); i++) {
             mselected.push_back (static_cast<FileBrowserEntry*>(selected[i]));
@@ -675,7 +750,7 @@ void FileBrowser::menuItemActivated (Gtk::MenuItem* m)
 
     for (int j = 0; j < mMenuExtProgs.size(); j++) {
         if (m == amiExtProg[j]) {
-            ExtProgAction* pAct = mMenuExtProgs[m->get_label()];
+            const auto pAct = mMenuExtProgs[m->get_label()];
 
             // Build vector of all file names
             std::vector<Glib::ustring> selFileNames;
@@ -691,7 +766,7 @@ void FileBrowser::menuItemActivated (Gtk::MenuItem* m)
                 selFileNames.push_back(fn);
             }
 
-            pAct->Execute(selFileNames);
+            pAct->execute (selFileNames);
             return;
         }
     }
@@ -719,9 +794,7 @@ void FileBrowser::menuItemActivated (Gtk::MenuItem* m)
     } else if (m == selall) {
         lastClicked = NULL;
         {
-#if PROTECT_VECTORS
             MYWRITERLOCK(l, entryRW);
-#endif
 
             selected.clear ();
 
@@ -760,8 +833,8 @@ void FileBrowser::menuItemActivated (Gtk::MenuItem* m)
     } else if (m == selectDF) {
         if( !mselected.empty() ) {
             rtengine::procparams::ProcParams pp = mselected[0]->thumbnail->getProcParams();
-            Gtk::FileChooserDialog fc("Dark Frame", Gtk::FILE_CHOOSER_ACTION_OPEN );
-            FileChooserLastFolderPersister persister(&fc, options.lastDarkframeDir);
+            Gtk::FileChooserDialog fc (getToplevelWindow (this), "Dark Frame", Gtk::FILE_CHOOSER_ACTION_OPEN );
+            bindCurrentFolder (fc, options.lastDarkframeDir);
             fc.add_button( Gtk::StockID("gtk-cancel"), Gtk::RESPONSE_CANCEL);
             fc.add_button( Gtk::StockID("gtk-apply"), Gtk::RESPONSE_APPLY);
 
@@ -836,8 +909,8 @@ void FileBrowser::menuItemActivated (Gtk::MenuItem* m)
     } else if (m == selectFF) {
         if( !mselected.empty() ) {
             rtengine::procparams::ProcParams pp = mselected[0]->thumbnail->getProcParams();
-            Gtk::FileChooserDialog fc("Flat Field", Gtk::FILE_CHOOSER_ACTION_OPEN );
-            FileChooserLastFolderPersister persister(&fc, options.lastFlatfieldDir);
+            Gtk::FileChooserDialog fc (getToplevelWindow (this), "Flat Field", Gtk::FILE_CHOOSER_ACTION_OPEN );
+            bindCurrentFolder (fc, options.lastFlatfieldDir);
             fc.add_button( Gtk::StockID("gtk-cancel"), Gtk::RESPONSE_CANCEL);
             fc.add_button( Gtk::StockID("gtk-apply"), Gtk::RESPONSE_APPLY);
 
@@ -941,9 +1014,7 @@ void FileBrowser::menuItemActivated (Gtk::MenuItem* m)
 
 void FileBrowser::copyProfile ()
 {
-#if PROTECT_VECTORS
     MYREADERLOCK(l, entryRW);
-#endif
 
     if (selected.size() == 1) {
         clipboard.setProcParams ((static_cast<FileBrowserEntry*>(selected[0]))->thumbnail->getProcParams());
@@ -956,9 +1027,7 @@ void FileBrowser::pasteProfile ()
     if (clipboard.hasProcParams()) {
         std::vector<FileBrowserEntry*> mselected;
         {
-#if PROTECT_VECTORS
             MYREADERLOCK(l, entryRW);
-#endif
 
             for (unsigned int i = 0; i < selected.size(); i++) {
                 mselected.push_back (static_cast<FileBrowserEntry*>(selected[i]));
@@ -998,9 +1067,7 @@ void FileBrowser::partPasteProfile ()
 
         std::vector<FileBrowserEntry*> mselected;
         {
-#if PROTECT_VECTORS
             MYREADERLOCK(l, entryRW);
-#endif
 
             for (unsigned int i = 0; i < selected.size(); i++) {
                 mselected.push_back (static_cast<FileBrowserEntry*>(selected[i]));
@@ -1049,9 +1116,7 @@ void FileBrowser::openDefaultViewer (int destination)
     bool success = true;
 
     {
-#if PROTECT_VECTORS
         MYREADERLOCK(l, entryRW);
-#endif
 
         if (selected.size() == 1) {
             success = (static_cast<FileBrowserEntry*>(selected[0]))->thumbnail->openDefaultViewer(destination);
@@ -1285,10 +1350,7 @@ int FileBrowser::getThumbnailHeight ()
 
 void FileBrowser::applyMenuItemActivated (ProfileStoreLabel *label)
 {
-
-#if PROTECT_VECTORS
     MYREADERLOCK(l, entryRW);
-#endif
 
     const rtengine::procparams::PartialProfile* partProfile = profileStore.getProfile (label->entry);
 
@@ -1313,9 +1375,7 @@ void FileBrowser::applyPartialMenuItemActivated (ProfileStoreLabel *label)
 {
 
     {
-#if PROTECT_VECTORS
         MYREADERLOCK(l, entryRW);
-#endif
 
         if (!tbl || selected.empty()) {
             return;
@@ -1327,9 +1387,7 @@ void FileBrowser::applyPartialMenuItemActivated (ProfileStoreLabel *label)
     if (srcProfiles->pparams) {
         if (partialPasteDlg.run() == Gtk::RESPONSE_OK) {
 
-#if PROTECT_VECTORS
             MYREADERLOCK(l, entryRW);
-#endif
 
             if (bppcl) {
                 bppcl->beginBatchPParamsChange(selected.size());
@@ -1366,9 +1424,11 @@ void FileBrowser::applyFilter (const BrowserFilter& filter)
     bool selchanged = false;
     numFiltered = 0;
     {
-#if PROTECT_VECTORS
-        MYWRITERLOCK(l, entryRW);  // Don't make this a writer lock!  HOMBRE: Why? 'selected' is modified here
-#endif
+        MYWRITERLOCK(l, entryRW);
+
+        if (filter.showOriginal) {
+            findOriginalEntries(fd);
+        }
 
         for (size_t i = 0; i < fd.size(); i++) {
             if (checkFilter (fd[i])) {
@@ -1399,6 +1459,10 @@ bool FileBrowser::checkFilter (ThumbBrowserEntryBase* entryb)   // true -> entry
 {
 
     FileBrowserEntry* entry = static_cast<FileBrowserEntry*>(entryb);
+
+    if (filter.showOriginal && entry->getOriginal() != NULL) {
+        return false;
+    }
 
     // return false if basic filter settings are not satisfied
     if ((filter.showRanked[entry->thumbnail->getRank()] == false ) ||
@@ -1611,9 +1675,7 @@ void FileBrowser::requestRanking(int rank)
 {
     std::vector<FileBrowserEntry*> mselected;
     {
-#if PROTECT_VECTORS
         MYREADERLOCK(l, entryRW);
-#endif
 
         for (size_t i = 0; i < selected.size(); i++) {
             mselected.push_back (static_cast<FileBrowserEntry*>(selected[i]));
@@ -1627,9 +1689,7 @@ void FileBrowser::requestColorLabel(int colorlabel)
 {
     std::vector<FileBrowserEntry*> mselected;
     {
-#if PROTECT_VECTORS
         MYREADERLOCK(l, entryRW);
-#endif
 
         for (size_t i = 0; i < selected.size(); i++) {
             mselected.push_back (static_cast<FileBrowserEntry*>(selected[i]));
@@ -1669,9 +1729,7 @@ void FileBrowser::buttonPressed (LWButton* button, int actionCode, void* actionD
 
 void FileBrowser::openNextImage ()
 {
-#if PROTECT_VECTORS
     MYWRITERLOCK(l, entryRW);
-#endif
 
     if (!fd.empty() && selected.size() > 0 && !options.tabbedUI) {
 
@@ -1693,16 +1751,12 @@ void FileBrowser::openNextImage ()
                             selected.push_back (fd[k]);
                             //queue_draw ();
 
-#if PROTECT_VECTORS
                             MYWRITERLOCK_RELEASE(l);
-#endif
 
                             // this will require a read access
                             notifySelectionListener ();
 
-#if PROTECT_VECTORS
                             MYWRITERLOCK_ACQUIRE(l);
-#endif
 
                             // scroll to the selected position
                             double h1, v1;
@@ -1714,9 +1768,7 @@ void FileBrowser::openNextImage ()
                             Thumbnail* thumb = (static_cast<FileBrowserEntry*>(fd[k]))->thumbnail;
                             int minWidth = get_width() - fd[k]->getMinimalWidth();
 
-#if PROTECT_VECTORS
                             MYWRITERLOCK_RELEASE(l);
-#endif
 
                             // scroll only when selected[0] is outside of the displayed bounds
                             if (h2 + minWidth - h1 > get_width()) {
@@ -1742,9 +1794,7 @@ void FileBrowser::openNextImage ()
 
 void FileBrowser::openPrevImage ()
 {
-#if PROTECT_VECTORS
     MYWRITERLOCK(l, entryRW);
-#endif
 
     if (!fd.empty() && selected.size() > 0 && !options.tabbedUI) {
 
@@ -1766,16 +1816,12 @@ void FileBrowser::openPrevImage ()
                             selected.push_back (fd[k]);
                             //queue_draw ();
 
-#if PROTECT_VECTORS
                             MYWRITERLOCK_RELEASE(l);
-#endif
 
                             // this will require a read access
                             notifySelectionListener ();
 
-#if PROTECT_VECTORS
                             MYWRITERLOCK_ACQUIRE(l);
-#endif
 
                             // scroll to the selected position
                             double h1, v1;
@@ -1787,9 +1833,7 @@ void FileBrowser::openPrevImage ()
                             Thumbnail* thumb = (static_cast<FileBrowserEntry*>(fd[k]))->thumbnail;
                             int minWidth = get_width() - fd[k]->getMinimalWidth();
 
-#if PROTECT_VECTORS
                             MYWRITERLOCK_RELEASE(l);
-#endif
 
                             // scroll only when selected[0] is outside of the displayed bounds
                             if (h2 + minWidth - h1 > get_width()) {
@@ -1818,10 +1862,7 @@ void FileBrowser::selectImage (Glib::ustring fname)
 {
 
     // need to clear the filter in filecatalog
-
-#if PROTECT_VECTORS
     MYWRITERLOCK(l, entryRW);
-#endif
 
     if (!fd.empty() && !options.tabbedUI) {
         for (size_t i = 0; i < fd.size(); i++) {
@@ -1840,24 +1881,18 @@ void FileBrowser::selectImage (Glib::ustring fname)
                 selected.push_back (fd[i]);
                 queue_draw ();
 
-#if PROTECT_VECTORS
                 MYWRITERLOCK_RELEASE(l);
-#endif
 
                 // this will require a read access
                 notifySelectionListener ();
 
-#if PROTECT_VECTORS
                 MYWRITERLOCK_ACQUIRE(l);
-#endif
 
                 // scroll to the selected position
                 double h = selected[0]->getStartX();
                 double v = selected[0]->getStartY();
 
-#if PROTECT_VECTORS
                 MYWRITERLOCK_RELEASE(l);
-#endif
 
                 setScrollPosition(h, v);
 
@@ -1908,9 +1943,7 @@ void FileBrowser::notifySelectionListener ()
 {
 
     if (tbl) {
-#if PROTECT_VECTORS
         MYREADERLOCK(l, entryRW);
-#endif
 
         std::vector<Thumbnail*> thm;
 

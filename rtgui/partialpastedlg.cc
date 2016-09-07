@@ -52,6 +52,7 @@ PartialPasteDlg::PartialPasteDlg (Glib::ustring title)
     exposure    = Gtk::manage (new Gtk::CheckButton (M("PARTIALPASTE_EXPOSURE")));
     sh          = Gtk::manage (new Gtk::CheckButton (M("PARTIALPASTE_SHADOWSHIGHLIGHTS")));
     epd         = Gtk::manage (new Gtk::CheckButton (M("PARTIALPASTE_EPD")));
+    retinex       = Gtk::manage (new Gtk::CheckButton (M("PARTIALPASTE_RETINEX")));
     pcvignette  = Gtk::manage (new Gtk::CheckButton (M("PARTIALPASTE_PCVIGNETTE")));
     gradient    = Gtk::manage (new Gtk::CheckButton (M("PARTIALPASTE_GRADIENT")));
     labcurve    = Gtk::manage (new Gtk::CheckButton (M("PARTIALPASTE_LABCURVE")));
@@ -91,6 +92,7 @@ PartialPasteDlg::PartialPasteDlg (Glib::ustring title)
     finerot     = Gtk::manage (new Gtk::CheckButton (M("PARTIALPASTE_ROTATION")));
     crop        = Gtk::manage (new Gtk::CheckButton (M("PARTIALPASTE_CROP")));
     resize      = Gtk::manage (new Gtk::CheckButton (M("PARTIALPASTE_RESIZE")));
+    prsharpening     = Gtk::manage (new Gtk::CheckButton (M("PARTIALPASTE_PRSHARPENING")));
     perspective = Gtk::manage (new Gtk::CheckButton (M("PARTIALPASTE_PERSPECTIVE")));
     commonTrans = Gtk::manage (new Gtk::CheckButton (M("PARTIALPASTE_COMMONTRANSFORMPARAMS")));
 
@@ -141,6 +143,7 @@ PartialPasteDlg::PartialPasteDlg (Glib::ustring title)
     vboxes[0]->pack_start (*exposure, Gtk::PACK_SHRINK, 2);
     vboxes[0]->pack_start (*sh, Gtk::PACK_SHRINK, 2);
     vboxes[0]->pack_start (*epd, Gtk::PACK_SHRINK, 2);
+    vboxes[0]->pack_start (*retinex, Gtk::PACK_SHRINK, 2);
     vboxes[0]->pack_start (*pcvignette, Gtk::PACK_SHRINK, 2);
     vboxes[0]->pack_start (*gradient, Gtk::PACK_SHRINK, 2);
     vboxes[0]->pack_start (*labcurve, Gtk::PACK_SHRINK, 2);
@@ -185,6 +188,7 @@ PartialPasteDlg::PartialPasteDlg (Glib::ustring title)
     vboxes[4]->pack_start (*finerot, Gtk::PACK_SHRINK, 2);
     vboxes[4]->pack_start (*crop, Gtk::PACK_SHRINK, 2);
     vboxes[4]->pack_start (*resize, Gtk::PACK_SHRINK, 2);
+    vboxes[4]->pack_start (*prsharpening, Gtk::PACK_SHRINK, 2);
     vboxes[4]->pack_start (*perspective, Gtk::PACK_SHRINK, 2);
     vboxes[4]->pack_start (*commonTrans, Gtk::PACK_SHRINK, 2);
 
@@ -294,6 +298,7 @@ PartialPasteDlg::PartialPasteDlg (Glib::ustring title)
     exposureConn    = exposure->signal_toggled().connect (sigc::bind (sigc::mem_fun(*basic, &Gtk::CheckButton::set_inconsistent), true));
     shConn          = sh->signal_toggled().connect (sigc::bind (sigc::mem_fun(*basic, &Gtk::CheckButton::set_inconsistent), true));
     epdConn         = epd->signal_toggled().connect (sigc::bind (sigc::mem_fun(*basic, &Gtk::CheckButton::set_inconsistent), true));
+    retinexConn       = retinex->signal_toggled().connect (sigc::bind (sigc::mem_fun(*basic, &Gtk::CheckButton::set_inconsistent), true));
     pcvignetteConn  = pcvignette->signal_toggled().connect (sigc::bind (sigc::mem_fun(*basic, &Gtk::CheckButton::set_inconsistent), true));
     gradientConn    = gradient->signal_toggled().connect (sigc::bind (sigc::mem_fun(*basic, &Gtk::CheckButton::set_inconsistent), true));
     labcurveConn    = labcurve->signal_toggled().connect (sigc::bind (sigc::mem_fun(*basic, &Gtk::CheckButton::set_inconsistent), true));
@@ -328,6 +333,7 @@ PartialPasteDlg::PartialPasteDlg (Glib::ustring title)
     finerotConn     = finerot->signal_toggled().connect (sigc::bind (sigc::mem_fun(*composition, &Gtk::CheckButton::set_inconsistent), true));
     cropConn        = crop->signal_toggled().connect (sigc::bind (sigc::mem_fun(*composition, &Gtk::CheckButton::set_inconsistent), true));
     resizeConn      = resize->signal_toggled().connect (sigc::bind (sigc::mem_fun(*composition, &Gtk::CheckButton::set_inconsistent), true));
+    prsharpeningConn      = prsharpening->signal_toggled().connect (sigc::bind (sigc::mem_fun(*composition, &Gtk::CheckButton::set_inconsistent), true));
     perspectiveConn = perspective->signal_toggled().connect (sigc::bind (sigc::mem_fun(*composition, &Gtk::CheckButton::set_inconsistent), true));
     commonTransConn = commonTrans->signal_toggled().connect (sigc::bind (sigc::mem_fun(*composition, &Gtk::CheckButton::set_inconsistent), true));
 
@@ -499,6 +505,7 @@ void PartialPasteDlg::basicToggled ()
     gradientConn.block (true);
     labcurveConn.block (true);
     colorappearanceConn.block (true);
+    retinexConn.block (true);
 
     basic->set_inconsistent (false);
 
@@ -508,6 +515,7 @@ void PartialPasteDlg::basicToggled ()
     epd->set_active (basic->get_active ());
     pcvignette->set_active (basic->get_active ());
     gradient->set_active (basic->get_active ());
+    retinex->set_active (basic->get_active ());
     labcurve->set_active (basic->get_active ());
     colorappearance->set_active (basic->get_active ());
 
@@ -517,6 +525,8 @@ void PartialPasteDlg::basicToggled ()
     epdConn.block (false);
     pcvignetteConn.block (false);
     gradientConn.block (false);
+    retinexConn.block (false);
+    
     labcurveConn.block (false);
     colorappearanceConn.block (false);
 }
@@ -625,6 +635,7 @@ void PartialPasteDlg::compositionToggled ()
     finerotConn.block (true);
     cropConn.block (true);
     resizeConn.block (true);
+    prsharpeningConn.block (true);
     perspectiveConn.block (true);
     commonTransConn.block (true);
 
@@ -634,6 +645,7 @@ void PartialPasteDlg::compositionToggled ()
     finerot->set_active (composition->get_active ());
     crop->set_active (composition->get_active ());
     resize->set_active (composition->get_active ());
+    prsharpening->set_active (composition->get_active ());
     perspective->set_active (composition->get_active ());
     commonTrans->set_active (composition->get_active ());
 
@@ -641,6 +653,7 @@ void PartialPasteDlg::compositionToggled ()
     finerotConn.block (false);
     cropConn.block (false);
     resizeConn.block (false);
+    prsharpeningConn.block (false);
     perspectiveConn.block (false);
     commonTransConn.block (false);
 }
@@ -693,6 +706,10 @@ void PartialPasteDlg::applyPaste (rtengine::procparams::ProcParams* dstPP, Param
 
     if (!epd->get_active ()) {
         filterPE.epd        = falsePE.epd;
+    }
+
+    if (!retinex->get_active ()) {
+        filterPE.retinex        = falsePE.retinex;
     }
 
     if (!pcvignette->get_active ()) {
@@ -805,6 +822,10 @@ void PartialPasteDlg::applyPaste (rtengine::procparams::ProcParams* dstPP, Param
 
     if (!resize->get_active ()) {
         filterPE.resize      = falsePE.resize;
+    }
+
+    if (!prsharpening->get_active ()) {
+        filterPE.prsharpening      = falsePE.prsharpening;
     }
 
     if (!perspective->get_active ()) {

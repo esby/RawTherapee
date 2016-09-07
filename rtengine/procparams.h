@@ -23,6 +23,7 @@
 #include <vector>
 #include <cstdio>
 #include <cmath>
+#include <lcms2.h>
 #include "LUT.h"
 #include "coord.h"
 
@@ -39,6 +40,16 @@ class WavOpacityCurveRG;
 class WavOpacityCurveBY;
 class WavOpacityCurveW;
 class WavOpacityCurveWL;
+class RetinextransmissionCurve;
+class RetinexgaintransmissionCurve;
+
+enum RenderingIntent {
+    RI_PERCEPTUAL = INTENT_PERCEPTUAL,
+    RI_RELATIVE = INTENT_RELATIVE_COLORIMETRIC,
+    RI_SATURATION = INTENT_SATURATION,
+    RI_ABSOLUTE = INTENT_ABSOLUTE_COLORIMETRIC,
+    RI__COUNT
+};
 
 namespace procparams
 {
@@ -260,6 +271,55 @@ public:
     void setDefaults();
     static bool HLReconstructionNecessary(LUTu &histRedRaw, LUTu &histGreenRaw, LUTu &histBlueRaw);
 };
+/**
+  * Parameters of Retinex
+  */
+class RetinexParams
+{
+
+public:
+    bool enabled;
+    std::vector<double>   cdcurve;
+    std::vector<double>   cdHcurve;
+    std::vector<double>   lhcurve;
+    std::vector<double> transmissionCurve;
+    std::vector<double> gaintransmissionCurve;
+    std::vector<double>   mapcurve;
+    int     str;
+    int     scal;
+    int     iter;
+    int     grad;
+    int     grads;
+    double  gam;
+    double  slope;
+    int     neigh;
+    int     gain;
+    int     offs;
+    int     highlights;
+    int     htonalwidth;
+    int     shadows;
+    int     stonalwidth;
+    int     radius;
+
+    Glib::ustring retinexMethod;
+    Glib::ustring retinexcolorspace;
+    Glib::ustring gammaretinex;
+    Glib::ustring mapMethod;
+    Glib::ustring viewMethod;
+    int     vart;
+    int     limd;
+    int     highl;
+    double     baselog;
+    int     skal;
+    bool    medianmap;
+    RetinexParams ();
+    void setDefaults();
+    void getCurves(RetinextransmissionCurve &transmissionCurveLUT, RetinexgaintransmissionCurve &gaintransmissionCurveLUT) const;
+
+    static void getDefaultgaintransmissionCurve(std::vector<double> &curve);
+
+    static void getDefaulttransmissionCurve(std::vector<double> &curve);
+};
 
 
 /**
@@ -468,7 +528,7 @@ public:
     double green;
     double equal;
 
-    WBEntry(Glib::ustring p, enum WBTypes t, Glib::ustring l, int temp, double green, double equal) : ppLabel(p), type(t), GUILabel(l), temperature(temp), green(green), equal(equal) {};
+    WBEntry(const Glib::ustring &p, enum WBTypes t, const Glib::ustring &l, int temp, double green, double equal) : ppLabel(p), type(t), GUILabel(l), temperature(temp), green(green), equal(equal) {};
 };
 
 class WBParams
@@ -906,6 +966,7 @@ public:
     int dcpIlluminant;
     Glib::ustring working;
     Glib::ustring output;
+    RenderingIntent outputIntent;
     static const Glib::ustring NoICMString;
 
     Glib::ustring gamma;
@@ -1049,7 +1110,7 @@ public:
     double skinprotect;
     Threshold<int> hueskin;
     //Glib::ustring algo;
-
+    Glib::ustring cbdlMethod;
     DirPyrEqualizerParams() : hueskin(20, 80, 2000, 1200, false) {};
 };
 
@@ -1161,6 +1222,7 @@ public:
     int ff_clipControl;
 
     bool ca_autocorrect;
+    double caautostrength;
     double cared;
     double cablue;
 
@@ -1188,6 +1250,7 @@ class ProcParams
 public:
     ToneCurveParams         toneCurve;       ///< Tone curve parameters
     LCurveParams            labCurve;        ///< CIELAB luminance curve parameters
+    RetinexParams             retinex;           ///< Retinex parameters
     RGBCurvesParams         rgbCurves;       ///< RGB curves parameters
     ColorToningParams       colorToning;     ///< Color Toning parameters
     SharpeningParams        sharpening;      ///< Sharpening parameters
@@ -1253,14 +1316,14 @@ public:
       * @param pedited pointer to a ParamsEdited object (optional) to store which values has to be saved
       * @return Error code (=0 if all supplied filenames where created correctly)
       */
-    int     save        (Glib::ustring fname, Glib::ustring fname2 = "", bool fnameAbsolute = true, ParamsEdited* pedited = NULL);
+    int     save        (const Glib::ustring &fname, const Glib::ustring &fname2 = "", bool fnameAbsolute = true, ParamsEdited* pedited = NULL);
     /**
       * Loads the parameters from a file.
       * @param fname the name of the file
       * @params pedited pointer to a ParamsEdited object (optional) to store which values has been loaded
       * @return Error code (=0 if no error)
       */
-    int     load        (Glib::ustring fname, ParamsEdited* pedited = NULL);
+    int     load        (const Glib::ustring &fname, ParamsEdited* pedited = NULL);
 
     /** Creates a new instance of ProcParams.
       * @return a pointer to the new ProcParams instance. */
@@ -1282,7 +1345,7 @@ private:
     * @param content the text to write
     * @return Error code (=0 if no error)
     * */
-    int write (Glib::ustring &fname, Glib::ustring &content) const;
+    int write (const Glib::ustring &fname, const Glib::ustring &content) const;
 
 };
 
@@ -1312,7 +1375,7 @@ public:
     PartialProfile      (const ProcParams* pp, const ParamsEdited* pe = NULL);
     void deleteInstance ();
     void clearGeneral   ();
-    int  load           (Glib::ustring fName);
+    int  load           (const Glib::ustring &fName);
     void set            (bool v);
     const void applyTo  (ProcParams *destParams) const ;
 };

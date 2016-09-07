@@ -78,11 +78,11 @@ private:
     MyComboBoxText*    wgamma;
 
     MyComboBoxText*    onames;
+    MyComboBoxText*    ointent;
     Gtk::RadioButton*  ofromdir;
     Gtk::RadioButton*  ofromfile;
     Gtk::RadioButton*  iunchanged;
     MyFileChooserButton* ipDialog;
-    std::auto_ptr<FileChooserLastFolderPersister> ipDialogPersister;
     Gtk::RadioButton::Group opts;
     Gtk::Button*        saveRef;
     sigc::connection   ipc;
@@ -93,6 +93,7 @@ private:
     double dcpTemperatures[2];
     bool enableLastICCWorkDirChange;
     Glib::ustring lastRefFilename;
+    Glib::ustring camName;
     void updateDCP(int dcpIlluminant, Glib::ustring dcp_name);
 public:
     ICMPanel ();
@@ -106,6 +107,7 @@ public:
 
     void wpChanged ();
     void opChanged ();
+    void oiChanged ();
     void ipChanged ();
     void gpChanged ();
     void GamChanged ();

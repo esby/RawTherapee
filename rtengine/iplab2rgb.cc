@@ -30,19 +30,10 @@
 namespace rtengine
 {
 
-#define CLIP01(a) ((a)>0?((a)<1?(a):1):0)
-
 extern const Settings* settings;
-
-const double (*wprof[])[3]  = {xyz_sRGB, xyz_adobe, xyz_prophoto, xyz_widegamut, xyz_bruce, xyz_beta, xyz_best};
-const double (*iwprof[])[3] = {sRGB_xyz, adobe_xyz, prophoto_xyz, widegamut_xyz, bruce_xyz, beta_xyz, best_xyz};
-const char* wprofnames[] = {"sRGB", "Adobe RGB", "ProPhoto", "WideGamut", "BruceRGB", "Beta RGB", "BestRGB"};
-const int numprof = 7;
 
 void ImProcFunctions::lab2monitorRgb (LabImage* lab, Image8* image)
 {
-    //gamutmap(lab);
-
     if (monitorTransform) {
 
         int W = lab->W;
@@ -126,15 +117,15 @@ void ImProcFunctions::lab2monitorRgb (LabImage* lab, Image8* image)
 
                 /* copy RGB */
                 //int R1=((int)gamma2curve[(R)])
-                data[ix++] = ((int)gamma2curve[CLIP(R)]) >> 8;
-                data[ix++] = ((int)gamma2curve[CLIP(G)]) >> 8;
-                data[ix++] = ((int)gamma2curve[CLIP(B)]) >> 8;
+                data[ix++] = ((int)Color::gamma2curve[R]) >> 8;
+                data[ix++] = ((int)Color::gamma2curve[G]) >> 8;
+                data[ix++] = ((int)Color::gamma2curve[B]) >> 8;
             }
         }
     }
 }
 
-Image8* ImProcFunctions::lab2rgb (LabImage* lab, int cx, int cy, int cw, int ch, Glib::ustring profile, bool standard_gamma)
+Image8* ImProcFunctions::lab2rgb (LabImage* lab, int cx, int cy, int cw, int ch, Glib::ustring profile, RenderingIntent intent, bool standard_gamma)
 {
     //gamutmap(lab);
 
@@ -167,7 +158,7 @@ Image8* ImProcFunctions::lab2rgb (LabImage* lab, int cx, int cy, int cw, int ch,
 
         lcmsMutex->lock ();
         cmsHPROFILE hLab  = cmsCreateLab4Profile(NULL);
-        cmsHTRANSFORM hTransform = cmsCreateTransform (hLab, TYPE_Lab_DBL, oprofG, TYPE_RGB_8, INTENT_RELATIVE_COLORIMETRIC,
+        cmsHTRANSFORM hTransform = cmsCreateTransform (hLab, TYPE_Lab_DBL, oprofG, TYPE_RGB_8, intent,
                                    cmsFLAGS_NOOPTIMIZE | cmsFLAGS_NOCACHE );  // NOCACHE is important for thread safety
         cmsCloseProfile(hLab);
         lcmsMutex->unlock ();
@@ -211,18 +202,7 @@ Image8* ImProcFunctions::lab2rgb (LabImage* lab, int cx, int cy, int cw, int ch,
         }
     } else {
 
-        double rgb_xyz[3][3];
-
-        for (int i = 0; i < numprof; i++) {
-            if (profile == wprofnames[i]) {
-                for (int m = 0; m < 3; m++)
-                    for (int n = 0; n < 3; n++) {
-                        rgb_xyz[m][n] = iwprof[i][m][n];
-                    }
-
-                break;
-            }
-        }
+        const auto xyz_rgb = iccStore->workingSpaceInverseMatrix (profile);
 
 #ifdef _OPENMP
         #pragma omp parallel for schedule(dynamic,16) if (multiThread)
@@ -247,11 +227,11 @@ Image8* ImProcFunctions::lab2rgb (LabImage* lab, int cx, int cy, int cw, int ch,
                 float z_ = 65535.0 * Color::f2xyz(fz) * Color::D50z;
                 float y_ = (LL > Color::epskap) ? 65535.0 * fy * fy * fy : 65535.0 * LL / Color::kappa;
 
-                Color::xyz2rgb(x_, y_, z_, R, G, B, rgb_xyz);
+                Color::xyz2rgb(x_, y_, z_, R, G, B, xyz_rgb);
 
-                image->data[ix++] = (int)gamma2curve[CLIP(R)] >> 8;
-                image->data[ix++] = (int)gamma2curve[CLIP(G)] >> 8;
-                image->data[ix++] = (int)gamma2curve[CLIP(B)] >> 8;
+                image->data[ix++] = (int)Color::gamma2curve[R] >> 8;
+                image->data[ix++] = (int)Color::gamma2curve[G] >> 8;
+                image->data[ix++] = (int)Color::gamma2curve[B] >> 8;
             }
         }
     }
@@ -259,7 +239,7 @@ Image8* ImProcFunctions::lab2rgb (LabImage* lab, int cx, int cy, int cw, int ch,
     return image;
 }
 // for default (not gamma)
-Image16* ImProcFunctions::lab2rgb16 (LabImage* lab, int cx, int cy, int cw, int ch, Glib::ustring profile, bool bw)
+Image16* ImProcFunctions::lab2rgb16 (LabImage* lab, int cx, int cy, int cw, int ch, Glib::ustring profile, RenderingIntent intent, bool bw)
 {
 
     //gamutmap(lab);
@@ -322,7 +302,7 @@ Image16* ImProcFunctions::lab2rgb16 (LabImage* lab, int cx, int cy, int cw, int 
 
         cmsHPROFILE iprof = iccStore->getXYZProfile ();
         lcmsMutex->lock ();
-        cmsHTRANSFORM hTransform = cmsCreateTransform (iprof, TYPE_RGB_16, oprof, TYPE_RGB_16, INTENT_RELATIVE_COLORIMETRIC, cmsFLAGS_NOOPTIMIZE | cmsFLAGS_NOCACHE);
+        cmsHTRANSFORM hTransform = cmsCreateTransform (iprof, TYPE_RGB_16, oprof, TYPE_RGB_16, intent, cmsFLAGS_NOOPTIMIZE | cmsFLAGS_NOCACHE);
         lcmsMutex->unlock ();
 
         image->ExecCMSTransform(hTransform);
@@ -351,9 +331,9 @@ Image16* ImProcFunctions::lab2rgb16 (LabImage* lab, int cx, int cy, int cw, int 
 
                 Color::xyz2srgb(x_, y_, z_, R, G, B);
 
-                image->r(i - cy, j - cx) = (int)gamma2curve[CLIP(R)];
-                image->g(i - cy, j - cx) = (int)gamma2curve[CLIP(G)];
-                image->b(i - cy, j - cx) = (int)gamma2curve[CLIP(B)];
+                image->r(i - cy, j - cx) = (int)Color::gamma2curve[CLIP(R)];
+                image->g(i - cy, j - cx) = (int)Color::gamma2curve[CLIP(G)];
+                image->b(i - cy, j - cx) = (int)Color::gamma2curve[CLIP(B)];
             }
         }
     }
@@ -363,7 +343,7 @@ Image16* ImProcFunctions::lab2rgb16 (LabImage* lab, int cx, int cy, int cw, int 
 
 
 // for gamma options (BT709...sRGB linear...)
-Image16* ImProcFunctions::lab2rgb16b (LabImage* lab, int cx, int cy, int cw, int ch, Glib::ustring profile, Glib::ustring profi, Glib::ustring gam,  bool freegamma, double gampos, double slpos, double &ga0, double &ga1, double &ga2, double &ga3, double &ga4, double &ga5, double &ga6, bool bw)
+Image16* ImProcFunctions::lab2rgb16b (LabImage* lab, int cx, int cy, int cw, int ch, Glib::ustring profile, RenderingIntent intent, Glib::ustring profi, Glib::ustring gam,  bool freegamma, double gampos, double slpos, double &ga0, double &ga1, double &ga2, double &ga3, double &ga4, double &ga5, double &ga6, bool bw)
 {
 
     //gamutmap(lab);
@@ -386,7 +366,7 @@ Image16* ImProcFunctions::lab2rgb16b (LabImage* lab, int cx, int cy, int cw, int
 
     Image16* image = new Image16 (cw, ch);
     float p1, p2, p3, p4, p5, p6; //primaries
-    //double ga0,ga1,ga2,ga3,ga4,ga5=0.0,ga6=0.0;//gamma parameters
+
     double g_a0, g_a1, g_a2, g_a3, g_a4, g_a5; //gamma parameters
     double pwr;
     double ts;
@@ -401,15 +381,7 @@ Image16* ImProcFunctions::lab2rgb16b (LabImage* lab, int cx, int cy, int cw, int
 
     //primaries for 7 working profiles ==> output profiles
     // eventually to adapt primaries  if RT used special profiles !
-    if(profi == "ProPhoto")     {
-        p1 = 0.7347;    //Prophoto primaries
-        p2 = 0.2653;
-        p3 = 0.1596;
-        p4 = 0.8404;
-        p5 = 0.0366;
-        p6 = 0.0001;
-        select_temp = 1;
-    } else if (profi == "WideGamut") {
+    if (profi == "WideGamut") {
         p1 = 0.7350;    //Widegamut primaries
         p2 = 0.2650;
         p3 = 0.1150;
@@ -456,6 +428,22 @@ Image16* ImProcFunctions::lab2rgb16b (LabImage* lab, int cx, int cy, int cw, int
         p4 = 0.7750;
         p5 = 0.1300;
         p6 = 0.0350;
+        select_temp = 1;
+    } else if (profi == "Rec2020") {
+        p1 = 0.7080;    // Rec2020 primaries
+        p2 = 0.2920;
+        p3 = 0.1700;
+        p4 = 0.7970;
+        p5 = 0.1310;
+        p6 = 0.0460;
+        select_temp = 2;
+    } else {
+        p1 = 0.7347;    //ProPhoto and default primaries
+        p2 = 0.2653;
+        p3 = 0.1596;
+        p4 = 0.8404;
+        p5 = 0.0366;
+        p6 = 0.0001;
         select_temp = 1;
     }
 
@@ -531,7 +519,7 @@ Image16* ImProcFunctions::lab2rgb16b (LabImage* lab, int cx, int cy, int cw, int
     if(select_temp == 1) {
         t50 = 5003;    // for Widegamut, Prophoto Best, Beta   D50
     } else if (select_temp == 2) {
-        t50 = 6504;    // for sRGB, AdobeRGB, Bruce  D65
+        t50 = 6504;    // for sRGB, AdobeRGB, Bruce Rec2020 D65
     }
 
     cmsCIExyY       xyD;
@@ -593,7 +581,7 @@ Image16* ImProcFunctions::lab2rgb16b (LabImage* lab, int cx, int cy, int cw, int
 
         cmsHPROFILE iprof = iccStore->getXYZProfile ();
         lcmsMutex->lock ();
-        cmsHTRANSFORM hTransform = cmsCreateTransform (iprof, TYPE_RGB_16, oprofdef, TYPE_RGB_16, INTENT_RELATIVE_COLORIMETRIC,  cmsFLAGS_NOOPTIMIZE | cmsFLAGS_NOCACHE);
+        cmsHTRANSFORM hTransform = cmsCreateTransform (iprof, TYPE_RGB_16, oprofdef, TYPE_RGB_16, intent,  cmsFLAGS_NOOPTIMIZE | cmsFLAGS_NOCACHE);
         lcmsMutex->unlock ();
 
         image->ExecCMSTransform(hTransform);
@@ -621,9 +609,9 @@ Image16* ImProcFunctions::lab2rgb16b (LabImage* lab, int cx, int cy, int cw, int
 
                 Color::xyz2srgb(x_, y_, z_, R, G, B);
 
-                image->r(i - cy, j - cx) = (int)gamma2curve[CLIP(R)];
-                image->g(i - cy, j - cx) = (int)gamma2curve[CLIP(G)];
-                image->b(i - cy, j - cx) = (int)gamma2curve[CLIP(B)];
+                image->r(i - cy, j - cx) = (int)Color::gamma2curve[CLIP(R)];
+                image->g(i - cy, j - cx) = (int)Color::gamma2curve[CLIP(G)];
+                image->b(i - cy, j - cx) = (int)Color::gamma2curve[CLIP(B)];
             }
         }
     }

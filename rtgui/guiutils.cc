@@ -21,18 +21,12 @@
 #include "options.h"
 #include "../rtengine/rt_math.h"
 #include "../rtengine/utils.h"
-#include "../rtengine/safegtk.h"
 #include "rtimage.h"
 #include "multilangmgr.h"
 
 #include <assert.h>
 
 using namespace std;
-
-#if TRACE_MYRWMUTEX==1 && !defined NDEBUG
-unsigned int MyReaderLock::readerLockCounter = 0;
-unsigned int MyWriterLock::writerLockCounter = 0;
-#endif
 
 Glib::RefPtr<Gdk::Pixbuf> MyExpander::inconsistentPBuf;
 Glib::RefPtr<Gdk::Pixbuf> MyExpander::enabledPBuf;
@@ -136,7 +130,7 @@ bool confirmOverwrite (Gtk::Window& parent, const std::string& filename)
 {
     bool safe = true;
 
-    if (safe_file_test (filename, Glib::FILE_TEST_EXISTS)) {
+    if (Glib::file_test (filename, Glib::FILE_TEST_EXISTS)) {
         Glib::ustring msg_ = Glib::ustring ("<b>\"") + Glib::path_get_basename (filename) + "\": "
                              + M("MAIN_MSG_ALREADYEXISTS") + "</b>\n" + M("MAIN_MSG_QOVERWRITE");
         Gtk::MessageDialog msgd (parent, msg_, true, Gtk::MESSAGE_WARNING, Gtk::BUTTONS_YES_NO, true);
@@ -1013,34 +1007,18 @@ bool MyFileChooserButton::on_scroll_event (GdkEventScroll* event)
     return false;
 }
 
-FileChooserLastFolderPersister::FileChooserLastFolderPersister(
-    Gtk::FileChooser* chooser, Glib::ustring& folderVariable) :
-    chooser(chooser), folderVariable(folderVariable)
+void bindCurrentFolder (Gtk::FileChooser& chooser, Glib::ustring& variable)
 {
-    assert(chooser != NULL);
+    chooser.signal_selection_changed ().connect ([&]()
+    {
+        const auto current_folder = chooser.get_current_folder ();
 
-    selectionChangedConnetion = chooser->signal_selection_changed().connect(
-                                    sigc::mem_fun(*this,
-                                            &FileChooserLastFolderPersister::selectionChanged));
+        if (!current_folder.empty ())
+            variable = current_folder;
+    });
 
-    if (!folderVariable.empty()) {
-        chooser->set_current_folder(folderVariable);
-    }
-
-}
-
-FileChooserLastFolderPersister::~FileChooserLastFolderPersister()
-{
-
-}
-
-void FileChooserLastFolderPersister::selectionChanged()
-{
-
-    if (!chooser->get_current_folder().empty()) {
-        folderVariable = chooser->get_current_folder();
-    }
-
+    if (!variable.empty ())
+        chooser.set_current_folder (variable);
 }
 
 TextOrIcon::TextOrIcon (Glib::ustring fname, Glib::ustring labelTx, Glib::ustring tooltipTx, TOITypes type)

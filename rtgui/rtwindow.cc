@@ -94,20 +94,11 @@ RTWindow::RTWindow ()
     Glib::ustring fName = "rt-logo.png";
     Glib::ustring fullPath = RTImage::findIconAbsolutePath(fName);
 
-#ifdef GLIBMM_EXCEPTIONS_ENABLED
-
     try {
         set_default_icon_from_file (fullPath);
     } catch(Glib::Exception& ex) {
         printf ("%s\n", ex.what().c_str());
     }
-
-#else
-    {
-        std::auto_ptr<Glib::Error> error;
-        set_default_icon_from_file (fullPath, error);
-    }
-#endif //GLIBMM_EXCEPTIONS_ENABLED
 
 #if defined(__APPLE__)
     {
@@ -348,6 +339,10 @@ void RTWindow::on_realize ()
 
     if( fpanel ) {
         fpanel->setAspect();
+    }
+
+    if (simpleEditor) {
+        epanel->setAspect();
     }
 
     cursorManager.init (get_window());
@@ -675,7 +670,7 @@ bool RTWindow::on_delete_event(GdkEventAny* event)
             Gtk::Widget *w = mainNB->get_nth_page(page);
             bool optionsWritten = false;
 
-            for (std::map<Glib::ustring, EditorPanel*>::iterator i = epanels.begin(); i != epanels.end(); i++) {
+            for (std::map<Glib::ustring, EditorPanel*>::iterator i = epanels.begin(); i != epanels.end(); ++i) {
                 if (i->second == w) {
                     i->second->writeOptions();
                     optionsWritten = true;

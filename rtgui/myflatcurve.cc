@@ -641,10 +641,10 @@ bool MyFlatCurve::handleEvents (GdkEvent* event)
                     itrt = curve.rightTangent.begin();
 
                     for (int i = 0; i < closest_point; i++) {
-                        itx++;
-                        ity++;
-                        itlt++;
-                        itrt++;
+                        ++itx;
+                        ++ity;
+                        ++itlt;
+                        ++itrt;
                     }
 
                     curve.x.insert (itx, 0);
@@ -1288,10 +1288,11 @@ void MyFlatCurve::pipetteMouseOver (CurveEditor *ce, EditDataProvider *provider,
     }
 }
 
-void MyFlatCurve::pipetteButton1Pressed(EditDataProvider *provider, int modifierKey)
+// returns true if a point is being dragged
+bool MyFlatCurve::pipetteButton1Pressed(EditDataProvider *provider, int modifierKey)
 {
     if (edited_point > -1) {
-        return;
+        return false;
     }
 
     buttonPressed = true;
@@ -1326,10 +1327,10 @@ void MyFlatCurve::pipetteButton1Pressed(EditDataProvider *provider, int modifier
         itrt = curve.rightTangent.begin();
 
         for (int i = 0; i < closest_point; i++) {
-            itx++;
-            ity++;
-            itlt++;
-            itrt++;
+            ++itx;
+            ++ity;
+            ++itlt;
+            ++itrt;
         }
 
         curve.x.insert (itx, 0);
@@ -1368,6 +1369,7 @@ void MyFlatCurve::pipetteButton1Pressed(EditDataProvider *provider, int modifier
         break;
     }
 
+    return true;
 }
 
 void MyFlatCurve::pipetteButton1Released(EditDataProvider *provider)
@@ -1805,6 +1807,7 @@ void MyFlatCurve::setPoints (const std::vector<double>& p)
     stopNumericalAdjustment();
     FlatCurveType t = (FlatCurveType)p[ix++];
     curve.type = t;
+    lit_point = -1;
 
     if (t == FCT_MinMaxCPoints) {
         curve.x.clear ();

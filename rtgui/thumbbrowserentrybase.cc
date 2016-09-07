@@ -26,7 +26,7 @@ ThumbBrowserEntryBase::ThumbBrowserEntryBase (const Glib::ustring& fname)
       prex(0), prey(0), upperMargin(6), borderWidth(1), textGap(6), sideMargin(8), lowerMargin(8),
       preview(NULL), dispname(Glib::path_get_basename (fname)), buttonSet(NULL), width(0), height(0),
       exp_width(0), exp_height(0), startx(0), starty(0), ofsX(0), ofsY(0), redrawRequests(0),
-      parent(NULL), bbSelected(false), bbFramed(false), bbPreview(NULL),
+      parent(NULL), original(NULL), bbSelected(false), bbFramed(false), bbPreview(NULL),
       thumbnail(NULL), filename(fname), shortname(dispname), exifline(""), datetimeline(""),
       selected(false), drawable(false), filtered(false), framed(false), processing(false), italicstyle(false),
       edited(false), recentlysaved(false), updatepriority(false), withFilename(WFNAME_NONE) {}
@@ -321,10 +321,7 @@ void ThumbBrowserEntryBase::getTextSizes (int& infow, int& infoh)
 
 void ThumbBrowserEntryBase::resize (int h)
 {
-
-#if PROTECT_VECTORS
     MYWRITERLOCK(l, lockRW);
-#endif
 
     height = h;
     int old_preh = preh, old_width = width;
@@ -446,9 +443,7 @@ void ThumbBrowserEntryBase::draw ()
         return;
     }
 
-#if PROTECT_VECTORS
     MYREADERLOCK(l, lockRW);  // No resizes, position moves etc. inbetween
-#endif
 
     int bbWidth, bbHeight;
 
@@ -486,10 +481,7 @@ void ThumbBrowserEntryBase::draw ()
 
 void ThumbBrowserEntryBase::setPosition (int x, int y, int w, int h)
 {
-
-#if PROTECT_VECTORS
     MYWRITERLOCK(l, lockRW);
-#endif
 
     exp_width = w;
     exp_height = h;
@@ -503,10 +495,7 @@ void ThumbBrowserEntryBase::setPosition (int x, int y, int w, int h)
 
 void ThumbBrowserEntryBase::setOffset (int x, int y)
 {
-
-#if PROTECT_VECTORS
     MYWRITERLOCK(l, lockRW);
-#endif
 
     ofsX = -x;
     ofsY = -y;
@@ -542,6 +531,17 @@ bool ThumbBrowserEntryBase::insideWindow (int x, int y, int w, int h)
 {
 
     return !(ofsX + startx > x + w || ofsX + startx + exp_width < x || ofsY + starty > y + h || ofsY + starty + exp_height < y);
+}
+
+std::vector<Glib::RefPtr<Gdk::Pixbuf> > ThumbBrowserEntryBase::getIconsOnImageArea()
+{
+    return std::vector<Glib::RefPtr<Gdk::Pixbuf> >();
+}
+
+void ThumbBrowserEntryBase::getIconSize(int& w, int& h)
+{
+    w = 0;
+    h = 0;
 }
 
 bool ThumbBrowserEntryBase::motionNotify  (int x, int y)

@@ -31,6 +31,7 @@
 #include "myflatcurve.h"
 #include "curveeditor.h"
 #include "flatcurveeditorsubgroup.h"
+#include "rtimage.h"
 
 FlatCurveEditorSubGroup::FlatCurveEditorSubGroup (CurveEditorGroup* prt, Glib::ustring& curveDir) : CurveEditorSubGroup(curveDir)
 {
@@ -215,13 +216,15 @@ void FlatCurveEditorSubGroup::pipetteMouseOver(EditDataProvider *provider, int m
     }
 }
 
-void FlatCurveEditorSubGroup::pipetteButton1Pressed(EditDataProvider *provider, int modifierKey)
+bool FlatCurveEditorSubGroup::pipetteButton1Pressed(EditDataProvider *provider, int modifierKey)
 {
     CurveEditor *curveEditor = static_cast<FlatCurveEditor*>(parent->displayedCurve);
 
+    bool isDragging = false;
+
     switch((FlatCurveType)(curveEditor->curveType->getSelected())) {
     case (FCT_MinMaxCPoints):
-        CPointsCurve->pipetteButton1Pressed(provider, modifierKey);
+        isDragging = CPointsCurve->pipetteButton1Pressed(provider, modifierKey);
         CPointsCurve->setDirty(true);
         break;
 
@@ -229,6 +232,8 @@ void FlatCurveEditorSubGroup::pipetteButton1Pressed(EditDataProvider *provider, 
         // ... do nothing
         break;
     }
+
+    return isDragging;
 }
 
 void FlatCurveEditorSubGroup::pipetteButton1Released(EditDataProvider *provider)

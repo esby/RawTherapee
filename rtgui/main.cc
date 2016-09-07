@@ -54,8 +54,6 @@
 #include "conio.h"
 #endif
 
-#include "../rtengine/safegtk.h"
-
 extern Options options;
 
 // stores path to data files
@@ -66,6 +64,29 @@ Glib::ustring argv1;
 bool simpleEditor;
 Glib::Thread* mainThread;
 
+namespace
+{
+
+// For an unknown reason, Glib::filename_to_utf8 doesn't work on reliably Windows,
+// so we're using Glib::filename_to_utf8 for Linux/Apple and Glib::locale_to_utf8 for Windows.
+Glib::ustring fname_to_utf8 (const char* fname)
+{
+#ifdef WIN32
+
+    try {
+        return Glib::locale_to_utf8 (fname);
+    } catch (Glib::Error&) {
+        return Glib::convert_with_fallback (fname, "UTF-8", "ISO-8859-1", "?");
+    }
+
+#else
+
+    return Glib::filename_to_utf8 (fname);
+
+#endif
+}
+
+}
 
 // This recursive mutex will be used by gdk_threads_enter/leave instead of a simple mutex
 #ifdef WIN32
@@ -170,7 +191,7 @@ int main(int argc, char **argv)
     bool consoleOpened = false;
 
     if (argc > 1 || options.rtSettings.verbose) {
-        if(options.rtSettings.verbose || ( !safe_file_test( safe_filename_to_utf8(argv[1]), Glib::FILE_TEST_EXISTS ) && !safe_file_test( safe_filename_to_utf8(argv[1]), Glib::FILE_TEST_IS_DIR ))) {
+        if (options.rtSettings.verbose || ( !Glib::file_test (fname_to_utf8 (argv[1]), Glib::FILE_TEST_EXISTS ) && !Glib::file_test (fname_to_utf8 (argv[1]), Glib::FILE_TEST_IS_DIR))) {
             bool stdoutRedirectedtoFile = (GetFileType(GetStdHandle(STD_OUTPUT_HANDLE)) == 0x0001);
             bool stderrRedirectedtoFile = (GetFileType(GetStdHandle(STD_ERROR_HANDLE)) == 0x0001);
 
@@ -243,7 +264,9 @@ int main(int argc, char **argv)
     if (argc > 1 || options.rtSettings.verbose) {
         // printing RT's version in all case, particularly useful for the 'verbose' mode, but also for the batch processing
         std::cout << "RawTherapee, version " << VERSION << std::endl;
+#ifdef WIN32
         std::cout << "WARNING: closing this window will close RawTherapee!" << std::endl << std::endl;
+#endif
 
         if (argc > 1) {
             int ret = processLineParams( argc, argv);
@@ -263,8 +286,8 @@ int main(int argc, char **argv)
 #ifndef WIN32
 
     // Move the old path to the new one if the new does not exist
-    if (safe_file_test(Glib::build_filename(options.rtdir, "cache"), Glib::FILE_TEST_IS_DIR) && !safe_file_test(options.cacheBaseDir, Glib::FILE_TEST_IS_DIR)) {
-        safe_g_rename(Glib::build_filename(options.rtdir, "cache"), options.cacheBaseDir);
+    if (Glib::file_test(Glib::build_filename(options.rtdir, "cache"), Glib::FILE_TEST_IS_DIR) && !Glib::file_test(options.cacheBaseDir, Glib::FILE_TEST_IS_DIR)) {
+        g_rename(Glib::build_filename (options.rtdir, "cache").c_str (), options.cacheBaseDir.c_str ());
     }
 
 #endif
@@ -272,9 +295,19 @@ int main(int argc, char **argv)
     simpleEditor = false;
 
     if( !argv1.empty() )
-        if( safe_file_test(argv1, Glib::FILE_TEST_EXISTS) && !safe_file_test(argv1, Glib::FILE_TEST_IS_DIR)) {
+        if( Glib::file_test(argv1, Glib::FILE_TEST_EXISTS) && !Glib::file_test(argv1, Glib::FILE_TEST_IS_DIR)) {
             simpleEditor = true;
         }
+
+    if (options.theme.empty()) {
+        options.theme = "21-Gray-Gray";
+    } else {
+        std::string themeFile = argv0 + "/themes/" + options.theme + ".gtkrc";
+        if (!std::ifstream(themeFile.c_str())) {
+            printf ("Current theme in options file is invalid:  %s\nChanging to 21-Gray-Gray\n", options.theme.c_str());
+            options.theme = "21-Gray-Gray";
+        }
+    }
 
     if (!options.useSystemTheme) {
         std::vector<Glib::ustring> rcfiles;
@@ -385,9 +418,9 @@ int processLineParams( int argc, char **argv )
             case 'o': // outputfile or dir
                 if( iArg + 1 < argc ) {
                     iArg++;
-                    outputPath = safe_filename_to_utf8 (argv[iArg]);
+                    outputPath = fname_to_utf8 (argv[iArg]);
 
-                    if( safe_file_test (outputPath, Glib::FILE_TEST_IS_DIR)) {
+                    if( Glib::file_test (outputPath, Glib::FILE_TEST_IS_DIR)) {
                         outputDirectory = true;
                     }
                 }
@@ -399,7 +432,7 @@ int processLineParams( int argc, char **argv )
                 // RT stop if any of them can't be loaded for any reason.
                 if( iArg + 1 < argc ) {
                     iArg++;
-                    Glib::ustring fname = safe_filename_to_utf8 ( argv[iArg] );
+                    Glib::ustring fname = fname_to_utf8 (argv[iArg]);
 
                     if (fname.at(0) == '-') {
                         std::cerr << "Error: filename missing next to the -p switch" << std::endl;
@@ -487,39 +520,54 @@ int processLineParams( int argc, char **argv )
                 break;
 
             case 'c': // MUST be last option
-                while( iArg + 1 < argc ) {
+                while (iArg + 1 < argc) {
                     iArg++;
 
-                    if( !safe_file_test( safe_filename_to_utf8(argv[iArg]), Glib::FILE_TEST_EXISTS )) {
-                        std::cerr << argv[iArg] << " doesn't exist." << std::endl;
+                    const auto argument = fname_to_utf8 (argv[iArg]);
+
+                    if (Glib::file_test (argument, Glib::FILE_TEST_IS_REGULAR)) {
+                        inputFiles.emplace_back (argument);
                         continue;
                     }
 
-                    if( safe_file_test( safe_filename_to_utf8(argv[iArg]), Glib::FILE_TEST_IS_DIR )) {
-                        std::vector<Glib::ustring> names;
-                        Glib::RefPtr<Gio::File> dir = Gio::File::create_for_path ( argv[iArg] );
-                        safe_build_file_list (dir, names, argv[iArg] );
+                    if (Glib::file_test (argument, Glib::FILE_TEST_IS_DIR)) {
 
-                        for(size_t iFile = 0; iFile < names.size(); iFile++ ) {
-                            if( !safe_file_test( names[iFile] , Glib::FILE_TEST_IS_DIR)) {
-                                // skip files without extension and without sidecar files
-                                Glib::ustring s(names[iFile]);
-                                Glib::ustring::size_type ext = s.find_last_of('.');
-
-                                if( Glib::ustring::npos == ext ) {
-                                    continue;
-                                }
-
-                                if( ! s.substr(ext).compare( paramFileExtension )) {
-                                    continue;
-                                }
-
-                                inputFiles.push_back( names[iFile] );
-                            }
+                        auto dir = Gio::File::create_for_path (argument);
+                        if (!dir || !dir->query_exists()) {
+                            continue;
                         }
-                    } else {
-                        inputFiles.push_back( safe_filename_to_utf8 (argv[iArg]) );
+
+                        try {
+
+                            auto enumerator = dir->enumerate_children ();
+
+                            while (auto file = enumerator->next_file ()) {
+
+                                const auto fileName = Glib::build_filename (argument, file->get_name ());
+
+                                if (Glib::file_test (fileName, Glib::FILE_TEST_IS_DIR)) {
+                                    continue;
+                                }
+
+                                // skip files without extension and sidecar files
+                                auto lastdot = fileName.find_last_of('.');
+                                if (lastdot == Glib::ustring::npos) {
+                                    continue;
+                                }
+
+                                if (fileName.substr (lastdot).compare (paramFileExtension) == 0) {
+                                    continue;
+                                }
+
+                                inputFiles.emplace_back (fileName);
+                            }
+
+                        } catch (Glib::Exception&) {}
+
+                        continue;
                     }
+
+                    std::cerr << "\"" << argument << "\" is neither a regular file nor a directory." << std::endl;
                 }
 
                 break;
@@ -533,61 +581,78 @@ int processLineParams( int argc, char **argv )
             case '?':
             default: {
                 Glib::ustring pparamsExt = paramFileExtension.substr(1);
-                std::cout << "<Chevrons> indicate parameters you can change." << std::endl;
-                std::cout << "[Square brackets] mean the parameter is not mandatory." << std::endl;
-                std::cout << "The pipe symbol | indicates a choice of one or the other." << std::endl;
-                std::cout << "The dash symbol - denotes a range of possible values from one to the other." << std::endl;
-                cout << std::endl;
+                std::cout << "  An advanced, cross-platform program for developing raw photos." << std::endl;
+                std::cout << std::endl;
+                std::cout << "  Website: http://www.rawtherapee.com/" << std::endl;
+                std::cout << "  Documentation: http://rawpedia.rawtherapee.com/" << std::endl;
+                std::cout << "  Forum: https://discuss.pixls.us/c/software/rawtherapee" << std::endl;
+                std::cout << "  Code and bug reports: https://github.com/Beep6581/RawTherapee" << std::endl;
+                std::cout << std::endl;
+                std::cout << "Symbols:" << std::endl;
+                std::cout << "  <Chevrons> indicate parameters you can change." << std::endl;
+                std::cout << "  [Square brackets] mean the parameter is optional." << std::endl;
+                std::cout << "  The pipe symbol | indicates a choice of one or the other." << std::endl;
+                std::cout << "  The dash symbol - denotes a range of possible values from one to the other." << std::endl;
+                std::cout << std::endl;
                 std::cout << "Usage:" << std::endl;
-                std::cout << "  " << Glib::path_get_basename(argv[0]) << " <selected dir>     Start File Browser inside directory." << std::endl;
+                std::cout << "  " << Glib::path_get_basename(argv[0]) << " <folder>           Start File Browser inside folder." << std::endl;
                 std::cout << "  " << Glib::path_get_basename(argv[0]) << " <file>             Start Image Editor with file." << std::endl;
-                std::cout << "  " << Glib::path_get_basename(argv[0]) << " -c <dir>|<files>   Convert files in batch with default parameters." << std::endl << std::endl;
+                std::cout << "  " << Glib::path_get_basename(argv[0]) << " -c <dir>|<files>   Convert files in batch with default parameters." << std::endl;
+                std::cout << "  " << Glib::path_get_basename(argv[0]) << " <other options> -c <dir>|<files>   Convert files in batch with your own settings." << std::endl;
+                std::cout << std::endl;
 #ifdef WIN32
                 std::cout << "  -w Do not open the Windows console" << std::endl;
+                std::cout << std::endl;
 #endif
-                std::cout << "Other options used with -c (-c must be the last option):" << std::endl;
-                std::cout << Glib::path_get_basename(argv[0]) << " [-o <output>|-O <output>] [-s|-S] [-p <files>] [-d] [-j[1-100] [-js<1-3>]|[-b<8|16>] <[-t[z] | [-n]]] [-Y] -c <input>" << std::endl;
-                std::cout << "  -o <file>|<dir>  Select output file or directory." << std::endl;
-                std::cout << "  -O <file>|<dir>  Select output file or directory and copy " << pparamsExt << " file into it." << std::endl;
-                std::cout << "  -s               Include the " << pparamsExt << " file next to the input file (with the same" << std::endl;
-                std::cout << "                   name) to build the image parameters," << std::endl;
-                std::cout << "                   e.g. for photo.raw there should be a photo.raw." << pparamsExt << " file in" << std::endl;
-                std::cout << "                   the same directory. If the file does not exist, internal" << std::endl;
-                std::cout << "                   default (neutral) values (not those in Default." << pparamsExt << ") will be" << std::endl;
-                std::cout << "                   used." << std::endl;
-                std::cout << "  -S               Like -s but skip if the " << pparamsExt << " file does not exist." << std::endl;
-                std::cout << "  -p <file.pp3>    Specify " << pparamsExt << " file to be used for all conversions." << std::endl;
-                std::cout << "                   You can specify as many -p options as you like (see" << std::endl;
-                std::cout << "                   description below)." << std::endl;
-                std::cout << "  -d               Use the default raw or non-raw " << pparamsExt << " file as set in" << std::endl;
+                std::cout << "Options:" << std::endl;
+                std::cout << "  " << Glib::path_get_basename(argv[0]) << " [-o <output>|-O <output>] [-s|-S] [-p <one.pp3> [-p <two.pp3> ...] ] [-d] [ -j[1-100] [-js<1-3>] | [-b<8|16>] [-t[z] | [-n]] ] [-Y] -c <input>" << std::endl;
+                std::cout << std::endl;
+                std::cout << "  -c <files>       Specify one or more input files." << std::endl;
+                std::cout << "                   -c must be the last option." << std::endl;
+                std::cout << "  -o <file>|<dir>  Set output file or folder." << std::endl;
+                std::cout << "                   Saves output file alongside input file if -o is not specified." << std::endl;
+                std::cout << "  -O <file>|<dir>  Set output file or folder and copy " << pparamsExt << " file into it." << std::endl;
+                std::cout << "                   Saves output file alongside input file if -O is not specified." << std::endl;
+                std::cout << "  -s               Use the existing sidecar file to build the processing parameters," << std::endl;
+                std::cout << "                   e.g. for photo.raw there should be a photo.raw." << pparamsExt << " file in the same folder." << std::endl;
+                std::cout << "                   If the sidecar file does not exist, neutral values will be used." << std::endl;
+                std::cout << "  -S               Like -s but skip if the sidecar file does not exist." << std::endl;
+                std::cout << "  -p <file.pp3>    Specify processing profile to be used for all conversions." << std::endl;
+                std::cout << "                   You can specify as many sets of \"-p <file.pp3>\" options as you like," << std::endl;
+                std::cout << "                   each will be built on top of the previous one, as explained below." << std::endl;
+                std::cout << "  -d               Use the default raw or non-raw processing profile as set in" << std::endl;
                 std::cout << "                   Preferences > Image Processing > Default Processing Profile" << std::endl;
-                std::cout << "  -j[1-100]        Specify output to be JPEG (on by default). Optionally add" << std::endl;
-                std::cout << "                   compression 1-100 (default value: 92)." << std::endl;
-                std::cout << "  -js<1-3>         Specify the JPEG subsampling parameter, where:" << std::endl;
-                std::cout << "                   1 = Best compression:         2x2, 1x1, 1x1 (4:1:1) - default of the JPEG library" << std::endl;
-                std::cout << "                   2 = Widely used normal ratio: 2x1, 1x1, 1x1 (4:2:2)" << std::endl;
-                std::cout << "                   3 = Best quality:             1x1, 1x1, 1x1 (4:4:4)" << std::endl;
-                std::cout << "  -b<8|16>         Specify bit depth per channel (only applies to TIFF and PNG output)." << std::endl;
-                std::cout << "  -t[z]            Specify output to be TIFF (16-bit if -b8 is not set)." << std::endl;
-                std::cout << "                   Uncompressed by default, or ZIP compression with 'z'" << std::endl;
-                std::cout << "  -n               Specify output to be compressed PNG (16-bit if -b8 is not set)." << std::endl;
-                std::cout << "  -Y               Overwrite output if present." << std::endl << std::endl;
-                std::cout << "Your " << pparamsExt << " files can be incomplete, RawTherapee will set the values as follows:" << std::endl;
-                std::cout << "  1- A new profile is created using internal default (neutral) values" << std::endl;
-                std::cout << "     (hard-coded into RawTherapee)," << std::endl;
-                std::cout << "  2- then overridden by those found in the default raw or non-raw " << pparamsExt << " file" << std::endl;
-                std::cout << "     (if -d has been set)," << std::endl;
-                std::cout << "  3- then overridden by those found in the " << pparamsExt << " files provided by -p, each one" << std::endl;
-                std::cout << "     overriding the previous values," << std::endl;
-                std::cout << "  4- then overridden by the sidecar file if -s is set and if the file exists;" << std::endl;
-                std::cout << "     the time where the sidecar file is used depends on the position of the -s" << std::endl;
-                std::cout << "     switch in the command line relative to the -p parameters," << std::endl;
-                std::cout << "     e.g. -p first." << pparamsExt << " -p second." << pparamsExt << " -s -p fourth." << pparamsExt << std::endl;
+                std::cout << "  -j[1-100]        Specify output to be JPEG (default, if -t and -n are not set)." << std::endl;
+                std::cout << "                   Optionally, specify compression 1-100 (default value: 92)." << std::endl;
+                std::cout << "  -js<1-3>         Specify the JPEG chroma subsampling parameter, where:" << std::endl;
+                std::cout << "                   1 = Best compression:   2x2, 1x1, 1x1 (4:2:0)" << std::endl;
+                std::cout << "                       Chroma halved vertically and horizontally." << std::endl;
+                std::cout << "                   2 = Balanced (default): 2x1, 1x1, 1x1 (4:2:2)" << std::endl;
+                std::cout << "                       Chroma halved horizontally." << std::endl;
+                std::cout << "                   3 = Best quality:       1x1, 1x1, 1x1 (4:4:4)" << std::endl;
+                std::cout << "                       No chroma subsampling." << std::endl;
+                std::cout << "  -b<8|16>         Specify bit depth per channel (default value: 16 for TIFF, 8 for PNG)." << std::endl;
+                std::cout << "                   Only applies to TIFF and PNG output, JPEG is always 8." << std::endl;
+                std::cout << "  -t[z]            Specify output to be TIFF." << std::endl;
+                std::cout << "                   Uncompressed by default, or deflate compression with 'z'." << std::endl;
+                std::cout << "  -n               Specify output to be compressed PNG." << std::endl;
+                std::cout << "                   Compression is hard-coded to 6." << std::endl;
+                std::cout << "  -Y               Overwrite output if present." << std::endl;
+                std::cout << std::endl;
+                std::cout << "Your " << pparamsExt << " files can be incomplete, RawTherapee will build the final values as follows:" << std::endl;
+                std::cout << "  1- A new processing profile is created using neutral values," << std::endl;
+                std::cout << "  2- If the \"-d\" option is set, the values are overridden by those found in" << std::endl;
+                std::cout << "     the default raw or non-raw processing profile." << std::endl;
+                std::cout << "  3- If one or more \"-p\" options are set, the values are overridden by those" << std::endl;
+                std::cout << "     found in these processing profiles." << std::endl;
+                std::cout << "  4- If the \"-s\" or \"-S\" options are set, the values are finally overridden by those" << std::endl;
+                std::cout << "     found in the sidecar files." << std::endl;
+                std::cout << "  The processing profiles are processed in the order specified on the command line." << std::endl;
                 return -1;
             }
             }
         } else {
-            argv1 = safe_filename_to_utf8 ( argv[iArg] );
+            argv1 = fname_to_utf8 (argv[iArg]);
 
             if( outputDirectory ) {
                 options.savePathFolder = outputPath;
@@ -688,7 +753,7 @@ int processLineParams( int argc, char **argv )
             continue;
         }
 
-        if( !overwriteFiles && safe_file_test( outputFile , Glib::FILE_TEST_EXISTS ) ) {
+        if( !overwriteFiles && Glib::file_test( outputFile , Glib::FILE_TEST_EXISTS ) ) {
             std::cerr << outputFile  << " already exists: use -Y option to overwrite. This image has been skipped." << std::endl;
             continue;
         }
@@ -729,7 +794,7 @@ int processLineParams( int argc, char **argv )
                 Glib::ustring sideProcessingParams = inputFile + paramFileExtension;
 
                 // the "load" method don't reset the procparams values anymore, so values found in the procparam file override the one of currentParams
-                if( !safe_file_test( sideProcessingParams, Glib::FILE_TEST_EXISTS ) || currentParams.load ( sideProcessingParams )) {
+                if( !Glib::file_test( sideProcessingParams, Glib::FILE_TEST_EXISTS ) || currentParams.load ( sideProcessingParams )) {
                     std::cerr << "Warning: sidecar file requested but not found for: " << sideProcessingParams << std::endl;
                 } else {
                     sideCarFound = true;

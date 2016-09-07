@@ -25,9 +25,8 @@
 using namespace std;
 
 ThumbBrowserBase::ThumbBrowserBase ()
-    : lastClicked(NULL), previewHeight(options.thumbSize), numOfCols(1), inspector(NULL), isInspectorActive(false)
+    : lastClicked(NULL), previewHeight(options.thumbSize), numOfCols(1), inspector(NULL), isInspectorActive(false), location(THLOC_FILEBROWSER)
 {
-    location = THLOC_FILEBROWSER;
     inW = -1;
     inH = -1;
 
@@ -61,9 +60,7 @@ ThumbBrowserBase::ThumbBrowserBase ()
 void ThumbBrowserBase::scrollChanged ()
 {
     {
-#if PROTECT_VECTORS
         MYWRITERLOCK(l, entryRW);
-#endif
 
         for (size_t i = 0; i < fd.size(); i++) {
             fd[i]->setOffset ((int)(hscroll.get_value()), (int)(vscroll.get_value()));
@@ -98,6 +95,88 @@ void ThumbBrowserBase::scrollPage (int direction)
     }
 }
 
+namespace
+{
+
+typedef std::vector<ThumbBrowserEntryBase*> ThumbVector;
+typedef ThumbVector::iterator ThumbIterator;
+
+inline void clearSelection (ThumbVector& selected)
+{
+    for (ThumbIterator thumb = selected.begin (); thumb != selected.end (); ++thumb)
+        (*thumb)->selected = false;
+
+    selected.clear ();
+}
+
+inline void addToSelection (ThumbBrowserEntryBase* entry, ThumbVector& selected)
+{
+    if (entry->selected || entry->filtered)
+        return;
+
+    entry->selected = true;
+    selected.push_back (entry);
+}
+
+inline void removeFromSelection (const ThumbIterator& iterator, ThumbVector& selected)
+{
+    (*iterator)->selected = false;
+    selected.erase (iterator);
+}
+
+}
+
+void ThumbBrowserBase::selectSingle (ThumbBrowserEntryBase* clicked)
+{
+    clearSelection (selected);
+
+    if (clicked)
+        addToSelection (clicked, selected);
+}
+
+void ThumbBrowserBase::selectRange (ThumbBrowserEntryBase* clicked, bool additional)
+{
+    if (selected.empty ()) {
+        addToSelection (clicked, selected);
+        return;
+    }
+
+    if (!additional || !lastClicked) {
+        // Extend the current range w.r.t to first selected entry.
+        ThumbIterator front = std::find (fd.begin (), fd.end (), selected.front ());
+        ThumbIterator current = std::find (fd.begin (), fd.end (), clicked);
+
+        if (front > current)
+            std::swap (front, current);
+
+        clearSelection (selected);
+
+        for (; front <= current; ++front)
+            addToSelection (*front, selected);
+    } else {
+        // Add an additional range w.r.t. the last clicked entry.
+        ThumbIterator last = std::find (fd.begin (), fd.end (), lastClicked);
+        ThumbIterator current = std::find (fd.begin (), fd.end (), clicked);
+
+        if (last > current)
+            std::swap (last, current);
+
+        for (; last <= current; ++last)
+            addToSelection (*last, selected);
+    }
+}
+
+void ThumbBrowserBase::selectSet (ThumbBrowserEntryBase* clicked)
+{
+    const ThumbIterator iterator = std::find (selected.begin (), selected.end (), clicked);
+
+    if (iterator != selected.end ()) {
+        removeFromSelection (iterator, selected);
+    } else {
+        addToSelection (clicked, selected);
+    }
+}
+
 static void scrollToEntry (double& h, double& v, int iw, int ih, ThumbBrowserEntryBase* entry)
 {
     const int hmin = entry->getX ();
@@ -124,9 +203,7 @@ void ThumbBrowserBase::selectPrev (int distance, bool enlarge)
     getScrollPosition (h, v);
 
     {
-#if PROTECT_VECTORS
         MYWRITERLOCK(l, entryRW);
-#endif
 
         if (!selected.empty ()) {
             std::vector<ThumbBrowserEntryBase*>::iterator front = std::find (fd.begin (), fd.end (), selected.front ());
@@ -181,9 +258,7 @@ void ThumbBrowserBase::selectPrev (int distance, bool enlarge)
             }
         }
 
-#if PROTECT_VECTORS
         MYWRITERLOCK_RELEASE(l);
-#endif
         selectionChanged ();
     }
 
@@ -196,9 +271,7 @@ void ThumbBrowserBase::selectNext (int distance, bool enlarge)
     getScrollPosition (h, v);
 
     {
-#if PROTECT_VECTORS
         MYWRITERLOCK(l, entryRW);
-#endif
 
         if (!selected.empty ()) {
             std::vector<ThumbBrowserEntryBase*>::iterator front = std::find (fd.begin (), fd.end (), selected.front ());
@@ -253,9 +326,7 @@ void ThumbBrowserBase::selectNext (int distance, bool enlarge)
             }
         }
 
-#if PROTECT_VECTORS
         MYWRITERLOCK_RELEASE(l);
-#endif
         selectionChanged ();
     }
 
@@ -268,9 +339,7 @@ void ThumbBrowserBase::selectFirst (bool enlarge)
     getScrollPosition (h, v);
 
     {
-#if PROTECT_VECTORS
         MYWRITERLOCK(l, entryRW);
-#endif
 
         if (!fd.empty ()) {
             // find first unfiltered entry
@@ -321,9 +390,7 @@ void ThumbBrowserBase::selectFirst (bool enlarge)
             }
         }
 
-#if PROTECT_VECTORS
         MYWRITERLOCK_RELEASE(l);
-#endif
         selectionChanged ();
     }
 
@@ -336,9 +403,7 @@ void ThumbBrowserBase::selectLast (bool enlarge)
     getScrollPosition (h, v);
 
     {
-#if PROTECT_VECTORS
         MYWRITERLOCK(l, entryRW);
-#endif
 
         if (!fd.empty ()) {
             // find last unfiltered entry
@@ -391,9 +456,7 @@ void ThumbBrowserBase::selectLast (bool enlarge)
             }
         }
 
-#if PROTECT_VECTORS
         MYWRITERLOCK_RELEASE(l);
-#endif
         selectionChanged ();
     }
 
@@ -464,10 +527,7 @@ void ThumbBrowserBase::configScrollBars ()
 
 void ThumbBrowserBase::arrangeFiles ()
 {
-
-#if PROTECT_VECTORS
     MYREADERLOCK(l, entryRW);
-#endif
 
     // GUI already locked by ::redraw, the only caller of this method for now.
     // We could lock it one more time, there's no harm excepted (negligible) speed penalty
@@ -528,9 +588,7 @@ void ThumbBrowserBase::arrangeFiles ()
             currx += maxw;
         }
 
-#if PROTECT_VECTORS
         MYREADERLOCK_RELEASE(l);
-#endif
         // This will require a Writer access
         resizeThumbnailArea (currx, numOfRows * rowHeight);
     } else {
@@ -607,9 +665,7 @@ void ThumbBrowserBase::arrangeFiles ()
             }
         }
 
-#if PROTECT_VECTORS
         MYREADERLOCK_RELEASE(l);
-#endif
         // This will require a Writer access
         resizeThumbnailArea (colsWidth, curry);
     }
@@ -651,9 +707,7 @@ bool ThumbBrowserBase::Internal::on_query_tooltip (int x, int y, bool keyboard_t
     Glib::ustring ttip = "";
 
     {
-#if PROTECT_VECTORS
         MYREADERLOCK(l, parent->entryRW);
-#endif
 
         for (size_t i = 0; i < parent->fd.size(); i++)
             if (parent->fd[i]->drawable && parent->fd[i]->inside (x, y)) {
@@ -726,9 +780,7 @@ void ThumbBrowserBase::buttonPressed (int x, int y, int button, GdkEventType typ
     bool handled = false;
 
     {
-#if PROTECT_VECTORS
         MYREADERLOCK(l, entryRW);
-#endif
 
         for (size_t i = 0; i < fd.size(); i++)
             if (fd[i]->drawable) {
@@ -746,125 +798,31 @@ void ThumbBrowserBase::buttonPressed (int x, int y, int button, GdkEventType typ
     }
 
     {
-#if PROTECT_VECTORS
         MYWRITERLOCK(l, entryRW);
-#endif
 
         if (selected.size() == 1 && type == GDK_2BUTTON_PRESS && button == 1) {
             doubleClicked (selected[0]);
         } else if (button == 1 && type == GDK_BUTTON_PRESS) {
-            if (fileDescr && (state & GDK_SHIFT_MASK)) {
-                if (selected.empty()) {
-                    selected.push_back (fileDescr);
-                    fileDescr->selected = true;
-                    lastClicked = fileDescr;
-#if PROTECT_VECTORS
-                    MYWRITERLOCK_RELEASE(l);
-#endif
-                    selectionChanged ();
-                } else {
-                    // find the start and the end of the selection interval
-                    size_t startx = fd.size() - 1;
+            if (fileDescr && (state & GDK_SHIFT_MASK))
+                selectRange (fileDescr, state & GDK_CONTROL_MASK);
+            else if (fileDescr && (state & GDK_CONTROL_MASK))
+                selectSet (fileDescr);
+            else
+                selectSingle (fileDescr);
 
-                    if (lastClicked) {
-                        for (; startx > 0; startx--)
-                            if (fd[startx] == lastClicked) {
-                                break;
-                            }
-                    } else {
-                        for (; startx > 0; startx--)
-                            if (fd[startx] == selected[0]) {
-                                break;
-                            }
-                    }
-
-                    size_t endx = 0;
-
-                    for (; endx < fd.size(); endx++)
-                        if (fd[endx] == fileDescr) {
-                            break;
-                        }
-
-                    if (endx < startx) {
-                        int tmp = endx;
-                        endx = startx;
-                        startx = tmp;
-                    }
-
-                    // clear current selection
-                    for (size_t i = 0; i < selected.size(); i++) {
-                        selected[i]->selected = false;
-                    }
-
-                    selected.clear ();
-
-                    // select thumbnails in the interval
-                    for (size_t i = startx; i <= endx; i++) {
-                        if (!fd[i]->filtered) {
-                            fd[i]->selected = true;
-                            selected.push_back (fd[i]);
-                        }
-                    }
-
-                    lastClicked = fileDescr;
-#if PROTECT_VECTORS
-                    MYWRITERLOCK_RELEASE(l);
-#endif
-                    selectionChanged ();
-                }
-            } else if (fileDescr && (state & GDK_CONTROL_MASK)) {
-                std::vector<ThumbBrowserEntryBase*>::iterator i = std::find (selected.begin(), selected.end(), fileDescr);
-
-                if (i != selected.end()) {
-                    (*i)->selected = false;
-                    selected.erase (i);
-                } else {
-                    selected.push_back (fileDescr);
-                    fileDescr->selected = true;
-                }
-
-                lastClicked = fileDescr;
-#if PROTECT_VECTORS
-                MYWRITERLOCK_RELEASE(l);
-#endif
-                selectionChanged ();
-            } else {
-                for (size_t i = 0; i < selected.size(); i++) {
-                    selected[i]->selected = false;
-                }
-
-                selected.clear ();
-
-                if (fileDescr) {
-                    selected.push_back (fileDescr);
-                    fileDescr->selected = true;
-                }
-
-                lastClicked = fileDescr;
-#if PROTECT_VECTORS
-                MYWRITERLOCK_RELEASE(l);
-#endif
-                selectionChanged ();
-            }
+            lastClicked = fileDescr;
+            MYWRITERLOCK_RELEASE(l);
+            selectionChanged ();
         } else if (fileDescr && button == 3 && type == GDK_BUTTON_PRESS) {
             if (!fileDescr->selected) {
-                for (size_t i = 0; i < selected.size(); i++) {
-                    selected[i]->selected = false;
-                }
+                selectSingle (fileDescr);
 
-                selected.clear ();
-                fileDescr->selected = true;
-                selected.push_back (fileDescr);
                 lastClicked = fileDescr;
-#if PROTECT_VECTORS
                 MYWRITERLOCK_RELEASE(l);
-#endif
                 selectionChanged ();
             }
 
-#if PROTECT_VECTORS
             MYWRITERLOCK_RELEASE(l);
-#endif
             rightClicked (fileDescr);
         }
     } // end of MYWRITERLOCK(l, entryRW);
@@ -888,9 +846,7 @@ bool ThumbBrowserBase::Internal::on_expose_event(GdkEventExpose* event)
     context->set_font_description (get_style()->get_font());
 
     {
-#if PROTECT_VECTORS
         MYWRITERLOCK(l, parent->entryRW);
-#endif
 
         for (size_t i = 0; i < parent->fd.size() && !dirty; i++) { // if dirty meanwhile, cancel and wait for next redraw
             if (!parent->fd[i]->drawable || !parent->fd[i]->insideWindow (0, 0, w, h)) {
@@ -911,21 +867,15 @@ bool ThumbBrowserBase::Internal::on_button_release_event (GdkEventButton* event)
     int w = get_width();
     int h = get_height();
 
-#if PROTECT_VECTORS
     MYREADERLOCK(l, parent->entryRW);
-#endif
 
     for (size_t i = 0; i < parent->fd.size(); i++)
         if (parent->fd[i]->drawable && parent->fd[i]->insideWindow (0, 0, w, h)) {
             ThumbBrowserEntryBase* tbe = parent->fd[i];
-#if PROTECT_VECTORS
             MYREADERLOCK_RELEASE(l);
-#endif
             // This will require a Writer access...
             tbe->releaseNotify (event->button, event->type, event->state, (int)event->x, (int)event->y);
-#if PROTECT_VECTORS
             MYREADERLOCK_ACQUIRE(l);
-#endif
         }
 
     return true;
@@ -937,15 +887,10 @@ bool ThumbBrowserBase::Internal::on_motion_notify_event (GdkEventMotion* event)
     int w = get_width();
     int h = get_height();
 
-#if PROTECT_VECTORS
     MYREADERLOCK(l, parent->entryRW);
-#endif
 
     for (size_t i = 0; i < parent->fd.size(); i++)
         if (parent->fd[i]->drawable && parent->fd[i]->insideWindow (0, 0, w, h)) {
-            /*#if PROTECT_VECTORS
-            MYREADERLOCK_RELEASE(l); // motionNotify calls the queue, which locks
-            #endif*/
             parent->fd[i]->motionNotify ((int)event->x, (int)event->y);
         }
 
@@ -997,9 +942,7 @@ void ThumbBrowserBase::zoomChanged (bool zoomIn)
     saveThumbnailHeight(newHeight);
 
     {
-#if PROTECT_VECTORS
         MYWRITERLOCK(l, entryRW);
-#endif
 
         for (size_t i = 0; i < fd.size(); i++) {
             fd[i]->resize (previewHeight);
@@ -1017,9 +960,7 @@ void ThumbBrowserBase::refreshThumbImages ()
 
     int previewHeight = getThumbnailHeight();
     {
-#if PROTECT_VECTORS
         MYWRITERLOCK(l, entryRW);
-#endif
 
         for (size_t i = 0; i < fd.size(); i++) {
             fd[i]->resize (previewHeight);
@@ -1031,9 +972,7 @@ void ThumbBrowserBase::refreshThumbImages ()
 
 void ThumbBrowserBase::refreshQuickThumbImages ()
 {
-#if PROTECT_VECTORS
     MYWRITERLOCK(l, entryRW);
-#endif
 
     for (size_t i = 0; i < fd.size(); ++i) {
         fd[i]->refreshQuickThumbnailImage ();
@@ -1045,9 +984,7 @@ void ThumbBrowserBase::refreshEditedState (const std::set<Glib::ustring>& efiles
 
     editedFiles = efiles;
     {
-#if PROTECT_VECTORS
         MYREADERLOCK(l, entryRW);
-#endif
 
         for (size_t i = 0; i < fd.size(); i++) {
             fd[i]->framed = editedFiles.find (fd[i]->filename) != editedFiles.end();
@@ -1070,9 +1007,8 @@ void ThumbBrowserBase::enableTabMode(bool enable)
     arrangement = enable ? ThumbBrowserBase::TB_Horizontal : ThumbBrowserBase::TB_Vertical;
 
     if ((!options.sameThumbSize && (options.thumbSizeTab != options.thumbSize)) || (options.showFileNames || options.filmStripShowFileNames)) {
-#if PROTECT_VECTORS
+
         MYWRITERLOCK(l, entryRW);
-#endif
 
         for (size_t i = 0; i < fd.size(); i++) {
             fd[i]->resize (getThumbnailHeight());
@@ -1084,22 +1020,16 @@ void ThumbBrowserBase::enableTabMode(bool enable)
     // Scroll to selected position if going into ribbon mode or back
     // Tab mode is horizontal, file browser is vertical
     {
-#if PROTECT_VECTORS
         MYREADERLOCK(l, entryRW);
-#endif
 
         if (!selected.empty()) {
             if (enable) {
                 double h = selected[0]->getStartX();
-#if PROTECT_VECTORS
                 MYREADERLOCK_RELEASE(l);
-#endif
                 hscroll.set_value (min(h, hscroll.get_adjustment()->get_upper()));
             } else {
                 double v = selected[0]->getStartY();
-#if PROTECT_VECTORS
                 MYREADERLOCK_RELEASE(l);
-#endif
                 vscroll.set_value (min(v, vscroll.get_adjustment()->get_upper()));
             }
         }
@@ -1128,9 +1058,7 @@ int ThumbBrowserBase::getEffectiveHeight()
 {
     int h = hscroll.get_height() + 2; // have 2 pixels rounding error for scroll bars to appear
 
-#if PROTECT_VECTORS
     MYREADERLOCK(l, entryRW);
-#endif
 
     // Filtered items do not change in size, so take a non-filtered
     for (size_t i = 0; i < fd.size(); i++)

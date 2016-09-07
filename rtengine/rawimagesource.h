@@ -31,38 +31,6 @@
 namespace rtengine
 {
 
-// these two functions "simulate" and jagged array, but just use two allocs
-template<class T> T** allocArray (int W, int H, bool initZero = false)
-{
-
-    T** t = new T*[H];
-    t[0] = new T[H * W];
-
-    if (initZero) {
-        memset(t[0], 0, sizeof(T)*W * H);
-    }
-
-    for (int i = 1; i < H; i++) {
-        t[i] = t[i - 1] + W;
-    }
-
-    return t;
-}
-
-template<class T> void freeArray (T** a, int H)
-{
-
-    delete [] a[0];
-    delete [] a;
-}
-
-
-template<class T> void freeArray2 (T** a, int H)
-{
-    //for (int i=0; i<H; i++)
-    delete [] a[0];
-}
-
 class RawImageSource : public ImageSource
 {
 
@@ -71,7 +39,8 @@ private:
     static DiagonalCurve *phaseOneIccCurveInv;
     static LUTf invGrad;  // for fast_demosaic
     static LUTf initInvGrad ();
-    static void colorSpaceConversion_ (Imagefloat* im, ColorManagementParams &cmp, ColorTemp &wb, double pre_mul[3], cmsHPROFILE embedded, cmsHPROFILE camprofile, double cam[3][3], const std::string &camName);
+    static void colorSpaceConversion_ (Imagefloat* im, ColorManagementParams &cmp, const ColorTemp &wb, double pre_mul[3], cmsHPROFILE embedded, cmsHPROFILE camprofile, double cam[3][3], const std::string &camName);
+    int  defTransform        (int tran);
 
 protected:
     MyMutex getImageMutex;  // locks getImage
@@ -127,10 +96,8 @@ protected:
     void hphd_vertical       (float** hpmap, int col_from, int col_to);
     void hphd_horizontal     (float** hpmap, int row_from, int row_to);
     void hphd_green          (float** hpmap);
-    void processFalseColorCorrectionThread (Imagefloat* im, int row_from, int row_to);
-    void hlRecovery          (std::string method, float* red, float* green, float* blue, int i, int sx1, int width, int skip, const RAWParams &raw, float* hlmax);
-    int  defTransform        (int tran);
-    void rotateLine          (float* line, PlanarPtr<float> &channel, int tran, int i, int w, int h);
+    void processFalseColorCorrectionThread (Imagefloat* im, array2D<float> &rbconv_Y, array2D<float> &rbconv_I, array2D<float> &rbconv_Q, array2D<float> &rbout_I, array2D<float> &rbout_Q, const int row_from, const int row_to);
+    void hlRecovery          (std::string method, float* red, float* green, float* blue, int width, float* hlmax);
     void transformRect       (PreviewProps pp, int tran, int &sx1, int &sy1, int &width, int &height, int &fw);
     void transformPosition   (int x, int y, int tran, int& tx, int& ty);
 
@@ -148,31 +115,34 @@ public:
     RawImageSource ();
     ~RawImageSource ();
 
-    int         load        (Glib::ustring fname, bool batch = false);
-    void        preprocess  (const RAWParams &raw, const LensProfParams &lensProf, const CoarseTransformParams& coarse);
+    int         load        (const Glib::ustring &fname, bool batch = false);
+    void        preprocess  (const RAWParams &raw, const LensProfParams &lensProf, const CoarseTransformParams& coarse, bool prepareDenoise = true);
     void        demosaic    (const RAWParams &raw);
+    void        retinex       (ColorManagementParams cmp, RetinexParams  deh, ToneCurveParams Tc, LUTf & cdcurve, LUTf & mapcurve, const RetinextransmissionCurve & dehatransmissionCurve, const RetinexgaintransmissionCurve & dehagaintransmissionCurve, multi_array2D<float, 4> &conversionBuffer, bool dehacontlutili, bool mapcontlutili, bool useHsl, float &minCD, float &maxCD, float &mini, float &maxi, float &Tmean, float &Tsigma, float &Tmin, float &Tmax, LUTu &histLRETI);
+    void        retinexPrepareCurves       (RetinexParams retinexParams, LUTf &cdcurve, LUTf &mapcurve, RetinextransmissionCurve &retinextransmissionCurve, RetinexgaintransmissionCurve &retinexgaintransmissionCurve, bool &retinexcontlutili, bool &mapcontlutili, bool &useHsl, LUTu & lhist16RETI, LUTu & histLRETI);
+    void        retinexPrepareBuffers      (ColorManagementParams cmp, RetinexParams retinexParams, multi_array2D<float, 4> &conversionBuffer, LUTu &lhist16RETI);
     void        flushRawData      ();
     void        flushRGB          ();
     void        HLRecovery_Global (ToneCurveParams hrp);
     void        refinement_lassus (int PassCount);
     void        refinement(int PassCount);
 
-    bool        IsrgbSourceModified()
+    bool        IsrgbSourceModified() const
     {
         return rgbSourceModified;   // tracks whether cached rgb output of demosaic has been modified
     }
 
     void        processFlatField(const RAWParams &raw, RawImage *riFlatFile, unsigned short black[4]);
     void        copyOriginalPixels(const RAWParams &raw, RawImage *ri, RawImage *riDark, RawImage *riFlatFile  );
-    void        cfaboxblur  (RawImage *riFlatFile, float* cfablur, int boxH, int boxW );
+    void        cfaboxblur  (RawImage *riFlatFile, float* cfablur, int boxH, int boxW);
     void        scaleColors (int winx, int winy, int winw, int winh, const RAWParams &raw); // raw for cblack
 
-    void        getImage    (ColorTemp ctemp, int tran, Imagefloat* image, PreviewProps pp, ToneCurveParams hrp, ColorManagementParams cmp, RAWParams raw);
-    eSensorType getSensorType ()
+    void        getImage    (const ColorTemp &ctemp, int tran, Imagefloat* image, const PreviewProps &pp, const ToneCurveParams &hrp, const ColorManagementParams &cmp, const RAWParams &raw);
+    eSensorType getSensorType () const
     {
         return ri != NULL ? ri->getSensorType() : ST_NONE;
     }
-    ColorTemp   getWB       ()
+    ColorTemp   getWB       () const
     {
         return camera_wb;
     }
@@ -183,7 +153,7 @@ public:
         return rawData;
     }
 
-    double      getDefGain  ()
+    double      getDefGain  () const
     {
         return defGain;
     }
@@ -214,24 +184,20 @@ public:
     }
     void        getAutoExpHistogram (LUTu & histogram, int& histcompr);
     void        getRAWHistogram (LUTu & histRedRaw, LUTu & histGreenRaw, LUTu & histBlueRaw);
-    DCPProfile *getDCP(ColorManagementParams cmp, ColorTemp &wb);
+    DCPProfile *getDCP(const ColorManagementParams &cmp, ColorTemp &wb, DCPProfile::ApplyState &as);
 
-    void convertColorSpace(Imagefloat* image, ColorManagementParams cmp, ColorTemp &wb);
+    void convertColorSpace(Imagefloat* image, const ColorManagementParams &cmp, const ColorTemp &wb);
     static bool findInputProfile(Glib::ustring inProfile, cmsHPROFILE embedded, std::string camName, DCPProfile **dcpProf, cmsHPROFILE& in);
-    static void colorSpaceConversion   (Imagefloat* im, ColorManagementParams cmp, ColorTemp &wb, double pre_mul[3], cmsHPROFILE embedded, cmsHPROFILE camprofile, double cam[3][3], std::string camName)
+    static void colorSpaceConversion   (Imagefloat* im, ColorManagementParams cmp, const ColorTemp &wb, double pre_mul[3], cmsHPROFILE embedded, cmsHPROFILE camprofile, double cam[3][3], std::string camName)
     {
         colorSpaceConversion_ (im, cmp, wb, pre_mul, embedded, camprofile, cam, camName);
     }
     static void inverse33 (const double (*coeff)[3], double (*icoeff)[3]);
 
-    void boxblur2(float** src, float** dst, int H, int W, int box );
-    void boxblur_resamp(float **src, float **dst, int H, int W, int box, int samp );
-
-    //void boxblur_resamp(float **red, float **green, float **blue, int H, int W, float thresh[3], float max[3],
-    //                multi_array2D<float,3> & hfsize, multi_array2D<float,3> & hilite, int box );
+    void boxblur2(float** src, float** dst, float** temp, int H, int W, int box );
+    void boxblur_resamp(float **src, float **dst, float** temp, int H, int W, int box, int samp );
+    void MSR(float** luminance, float **originalLuminance, float **exLuminance,  LUTf & mapcurve, bool &mapcontlutili, int width, int height, RetinexParams deh, const RetinextransmissionCurve & dehatransmissionCurve, const RetinexgaintransmissionCurve & dehagaintransmissionCurve, float &minCD, float &maxCD, float &mini, float &maxi, float &Tmean, float &Tsigma, float &Tmin, float &Tmax);
     void HLRecovery_inpaint (float** red, float** green, float** blue);
-    //void HLRecovery_inpaint ();
-
     static void HLRecovery_Luminance (float* rin, float* gin, float* bin, float* rout, float* gout, float* bout, int width, float maxval);
     static void HLRecovery_CIELab (float* rin, float* gin, float* bin, float* rout, float* gout, float* bout, int width, float maxval, double cam[3][3], double icam[3][3]);
     static void HLRecovery_blend (float* rin, float* gin, float* bin, int width, float maxval, float* hlmax);
@@ -240,17 +206,17 @@ public:
 
 protected:
     typedef unsigned short ushort;
-    void processFalseColorCorrection (Imagefloat* i, int steps);
-    inline  void convert_row_to_YIQ (float* r, float* g, float* b, float* Y, float* I, float* Q, int W);
-    inline  void convert_row_to_RGB (float* r, float* g, float* b, float* Y, float* I, float* Q, int W);
+    void processFalseColorCorrection (Imagefloat* i, const int steps);
+    inline  void convert_row_to_YIQ (const float* const r, const float* const g, const float* const b, float* Y, float* I, float* Q, const int W);
+    inline  void convert_row_to_RGB (float* r, float* g, float* b, const float* const Y, const float* const I, const float* const Q, const int W);
+    inline  void convert_to_RGB (float &r, float &g, float &b, const float Y, const float I, const float Q);
 
     inline  void convert_to_cielab_row  (float* ar, float* ag, float* ab, float* oL, float* oa, float* ob);
     inline  void interpolate_row_g      (float* agh, float* agv, int i);
     inline  void interpolate_row_rb     (float* ar, float* ab, float* pg, float* cg, float* ng, int i);
     inline  void interpolate_row_rb_mul_pp (float* ar, float* ab, float* pg, float* cg, float* ng, int i, float r_mul, float g_mul, float b_mul, int x1, int width, int skip);
 
-    int  LinEqSolve( int nDim, double* pfMatr, double* pfVect, double* pfSolution);//Emil's CA auto correction
-    void CA_correct_RT  (double cared, double cablue);
+    void CA_correct_RT  (const double cared, const double cablue, const double caautostrength);
     void ddct8x8s(int isgn, float a[8][8]);
     void processRawWhitepoint (float expos, float preser);  // exposure before interpolation
 
@@ -271,7 +237,6 @@ protected:
     void jdl_interpolate_omp();
     void igv_interpolate(int winw, int winh);
     void lmmse_interpolate_omp(int winw, int winh, int iterations);
-
     void amaze_demosaic_RT(int winx, int winy, int winw, int winh);//Emil's code for AMaZE
     void fast_demosaic(int winx, int winy, int winw, int winh );//Emil's code for fast demosaicing
     void dcb_demosaic(int iterations, bool dcb_enhance);
@@ -294,9 +259,8 @@ protected:
     void dcb_color_full(float (*image)[4], int x0, int y0, float (*chroma)[2]);
     void cielab (const float (*rgb)[3], float* l, float* a, float *b, const int width, const int height, const int labWidth, const float xyz_cam[3][3]);
     void xtransborder_interpolate (int border);
-    void xtrans_interpolate (int passes, bool useCieLab);
+    void xtrans_interpolate (const int passes, const bool useCieLab);
     void fast_xtrans_interpolate ();
-    void    transLine   (float* red, float* green, float* blue, int i, Imagefloat* image, int tran, int imw, int imh, int fw);
     void    hflip       (Imagefloat* im);
     void    vflip       (Imagefloat* im);
 

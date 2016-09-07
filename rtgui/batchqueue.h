@@ -57,25 +57,24 @@ protected:
     Gtk::ImageMenuItem* tail;
     Gtk::MenuItem* selall;
     Gtk::MenuItem* open;
-    Gtk::Menu* pmenu;
-
     Glib::RefPtr<Gtk::AccelGroup> pmaccelgroup;
+    Gtk::Menu pmenu;
 
     BatchQueueListener* listener;
 
     Glib::ustring autoCompleteFileName (const Glib::ustring& fileName, const Glib::ustring& format);
-    Glib::ustring getTempFilenameForParams( const Glib::ustring filename );
-    bool saveBatchQueue( );
+    Glib::ustring getTempFilenameForParams( const Glib::ustring &filename );
+    bool saveBatchQueue ();
     void notifyListener (bool queueEmptied);
 
 public:
     BatchQueue (FileCatalog* aFileCatalog);
     ~BatchQueue ();
 
-    void addEntries (std::vector<BatchQueueEntry*> &entries, bool head = false, bool save = true);
-    void cancelItems (std::vector<ThumbBrowserEntryBase*>* items);
-    void headItems (std::vector<ThumbBrowserEntryBase*>* items);
-    void tailItems (std::vector<ThumbBrowserEntryBase*>* items);
+    void addEntries (const std::vector<BatchQueueEntry*>& entries, bool head = false, bool save = true);
+    void cancelItems (const std::vector<ThumbBrowserEntryBase*>& items);
+    void headItems (const std::vector<ThumbBrowserEntryBase *>& items);
+    void tailItems (const std::vector<ThumbBrowserEntryBase *>& items);
     void selectAll ();
     void openItemInEditor(ThumbBrowserEntryBase* item);
     void openLastSelectedItemInEditor();
@@ -84,11 +83,7 @@ public:
 
     bool hasJobs ()
     {
-        // not sure that this lock is necessary, but it's safer to keep it...
-        // TODO: Check for Linux
-#if PROTECT_VECTORS
         MYREADERLOCK(l, entryRW);
-#endif
         return (!fd.empty());
     }
 

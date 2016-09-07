@@ -51,12 +51,12 @@
 #include "perspective.h"
 #include "rotate.h"
 #include "vignetting.h"
+#include "retinex.h"
 #include "gradient.h"
 #include "pcvignette.h"
 #include "toolbar.h"
 #include "lensgeom.h"
 #include "lensgeomlistener.h"
-#include "dirselectionlistener.h"
 #include "wavelet.h"
 #include "dirpyrequalizer.h"
 #include "hsvequalizer.h"
@@ -101,7 +101,6 @@ class ToolPanelCoordinator :    public ToolPanelListener,
     public SpotWBListener,
     public CropPanelListener,
     public ICMPanelListener,
-    public DirSelectionListener,
     public ImageAreaToolListener
 {
 
@@ -112,6 +111,7 @@ protected:
     WhiteBalance* whitebalance;
     Vignetting* vignetting;
     Gradient* gradient;
+    Retinex*  retinex;
     PCVignette* pcvignette;
     LensGeometry* lensgeom;
     LensProfilePanel* lensProf;
@@ -246,7 +246,7 @@ public:
     {
         return hasChanged;
     }
-    void updateCurveBackgroundHistogram (LUTu & histToneCurve, LUTu & histLCurve, LUTu & histCCurve, /*LUTu & histCLurve, LUTu & histLLCurve,*/ LUTu & histLCAM,  LUTu & histCCAM, LUTu & histRed, LUTu & histGreen, LUTu & histBlue, LUTu & histLuma);
+    void updateCurveBackgroundHistogram (LUTu & histToneCurve, LUTu & histLCurve, LUTu & histCCurve, /*LUTu & histCLurve, LUTu & histLLCurve,*/ LUTu & histLCAM,  LUTu & histCCAM, LUTu & histRed, LUTu & histGreen, LUTu & histBlue, LUTu & histLuma, LUTu & histLRETI);
     void foldAllButOne (Gtk::Box* parent, FoldableToolPanel* openedSection);
 
     // multiple listeners can be added that are notified on changes (typical: profile panel and the history)
@@ -263,7 +263,7 @@ public:
     void setDefaults    (rtengine::procparams::ProcParams* defparams);
 
     // DirSelectionListener interface
-    void dirSelected (const Glib::ustring& dirname, const Glib::ustring& openfile = "");
+    void dirSelected (const Glib::ustring& dirname, const Glib::ustring& openfile);
 
     // to support the GUI:
     CropGUIListener* getCropGUIListener (); // through the CropGUIListener the editor area can notify the "crop" ToolPanel when the crop selection changes

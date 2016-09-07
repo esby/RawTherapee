@@ -17,7 +17,7 @@
  *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "adjuster.h"
-#include <sigc++/class_slot.h>
+#include <sigc++/slot.h>
 #include <cmath>
 #include "multilangmgr.h"
 #include "../rtengine/rtengine.h"
@@ -50,8 +50,7 @@ Adjuster::Adjuster (Glib::ustring vlabel, double vmin, double vmax, double vstep
     vStep = vstep;
     addMode = false;
 
-    // TODO: let the user chose the default value of Adjuster::delay, for slow machines
-    delay = options.adjusterDelay;        // delay is no more static, so we can set the delay individually (useful for the RAW editor tab)
+    delay = options.adjusterMinDelay;
 
     set_border_width (0);
     set_spacing (0);

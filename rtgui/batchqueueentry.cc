@@ -17,13 +17,14 @@
  *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "batchqueueentry.h"
-#include "thumbbrowserbase.h"
 
 #include <cstring>
+
 #include "guiutils.h"
 #include "threadutils.h"
-#include "../rtengine/safegtk.h"
+#include "rtimage.h"
 #include "multilangmgr.h"
+#include "thumbbrowserbase.h"
 
 bool BatchQueueEntry::iconsLoaded(false);
 Glib::RefPtr<Gdk::Pixbuf> BatchQueueEntry::savedAsIcon;
@@ -31,11 +32,10 @@ Glib::RefPtr<Gdk::Pixbuf> BatchQueueEntry::savedAsIcon;
 BatchQueueEntry::BatchQueueEntry (rtengine::ProcessingJob* pjob, const rtengine::procparams::ProcParams& pparams, Glib::ustring fname, int prevw, int prevh, Thumbnail* thm)
     : ThumbBrowserEntryBase(fname),
       opreview(NULL), origpw(prevw), origph(prevh), opreviewDone(false),
-      job(pjob), progress(0), outFileName(""), sequence(0), forceFormatOpts(false)
+      job(pjob), progress(0), outFileName(""), sequence(0), forceFormatOpts(false), params(pparams)
 {
 
     thumbnail = thm;
-    params = pparams;
 
 #if 1 //ndef WIN32
     // The BatchQueueEntryIdleHelper tracks if an entry has been deleted while it was sitting waiting for "idle"
@@ -46,7 +46,7 @@ BatchQueueEntry::BatchQueueEntry (rtengine::ProcessingJob* pjob, const rtengine:
 #endif
 
     if (!iconsLoaded) {
-        savedAsIcon = safe_create_from_file ("gtk-save.png");
+        savedAsIcon = RTImage::createFromFile ("gtk-save.png");
         iconsLoaded = true;
     }
 
@@ -244,10 +244,7 @@ void BatchQueueEntry::_updateImage (guint8* img, int w, int h)
 {
 
     if (preh == h) {
-
-#if PROTECT_VECTORS
         MYWRITERLOCK(l, lockRW);
-#endif
 
         prew = w;
         assert (preview == NULL);

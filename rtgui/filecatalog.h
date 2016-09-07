@@ -22,8 +22,6 @@
 #ifdef WIN32
 #include "windirmonitor.h"
 #endif
-#include "dirbrowserremoteinterface.h"
-#include "dirselectionlistener.h"
 #include "filebrowser.h"
 #include "exiffiltersettings.h"
 #include <giomm.h>
@@ -60,7 +58,6 @@ class FilePanel;
  *   - monitoring the directory (for any change)
  */
 class FileCatalog : public Gtk::VBox,
-    public DirSelectionListener,
     public PreviewLoaderListener,
     public FilterPanelListener,
     public FileBrowserListener,
@@ -69,6 +66,8 @@ class FileCatalog : public Gtk::VBox,
     , public WinDirChangeListener
 #endif
 {
+public:
+    typedef sigc::slot<void, const Glib::ustring&> DirSelectionSlot;
 
 private:
     FilePanel* filepanel;
@@ -84,7 +83,7 @@ private:
     FileSelectionListener* listener;
     FileSelectionChangeListener* fslistener;
     ImageAreaToolListener* iatlistener;
-    DirBrowserRemoteInterface*   dirlistener;
+    DirSelectionSlot selectDir;
 
     Gtk::HBox* buttonBar;
     Gtk::HBox* hbToolBar1;
@@ -108,16 +107,17 @@ private:
     Gtk::ToggleButton* bRecentlySaved[2];
     Gtk::ToggleButton* bTrash;
     Gtk::ToggleButton* bNotTrash;
-    Gtk::ToggleButton* categoryButtons[19];
+    Gtk::ToggleButton* bOriginal;
+    Gtk::ToggleButton* categoryButtons[20];
     Gtk::ToggleButton* exifInfo;
-    sigc::connection bCateg[19];
+    sigc::connection bCateg[20];
     Gtk::Image* iFilterClear, *igFilterClear;
     Gtk::Image* iranked[5], *igranked[5], *iUnRanked, *igUnRanked;
     Gtk::Image* iCLabeled[5], *igCLabeled[5], *iUnCLabeled, *igUnCLabeled;
     Gtk::Image* iEdited[2], *igEdited[2];
     Gtk::Image* iRecentlySaved[2], *igRecentlySaved[2];
     Gtk::Image *iTrashEmpty, *iTrashFull;
-    Gtk::Image *iNotTrash;
+    Gtk::Image *iNotTrash, *iOriginal;
     Gtk::Image *iRefreshWhite, *iRefreshRed;
     Gtk::Image *iLeftPanel_1_Show, *iLeftPanel_1_Hide, *iRightPanel_1_Show, *iRightPanel_1_Hide;
     Gtk::Image *iQueryClear;
@@ -174,7 +174,7 @@ public:
 
     FileCatalog (CoarsePanel* cp, ToolBar* tb, FilePanel* filepanel);
     ~FileCatalog();
-    void dirSelected (const Glib::ustring& dirname, const Glib::ustring& openfile = "");
+    void dirSelected (const Glib::ustring& dirname, const Glib::ustring& openfile);
     void closeDir    ();
     void refreshEditedState (const std::set<Glib::ustring>& efiles);
 
@@ -243,10 +243,7 @@ public:
     {
         iatlistener = l;
     }
-    void setDirBrowserRemoteInterface (DirBrowserRemoteInterface* l)
-    {
-        dirlistener = l;
-    }
+    void setDirSelector (const DirSelectionSlot& selectDir);
 
     void setFilterPanel (FilterPanel* fpanel);
     void setExportPanel (ExportPanel* expanel);
@@ -310,5 +307,10 @@ public:
 #endif
 
 };
+
+inline void FileCatalog::setDirSelector (const FileCatalog::DirSelectionSlot& selectDir)
+{
+    this->selectDir = selectDir;
+}
 
 #endif

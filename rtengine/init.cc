@@ -39,21 +39,17 @@ MyMutex* lcmsMutex = NULL;
 
 int init (const Settings* s, Glib::ustring baseDir, Glib::ustring userSettingsDir)
 {
-
     settings = s;
     iccStore->init (s->iccDirectory, baseDir + "/iccprofiles");
     iccStore->findDefaultMonitorProfile();
+    DCPStore::getInstance()->init (baseDir + "/dcpprofiles");
 
-    dcpStore->init (baseDir + "/dcpprofiles");
-
-    CameraConstantsStore::initCameraConstants (baseDir, userSettingsDir);
+    CameraConstantsStore::getInstance ()->init (baseDir, userSettingsDir);
     profileStore.init ();
     ProcParams::init ();
     Color::init ();
     PerceptualToneCurve::init ();
     RawImageSource::init ();
-    ImProcFunctions::initCache ();
-    Thumbnail::initGamma ();
     delete lcmsMutex;
     lcmsMutex = new MyMutex;
     dfm.init( s->darkFramesPath );
@@ -66,8 +62,6 @@ void cleanup ()
 
     ProcParams::cleanup ();
     Color::cleanup ();
-    ImProcFunctions::cleanupCache ();
-    Thumbnail::cleanupGamma ();
     RawImageSource::cleanup ();
 }
 

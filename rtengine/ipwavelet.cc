@@ -23,9 +23,9 @@
 //
 ////////////////////////////////////////////////////////////////
 
+#include <cassert>
+#include <cmath>
 
-
-#include <math.h>
 #include "../rtgui/threadutils.h"
 
 #include "rtengine.h"
@@ -37,6 +37,7 @@
 #include "mytime.h"
 #include "sleef.c"
 #include "opthelper.h"
+#include "median.h"
 #include "EdgePreservingDecomposition.h"
 
 #ifdef _OPENMP
@@ -49,26 +50,6 @@
 #define offset 25   // shift between tiles
 #define fTS ((TS/2+1))  // second dimension of Fourier tiles
 #define blkrad 1    // radius of block averaging
-
-#define PIX_SORT(a,b) { if ((a)>(b)) {temp=(a);(a)=(b);(b)=temp;} }
-
-#define med3(a0,a1,a2,a3,a4,a5,a6,a7,a8,median) { \
-pp[0]=a0; pp[1]=a1; pp[2]=a2; pp[3]=a3; pp[4]=a4; pp[5]=a5; pp[6]=a6; pp[7]=a7; pp[8]=a8; \
-PIX_SORT(pp[1],pp[2]); PIX_SORT(pp[4],pp[5]); PIX_SORT(pp[7],pp[8]); \
-PIX_SORT(pp[0],pp[1]); PIX_SORT(pp[3],pp[4]); PIX_SORT(pp[6],pp[7]); \
-PIX_SORT(pp[1],pp[2]); PIX_SORT(pp[4],pp[5]); PIX_SORT(pp[7],pp[8]); \
-PIX_SORT(pp[0],pp[3]); PIX_SORT(pp[5],pp[8]); PIX_SORT(pp[4],pp[7]); \
-PIX_SORT(pp[3],pp[6]); PIX_SORT(pp[1],pp[4]); PIX_SORT(pp[2],pp[5]); \
-PIX_SORT(pp[4],pp[7]); PIX_SORT(pp[4],pp[2]); PIX_SORT(pp[6],pp[4]); \
-PIX_SORT(pp[4],pp[2]); median=pp[4];} //pp4 = median
-
-
-#define med2(a0,a1,a2,a3,a4,median) { \
-pp[0]=a0; pp[1]=a1; pp[2]=a2; pp[3]=a3; pp[4]=a4;  \
-PIX_SORT(pp[0],pp[1]) ; PIX_SORT(pp[3],pp[4]) ; PIX_SORT(pp[0],pp[3]) ;\
-PIX_SORT(pp[1],pp[4]) ; PIX_SORT(pp[1],pp[2]) ; PIX_SORT(pp[2],pp[3]) ;\
-PIX_SORT(pp[1],pp[2]) ; median=pp[2] ;}
-
 
 #define epsilon 0.001f/(TS*TS) //tolerance
 
@@ -163,9 +144,6 @@ SSEFUNCTION void ImProcFunctions::ip_wavelet(LabImage * lab, LabImage * dst, int
 
 
 {
-    MyTime t1e, t2e ;
-    t1e.set();
-
 #ifdef _DEBUG
     // init variables to display Munsell corrections
     MunsellDebugInfo* MunsDebugInfo = new MunsellDebugInfo();
@@ -219,10 +197,6 @@ SSEFUNCTION void ImProcFunctions::ip_wavelet(LabImage * lab, LabImage * dst, int
         cp.tonemap = true;
     }
 
-    /*else if(params->wavelet.TMmethod=="std")  {cp.TMmeth=1;cp.tonemap=true;}
-    else if(params->wavelet.TMmethod=="high")   {cp.TMmeth=2;cp.tonemap=true;}
-    else if(params->wavelet.TMmethod=="lowhigh")    {cp.TMmeth=3;cp.tonemap=true;}
-    */
     if(params->wavelet.TMmethod == "cont") {
         cp.contmet = 1;
     } else if(params->wavelet.TMmethod == "tm") {
@@ -581,15 +555,8 @@ SSEFUNCTION void ImProcFunctions::ip_wavelet(LabImage * lab, LabImage * dst, int
         realtile = 12;
     }
 
-    int tilesize;
-    int overlap;
-    tilesize = 1024;
-    overlap = 128;
-    //tilesize=128*params->wavelet.tiles;
-    tilesize = 128 * realtile;
-    //overlap=(int) tilesize*params->wavelet.overl;
-    overlap = (int) tilesize * 0.125f;
-    //  printf("overl=%d\n",overlap);
+    int tilesize = 128 * realtile;
+    int overlap = (int) tilesize * 0.125f;
     int numtiles_W, numtiles_H, tilewidth, tileheight, tileWskip, tileHskip;
 
     if(params->wavelet.Tilesmethod == "full") {
@@ -834,11 +801,9 @@ SSEFUNCTION void ImProcFunctions::ip_wavelet(LabImage * lab, LabImage * dst, int
 #endif
 
                     for (int i = 1; i < hei - 1; i++) {
-                        float pp[9], temp;
-
                         for (int j = 1; j < wid - 1; j++) {
                             if((varhue[i][j] < -1.3f && varhue[i][j] > - 2.5f)  && (varchro[i][j] > 15.f && varchro[i][j] < 55.f) && labco->L[i][j] > 6000.f) { //blue sky + med3x3  ==> after for more effect use denoise
-                                med3(labco->L[i][j] , labco->L[i - 1][j], labco->L[i + 1][j] , labco->L[i][j + 1], labco->L[i][j - 1], labco->L[i - 1][j - 1], labco->L[i - 1][j + 1], labco->L[i + 1][j - 1], labco->L[i + 1][j + 1], tmL[i][j]);    //3x3
+                                tmL[i][j] = median(labco->L[i][j] , labco->L[i - 1][j], labco->L[i + 1][j] , labco->L[i][j + 1], labco->L[i][j - 1], labco->L[i - 1][j - 1], labco->L[i - 1][j + 1], labco->L[i + 1][j - 1], labco->L[i + 1][j + 1]);    //3x3
                             }
                         }
                     }
@@ -1314,15 +1279,7 @@ SSEFUNCTION void ImProcFunctions::ip_wavelet(LabImage * lab, LabImage * dst, int
         delete dsttmp;
     }
 
-    if (settings->verbose) {
-        t2e.set();
-        printf("Wavelet performed in %d usec:\n", t2e.etime(t1e));
-    }
-
-}//end o
-
-
-
+}
 
 #undef TS
 #undef fTS
@@ -1377,8 +1334,17 @@ void ImProcFunctions::Aver( float *  RESTRICT DataList, int datalen, float &aver
         }
     }
 
-    averagePlus = averaP / countP;
-    averageNeg = averaN / countN;
+    if(countP > 0) {
+        averagePlus = averaP / countP;
+    } else {
+        averagePlus = 0;
+    }
+
+    if(countN > 0) {
+        averageNeg = averaN / countN;
+    } else {
+        averageNeg = 0;
+    }
 
 }
 
@@ -1403,13 +1369,22 @@ void ImProcFunctions::Sigma( float *  RESTRICT DataList, int datalen, float aver
         }
     }
 
-    sigmaPlus = sqrt(variP / countP);
-    sigmaNeg = sqrt(variN / countN);
+    if(countP > 0) {
+        sigmaPlus = sqrt(variP / countP);
+    } else {
+        sigmaPlus = 0;
+    }
+
+    if(countN > 0) {
+        sigmaNeg = sqrt(variN / countN);
+    } else {
+        sigmaNeg = 0;
+    }
 
 }
 
 void ImProcFunctions::Evaluate2(wavelet_decomposition &WaveletCoeffs_L,
-                                struct cont_params cp, int ind, float *mean, float *meanN, float *sigma, float *sigmaN, float *MaxP, float *MaxN, float madL[8][3])
+                                const struct cont_params& cp, int ind, float *mean, float *meanN, float *sigma, float *sigmaN, float *MaxP, float *MaxN, float madL[8][3])
 {
 //StopWatch Stop1("Evaluate2");
     int maxlvl = WaveletCoeffs_L.maxlevel();
@@ -1427,7 +1402,7 @@ void ImProcFunctions::Evaluate2(wavelet_decomposition &WaveletCoeffs_L,
     }
 
 }
-void ImProcFunctions::Eval2 (float ** WavCoeffs_L,  int level, struct cont_params cp,
+void ImProcFunctions::Eval2 (float ** WavCoeffs_L,  int level, const struct cont_params& cp,
                              int W_L, int H_L, int skip_L, int ind, float *mean, float *meanN, float *sigma, float *sigmaN, float *MaxP, float *MaxN, float *madL)
 {
     const float eps = 0.01f;
@@ -1442,7 +1417,6 @@ void ImProcFunctions::Eval2 (float ** WavCoeffs_L,  int level, struct cont_param
     for (int dir = 1; dir < 4; dir++) {
         Aver(WavCoeffs_L[dir], W_L * H_L,  avLP[dir], avLN[dir], maxL[dir], minL[dir]);
         Sigma(WavCoeffs_L[dir], W_L * H_L, avLP[dir], avLN[dir], sigP[dir], sigN[dir]);
-        //  printf("dir=%d level=%d avLP=%f max=%f avLN=%f min=%f sigP=%f sigN=%f\n",dir,level,avLP[dir] ,maxL[dir], avLN[dir] ,minL[dir], sigP[dir], sigN[dir]);
     }
 
     AvL = 0.f;
@@ -1483,9 +1457,6 @@ void ImProcFunctions::Eval2 (float ** WavCoeffs_L,  int level, struct cont_param
     sigmaN[level] = SN;
     MaxP[level] = maxLP;
     MaxN[level] = maxLN;
-    //  if(params->wavelet.CLmethod!="all") {//display only if user choose different from all
-    //  printf("Ind=%d Level=%d MadL=%f AvL=%f AvN=%f SL=%f SN=%f maxP=%f maxN=%f\n",ind, level,MADL,mean[level],meanN[level],sigma[level],sigmaN[level],MaxP[level],MaxN[level]);
-    //  }
 }
 
 float *ImProcFunctions::ContrastDR(float *Source, int skip, struct cont_params &cp, int W_L, int H_L, float Compression, float DetailBoost, float max0, float min0, float ave, float ah, float bh, float al, float bl, float factorx, float *Contrast)
@@ -1502,27 +1473,7 @@ float *ImProcFunctions::ContrastDR(float *Source, int skip, struct cont_params &
 #endif
 
     for (int i = 0; i < W_L * H_L; i++) { //contrast
-        /*
-        //source between 0 and 1
-        if(Source[i] < 1.f) {
-            float prov;
-            if( 32768.f*Source[i]> ave) {
-                float kh = ah*(Source[i]*100.f)+bh;
-                prov=32768.f*Source[i];
-                Contrast[i]=ave+kh*(Source[i]*32768.f-ave);
-            } else {
-                float kl = al*(Source[i]*100.f)+bl;
-                prov=32768.f*Source[i];
-                Contrast[i]=ave-kl*(ave-Source[i]*32768.f);
-            }
-            float diflc=Contrast[i]-prov;
-            diflc*=factorx;
-            Contrast[i] =  (prov + diflc)/32768.f;
-            //contrast between 0 and 1
-        }
-        */
         Contrast[i] = Source[i] ;
-
     }
 
     return Contrast;
@@ -1589,9 +1540,6 @@ SSEFUNCTION float *ImProcFunctions::CompressDR(float *Source, int skip, struct c
     else {
         temp = (Compression - 1.0f) / 20.f;
     }
-
-//  printf("temp=%f \n", temp);
-
 
 #ifdef __SSE2__
 #ifdef _RT_NESTED_OPENMP
@@ -1690,7 +1638,7 @@ void ImProcFunctions::ContrastResid(float * WavCoeffs_L0,  unsigned int Iterates
 
 
 
-void ImProcFunctions::EPDToneMapResid(float * WavCoeffs_L0,  unsigned int Iterates, int skip, struct cont_params cp, int W_L, int H_L, float max0, float min0)
+void ImProcFunctions::EPDToneMapResid(float * WavCoeffs_L0,  unsigned int Iterates, int skip, struct cont_params& cp, int W_L, int H_L, float max0, float min0)
 {
 
 
@@ -1744,7 +1692,7 @@ void ImProcFunctions::EPDToneMapResid(float * WavCoeffs_L0,  unsigned int Iterat
     }
 }
 
-void ImProcFunctions::WaveletcontAllLfinal(wavelet_decomposition &WaveletCoeffs_L, struct cont_params &cp, float *mean,float *sigma, float *MaxP, const WavOpacityCurveWL & waOpacityCurveWL)
+void ImProcFunctions::WaveletcontAllLfinal(wavelet_decomposition &WaveletCoeffs_L, struct cont_params &cp, float *mean, float *sigma, float *MaxP, const WavOpacityCurveWL & waOpacityCurveWL)
 {
     int maxlvl = WaveletCoeffs_L.maxlevel();
     float * WavCoeffs_L0 = WaveletCoeffs_L.coeff0;
@@ -1852,8 +1800,7 @@ void ImProcFunctions::WaveletcontAllL(LabImage * labco, float ** varhue, float *
     float maxkoeLi[12];
 
     float *koeLibuffer = NULL;
-    bool lipschitz = false;
-    lipschitz = true;
+    bool lipschitz = true;
 
     if(lipschitz == true) {
         for(int y = 0; y < 12; y++) {
@@ -2013,16 +1960,10 @@ void ImProcFunctions::WaveletcontAllL(LabImage * labco, float ** varhue, float *
                         float interm = 0.f;
 
                         if(cp.lip3 && cp.lipp) {
-                            // comparaison betwwen pixel and neighbours
-                            float kneigh, somm;
-
-                            if(cp.neigh == 0) {
-                                kneigh = 38.f;
-                                somm = 50.f;
-                            } else if(cp.neigh == 1) {
-                                kneigh = 28.f;
-                                somm = 40.f;
-                            }
+                            // comparaison between pixel and neighbours
+                            const auto neigh = cp.neigh == 1;
+                            const auto kneigh = neigh ? 28.f : 38.f;
+                            const auto somm = neigh ? 40.f : 50.f;
 
                             for (int dir = 1; dir < 4; dir++) { //neighbours proxi
                                 koeLi[lvl * 3 + dir - 1][i * W_L + j] = (kneigh * koeLi[lvl * 3 + dir - 1][i * W_L + j] + 2.f * koeLi[lvl * 3 + dir - 1][(i - 1) * W_L + j] + 2.f * koeLi[lvl * 3 + dir - 1][(i + 1) * W_L + j]
@@ -2354,7 +2295,7 @@ void ImProcFunctions::WaveletcontAllAB(LabImage * labco, float ** varhue, float 
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-void ImProcFunctions::calckoe(float ** WavCoeffs_LL, struct cont_params cp, float *koeLi[12], int level, int dir, int W_L, int H_L, float edd, float *maxkoeLi, float **tmC)
+void ImProcFunctions::calckoe(float ** WavCoeffs_LL, const struct cont_params& cp, float *koeLi[12], int level, int dir, int W_L, int H_L, float edd, float *maxkoeLi, float **tmC)
 {
     int borderL = 2;
 
@@ -2516,7 +2457,7 @@ void ImProcFunctions::calckoe(float ** WavCoeffs_LL, struct cont_params cp, floa
 void ImProcFunctions::finalContAllL (float ** WavCoeffs_L, float * WavCoeffs_L0, int level, int dir, struct cont_params &cp,
                                      int W_L, int H_L, float *mean, float *sigma, float *MaxP, const WavOpacityCurveWL & waOpacityCurveWL)
 {
-    if(cp.diagcurv  && cp.finena) {//curve
+    if(cp.diagcurv  && cp.finena && MaxP[level] > 0.f && mean[level] != 0.f && sigma[level] != 0.f ) { //curve
         float insigma = 0.666f; //SD
         float logmax = log(MaxP[level]); //log Max
         float rapX = (mean[level] + sigma[level]) / MaxP[level]; //rapport between sD / max
@@ -2530,6 +2471,7 @@ void ImProcFunctions::finalContAllL (float ** WavCoeffs_L, float * WavCoeffs_L0,
 #ifdef _RT_NESTED_OPENMP
         #pragma omp parallel for schedule(dynamic, W_L * 16) num_threads(wavNestedLevels) if(wavNestedLevels>1)
 #endif
+
         for (int i = 0; i < W_L * H_L; i++) {
             float absciss;
 
@@ -2669,6 +2611,8 @@ void ImProcFunctions::finalContAllL (float ** WavCoeffs_L, float * WavCoeffs_L0,
 void ImProcFunctions::ContAllL (float *koeLi[12], float *maxkoeLi, bool lipschitz, int maxlvl, LabImage * labco, float ** varhue, float **varchrom, float ** WavCoeffs_L, float * WavCoeffs_L0, int level, int dir, struct cont_params &cp,
                                 int W_L, int H_L, int skip, float *mean, float *meanN, float *sigma, float *sigmaN, float *MaxP, float *MaxN, const WavCurve & wavCLVCcurve, const WavOpacityCurveW & waOpacityCurveW, FlatCurve* ChCurve, bool Chutili)
 {
+    assert (level >= 0);
+    assert (maxlvl > level);
 
     static const float scales[10] = {1.f, 2.f, 4.f, 8.f, 16.f, 32.f, 64.f, 128.f, 256.f, 512.f};
     float scaleskip[10];
@@ -2681,17 +2625,11 @@ void ImProcFunctions::ContAllL (float *koeLi[12], float *maxkoeLi, bool lipschit
     float t_r = settings->top_right;
     float t_l = settings->top_left;
     float b_r = settings->bot_right;
-    float b_l = settings->bot_left;
     float edd = settings->ed_detec;
-    float eddlow = settings->ed_low;
     float eddstrength = settings->ed_detecStr;
     float aedstr = (eddstrength - 1.f) / 90.f;
     float bedstr = 1.f - 10.f * aedstr;
 
-    bool refi = false;
-
-    //  if(cp.lev0s > 0.f || cp.lev1s > 0.f || cp.lev2s > 0.f) refi=true;
-    //  if(cp.val > 0 || refi) {//edge
     if(cp.val > 0  && cp.edgeena) {
         float * koe;
         float maxkoe = 0.f;
@@ -2705,7 +2643,7 @@ void ImProcFunctions::ContAllL (float *koeLi[12], float *maxkoeLi, bool lipschit
 
             maxkoe = 0.f;
 
-            if(cp.detectedge) {//
+            if(cp.detectedge) {
                 float** tmC;
                 int borderL = 1;
                 tmC = new float*[H_L];
@@ -2766,8 +2704,6 @@ void ImProcFunctions::ContAllL (float *koeLi[12], float *maxkoeLi, bool lipschit
                     }
                 }
 
-                //printf("maxkoe=%f \n",maxkoe);
-
                 for (int i = 0; i < H_L; i++) {
                     delete [] tmC[i];
                 }
@@ -2827,9 +2763,6 @@ void ImProcFunctions::ContAllL (float *koeLi[12], float *maxkoeLi, bool lipschit
             }
         }
 
-        float coefsd = 0.85f; //arbitray value to reduce effect after sigma in all case
-        float coefmean = 0.85f; //arbitray value to reduce effect after sigma in all case
-//          edge = 1.f + value * exp (expkoef);//estimate edge "pseudo variance"
         //take into account local contrast
         float refin = value * exp (expkoef);
 
@@ -2855,7 +2788,6 @@ void ImProcFunctions::ContAllL (float *koeLi[12], float *maxkoeLi, bool lipschit
 
         float edgePrecalc = 1.f + refin; //estimate edge "pseudo variance"
 
-        //bool exa=false;
         if(cp.EDmet == 2) { //curve
             //  if(exa) {//curve
             float insigma = 0.666f; //SD
@@ -2870,7 +2802,6 @@ void ImProcFunctions::ContAllL (float *koeLi[12], float *maxkoeLi, bool lipschit
             float absciss;
             float kinterm;
             float kmul;
-            //  for (int i=0; i<W_L*H_L; i++) {
             int borderL = 1;
 
             for(int i = borderL; i < H_L - borderL; i++ ) {
@@ -3132,7 +3063,6 @@ void ImProcFunctions::ContAllL (float *koeLi[12], float *maxkoeLi, bool lipschit
         mea[7] = mean[level] + 2.f * sigma[level]; //95%
         mea[8] = mean[level] + 2.5f * sigma[level]; //99%
 
-        bool skinControl = (skinprot != 0.f);
         bool useChromAndHue = (skinprot != 0.f || cp.HSmet);
         float modchro, kLlev;
 
@@ -3173,6 +3103,7 @@ void ImProcFunctions::ContAllL (float *koeLi[12], float *maxkoeLi, bool lipschit
             float scale2 = 1.f;
 
             float LL100, LL100res, LL100init, kH[maxlvl];
+
             int ii = i / W_L;
             int jj = i - ii * W_L;
             float LL = labco->L[ii * 2][jj * 2];
@@ -3190,18 +3121,6 @@ void ImProcFunctions::ContAllL (float *koeLi[12], float *maxkoeLi, bool lipschit
 
 
             if(useChromAndHue) {
-                /*
-                int ii=i/W_L;
-                int jj=i-ii*W_L;
-                float LL = labco->L[ii*2][jj*2];
-                LL100=LL100init=LL/327.68f;
-                LL100res=WavCoeffs_L0[i]/327.68f;
-                float delta=fabs(LL100init-LL100res)/(maxlvl/2);
-                for(int ml=0;ml<maxlvl;ml++) {
-                    if(ml < maxlvl/2) kH[ml]=(LL100res+ml*delta)/LL100res;// fixed a priori max to level middle
-                    else kH[ml]=(LL100init-ml*delta)/LL100res;
-                }
-                */
                 float modhue = varhue[ii][jj];
                 modchro = varchrom[ii * 2][jj * 2];
                 // hue chroma skin with initial lab datas
@@ -3233,23 +3152,13 @@ void ImProcFunctions::ContAllL (float *koeLi[12], float *maxkoeLi, bool lipschit
                 } else {
                     scale2 = 1.f + 1.9f * valparam;    //near 0 but not zero if curve # 0
                 }
-
-                //curve Contrast / hue
-
             }
 
-            //
             //linear transition HL
             float diagacc = 1.f;
-            /*
-            if(cp.diag) {
-            if(dir <=2) diagacc=0.75f;
-            if(dir ==3) diagacc=1.5f;
-            }
-            */
             float alpha = (1024.f + 15.f * (float) cpMul * scale * scale2 * beta * diagacc) / 1024.f ;
 
-            if(cp.HSmet  && cp.chromena) {
+            if(cp.HSmet  && cp.contena) {
                 float aaal = (1.f - alpha) / ((cp.b_lhl - cp.t_lhl) * kH[level]);
                 float bbal = 1.f - aaal * cp.b_lhl * kH[level];
                 float aaar = (alpha - 1.f) / (cp.t_rhl - cp.b_rhl) * kH[level];
@@ -3324,8 +3233,6 @@ void ImProcFunctions::ContAllL (float *koeLi[12], float *maxkoeLi, bool lipschit
                     int ii = i / W_L;
                     int jj = i - ii * W_L;
                     float LL100 = labco->L[ii * 2][jj * 2] / 327.68f;
-                    k1 = 600.f;
-                    k2 = 300.f;
                     k1 = 0.3f * (waOpacityCurveW[6.f * LL100] - 0.5f); //k1 between 0 and 0.5    0.5==> 1/6=0.16
                     k2 = k1 * 2.f;
 
@@ -3587,8 +3494,6 @@ void ImProcFunctions::ContAllAB (LabImage * labco, int maxlvl, float ** varhue, 
                     int ii = i / W_ab;
                     int jj = i - ii * W_ab;
                     float LL100 = labco->L[ii * 2][jj * 2] / 327.68f;
-                    k1 = 600.f;
-                    k2 = 300.f;
                     k1 = 0.3f * (waOpacityCurveW[6.f * LL100] - 0.5f); //k1 between 0 and 0.5    0.5==> 1/6=0.16
                     k2 = k1 * 2.f;
 

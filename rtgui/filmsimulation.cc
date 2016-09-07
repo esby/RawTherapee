@@ -1,10 +1,48 @@
 #include "filmsimulation.h"
+
+#include <chrono>
+
 #include "options.h"
 #include "../rtengine/clutstore.h"
-#include "../rtengine/safegtk.h"
 
 using namespace rtengine;
 using namespace rtengine::procparams;
+
+namespace
+{
+
+bool notifySlowParseDir (const std::chrono::system_clock::time_point& startedAt)
+{
+    static enum
+    {
+        Undecided,
+        Cancel,
+        Continue
+    }
+    decision = Undecided;
+
+    if (decision == Cancel) {
+        return false;
+    } else if (decision == Continue) {
+        return true;
+    }
+
+    const auto now = std::chrono::system_clock::now ();
+    if (now - startedAt < std::chrono::seconds (10)) {
+        return true;
+    }
+
+    Gtk::MessageDialog dialog (M ("TP_FILMSIMULATION_SLOWPARSEDIR"), false, Gtk::MESSAGE_WARNING, Gtk::BUTTONS_YES_NO, true);
+    if (dialog.run () == Gtk::RESPONSE_YES) {
+        decision = Cancel;
+        return false;
+    } else {
+        decision = Continue;
+        return true;
+    }
+}
+
+}
 
 typedef std::vector<Glib::ustring> Strings;
 
@@ -34,7 +72,7 @@ void FilmSimulation::onClutSelected()
 
     if ( getEnabled() && !currentClutFilename.empty() && listener && currentClutFilename != m_oldClutFilename ) {
         Glib::ustring clutName, dummy;
-        splitClutFilename( currentClutFilename, clutName, dummy, dummy );
+        HaldCLUT::splitClutFilename( currentClutFilename, clutName, dummy, dummy );
         listener->panelChanged( EvFilmSimulationFilename, clutName );
 
         m_oldClutFilename = currentClutFilename;
@@ -94,7 +132,7 @@ void FilmSimulation::read( const rtengine::procparams::ProcParams* pp, const Par
 
     if ( !get_inconsistent() && !pp->filmSimulation.enabled ) {
         if (options.clutCacheSize == 1) {
-            clutStore.clearCache();
+            CLUTStore::getInstance().clearCache();
         }
     }
 
@@ -143,83 +181,125 @@ ClutComboBox::ClutColumns::ClutColumns()
     add( clutFilename );
 }
 
-int ClutComboBox::fillFromDir( Glib::ustring path )
+int ClutComboBox::fillFromDir (const Glib::ustring& path)
 {
-    int result = 0;
+    m_model = Gtk::TreeStore::create (m_columns);
+    set_model (m_model);
 
-    if ( !path.empty() ) {
-        m_model.clear();
-        m_model = Gtk::TreeStore::create( m_columns );
-        set_model( m_model );
-        result = parseDir( path, 0 );
-        pack_start( m_columns.label, false );
+    const auto result = parseDir (path);
+
+    if (result > 0) {
+        pack_start (m_columns.label, false);
     }
 
     return result;
 }
 
-Gtk::TreeIter appendToModel( Glib::RefPtr<Gtk::TreeStore> model, Gtk::TreeModel::Row *parent )
+int ClutComboBox::parseDir (const Glib::ustring& path)
 {
-    Gtk::TreeIter result;
-
-    if ( parent ) {
-        result = model->append( parent->children() );
-
-    } else {
-        result = model->append();
+    if (path.empty () || !Glib::file_test (path, Glib::FILE_TEST_IS_DIR)) {
+        return 0;
     }
 
-    return result;
-}
+    const auto startedAt = std::chrono::system_clock::now ();
 
-int ClutComboBox::parseDir( Glib::ustring path, Gtk::TreeModel::Row *parentRow )
-{
-    int result = 0;
+    // Build menu of limited directory structure using breadth-first search
+    using Dirs = std::vector<std::pair<Glib::ustring, Gtk::TreeModel::Row>>;
+    Dirs dirs;
 
-    if ( path.empty() || !safe_file_test( path, Glib::FILE_TEST_EXISTS ) || !safe_file_test ( path, Glib::FILE_TEST_IS_DIR ) ) {
-        return result;
-    }
+    {
+        Dirs currDirs;
+        Dirs nextDirs;
 
-    Glib::Dir* dir = new Glib::Dir( path );
+        currDirs.emplace_back (path, Gtk::TreeModel::Row ());
 
-    Strings names;
+        while (!currDirs.empty ()) {
 
-    for( Glib::DirIterator it = dir->begin(); it != dir->end(); ++it ) {
-        Glib::ustring current = *it;
+            for (auto& dir : currDirs) {
 
-        if ( current != "." && current != ".." ) {
-            names.push_back( current );
+                const auto& path = dir.first;
+                const auto& row = dir.second;
+
+                try {
+                    for (const auto& entry : Glib::Dir (path)) {
+
+                        const auto entryPath = Glib::build_filename (path, entry);
+
+                        if (!Glib::file_test (entryPath, Glib::FILE_TEST_IS_DIR)) {
+                            continue;
+                        }
+
+                        auto newRow = row ? *m_model->append (row.children ()) : *m_model->append ();
+                        newRow[m_columns.label] = entry;
+
+                        nextDirs.emplace_back (entryPath, newRow);
+                    }
+                } catch (Glib::Exception&) {}
+
+                dirs.push_back (std::move (dir));
+
+                if (!notifySlowParseDir (startedAt)) {
+                    m_model->clear ();
+                    return 0;
+                }
+            }
+
+            currDirs.clear ();
+            currDirs.swap (nextDirs);
         }
     }
 
-    std::sort( names.begin(), names.end() );
+    // Fill menu structure with CLUT files
+    Strings entries;
 
-    for ( Strings::iterator it = names.begin(); it != names.end(); ++it ) {
-        Glib::ustring current = *it;
-        Glib::ustring fullname = Glib::build_filename( path, current );
+    auto fileCount = 0;
 
-        if ( safe_file_test( fullname, Glib::FILE_TEST_IS_DIR ) ) {
+    for (const auto& dir : dirs) {
 
-            Gtk::TreeModel::Row newFolderMenu = *appendToModel( m_model, parentRow );
-            newFolderMenu[ m_columns.label ] = current;
-            result += parseDir( fullname, &newFolderMenu );
-        } else {
+        const auto& path = dir.first;
+        const auto& row = dir.second;
+
+        entries.clear ();
+
+        try {
+            for (const auto& entry : Glib::Dir (path)) {
+
+                const auto entryPath = Glib::build_filename (path, entry);
+
+                if (!Glib::file_test (entryPath, Glib::FILE_TEST_IS_REGULAR)) {
+                    continue;
+                }
+
+                entries.push_back (entryPath);
+            }
+        } catch (Glib::Exception&) {}
+
+        std::sort (entries.begin (), entries.end ());
+
+        for (const auto& entry : entries) {
+
             Glib::ustring name, extension, profileName;
-            splitClutFilename( current, name, extension, profileName );
+            HaldCLUT::splitClutFilename (entry, name, extension, profileName);
 
-            if ( extension == "tif" ||
-                    extension == "TIF" ||
-                    extension == "png" ||
-                    extension == "PNG" ) {
-                Gtk::TreeModel::Row newClut = *appendToModel( m_model, parentRow );
-                newClut[ m_columns.label ] = name;
-                newClut[ m_columns.clutFilename ] = fullname;
-                ++result;
+            extension = extension.casefold ();
+            if (extension.compare ("tif") != 0 && extension.compare ("png") != 0) {
+                continue;
+            }
+
+            auto newRow = row ? *m_model->append (row.children ()) : *m_model->append ();
+            newRow[m_columns.label] = name;
+            newRow[m_columns.clutFilename] = entry;
+
+            ++fileCount;
+
+            if (!notifySlowParseDir (startedAt)) {
+                m_model->clear ();
+                return 0;
             }
         }
     }
 
-    return result;
+    return fileCount;
 }
 
 Glib::ustring ClutComboBox::getSelectedClut()

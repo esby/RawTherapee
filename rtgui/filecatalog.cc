@@ -17,22 +17,25 @@
  *  You should have received a copy of the GNU General Public License
  *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include <glib/gstdio.h>
+#include "filecatalog.h"
+
 #include <iostream>
 #include <iomanip>
+
+#include <glib/gstdio.h>
+
 #include "../rtengine/rt_math.h"
 
-#include "filecatalog.h"
-#include "filepanel.h"
+#include "guiutils.h"
 #include "options.h"
+#include "rtimage.h"
 #include "cachemanager.h"
 #include "multilangmgr.h"
-#include "guiutils.h"
+#include "filepanel.h"
 #include "renamedlg.h"
 #include "thumbimageupdater.h"
-#include "../rtengine/safegtk.h"
 #include "batchqueue.h"
-#include "rtimage.h"
+#include "placesbrowser.h"
 
 using namespace std;
 
@@ -43,7 +46,6 @@ FileCatalog::FileCatalog (CoarsePanel* cp, ToolBar* tb, FilePanel* filepanel) :
     selectedDirectoryId(1),
     listener(NULL),
     fslistener(NULL),
-    dirlistener(NULL),
     hasValidCurrentEFS(false),
     filterPanel(NULL),
     previewsToLoad(0),
@@ -286,6 +288,7 @@ FileCatalog::FileCatalog (CoarsePanel* cp, ToolBar* tb, FilePanel* filepanel) :
     bTrash->signal_button_press_event().connect (sigc::mem_fun(*this, &FileCatalog::capture_event), false);
 
     iNotTrash = new RTImage("trash-hide-deleted.png") ;
+    iOriginal = new RTImage("filter-original-2.png");
 
     bNotTrash = Gtk::manage( new Gtk::ToggleButton () );
     bNotTrash->set_image (*iNotTrash);
@@ -294,8 +297,16 @@ FileCatalog::FileCatalog (CoarsePanel* cp, ToolBar* tb, FilePanel* filepanel) :
     bCateg[18] = bNotTrash->signal_toggled().connect (sigc::bind(sigc::mem_fun(*this, &FileCatalog::categoryButtonToggled), bNotTrash, true));
     bNotTrash->signal_button_press_event().connect (sigc::mem_fun(*this, &FileCatalog::capture_event), false);
 
+    bOriginal = Gtk::manage( new Gtk::ToggleButton () );
+    bOriginal->set_image (*iOriginal);
+    bOriginal->set_tooltip_markup (M("FILEBROWSER_SHOWORIGINALHINT"));
+    bOriginal->set_relief (Gtk::RELIEF_NONE);
+    bCateg[19] = bOriginal->signal_toggled().connect (sigc::bind(sigc::mem_fun(*this, &FileCatalog::categoryButtonToggled), bOriginal, true));
+    bOriginal->signal_button_press_event().connect (sigc::mem_fun(*this, &FileCatalog::capture_event), false);
+
     buttonBar->pack_start (*bTrash, Gtk::PACK_SHRINK);
     buttonBar->pack_start (*bNotTrash, Gtk::PACK_SHRINK);
+    buttonBar->pack_start (*bOriginal, Gtk::PACK_SHRINK);
     buttonBar->pack_start (*Gtk::manage(new Gtk::VSeparator), Gtk::PACK_SHRINK);
     fileBrowser->trash_changed().connect( sigc::mem_fun(*this, &FileCatalog::trashChanged) );
 
@@ -318,6 +329,7 @@ FileCatalog::FileCatalog (CoarsePanel* cp, ToolBar* tb, FilePanel* filepanel) :
     // 16 - bRecentlySaved[1]
     // 17 - bTrash
     // 18 - bNotTrash
+    // 19 - bOriginal
 
     categoryButtons[0] = bFilterClear;
     categoryButtons[1] = bUnRanked;
@@ -342,6 +354,7 @@ FileCatalog::FileCatalog (CoarsePanel* cp, ToolBar* tb, FilePanel* filepanel) :
 
     categoryButtons[17] = bTrash;
     categoryButtons[18] = bNotTrash;
+    categoryButtons[19] = bOriginal;
 
     exifInfo = Gtk::manage(new Gtk::ToggleButton ());
     exifInfo->set_image (*Gtk::manage(new RTImage ("info.png")));
@@ -440,6 +453,8 @@ FileCatalog::~FileCatalog()
     delete igUnCLabeled;
     delete iTrashEmpty;
     delete iTrashFull;
+    delete iNotTrash;
+    delete iOriginal;
     delete iRefreshWhite;
     delete iRefreshRed;
     delete iQueryClear;
@@ -526,11 +541,44 @@ void FileCatalog::closeDir ()
 
 std::vector<Glib::ustring> FileCatalog::getFileList ()
 {
-
     std::vector<Glib::ustring> names;
-    Glib::RefPtr<Gio::File> dir = Gio::File::create_for_path (selectedDirectory);
-    safe_build_file_list (dir, names, selectedDirectory, &(options.parsedExtensions));
-// Issue 2406    std::sort (names.begin(), names.end());
+
+    std::set<Glib::ustring> extensions;
+    for (const auto& parsedExt : options.parsedExtensions) {
+        extensions.emplace (parsedExt.lowercase ());
+    }
+
+    try {
+
+        auto dir = Gio::File::create_for_path (selectedDirectory);
+
+        auto enumerator = dir->enumerate_children ("standard::name");
+
+        while (auto file = enumerator->next_file ()) {
+
+            const Glib::ustring fname = file->get_name ();
+
+            auto lastdot = fname.find_last_of ('.');
+            if (lastdot >= fname.length () - 1) {
+                continue;
+            }
+
+            const auto fext = fname.substr (lastdot + 1).lowercase ();
+            if (extensions.count (fext) == 0) {
+                continue;
+            }
+
+            names.emplace_back (Glib::build_filename (selectedDirectory, fname));
+        }
+
+    } catch (Glib::Exception& exception) {
+
+        if (options.rtSettings.verbose) {
+            std::cerr << "Failed to list directory \"" << selectedDirectory << "\": " << exception.what() << std::endl;
+        }
+
+    }
+
     return names;
 }
 
@@ -887,35 +935,26 @@ void FileCatalog::deleteRequested  (std::vector<FileBrowserEntry*> tbe, bool inc
 
     if (msd.run() == Gtk::RESPONSE_YES) {
         for (unsigned int i = 0; i < tbe.size(); i++) {
-            Glib::ustring fname = tbe[i]->filename;
+            const auto fname = tbe[i]->filename;
             // remove from browser
-            FileBrowserEntry* t = fileBrowser->delEntry (fname);
-//            t->thumbnail->decreaseRef ();
-            delete t;
+            delete fileBrowser->delEntry (fname);
             // remove from cache
             cacheMgr->deleteEntry (fname);
             // delete from file system
-            safe_g_remove (fname);
+            ::g_remove (fname.c_str ());
             // delete paramfile if found
-            safe_g_remove (Glib::ustring(fname + paramFileExtension));
-            safe_g_remove (Glib::ustring(removeExtension(fname) + paramFileExtension));
+            ::g_remove ((fname + paramFileExtension).c_str ());
+            ::g_remove ((removeExtension(fname) + paramFileExtension).c_str ());
             // delete .thm file
-            safe_g_remove (Glib::ustring(removeExtension(fname) + ".thm"));
-            safe_g_remove (Glib::ustring(removeExtension(fname) + ".THM"));
+            ::g_remove ((removeExtension(fname) + ".thm").c_str ());
+            ::g_remove ((removeExtension(fname) + ".THM").c_str ());
 
             if (inclBatchProcessed) {
                 Glib::ustring procfName = Glib::ustring::compose ("%1.%2", BatchQueue::calcAutoFileNameBase(fname), options.saveFormatBatch.format);
+                ::g_remove (procfName.c_str ());
 
-                if (safe_file_test (procfName, Glib::FILE_TEST_EXISTS)) {
-                    safe_g_remove (procfName);
-                }
-
-                // delete paramfile if found
                 Glib::ustring procfNameParamFile = Glib::ustring::compose ("%1.%2.out%3", BatchQueue::calcAutoFileNameBase(fname), options.saveFormatBatch.format, paramFileExtension);
-
-                if (safe_file_test (procfNameParamFile, Glib::FILE_TEST_EXISTS)) {
-                    safe_g_remove (procfNameParamFile);
-                }
+                ::g_remove (procfNameParamFile.c_str ());
             }
 
             previewsLoaded--;
@@ -943,7 +982,7 @@ void FileCatalog::copyMoveRequested  (std::vector<FileBrowserEntry*> tbe, bool m
         fc_title = M("FILEBROWSER_POPUPCOPYTO");
     }
 
-    Gtk::FileChooserDialog fc(fc_title, Gtk::FILE_CHOOSER_ACTION_SELECT_FOLDER );
+    Gtk::FileChooserDialog fc (getToplevelWindow (this), fc_title, Gtk::FILE_CHOOSER_ACTION_SELECT_FOLDER );
     fc.add_button( Gtk::StockID("gtk-cancel"), Gtk::RESPONSE_CANCEL);
     fc.add_button( Gtk::StockID("gtk-ok"), Gtk::RESPONSE_OK);
     // open dialog at the 1-st file's path
@@ -986,7 +1025,7 @@ void FileCatalog::copyMoveRequested  (std::vector<FileBrowserEntry*> tbe, bool m
 
             while(!filecopymovecomplete) {
                 // check for filename conflicts at destination - prevent overwriting (actually RT will crash on overwriting attempt)
-                if (!safe_file_test(dest_fPath, Glib::FILE_TEST_EXISTS) && !safe_file_test(dest_fPath_param, Glib::FILE_TEST_EXISTS)) {
+                if (!Glib::file_test(dest_fPath, Glib::FILE_TEST_EXISTS) && !Glib::file_test(dest_fPath_param, Glib::FILE_TEST_EXISTS)) {
                     // copy/move file to destination
                     Glib::RefPtr<Gio::File> dest_file = Gio::File::create_for_path ( dest_fPath );
 
@@ -1007,15 +1046,15 @@ void FileCatalog::copyMoveRequested  (std::vector<FileBrowserEntry*> tbe, bool m
                     // attempt to copy/move paramFile only if it exist next to the src
                     Glib::RefPtr<Gio::File> scr_param = Gio::File::create_for_path (  src_fPath + paramFileExtension );
 
-                    if (safe_file_test( src_fPath + paramFileExtension, Glib::FILE_TEST_EXISTS)) {
+                    if (Glib::file_test( src_fPath + paramFileExtension, Glib::FILE_TEST_EXISTS)) {
                         Glib::RefPtr<Gio::File> dest_param = Gio::File::create_for_path ( dest_fPath_param);
 
                         // copy/move paramFile to destination
                         if (moveRequested) {
-                            if (safe_file_test( dest_fPath + paramFileExtension, Glib::FILE_TEST_EXISTS)) {
+                            if (Glib::file_test( dest_fPath + paramFileExtension, Glib::FILE_TEST_EXISTS)) {
                                 // profile already got copied to destination from cache after cacheMgr->renameEntry
                                 // delete source profile as cleanup
-                                safe_g_remove (src_fPath + paramFileExtension);
+                                ::g_remove ((src_fPath + paramFileExtension).c_str ());
                             } else {
                                 scr_param->move(dest_param);
                             }
@@ -1139,6 +1178,7 @@ void FileCatalog::developRequested (std::vector<FileBrowserEntry*> tbe, bool fas
                 params.icm.input               = options.fastexport_icm_input        ;
                 params.icm.working             = options.fastexport_icm_working      ;
                 params.icm.output              = options.fastexport_icm_output       ;
+                params.icm.outputIntent        = options.fastexport_icm_outputIntent ;
                 params.icm.gamma               = options.fastexport_icm_gamma        ;
                 params.resize.enabled          = options.fastexport_resize_enabled   ;
                 params.resize.scale            = options.fastexport_resize_scale     ;
@@ -1216,16 +1256,16 @@ void FileCatalog::renameRequested  (std::vector<FileBrowserEntry*> tbe)
                 Glib::ustring nfname = Glib::build_filename (dirName, nBaseName);
 
                 /* check if filename already exists*/
-                if (safe_file_test (nfname, Glib::FILE_TEST_EXISTS)) {
+                if (Glib::file_test (nfname, Glib::FILE_TEST_EXISTS)) {
                     Glib::ustring msg_ = Glib::ustring("<b>") + nfname + ": " + M("MAIN_MSG_ALREADYEXISTS") + "</b>";
                     Gtk::MessageDialog msgd (msg_, true, Gtk::MESSAGE_ERROR, Gtk::BUTTONS_OK, true);
                     msgd.run ();
                 } else {
                     success = true;
 
-                    if (!safe_g_rename (ofname, nfname)) {
+                    if (::g_rename (ofname.c_str (), nfname.c_str ()) == 0) {
                         cacheMgr->renameEntry (ofname, tbe[i]->thumbnail->getMD5(), nfname);
-                        safe_g_remove(ofname + paramFileExtension);
+                        ::g_remove((ofname + paramFileExtension).c_str ());
                         reparseDirectory ();
                     }
                 }
@@ -1238,53 +1278,6 @@ void FileCatalog::renameRequested  (std::vector<FileBrowserEntry*> tbe)
     }
 
     delete renameDlg;
-    /*    // ask for new file name
-        Gtk::Dialog dialog (M("FILEBROWSER_RENAMEDLGLABEL"), *((Gtk::Window*)get_toplevel()), true, true);
-
-        dialog.add_button (Gtk::Stock::OK, Gtk::RESPONSE_OK);
-        dialog.add_button (Gtk::Stock::CANCEL, Gtk::RESPONSE_CANCEL);
-
-        Gtk::Label l;
-        dialog.get_vbox()->pack_start (l, Gtk::PACK_SHRINK);
-
-        Gtk::Entry nfentry;
-
-        dialog.get_vbox()->pack_start (nfentry, Gtk::PACK_SHRINK);
-        dialog.get_vbox()->show_all ();
-
-        nfentry.set_activates_default (true);
-        dialog.set_default_response (Gtk::RESPONSE_OK);
-
-        for (int i=0; i<tbe.size(); i++) {
-
-            Glib::ustring ofname = tbe[i]->filename;
-            Glib::ustring dirName = Glib::path_get_dirname (tbe[i]->filename);
-            Glib::ustring baseName = Glib::path_get_basename (tbe[i]->filename);
-
-            l.set_markup (Glib::ustring("<big><b>") + Glib::ustring::compose (M("FILEBROWSER_RENAMEDLGMSG"), baseName) + Glib::ustring("</b></big>"));
-            nfentry.set_text (baseName);
-            nfentry.select_region (0, baseName.size());
-
-            if (dialog.run ()== Gtk::RESPONSE_OK) {
-                Glib::ustring nBaseName = nfentry.get_text ();
-                // if path has directory components, exit
-                if (Glib::path_get_dirname (nBaseName) != ".")
-                    continue;
-                // if no extension is given, concatenate the extension of the original file
-                if (nBaseName.find ('.')==nBaseName.npos) {
-            size_t lastdot = baseName.find_last_of ('.');
-                    nBaseName += "." + (lastdot!=Glib::ustring::npos ? baseName.substr (lastdot+1) : "");
-                }
-                Glib::ustring nfname = Glib::build_filename (dirName, nBaseName);
-                if (!safe_g_rename (ofname, nfname)) {
-                    cacheMgr->renameEntry (ofname, tbe[i]->thumbnail->getMD5(), nfname);
-                    // the remaining part (removing old and adding new entry) is done by the directory monitor
-                    reparseDirectory ();
-    //                on_dir_changed (Gio::File::create_for_path (nfname), Gio::File::create_for_path (nfname), Gio::FILE_MONITOR_EVENT_CHANGED, true);
-                }
-            }
-        }
-        */
 }
 
 void FileCatalog::clearFromCacheRequested  (std::vector<FileBrowserEntry*> tbe, bool leavenotrace)
@@ -1351,8 +1344,8 @@ void FileCatalog::categoryButtonToggled (Gtk::ToggleButton* b, bool isMouseClick
 
         // if no modifier key is pressed,
         if (!(control_down || shift_down)) {
-            // if we're deselecting non-trashed
-            if (toggled_button == 18 && (buttons & (1 << toggled_button))) {
+            // if we're deselecting non-trashed or original
+            if (toggled_button >= 18 && toggled_button <= 19 && (buttons & (1 << toggled_button))) {
                 categoryButtons[0]->set_active (true);
 
                 for (int i = 1; i < numButtons; i++) {
@@ -1445,9 +1438,15 @@ void FileCatalog::categoryButtonToggled (Gtk::ToggleButton* b, bool isMouseClick
                 //if more than one star & color label is selected, do nothing
             }
         }
-        // ...or non-trashed with Control modifier
-        else if (toggled_button == 18 && control_down) {
-            bNotTrash->set_active (!bNotTrash->get_active ());
+        // ...or non-trashed or original with Control modifier
+        else if (toggled_button >= 18 && toggled_button <= 19 && control_down) {
+            Gtk::ToggleButton* categoryButton = categoryButtons[toggled_button];
+            categoryButton->set_active (!categoryButton->get_active ());
+
+            // If it was the first or last one, we reset the clear filter.
+            if (buttons == 1 || buttons == (1 << toggled_button)) {
+                bFilterClear->set_active (!categoryButton->get_active ());
+            }
         }
 
         bool active_now, active_before;
@@ -1554,30 +1553,30 @@ BrowserFilter FileCatalog::getFilter ()
     bool anyCLabelFilterActive = bUnCLabeled->get_active () || bCLabel[0]->get_active () || bCLabel[1]->get_active () || bCLabel[2]->get_active () || bCLabel[3]->get_active () || bCLabel[4]->get_active ();
     bool anyEditedFilterActive = bEdited[0]->get_active() || bEdited[1]->get_active();
     bool anyRecentlySavedFilterActive = bRecentlySaved[0]->get_active() || bRecentlySaved[1]->get_active();
-    const bool nonTrashedActive = bNotTrash->get_active();
+    const bool anySupplementaryActive = bNotTrash->get_active() || bOriginal->get_active();
     /*
      * filter is setup in 2 steps
      * Step 1: handle individual filters
     */
-    filter.showRanked[0] = bFilterClear->get_active() || bUnRanked->get_active () || bTrash->get_active () || nonTrashedActive ||
+    filter.showRanked[0] = bFilterClear->get_active() || bUnRanked->get_active () || bTrash->get_active () || anySupplementaryActive ||
                            anyCLabelFilterActive || anyEditedFilterActive || anyRecentlySavedFilterActive;
 
-    filter.showCLabeled[0] = bFilterClear->get_active() || bUnCLabeled->get_active () || bTrash->get_active ()  || nonTrashedActive ||
+    filter.showCLabeled[0] = bFilterClear->get_active() || bUnCLabeled->get_active () || bTrash->get_active ()  || anySupplementaryActive ||
                              anyRankFilterActive || anyEditedFilterActive || anyRecentlySavedFilterActive;
 
     for (int i = 1; i <= 5; i++) {
-        filter.showRanked[i] = bFilterClear->get_active() || bRank[i - 1]->get_active () || bTrash->get_active () || nonTrashedActive ||
+        filter.showRanked[i] = bFilterClear->get_active() || bRank[i - 1]->get_active () || bTrash->get_active () || anySupplementaryActive ||
                                anyCLabelFilterActive || anyEditedFilterActive || anyRecentlySavedFilterActive;
 
-        filter.showCLabeled[i] = bFilterClear->get_active() || bCLabel[i - 1]->get_active () || bTrash->get_active ()  || nonTrashedActive ||
+        filter.showCLabeled[i] = bFilterClear->get_active() || bCLabel[i - 1]->get_active () || bTrash->get_active ()  || anySupplementaryActive ||
                                  anyRankFilterActive || anyEditedFilterActive || anyRecentlySavedFilterActive;
     }
 
     for (int i = 0; i < 2; i++) {
-        filter.showEdited[i] = bFilterClear->get_active() || bEdited[i]->get_active () || bTrash->get_active ()  || nonTrashedActive ||
+        filter.showEdited[i] = bFilterClear->get_active() || bEdited[i]->get_active () || bTrash->get_active ()  || anySupplementaryActive ||
                                anyRankFilterActive || anyCLabelFilterActive || anyRecentlySavedFilterActive;
 
-        filter.showRecentlySaved[i] = bFilterClear->get_active() || bRecentlySaved[i]->get_active () || bTrash->get_active ()  || nonTrashedActive ||
+        filter.showRecentlySaved[i] = bFilterClear->get_active() || bRecentlySaved[i]->get_active () || bTrash->get_active ()  || anySupplementaryActive ||
                                       anyRankFilterActive || anyCLabelFilterActive || anyEditedFilterActive;
     }
 
@@ -1615,7 +1614,7 @@ BrowserFilter FileCatalog::getFilter ()
             (anyCLabelFilterActive && anyEditedFilterActive ) ||
             (anyCLabelFilterActive && anyRecentlySavedFilterActive ) ||
             (anyEditedFilterActive && anyRecentlySavedFilterActive) ||
-            (nonTrashedActive && (anyRankFilterActive || anyCLabelFilterActive || anyEditedFilterActive || anyRecentlySavedFilterActive))) {
+            (anySupplementaryActive && (anyRankFilterActive || anyCLabelFilterActive || anyEditedFilterActive || anyRecentlySavedFilterActive))) {
 
         filter.multiselect = true;
         filter.showRanked[0] = anyRankFilterActive ? bUnRanked->get_active () : true;
@@ -1657,6 +1656,7 @@ BrowserFilter FileCatalog::getFilter ()
 
     filter.showTrash = bTrash->get_active () || !bNotTrash->get_active ();
     filter.showNotTrash = !bTrash->get_active ();
+    filter.showOriginal = bOriginal->get_active();
 
     if (!filterPanel) {
         filter.exifFilterEnabled = false;
@@ -1702,7 +1702,7 @@ void FileCatalog::reparseDirectory ()
         return;
     }
 
-    if (!safe_file_test (selectedDirectory, Glib::FILE_TEST_IS_DIR)) {
+    if (!Glib::file_test (selectedDirectory, Glib::FILE_TEST_IS_DIR)) {
         closeDir ();
         return;
     }
@@ -1714,13 +1714,18 @@ void FileCatalog::reparseDirectory ()
     std::vector<Glib::ustring> fileNamesToDel;
 
     for (size_t i = 0; i < t.size(); i++)
-        if (!safe_file_test (t[i]->filename, Glib::FILE_TEST_EXISTS)) {
+        if (!Glib::file_test (t[i]->filename, Glib::FILE_TEST_EXISTS)) {
             fileNamesToDel.push_back (t[i]->filename);
         }
 
     for (size_t i = 0; i < fileNamesToDel.size(); i++) {
         delete fileBrowser->delEntry (fileNamesToDel[i]);
         cacheMgr->deleteEntry (fileNamesToDel[i]);
+        previewsLoaded--;
+    }
+
+    if (!fileNamesToDel.empty ()) {
+        _refreshProgressBar();
     }
 
     // check if a new file has been added
@@ -1774,63 +1779,91 @@ void FileCatalog::on_dir_changed (const Glib::RefPtr<Gio::File>& file, const Gli
 
 void FileCatalog::checkAndAddFile (Glib::RefPtr<Gio::File> file)
 {
-
-    if (!file ) {
+    if (!file) {
         return;
     }
 
-    if( !file->query_exists()) {
+    if (!file->query_exists()) {
         return;
     }
 
-    Glib::RefPtr<Gio::FileInfo> info = safe_query_file_info(file);
+    try {
 
-    if (info && info->get_file_type() != Gio::FILE_TYPE_DIRECTORY && (!info->is_hidden() || !options.fbShowHidden)) {
-        size_t lastdot = info->get_name().find_last_of ('.');
+        auto info = file->query_info ();
 
-        if (options.is_extention_enabled(lastdot != Glib::ustring::npos ? info->get_name().substr (lastdot + 1) : "")) {
-            previewLoader->add (selectedDirectoryId, file->get_parse_name(), this);
-            previewsToLoad++;
+        if (!info || info->get_file_type () == Gio::FILE_TYPE_DIRECTORY) {
+            return;
         }
-    }
+
+        if (!options.fbShowHidden && info->is_hidden ()) {
+            return;
+        }
+
+        Glib::ustring ext;
+
+        const auto lastdot = info->get_name ().find_last_of ('.');
+        if (lastdot != Glib::ustring::npos) {
+            ext = info->get_name ().substr (lastdot + 1);
+        }
+
+        if (!options.is_extention_enabled (ext)) {
+            return;
+        }
+
+        previewLoader->add (selectedDirectoryId, file->get_parse_name (), this);
+        previewsToLoad++;
+
+    } catch(Gio::Error&) {}
 }
 
 void FileCatalog::addAndOpenFile (const Glib::ustring& fname)
 {
-
-    Glib::RefPtr<Gio::File> file = Gio::File::create_for_path (fname);
+    auto file = Gio::File::create_for_path (fname);
 
     if (!file ) {
         return;
     }
 
-    if( !file->query_exists()) {
+    if (!file->query_exists ()) {
         return;
     }
 
-    Glib::RefPtr<Gio::FileInfo> info = safe_query_file_info(file);
+    try {
 
-    if( !info ) {
-        return;
-    }
+        auto info = file->query_info ();
 
-    size_t lastdot = info->get_name().find_last_of ('.');
-
-    if (options.is_extention_enabled(lastdot != Glib::ustring::npos ? info->get_name().substr (lastdot + 1) : "")) {
-        // if supported, load thumbnail first
-        Thumbnail* tmb = cacheMgr->getEntry (file->get_parse_name());
-
-        if (tmb) {
-            FileBrowserEntry* entry = new FileBrowserEntry (tmb, file->get_parse_name());
-            previewReady (selectedDirectoryId, entry);
-            // open the file
-            FCOIParams* params = new FCOIParams;
-            params->catalog = this;
-            params->tmb.push_back (tmb);
-            tmb->increaseRef ();
-            g_idle_add (openRequestedUI, params);
+        if (!info) {
+            return;
         }
-    }
+
+        Glib::ustring ext;
+
+        auto lastdot = info->get_name().find_last_of ('.');
+        if (lastdot != Glib::ustring::npos) {
+            ext = info->get_name ().substr (lastdot + 1);
+        }
+
+        if (!options.is_extention_enabled(ext)) {
+            return;
+        }
+
+        // if supported, load thumbnail first
+        const auto tmb = cacheMgr->getEntry (file->get_parse_name ());
+
+        if (!tmb) {
+            return;
+        }
+
+        FileBrowserEntry* entry = new FileBrowserEntry (tmb, file->get_parse_name ());
+        previewReady (selectedDirectoryId, entry);
+        // open the file
+        FCOIParams* params = new FCOIParams;
+        params->catalog = this;
+        params->tmb.push_back (tmb);
+        tmb->increaseRef ();
+        g_idle_add (openRequestedUI, params);
+
+    } catch(Gio::Error&) {}
 }
 
 void FileCatalog::emptyTrash ()
@@ -2002,10 +2035,9 @@ void FileCatalog::buttonBrowsePathPressed ()
     FirstChar = BrowsePathValue.substr (0, 1);
 
     if (FirstChar == "~") { // home directory
-        DecodedPathPrefix = Glib::get_home_dir();
+        DecodedPathPrefix = PlacesBrowser::userHomeDir ();
     } else if (FirstChar == "!") { // user's pictures directory
-        //DecodedPathPrefix = g_get_user_special_dir(G_USER_DIRECTORY_PICTURES);
-        DecodedPathPrefix = safe_get_user_picture_dir();
+        DecodedPathPrefix = PlacesBrowser::userPicturesDir ();
     }
 
     if (!DecodedPathPrefix.empty()) {
@@ -2016,8 +2048,8 @@ void FileCatalog::buttonBrowsePathPressed ()
     // handle shortcuts in the BrowsePath -- END
 
     // validate the path
-    if (safe_file_test(BrowsePathValue, Glib::FILE_TEST_IS_DIR) && dirlistener) {
-        dirlistener->selectDir (BrowsePathValue);
+    if (Glib::file_test(BrowsePathValue, Glib::FILE_TEST_IS_DIR) && selectDir) {
+        selectDir (BrowsePathValue);
     } else
         // error, likely path not found: show red arrow
     {

@@ -21,7 +21,6 @@
 #include "previewloader.h"
 #include "guiutils.h"
 #include "threadutils.h"
-#include "../rtengine/safegtk.h"
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -123,7 +122,7 @@ public:
         try {
             Thumbnail* tmb = 0;
             {
-                if (safe_file_test(j.dir_entry_, Glib::FILE_TEST_EXISTS)) {
+                if (Glib::file_test(j.dir_entry_, Glib::FILE_TEST_EXISTS)) {
                     tmb = cacheMgr->getEntry(j.dir_entry_);
                 }
             }
@@ -168,19 +167,8 @@ PreviewLoader::PreviewLoader():
 
 PreviewLoader* PreviewLoader::getInstance(void)
 {
-    // this will not be deleted...
-    static PreviewLoader* instance_ = NULL;
-
-    if ( instance_ == NULL ) {
-        static MyMutex smutex_;
-        MyMutex::MyLock lock(smutex_);
-
-        if ( instance_ == NULL ) {
-            instance_ = new PreviewLoader();
-        }
-    }
-
-    return instance_;
+    static PreviewLoader instance_;
+    return &instance_;
 }
 
 void PreviewLoader::add(int dir_id, const Glib::ustring& dir_entry, PreviewLoaderListener* l)

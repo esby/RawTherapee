@@ -4,7 +4,6 @@
 
 #ifdef __GNUC__
 #define INLINE __inline
-//#define INLINE __attribute__((always_inline))
 #else
 #define INLINE inline
 #endif
@@ -22,43 +21,61 @@ typedef __m128i vint2;
 
 //
 #ifdef __GNUC__
-    #if (__GNUC__ == 4 && __GNUC_MINOR__ >= 9) || __GNUC__ > 4
-        #define LVF(x) _mm_load_ps(&x)
-        #define LVFU(x) _mm_loadu_ps(&x)
-        #define STVF(x,y) _mm_store_ps(&x,y)
-    #else // there is a bug in gcc 4.7.x when using openmp and aligned memory and -O3
-        #define LVF(x) _mm_loadu_ps(&x)
-        #define LVFU(x) _mm_loadu_ps(&x)
-        #define STVF(x,y) _mm_storeu_ps(&x,y)
-    #endif
+#if ((__GNUC__ == 4 && __GNUC_MINOR__ >= 9) || __GNUC__ > 4) && (!defined(WIN32) || defined( __x86_64__ ))
+#define LVF(x) _mm_load_ps((float*)&x)
+#define LVFU(x) _mm_loadu_ps(&x)
+#define STVF(x,y) _mm_store_ps(&x,y)
+#define STVFU(x,y) _mm_storeu_ps(&x,y)
+#define LVI(x) _mm_load_si128((__m128i*)&x)
+#else // there is a bug in gcc 4.7.x when using openmp and aligned memory and -O3, also need to map the aligned functions to unaligned functions for WIN32 builds
+#define LVF(x) _mm_loadu_ps((float*)&x)
+#define LVFU(x) _mm_loadu_ps(&x)
+#define STVF(x,y) _mm_storeu_ps(&x,y)
+#define STVFU(x,y) _mm_storeu_ps(&x,y)
+#define LVI(x) _mm_loadu_si128((__m128i*)&x)
+#endif
 #else
-    #define LVF(x) _mm_load_ps(&x)
-    #define LVFU(x) _mm_loadu_ps(&x)
-    #define STVF(x,y) _mm_store_ps(&x,y)
+#define LVF(x) _mm_load_ps((float*)&x)
+#define LVFU(x) _mm_loadu_ps(&x)
+#define STVF(x,y) _mm_store_ps(&x,y)
+#define STVFU(x,y) _mm_storeu_ps(&x,y)
+#define LVI(x) _mm_load_si128((__m128i*)&x)
 #endif
 
-// Load 8 floats from a and combine a[0],a[2],a[4] and a[6] into a vector of 4 floats
-#define LC2VFU(a) _mm_shuffle_ps( LVFU(a),  _mm_loadu_ps(  (&a) + 4 ), _MM_SHUFFLE( 2,0,2,0 ) )
+#if defined(__x86_64__) && defined(__AVX__)
+#define PERMUTEPS(a,mask) _mm_permute_ps(a,mask)
+#else
+#define PERMUTEPS(a,mask) _mm_shuffle_ps(a,a,mask)
+#endif
+
+static INLINE vfloat LC2VFU(float &a)
+{
+    // Load 8 floats from a and combine a[0],a[2],a[4] and a[6] into a vector of 4 floats
+    vfloat a1 = _mm_loadu_ps( &a );
+    vfloat a2 = _mm_loadu_ps( (&a) + 4 );
+    return _mm_shuffle_ps(a1,a2,_MM_SHUFFLE( 2,0,2,0 ));
+}
+
 
 // Store a vector of 4 floats in a[0],a[2],a[4] and a[6]
 #if defined(__x86_64__) && defined(__SSE4_1__)
 // SSE4.1 => use _mm_blend_ps instead of _mm_set_epi32 and vself
 #define STC2VFU(a,v) {\
                          __m128 TST1V = _mm_loadu_ps(&a);\
-                         __m128 TST2V = _mm_shuffle_ps(v,v,_MM_SHUFFLE( 1,1,0,0 ));\
+                         __m128 TST2V = _mm_unpacklo_ps(v,v);\
                          _mm_storeu_ps(&a, _mm_blend_ps(TST1V,TST2V,5));\
                          TST1V = _mm_loadu_ps((&a)+4);\
-                         TST2V = _mm_shuffle_ps(v,v,_MM_SHUFFLE( 3,3,2,2 ));\
+                         TST2V = _mm_unpackhi_ps(v,v);\
                          _mm_storeu_ps((&a)+4, _mm_blend_ps(TST1V,TST2V,5));\
                      }
 #else
 #define STC2VFU(a,v) {\
                          __m128 TST1V = _mm_loadu_ps(&a);\
-                         __m128 TST2V = _mm_shuffle_ps(v,v,_MM_SHUFFLE( 1,1,0,0 ));\
+                         __m128 TST2V = _mm_unpacklo_ps(v,v);\
                          vmask cmask = _mm_set_epi32(0xffffffff,0,0xffffffff,0);\
                          _mm_storeu_ps(&a, vself(cmask,TST1V,TST2V));\
                          TST1V = _mm_loadu_ps((&a)+4);\
-                         TST2V = _mm_shuffle_ps(v,v,_MM_SHUFFLE( 3,3,2,2 ));\
+                         TST2V = _mm_unpackhi_ps(v,v);\
                          _mm_storeu_ps((&a)+4, vself(cmask,TST1V,TST2V));\
                      }
 #endif
@@ -112,21 +129,30 @@ static INLINE vfloat vcast_vf_f(float f)
     return _mm_set_ps(f, f, f, f);
 }
 
+// Don't use intrinsics here. Newer gcc versions (>= 4.9, maybe also before 4.9) generate better code when not using intrinsics
+// example: vaddf(vmulf(a,b),c) will generate an FMA instruction when build for chips with that feature only when vaddf and vmulf don't use intrinsics
 static INLINE vfloat vaddf(vfloat x, vfloat y)
 {
-    return _mm_add_ps(x, y);
+    return x + y;
 }
 static INLINE vfloat vsubf(vfloat x, vfloat y)
 {
-    return _mm_sub_ps(x, y);
+    return x - y;
 }
 static INLINE vfloat vmulf(vfloat x, vfloat y)
 {
-    return _mm_mul_ps(x, y);
+    return x * y;
 }
 static INLINE vfloat vdivf(vfloat x, vfloat y)
 {
-    return _mm_div_ps(x, y);
+    return x / y;
+}
+// Also don't use intrinsic here: Some chips support FMA instructions with 3 and 4 operands
+// 3 operands: a = a*b+c, b = a*b+c, c = a*b+c // destination has to be one of a,b,c
+// 4 operands: d = a*b+c // destination does not have to be one of a,b,c
+// gcc will use the one which fits best when not using intrinsics. With using intrinsics that's not possible
+static INLINE vfloat vmlaf(vfloat x, vfloat y, vfloat z) {
+    return x * y + z;
 }
 static INLINE vfloat vrecf(vfloat x)
 {

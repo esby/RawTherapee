@@ -25,9 +25,11 @@
 #include <sstream>
 #include <stdint.h>
 
-#include "../rtgui/cacheimagedata.h"
+#include <glib/gstdio.h>
+
 #include "rtexif.h"
-#include "../rtengine/safegtk.h"
+
+#include "../rtgui/cacheimagedata.h"
 #include "../rtgui/version.h"
 #include "../rtgui/ppversion.h"
 
@@ -247,17 +249,10 @@ void TagDirectory::printAll (unsigned int level) const
  *
  * @return True if everything went fine, false otherwise
  */
-bool TagDirectory::CPBDump (const Glib::ustring &commFName, const Glib::ustring &imageFName, const Glib::ustring &profileFName, const Glib::ustring &defaultPParams, const CacheImageData* cfs, const bool flagMode,
-                            rtengine::SafeKeyFile *keyFile, Glib::ustring tagDirName) const
+bool TagDirectory::CPBDump (const Glib::ustring &commFName, const Glib::ustring &imageFName, const Glib::ustring &profileFName, const Glib::ustring &defaultPParams,
+                            const CacheImageData* cfs, const bool flagMode, Glib::KeyFile *keyFile, Glib::ustring tagDirName) const
 {
-
-    rtengine::SafeKeyFile *kf;
-
-    if (!keyFile) {
-        kf = new rtengine::SafeKeyFile();
-    } else {
-        kf = keyFile;
-    }
+    const auto kf = keyFile ? keyFile : new Glib::KeyFile;
 
     if (!kf) {
         return false;
@@ -274,7 +269,7 @@ bool TagDirectory::CPBDump (const Glib::ustring &commFName, const Glib::ustring 
 
     if (!keyFile) {
         // open the file in write mode
-        f = safe_g_fopen (commFName, "wt");
+        f = g_fopen (commFName.c_str (), "wt");
 
         if (f == NULL) {
             printf("TagDirectory::keyFileDump(\"%s\") >>> Error: unable to open file with write access!\n", commFName.c_str());
@@ -282,21 +277,25 @@ bool TagDirectory::CPBDump (const Glib::ustring &commFName, const Glib::ustring 
             return false;
         }
 
-        kf->set_string ("RT General", "CachePath", options.cacheBaseDir);
-        kf->set_string ("RT General", "AppVersion", VERSION);
-        kf->set_integer("RT General", "ProcParamsVersion", PPVERSION);
-        kf->set_string ("RT General", "ImageFileName", imageFName);
-        kf->set_string ("RT General", "OutputProfileFileName", profileFName);
-        kf->set_string ("RT General", "DefaultProcParams", defaultPParams);
-        kf->set_boolean("RT General", "FlaggingMode", flagMode);
+        try {
 
-        kf->set_double ("Common Data", "FNumber", cfs->fnumber);
-        kf->set_double ("Common Data", "Shutter", cfs->shutter);
-        kf->set_double ("Common Data", "FocalLength", cfs->focalLen);
-        kf->set_integer("Common Data", "ISO", cfs->iso);
-        kf->set_string ("Common Data", "Lens", cfs->lens);
-        kf->set_string ("Common Data", "Make", cfs->camMake);
-        kf->set_string ("Common Data", "Model", cfs->camModel);
+            kf->set_string ("RT General", "CachePath", options.cacheBaseDir);
+            kf->set_string ("RT General", "AppVersion", VERSION);
+            kf->set_integer("RT General", "ProcParamsVersion", PPVERSION);
+            kf->set_string ("RT General", "ImageFileName", imageFName);
+            kf->set_string ("RT General", "OutputProfileFileName", profileFName);
+            kf->set_string ("RT General", "DefaultProcParams", defaultPParams);
+            kf->set_boolean("RT General", "FlaggingMode", flagMode);
+
+            kf->set_double ("Common Data", "FNumber", cfs->fnumber);
+            kf->set_double ("Common Data", "Shutter", cfs->shutter);
+            kf->set_double ("Common Data", "FocalLength", cfs->focalLen);
+            kf->set_integer("Common Data", "ISO", cfs->iso);
+            kf->set_string ("Common Data", "Lens", cfs->lens);
+            kf->set_string ("Common Data", "Make", cfs->camMake);
+            kf->set_string ("Common Data", "Model", cfs->camModel);
+
+        } catch (Glib::KeyFileError&) {}
     }
 
     // recursively iterate over the tag list
@@ -308,10 +307,15 @@ bool TagDirectory::CPBDump (const Glib::ustring &commFName, const Glib::ustring 
                 // Accumulating the TagDirectories to dump later
                 tagDirPaths.push_back( Glib::ustring( tagDirName + "/" + getDumpKey(tags[i]->getID(), tagName) ) );
                 tagDirList.push_back(tags[i]->getDirectory(j));
-                kf->set_string (tagDirName, getDumpKey(tags[i]->getID(), tagName), "$subdir");
+
+                try {
+                    kf->set_string (tagDirName, getDumpKey(tags[i]->getID(), tagName), "$subdir");
+                } catch (Glib::KeyFileError&) {}
             }
         else {
-            kf->set_string (tagDirName, getDumpKey(tags[i]->getID(), tagName), tags[i]->valueToString());
+            try {
+                kf->set_string (tagDirName, getDumpKey(tags[i]->getID(), tagName), tags[i]->valueToString());
+            } catch (Glib::KeyFileError&) {}
         }
     }
 
@@ -321,7 +325,10 @@ bool TagDirectory::CPBDump (const Glib::ustring &commFName, const Glib::ustring 
     }
 
     if (!keyFile) {
-        fprintf (f, "%s", kf->to_data().c_str());
+        try {
+            fprintf (f, "%s", kf->to_data().c_str());
+        } catch (Glib::KeyFileError&) {}
+
         fclose (f);
         delete kf;
     }
@@ -329,7 +336,7 @@ bool TagDirectory::CPBDump (const Glib::ustring &commFName, const Glib::ustring 
     return true;
 }
 
-Glib::ustring TagDirectory::getDumpKey (int tagID, const Glib::ustring tagName)
+Glib::ustring TagDirectory::getDumpKey (int tagID, const Glib::ustring &tagName)
 {
     Glib::ustring key;
 
@@ -2783,23 +2790,18 @@ TagDirectory* ExifManager::parseTIFF (FILE* f, bool skipIgnored)
     return parse (f, 0, skipIgnored);
 }
 
-std::vector<Tag*> ExifManager::defTags;
-
-// forthis: the byte order will be taken from directory "forthis"
-const std::vector<Tag*>& ExifManager::getDefaultTIFFTags (TagDirectory* forthis)
+std::vector<Tag*> ExifManager::getDefaultTIFFTags (TagDirectory* forthis)
 {
 
-    for (size_t i = 0; i < defTags.size(); i++) {
-        delete defTags[i];
-    }
+    std::vector<Tag*> defTags;
 
-    defTags.clear ();
+    defTags.reserve (12);
     defTags.push_back (new Tag (forthis, lookupAttrib(ifdAttribs, "ImageWidth"), 0, LONG));
     defTags.push_back (new Tag (forthis, lookupAttrib(ifdAttribs, "ImageHeight"), 0, LONG));
     defTags.push_back (new Tag (forthis, lookupAttrib(ifdAttribs, "XResolution"), 300, RATIONAL));
     defTags.push_back (new Tag (forthis, lookupAttrib(ifdAttribs, "YResolution"), 300, RATIONAL));
     defTags.push_back (new Tag (forthis, lookupAttrib(ifdAttribs, "ResolutionUnit"), 2, SHORT));
-    defTags.push_back (new Tag (forthis, lookupAttrib(ifdAttribs, "Software"), "RawTherapee"));
+    defTags.push_back (new Tag (forthis, lookupAttrib(ifdAttribs, "Software"), "RawTherapee " VERSION));
     defTags.push_back (new Tag (forthis, lookupAttrib(ifdAttribs, "Orientation"), 1, SHORT));
     defTags.push_back (new Tag (forthis, lookupAttrib(ifdAttribs, "SamplesPerPixel"), 3, SHORT));
     defTags.push_back (new Tag (forthis, lookupAttrib(ifdAttribs, "BitsPerSample"), 8, SHORT));
@@ -2839,18 +2841,20 @@ int ExifManager::createJPEGMarker (const TagDirectory* root, const rtengine::pro
         cl = new TagDirectory (NULL, ifdAttribs, INTEL);
     }
 
-    for (rtengine::procparams::ExifPairs::const_iterator i = changeList.begin(); i != changeList.end(); i++) {
+    for (rtengine::procparams::ExifPairs::const_iterator i = changeList.begin(); i != changeList.end(); ++i) {
         cl->applyChange (i->first, i->second);
     }
 
-    getDefaultTIFFTags (cl);
+    const std::vector<Tag*> defTags = getDefaultTIFFTags (cl);
 
     defTags[0]->setInt (W, 0, LONG);
     defTags[1]->setInt (H, 0, LONG);
     defTags[8]->setInt (8, 0, SHORT);
 
     for (int i = defTags.size() - 1; i >= 0; i--) {
-        cl->replaceTag (defTags[i]->clone (cl));
+        Tag* defTag = defTags[i];
+        cl->replaceTag (defTag->clone (cl));
+        delete defTag;
     }
 
     cl->sort ();
@@ -2861,7 +2865,7 @@ int ExifManager::createJPEGMarker (const TagDirectory* root, const rtengine::pro
     return size + 6;
 }
 
-int ExifManager::createTIFFHeader (const TagDirectory* root, const rtengine::procparams::ExifPairs& changeList, int W, int H, int bps, const char* profiledata, int profilelen, const char* iptcdata, int iptclen, unsigned char* buffer)
+int ExifManager::createTIFFHeader (const TagDirectory* root, const rtengine::procparams::ExifPairs& changeList, int W, int H, int bps, const char* profiledata, int profilelen, const char* iptcdata, int iptclen, unsigned char *&buffer, unsigned &bufferSize)
 {
 
 // write tiff header
@@ -2872,17 +2876,17 @@ int ExifManager::createTIFFHeader (const TagDirectory* root, const rtengine::pro
         order = root->getOrder ();
     }
 
-    sset2 ((unsigned short)order, buffer + offs, order);
-    offs += 2;
-    sset2 (42, buffer + offs, order);
-    offs += 2;
-    sset4 (8, buffer + offs, order);
-    offs += 4;
-
     TagDirectory* cl;
 
     if (root) {
         cl = (const_cast<TagDirectory*>(root))->clone (NULL);
+        // remove some unknown top level tags which produce warnings when opening a tiff
+        Tag *removeTag = cl->getTag(0x9003);
+        if(removeTag)
+            removeTag->setKeep(false);
+        removeTag = cl->getTag(0x9211);
+        if(removeTag)
+            removeTag->setKeep(false);
     } else {
         cl = new TagDirectory (NULL, ifdAttribs, HOSTORDER);
     }
@@ -2923,12 +2927,12 @@ int ExifManager::createTIFFHeader (const TagDirectory* root, const rtengine::pro
     }
 
 // apply list of changes
-    for (rtengine::procparams::ExifPairs::const_iterator i = changeList.begin(); i != changeList.end(); i++) {
+    for (rtengine::procparams::ExifPairs::const_iterator i = changeList.begin(); i != changeList.end(); ++i) {
         cl->applyChange (i->first, i->second);
     }
 
     // append default properties
-    getDefaultTIFFTags (cl);
+    const std::vector<Tag*> defTags = getDefaultTIFFTags (cl);
 
     defTags[0]->setInt (W, 0, LONG);
     defTags[1]->setInt (H, 0, LONG);
@@ -2939,7 +2943,9 @@ int ExifManager::createTIFFHeader (const TagDirectory* root, const rtengine::pro
     }
 
     for (int i = defTags.size() - 1; i >= 0; i--) {
-        cl->replaceTag (defTags[i]->clone (cl));
+        Tag* defTag = defTags[i];
+        cl->replaceTag (defTag->clone (cl));
+        delete defTag;
     }
 
 // calculate strip offsets
@@ -2951,6 +2957,15 @@ int ExifManager::createTIFFHeader (const TagDirectory* root, const rtengine::pro
     }
 
     cl->sort ();
+    bufferSize = cl->calculateSize() + 8;
+    buffer = new unsigned char[bufferSize]; // this has to be deleted in caller
+    sset2 ((unsigned short)order, buffer + offs, order);
+    offs += 2;
+    sset2 (42, buffer + offs, order);
+    offs += 2;
+    sset4 (8, buffer + offs, order);
+    offs += 4;
+
     int endOffs = cl->write (8, buffer);
 
 //  cl->printAll();

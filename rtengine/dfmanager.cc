@@ -20,7 +20,6 @@
 #include "../rtgui/options.h"
 #include <giomm.h>
 #include "../rtgui/guiutils.h"
-#include "safegtk.h"
 #include "rawimage.h"
 #include <sstream>
 #include <iostream>
@@ -159,7 +158,7 @@ void dfInfo::updateRawImage()
 
             int nFiles = 1; // First file data already loaded
 
-            for( iName++; iName != pathNames.end(); iName++) {
+            for( ++iName; iName != pathNames.end(); ++iName) {
                 RawImage* temp = new RawImage(*iName);
 
                 if( !temp->loadRaw(true)) {
@@ -263,13 +262,21 @@ void dfInfo::updateBadPixelList( RawImage *df )
 void DFManager::init( Glib::ustring pathname )
 {
     std::vector<Glib::ustring> names;
-    Glib::RefPtr<Gio::File> dir = Gio::File::create_for_path (pathname);
 
-    if( dir && !dir->query_exists()) {
+    auto dir = Gio::File::create_for_path (pathname);
+    if (!dir || !dir->query_exists()) {
         return;
     }
 
-    safe_build_file_list (dir, names, pathname);
+    try {
+
+        auto enumerator = dir->enumerate_children ("standard::name");
+
+        while (auto file = enumerator->next_file ()) {
+            names.emplace_back (Glib::build_filename (pathname, file->get_name ()));
+        }
+
+    } catch (Glib::Exception&) {}
 
     dfList.clear();
     bpList.clear();
@@ -293,7 +300,7 @@ void DFManager::init( Glib::ustring pathname )
     }
 
     // Where multiple shots exist for same group, move filename to list
-    for( dfList_t::iterator iter = dfList.begin(); iter != dfList.end(); iter++ ) {
+    for( dfList_t::iterator iter = dfList.begin(); iter != dfList.end(); ++iter ) {
         dfInfo &i = iter->second;
 
         if( !i.pathNames.empty() && !i.pathname.empty() ) {
@@ -307,7 +314,7 @@ void DFManager::init( Glib::ustring pathname )
             } else {
                 printf( "%s: MEAN of \n    ", i.key().c_str());
 
-                for( std::list<Glib::ustring>::iterator iter = i.pathNames.begin(); iter != i.pathNames.end(); iter++  ) {
+                for( std::list<Glib::ustring>::iterator iter = i.pathNames.begin(); iter != i.pathNames.end(); ++iter  ) {
                     printf( "%s, ", iter->c_str() );
                 }
 
@@ -320,65 +327,84 @@ void DFManager::init( Glib::ustring pathname )
     return;
 }
 
-dfInfo *DFManager::addFileInfo(const Glib::ustring &filename , bool pool )
+dfInfo* DFManager::addFileInfo (const Glib::ustring& filename, bool pool)
 {
-    Glib::RefPtr<Gio::File> file = Gio::File::create_for_path(filename);
+    auto file = Gio::File::create_for_path (filename);
 
-    if (!file ) {
+    if (!file) {
         return 0;
     }
 
-    if( !file->query_exists()) {
+    if (!file->query_exists ()) {
         return 0;
     }
 
-    Glib::RefPtr<Gio::FileInfo> info = safe_query_file_info(file);
+    try {
 
-    if (info && info->get_file_type() != Gio::FILE_TYPE_DIRECTORY && (!info->is_hidden() || !options.fbShowHidden)) {
-        size_t lastdot = info->get_name().find_last_of ('.');
+        auto info = file->query_info ();
 
-        if (options.is_extention_enabled(lastdot != Glib::ustring::npos ? info->get_name().substr (lastdot + 1) : "")) {
-            RawImage ri(filename);
-            int res = ri.loadRaw(false); // Read informations about shot
+        if (!info && info->get_file_type () == Gio::FILE_TYPE_DIRECTORY) {
+            return 0;
+        }
 
-            if( !res ) {
-                dfList_t::iterator iter;
+        if (!options.fbShowHidden && info->is_hidden ()) {
+            return 0;
+        }
 
-                if(!pool) {
-                    dfInfo n(filename, "", "", 0, 0, 0);
-                    iter = dfList.insert(std::pair< std::string, dfInfo>( "", n ) );
-                    return &(iter->second);
-                }
+        Glib::ustring ext;
 
-                RawMetaDataLocation rml;
-                rml.exifBase = ri.get_exifBase();
-                rml.ciffBase = ri.get_ciffBase();
-                rml.ciffLength = ri.get_ciffLen();
-                ImageData idata(filename, &rml);
-                /* Files are added in the map, divided by same maker/model,ISO and shutter*/
-                std::string key( dfInfo::key(((Glib::ustring)idata.getMake()).uppercase(), ((Glib::ustring)idata.getModel()).uppercase(), idata.getISOSpeed(), idata.getShutterSpeed()) );
-                iter = dfList.find( key );
+        auto lastdot = info->get_name ().find_last_of ('.');
+        if (lastdot != Glib::ustring::npos) {
+            ext = info->get_name ().substr (lastdot + 1);
+        }
 
-                if( iter == dfList.end() ) {
-                    dfInfo n(filename, ((Glib::ustring)idata.getMake()).uppercase(), ((Glib::ustring)idata.getModel()).uppercase(), idata.getISOSpeed(), idata.getShutterSpeed(), idata.getDateTimeAsTS() );
-                    iter = dfList.insert(std::pair< std::string, dfInfo>( key, n ) );
-                } else {
-                    while( iter != dfList.end() && iter->second.key() == key && ABS(iter->second.timestamp - idata.getDateTimeAsTS()) > 60 * 60 * 6 ) { // 6 hour difference
-                        iter++;
-                    }
+        if (!options.is_extention_enabled (ext)) {
+            return 0;
+        }
 
-                    if( iter != dfList.end() ) {
-                        iter->second.pathNames.push_back( filename );
-                    } else {
-                        dfInfo n(filename, ((Glib::ustring)idata.getMake()).uppercase(), ((Glib::ustring)idata.getModel()).uppercase(), idata.getISOSpeed(), idata.getShutterSpeed(), idata.getDateTimeAsTS());
-                        iter = dfList.insert(std::pair< std::string, dfInfo>( key, n ) );
-                    }
-                }
+        RawImage ri (filename);
+        int res = ri.loadRaw (false); // Read informations about shot
 
-                return &(iter->second);
+        if (res != 0) {
+            return 0;
+        }
+
+        dfList_t::iterator iter;
+
+        if(!pool) {
+            dfInfo n(filename, "", "", 0, 0, 0);
+            iter = dfList.insert(std::pair< std::string, dfInfo>( "", n ) );
+            return &(iter->second);
+        }
+
+        RawMetaDataLocation rml;
+        rml.exifBase = ri.get_exifBase();
+        rml.ciffBase = ri.get_ciffBase();
+        rml.ciffLength = ri.get_ciffLen();
+        ImageData idata(filename, &rml);
+        /* Files are added in the map, divided by same maker/model,ISO and shutter*/
+        std::string key( dfInfo::key(((Glib::ustring)idata.getMake()).uppercase(), ((Glib::ustring)idata.getModel()).uppercase(), idata.getISOSpeed(), idata.getShutterSpeed()) );
+        iter = dfList.find( key );
+
+        if( iter == dfList.end() ) {
+            dfInfo n(filename, ((Glib::ustring)idata.getMake()).uppercase(), ((Glib::ustring)idata.getModel()).uppercase(), idata.getISOSpeed(), idata.getShutterSpeed(), idata.getDateTimeAsTS() );
+            iter = dfList.insert(std::pair< std::string, dfInfo>( key, n ) );
+        } else {
+            while( iter != dfList.end() && iter->second.key() == key && ABS(iter->second.timestamp - idata.getDateTimeAsTS()) > 60 * 60 * 6 ) { // 6 hour difference
+                ++iter;
+            }
+
+            if( iter != dfList.end() ) {
+                iter->second.pathNames.push_back( filename );
+            } else {
+                dfInfo n(filename, ((Glib::ustring)idata.getMake()).uppercase(), ((Glib::ustring)idata.getModel()).uppercase(), idata.getISOSpeed(), idata.getShutterSpeed(), idata.getDateTimeAsTS());
+                iter = dfList.insert(std::pair< std::string, dfInfo>( key, n ) );
             }
         }
-    }
+
+        return &(iter->second);
+
+    } catch(Gio::Error&) {}
 
     return 0;
 }
@@ -388,7 +414,7 @@ void DFManager::getStat( int &totFiles, int &totTemplates)
     totFiles = 0;
     totTemplates = 0;
 
-    for( dfList_t::iterator iter = dfList.begin(); iter != dfList.end(); iter++ ) {
+    for( dfList_t::iterator iter = dfList.begin(); iter != dfList.end(); ++iter ) {
         dfInfo &i = iter->second;
 
         if( i.pathname.empty() ) {
@@ -417,7 +443,7 @@ dfInfo* DFManager::find( const std::string &mak, const std::string &mod, int iso
         dfList_t::iterator bestMatch = iter;
         time_t bestDeltaTime = ABS(iter->second.timestamp - t);
 
-        for(iter++; iter != dfList.end() && !key.compare( iter->second.key() ); iter++ ) {
+        for(++iter; iter != dfList.end() && !key.compare( iter->second.key() ); ++iter ) {
             time_t d = ABS(iter->second.timestamp - t );
 
             if( d < bestDeltaTime ) {
@@ -432,7 +458,7 @@ dfInfo* DFManager::find( const std::string &mak, const std::string &mod, int iso
         dfList_t::iterator bestMatch = iter;
         double bestD = iter->second.distance(  mak, mod, isospeed, shut );
 
-        for( iter++; iter != dfList.end(); iter++ ) {
+        for( ++iter; iter != dfList.end(); ++iter ) {
             double d = iter->second.distance(  mak, mod, isospeed, shut );
 
             if( d < bestD ) {
@@ -458,7 +484,7 @@ RawImage* DFManager::searchDarkFrame( const std::string &mak, const std::string 
 
 RawImage* DFManager::searchDarkFrame( const Glib::ustring filename )
 {
-    for ( dfList_t::iterator iter = dfList.begin(); iter != dfList.end(); iter++ ) {
+    for ( dfList_t::iterator iter = dfList.begin(); iter != dfList.end(); ++iter ) {
         if( iter->second.pathname.compare( filename ) == 0  ) {
             return iter->second.getRawImage();
         }
@@ -474,7 +500,7 @@ RawImage* DFManager::searchDarkFrame( const Glib::ustring filename )
 }
 std::vector<badPix> *DFManager::getHotPixels ( const Glib::ustring filename )
 {
-    for ( dfList_t::iterator iter = dfList.begin(); iter != dfList.end(); iter++ ) {
+    for ( dfList_t::iterator iter = dfList.begin(); iter != dfList.end(); ++iter ) {
         if( iter->second.pathname.compare( filename ) == 0  ) {
             return &iter->second.getHotPixels();
         }

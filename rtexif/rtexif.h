@@ -29,7 +29,6 @@
 #include <cmath>
 #include <glibmm.h>
 #include "../rtengine/procparams.h"
-#include "../rtengine/safekeyfile.h"
 
 class CacheImageData;
 
@@ -102,7 +101,7 @@ protected:
     const TagAttrib*  attribs;  // descriptor table to decode the tags
     ByteOrder         order;    // byte order
     TagDirectory*     parent;   // parent directory (NULL if root)
-    static Glib::ustring getDumpKey (int tagID, const Glib::ustring tagName);
+    static Glib::ustring getDumpKey (int tagID, const Glib::ustring &tagName);
 
 public:
     TagDirectory ();
@@ -156,7 +155,7 @@ public:
 
     virtual void     printAll      (unsigned  int level = 0) const; // reentrant debug function, keep level=0 on first call !
     virtual bool     CPBDump       (const Glib::ustring &commFName, const Glib::ustring &imageFName, const Glib::ustring &profileFName, const Glib::ustring &defaultPParams,
-                                    const CacheImageData* cfs, const bool flagMode, rtengine::SafeKeyFile *keyFile = NULL, Glib::ustring tagDirName = "") const;
+                                    const CacheImageData* cfs, const bool flagMode, Glib::KeyFile *keyFile = NULL, Glib::ustring tagDirName = "") const;
     virtual void     sort     ();
 };
 
@@ -306,8 +305,6 @@ public:
 class ExifManager
 {
 
-    static std::vector<Tag*> defTags;
-
     static Tag* saveCIFFMNTag (FILE* f, TagDirectory* root, int len, const char* name);
 public:
     static TagDirectory* parse (FILE*f, int base, bool skipIgnored = true);
@@ -316,9 +313,12 @@ public:
     static TagDirectory* parseCIFF (FILE* f, int base, int length);
     static void          parseCIFF (FILE* f, int base, int length, TagDirectory* root);
 
-    static const std::vector<Tag*>& getDefaultTIFFTags (TagDirectory* forthis);
+    /// @brief Get default tag for TIFF
+    /// @param forthis The byte order will be taken from the given directory.
+    /// @return The ownership of the return tags is passed to the caller.
+    static std::vector<Tag*> getDefaultTIFFTags (TagDirectory* forthis);
     static int    createJPEGMarker (const TagDirectory* root, const rtengine::procparams::ExifPairs& changeList, int W, int H, unsigned char* buffer);
-    static int    createTIFFHeader (const TagDirectory* root, const rtengine::procparams::ExifPairs& changeList, int W, int H, int bps, const char* profiledata, int profilelen, const char* iptcdata, int iptclen, unsigned char* buffer);
+    static int    createTIFFHeader (const TagDirectory* root, const rtengine::procparams::ExifPairs& changeList, int W, int H, int bps, const char* profiledata, int profilelen, const char* iptcdata, int iptclen, unsigned char *&buffer, unsigned &bufferSize);
 };
 
 class Interpreter
@@ -495,7 +495,7 @@ protected:
         * Get the lens info (min/man focal, min/max aperture) and compare them to the possible choice
         */
         if (lensInfoArray) {
-            for ( r = choices.lower_bound( lensID ); r != choices.upper_bound(lensID); r++  ) {
+            for ( r = choices.lower_bound( lensID ); r != choices.upper_bound(lensID); ++r  ) {
                 if( !extractLensInfo( r->second , f1, f2, a1, a2) ) {
                     continue;
                 }
@@ -532,7 +532,7 @@ protected:
         std::ostringstream candidates;
         double deltaMin = 1000.;
 
-        for ( r = choices.lower_bound( lensID ); r != choices.upper_bound(lensID); r++  ) {
+        for ( r = choices.lower_bound( lensID ); r != choices.upper_bound(lensID); ++r  ) {
             double lensAperture, dif;
 
             if( !extractLensInfo( r->second , f1, f2, a1, a2) ) {
@@ -558,7 +558,7 @@ protected:
                     lensAperture = exp( log(a1) + (log(a2) - log(a1)) / (log(f2) - log(f1)) * (log(focalLength) - log(f1)) );
                 }
 
-                dif = abs(lensAperture - maxApertureAtFocal);
+                dif = std::abs(lensAperture - maxApertureAtFocal);
             } else {
                 dif = 0;
             }

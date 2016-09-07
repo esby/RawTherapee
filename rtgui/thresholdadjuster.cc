@@ -17,7 +17,7 @@
  *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "thresholdadjuster.h"
-#include <sigc++/class_slot.h>
+#include <sigc++/slot.h>
 #include <cmath>
 #include "multilangmgr.h"
 #include "../rtengine/rtengine.h"
@@ -77,8 +77,7 @@ void ThresholdAdjuster::initObject (Glib::ustring label, bool editedcb)
 
     addMode = false;
 
-    // TODO: let the user chose the default value of ThresholdAdjuster::delay, for slow machines
-    delay = options.adjusterDelay;      // delay is no more static, so we can set the delay individually (useful for the RAW editor tab)
+    delay = options.adjusterMinDelay;
 
     set_name("ThresholdAdjuster");
 

@@ -49,6 +49,41 @@ void ParamsEdited::set (bool v)
     toneCurve.expcomp    = v;
     toneCurve.hrenabled   = v;
     toneCurve.method    = v;
+    retinex.cdcurve    = v;
+    retinex.mapcurve    = v;
+    retinex.cdHcurve    = v;
+    retinex.lhcurve    = v;
+    retinex.retinexMethod    = v;
+    retinex.mapMethod    = v;
+    retinex.viewMethod    = v;
+    retinex.retinexcolorspace    = v;
+    retinex.gammaretinex    = v;
+    retinex.enabled    = v;
+    retinex.str    = v;
+    retinex.scal    = v;
+    retinex.iter    = v;
+    retinex.grad    = v;
+    retinex.grads    = v;
+    retinex.gam    = v;
+    retinex.slope    = v;
+    retinex.neigh    = v;
+    retinex.gain    = v;
+    retinex.offs    = v;
+    retinex.vart    = v;
+    retinex.limd    = v;
+    retinex.highl    = v;
+    retinex.baselog    = v;
+    retinex.skal    = v;
+    retinex.medianmap = v;
+    retinex.transmissionCurve   = v;
+    retinex.gaintransmissionCurve   = v;
+    retinex.highlights    = v;
+    retinex.htonalwidth   = v;
+    retinex.shadows       = v;
+    retinex.stonalwidth   = v;
+    retinex.radius        = v;
+
+    retinex.retinex = v;
     labCurve.lcurve      = v;
     labCurve.acurve      = v;
     labCurve.bcurve      = v;
@@ -317,6 +352,7 @@ void ParamsEdited::set (bool v)
     icm.dcpIlluminant = v;
     icm.working      = v;
     icm.output       = v;
+    icm.outputIntent = v;
     icm.gamma       = v;
     icm.freegamma       = v;
     icm.gampos      = v;
@@ -340,6 +376,7 @@ void ParamsEdited::set (bool v)
     raw.xtranssensor.exBlackGreen = v;
     raw.xtranssensor.exBlackBlue = v;
     raw.caCorrection = v;
+    raw.caAutoStrength  = v;
     raw.caBlue  = v;
     raw.caRed   = v;
     raw.hotPixelFilter = v;
@@ -452,6 +489,8 @@ void ParamsEdited::set (bool v)
 
     dirpyrequalizer.enabled = v;
     dirpyrequalizer.gamutlab = v;
+    dirpyrequalizer.cbdlMethod = v;
+
 
     for(int i = 0; i < 6; i++) {
         dirpyrequalizer.mult[i] = v;
@@ -504,6 +543,40 @@ void ParamsEdited::initFrom (const std::vector<rtengine::procparams::ProcParams>
         toneCurve.expcomp = toneCurve.expcomp && p.toneCurve.expcomp == other.toneCurve.expcomp;
         toneCurve.hrenabled = toneCurve.hrenabled && p.toneCurve.hrenabled == other.toneCurve.hrenabled;
         toneCurve.method = toneCurve.method && p.toneCurve.method == other.toneCurve.method;
+        retinex.cdcurve = retinex.cdcurve && p.retinex.cdcurve == other.retinex.cdcurve;
+        retinex.mapcurve = retinex.mapcurve && p.retinex.mapcurve == other.retinex.mapcurve;
+        retinex.cdHcurve = retinex.cdHcurve && p.retinex.cdHcurve == other.retinex.cdHcurve;
+        retinex.lhcurve = retinex.lhcurve && p.retinex.lhcurve == other.retinex.lhcurve;
+        retinex.transmissionCurve = retinex.transmissionCurve && p.retinex.transmissionCurve == other.retinex.transmissionCurve;
+        retinex.gaintransmissionCurve = retinex.gaintransmissionCurve && p.retinex.gaintransmissionCurve == other.retinex.gaintransmissionCurve;
+        retinex.retinexMethod = retinex.retinexMethod && p.retinex.retinexMethod == other.retinex.retinexMethod;
+        retinex.mapMethod = retinex.mapMethod && p.retinex.mapMethod == other.retinex.mapMethod;
+        retinex.viewMethod = retinex.viewMethod && p.retinex.viewMethod == other.retinex.viewMethod;
+        retinex.retinexcolorspace = retinex.retinexcolorspace && p.retinex.retinexcolorspace == other.retinex.retinexcolorspace;
+        retinex.gammaretinex = retinex.gammaretinex && p.retinex.gammaretinex == other.retinex.gammaretinex;
+        retinex.str = retinex.str && p.retinex.str == other.retinex.str;
+        retinex.scal = retinex.scal && p.retinex.scal == other.retinex.scal;
+        retinex.iter = retinex.iter && p.retinex.iter == other.retinex.iter;
+        retinex.grad = retinex.grad && p.retinex.grad == other.retinex.grad;
+        retinex.grads = retinex.grads && p.retinex.grads == other.retinex.grads;
+        retinex.gam = retinex.gam && p.retinex.gam == other.retinex.gam;
+        retinex.slope = retinex.slope && p.retinex.slope == other.retinex.slope;
+        retinex.neigh = retinex.neigh && p.retinex.neigh == other.retinex.neigh;
+        retinex.gain = retinex.gain && p.retinex.gain == other.retinex.gain;
+        retinex.offs = retinex.offs && p.retinex.offs == other.retinex.offs;
+        retinex.vart = retinex.vart && p.retinex.vart == other.retinex.vart;
+        retinex.limd = retinex.limd && p.retinex.limd == other.retinex.limd;
+        retinex.highl = retinex.highl && p.retinex.highl == other.retinex.highl;
+        retinex.baselog = retinex.baselog && p.retinex.baselog == other.retinex.baselog;
+        retinex.skal = retinex.skal && p.retinex.skal == other.retinex.skal;
+        retinex.medianmap = retinex.medianmap && p.retinex.medianmap == other.retinex.medianmap;
+        retinex.highlights = retinex.highlights && p.retinex.highlights == other.retinex.highlights;
+        retinex.htonalwidth = retinex.htonalwidth && p.retinex.htonalwidth == other.retinex.htonalwidth;
+        retinex.shadows = retinex.shadows && p.retinex.shadows == other.retinex.shadows;
+        retinex.stonalwidth = retinex.stonalwidth && p.retinex.stonalwidth == other.retinex.stonalwidth;
+        retinex.radius = retinex.radius && p.retinex.radius == other.retinex.radius;
+
+        retinex.enabled = retinex.enabled && p.retinex.enabled == other.retinex.enabled;
         labCurve.lcurve = labCurve.lcurve && p.labCurve.lcurve == other.labCurve.lcurve;
         labCurve.acurve = labCurve.acurve && p.labCurve.acurve == other.labCurve.acurve;
         labCurve.bcurve = labCurve.bcurve && p.labCurve.bcurve == other.labCurve.bcurve;
@@ -773,6 +846,7 @@ void ParamsEdited::initFrom (const std::vector<rtengine::procparams::ProcParams>
         icm.dcpIlluminant = icm.dcpIlluminant && p.icm.dcpIlluminant == other.icm.dcpIlluminant;
         icm.working = icm.working && p.icm.working == other.icm.working;
         icm.output = icm.output && p.icm.output == other.icm.output;
+        icm.outputIntent = icm.outputIntent && p.icm.outputIntent == other.icm.outputIntent;
         icm.gamma = icm.gamma && p.icm.gamma == other.icm.gamma;
         icm.freegamma = icm.freegamma && p.icm.freegamma == other.icm.freegamma;
         icm.gampos = icm.gampos && p.icm.gampos == other.icm.gampos;
@@ -796,6 +870,7 @@ void ParamsEdited::initFrom (const std::vector<rtengine::procparams::ProcParams>
         raw.xtranssensor.exBlackGreen = raw.xtranssensor.exBlackGreen && p.raw.xtranssensor.blackgreen == other.raw.xtranssensor.blackgreen;
         raw.xtranssensor.exBlackBlue = raw.xtranssensor.exBlackBlue && p.raw.xtranssensor.blackblue == other.raw.xtranssensor.blackblue;
         raw.caCorrection = raw.caCorrection && p.raw.ca_autocorrect == other.raw.ca_autocorrect;
+        raw.caAutoStrength = raw.caAutoStrength && p.raw.caautostrength == other.raw.caautostrength;
         raw.caRed = raw.caRed && p.raw.cared == other.raw.cared;
         raw.caBlue = raw.caBlue && p.raw.cablue == other.raw.cablue;
         raw.hotPixelFilter = raw.hotPixelFilter && p.raw.hotPixelFilter == other.raw.hotPixelFilter;
@@ -904,6 +979,7 @@ void ParamsEdited::initFrom (const std::vector<rtengine::procparams::ProcParams>
 
         dirpyrequalizer.enabled = dirpyrequalizer.enabled && p.dirpyrequalizer.enabled == other.dirpyrequalizer.enabled;
         dirpyrequalizer.gamutlab = dirpyrequalizer.gamutlab && p.dirpyrequalizer.gamutlab == other.dirpyrequalizer.gamutlab;
+        dirpyrequalizer.cbdlMethod = dirpyrequalizer.cbdlMethod && p.dirpyrequalizer.cbdlMethod == other.dirpyrequalizer.cbdlMethod;
 
         for(int i = 0; i < 6; i++) {
             dirpyrequalizer.mult[i] = dirpyrequalizer.mult[i] && p.dirpyrequalizer.mult[i] == other.dirpyrequalizer.mult[i];
@@ -994,6 +1070,144 @@ void ParamsEdited::combine (rtengine::procparams::ProcParams& toEdit, const rten
     if (toneCurve.method) {
         toEdit.toneCurve.method   = mods.toneCurve.method;
     }
+
+    if (retinex.enabled) {
+        toEdit.retinex.enabled        = mods.retinex.enabled;
+    }
+
+    if (retinex.cdcurve) {
+        toEdit.retinex.cdcurve    = mods.retinex.cdcurve;
+    }
+
+    if (retinex.mapcurve) {
+        toEdit.retinex.mapcurve    = mods.retinex.mapcurve;
+    }
+
+    if (retinex.cdHcurve) {
+        toEdit.retinex.cdHcurve    = mods.retinex.cdHcurve;
+    }
+
+    if (retinex.lhcurve) {
+        toEdit.retinex.lhcurve    = mods.retinex.lhcurve;
+    }
+
+    if (retinex.transmissionCurve) {
+        toEdit.retinex.transmissionCurve    = mods.retinex.transmissionCurve;
+    }
+
+    if (retinex.gaintransmissionCurve) {
+        toEdit.retinex.gaintransmissionCurve    = mods.retinex.gaintransmissionCurve;
+    }
+
+    if (retinex.retinexMethod) {
+        toEdit.retinex.retinexMethod    = mods.retinex.retinexMethod;
+    }
+
+    if (retinex.mapMethod) {
+        toEdit.retinex.mapMethod    = mods.retinex.mapMethod;
+    }
+
+    if (retinex.viewMethod) {
+        toEdit.retinex.viewMethod    = mods.retinex.viewMethod;
+    }
+
+    if (retinex.retinexcolorspace) {
+        toEdit.retinex.retinexcolorspace    = mods.retinex.retinexcolorspace;
+    }
+
+    if (retinex.gammaretinex) {
+        toEdit.retinex.gammaretinex    = mods.retinex.gammaretinex;
+    }
+
+    if (retinex.gam) {
+        toEdit.retinex.gam   = dontforceSet && options.baBehav[ADDSET_RETI_GAM] ? toEdit.retinex.gam + mods.retinex.gam : mods.retinex.gam;
+    }
+
+    if (retinex.slope) {
+        toEdit.retinex.slope   = dontforceSet && options.baBehav[ADDSET_RETI_SLO] ? toEdit.retinex.slope + mods.retinex.slope : mods.retinex.slope;
+    }
+
+    if (retinex.str) {
+        toEdit.retinex.str   = dontforceSet && options.baBehav[ADDSET_RETI_STR] ? toEdit.retinex.str + mods.retinex.str : mods.retinex.str;
+    }
+
+    if (retinex.scal) {
+        toEdit.retinex.scal    = mods.retinex.scal;
+    }
+
+    if (retinex.iter) {
+        toEdit.retinex.iter    = mods.retinex.iter;
+    }
+
+    if (retinex.grad) {
+        toEdit.retinex.grad    = mods.retinex.grad;
+    }
+
+    if (retinex.grads) {
+        toEdit.retinex.grads    = mods.retinex.grads;
+    }
+
+//    if (retinex.scal) {
+//        toEdit.retinex.scal   = dontforceSet && options.baBehav[ADDSET_RETI_SCAL] ? toEdit.retinex.scal + mods.retinex.scal : mods.retinex.scal;
+//    }
+
+    if (retinex.medianmap) {
+        toEdit.retinex.medianmap  = mods.retinex.medianmap;
+    }
+
+    if (retinex.neigh) {
+        toEdit.retinex.neigh   = dontforceSet && options.baBehav[ADDSET_RETI_NEIGH] ? toEdit.retinex.neigh + mods.retinex.neigh : mods.retinex.neigh;
+    }
+
+    if (retinex.limd) {
+        toEdit.retinex.limd   = dontforceSet && options.baBehav[ADDSET_RETI_LIMD] ? toEdit.retinex.limd + mods.retinex.limd : mods.retinex.limd;
+    }
+
+    if (retinex.highl) {
+        toEdit.retinex.highl   = mods.retinex.highl;
+    }
+
+    if (retinex.baselog) {
+        toEdit.retinex.baselog   = mods.retinex.baselog;
+    }
+
+    if (retinex.skal) {
+        toEdit.retinex.skal   = mods.retinex.skal;
+    }
+
+    if (retinex.gain) {
+        toEdit.retinex.gain   = dontforceSet && options.baBehav[ADDSET_RETI_GAIN] ? toEdit.retinex.gain + mods.retinex.gain : mods.retinex.gain;
+    }
+
+    if (retinex.offs) {
+        toEdit.retinex.offs   = dontforceSet && options.baBehav[ADDSET_RETI_OFFS] ? toEdit.retinex.offs + mods.retinex.offs : mods.retinex.offs;
+    }
+
+    if (retinex.vart) {
+        toEdit.retinex.vart   = dontforceSet && options.baBehav[ADDSET_RETI_VART] ? toEdit.retinex.vart + mods.retinex.vart : mods.retinex.vart;
+    }
+
+    if (retinex.highlights) {
+        toEdit.retinex.highlights     = mods.retinex.highlights;
+    }
+
+    if (retinex.htonalwidth) {
+        toEdit.retinex.htonalwidth     = mods.retinex.htonalwidth;
+    }
+
+    if (retinex.shadows) {
+        toEdit.retinex.shadows     = mods.retinex.shadows;
+
+    }
+
+    if (retinex.stonalwidth) {
+        toEdit.retinex.stonalwidth     = mods.retinex.stonalwidth;
+    }
+
+    if (retinex.radius) {
+        toEdit.retinex.radius      = mods.retinex.radius;
+    }
+
 
     if (labCurve.lcurve) {
         toEdit.labCurve.lcurve        = mods.labCurve.lcurve;
@@ -1992,6 +2206,10 @@ void ParamsEdited::combine (rtengine::procparams::ProcParams& toEdit, const rten
         toEdit.icm.output       = mods.icm.output;
     }
 
+    if (icm.outputIntent) {
+        toEdit.icm.outputIntent = mods.icm.outputIntent;
+    }
+
     //if (icm.gampos)           toEdit.icm.gampos       = mods.icm.gampos;
     //if (icm.slpos)            toEdit.icm.slpos        = mods.icm.slpos;
     if (icm.gampos) {
@@ -2081,6 +2299,10 @@ void ParamsEdited::combine (rtengine::procparams::ProcParams& toEdit, const rten
 
     if (raw.caCorrection) {
         toEdit.raw.ca_autocorrect  = mods.raw.ca_autocorrect;
+    }
+
+    if (raw.caAutoStrength) {
+        toEdit.raw.caautostrength           = dontforceSet && options.baBehav[ADDSET_RAWCACORR] ? toEdit.raw.caautostrength + mods.raw.caautostrength : mods.raw.caautostrength;
     }
 
     if (raw.caRed) {
@@ -2493,6 +2715,10 @@ void ParamsEdited::combine (rtengine::procparams::ProcParams& toEdit, const rten
         toEdit.dirpyrequalizer.gamutlab   = mods.dirpyrequalizer.gamutlab;
     }
 
+    if (dirpyrequalizer.cbdlMethod) {
+        toEdit.dirpyrequalizer.cbdlMethod   = mods.dirpyrequalizer.cbdlMethod;
+    }
+
     for(int i = 0; i < 6; i++) {
         if(dirpyrequalizer.mult[i]) {
             toEdit.dirpyrequalizer.mult[i]    = dontforceSet && options.baBehav[ADDSET_DIRPYREQ] ? toEdit.dirpyrequalizer.mult[i] + mods.dirpyrequalizer.mult[i] : mods.dirpyrequalizer.mult[i];
@@ -2539,35 +2765,40 @@ void ParamsEdited::combine (rtengine::procparams::ProcParams& toEdit, const rten
 
     // Exif changes are added to the existing ones
     if (exif)
-        for (procparams::ExifPairs::const_iterator i = mods.exif.begin(); i != mods.exif.end(); i++) {
+        for (procparams::ExifPairs::const_iterator i = mods.exif.begin(); i != mods.exif.end(); ++i) {
             toEdit.exif[i->first] = i->second;
         }
 
     // IPTC changes are added to the existing ones
     if (iptc)
-        for (procparams::IPTCPairs::const_iterator i = mods.iptc.begin(); i != mods.iptc.end(); i++) {
+        for (procparams::IPTCPairs::const_iterator i = mods.iptc.begin(); i != mods.iptc.end(); ++i) {
             toEdit.iptc[i->first] = i->second;
         }
 }
 
 bool RAWParamsEdited::BayerSensor::isUnchanged() const
 {
-    return  method && ccSteps && dcbIterations && dcbEnhance && lmmseIterations/*&& allEnhance*/ &&  greenEq
+    return  method && dcbIterations && dcbEnhance && lmmseIterations/*&& allEnhance*/ &&  greenEq
             && linenoise && exBlack0 && exBlack1 && exBlack2 && exBlack3 && exTwoGreen;
 }
 
 bool RAWParamsEdited::XTransSensor::isUnchanged() const
 {
-    return method && ccSteps && exBlackRed && exBlackGreen && exBlackBlue;
+    return method && exBlackRed && exBlackGreen && exBlackBlue;
 }
 
 bool RAWParamsEdited::isUnchanged() const
 {
-    return  bayersensor.isUnchanged() && xtranssensor.isUnchanged() && caCorrection && caRed && caBlue && hotPixelFilter && deadPixelFilter && hotDeadPixelThresh && darkFrame
+    return  bayersensor.isUnchanged() && xtranssensor.isUnchanged() && caCorrection && caAutoStrength && caRed && caBlue && hotPixelFilter && deadPixelFilter && hotDeadPixelThresh && darkFrame
             && dfAuto && ff_file && ff_AutoSelect && ff_BlurRadius && ff_BlurType && exPos && exPreser && ff_AutoClipControl && ff_clipControl;
 }
 
 bool LensProfParamsEdited::isUnchanged() const
 {
     return lcpFile;
+}
+
+bool RetinexParamsEdited::isUnchanged() const
+{
+    return enabled && retinexcolorspace && gammaretinex && gam && slope;
 }

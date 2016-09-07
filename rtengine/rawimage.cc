@@ -13,14 +13,13 @@
 #else
 #include <netinet/in.h>
 #endif
-#include "safegtk.h"
 
 namespace rtengine
 {
 
 extern const Settings* settings;
 
-RawImage::RawImage(  const Glib::ustring name )
+RawImage::RawImage(  const Glib::ustring &name )
     : data(NULL)
     , prefilters(0)
     , filename(name)
@@ -88,15 +87,15 @@ void RawImage::get_colorsCoeff( float *pre_mul_, float *scale_mul_, float *cblac
     float val;
     double dsum[8], dmin, dmax;
 
-    if ((this->get_cblack(4) + 1) / 2 == 1 && (this->get_cblack(5) + 1) / 2 == 1) {
-        for (int c = 0; c < 4; c++) {
-            cblack_[FC(c / 2, c % 2)] = this->get_cblack(6 + c / 2 % this->get_cblack(4) * this->get_cblack(5) + c % 2 % this->get_cblack(5));
-            pre_mul_[c] = this->get_pre_mul(c);
-        }
-    } else if(isXtrans()) {
+    if(isXtrans()) {
         // for xtrans files dcraw stores black levels in cblack[6] .. cblack[41], but all are equal, so we just use cblack[6]
         for (int c = 0; c < 4; c++) {
             cblack_[c] = (float) this->get_cblack(6);
+            pre_mul_[c] = this->get_pre_mul(c);
+        }
+    } else if ((this->get_cblack(4) + 1) / 2 == 1 && (this->get_cblack(5) + 1) / 2 == 1) {
+        for (int c = 0; c < 4; c++) {
+            cblack_[FC(c / 2, c % 2)] = this->get_cblack(6 + c / 2 % this->get_cblack(4) * this->get_cblack(5) + c % 2 % this->get_cblack(5));
             pre_mul_[c] = this->get_pre_mul(c);
         }
     } else {
@@ -495,11 +494,13 @@ int RawImage::loadRaw (bool loadData, bool closeFile, ProgressListener *plistene
             if (cc && cc->has_rawCrop()) {
                 int lm, tm, w, h;
                 cc->get_rawCrop(lm, tm, w, h);
-
-                if(((int)top_margin - tm) & 1) { // we have an odd border difference
-                    filters = (filters << 4) | (filters >> 28);    // left rotate filters by 4 bits
+                if(isXtrans()) {
+                    shiftXtransMatrix(6 - ((top_margin - tm)%6), 6 - ((left_margin - lm)%6));
+                } else {
+                    if(((int)top_margin - tm) & 1) { // we have an odd border difference
+                        filters = (filters << 4) | (filters >> 28);    // left rotate filters by 4 bits
+                    }
                 }
-
                 left_margin = lm;
                 top_margin = tm;
 
@@ -579,7 +580,9 @@ int RawImage::loadRaw (bool loadData, bool closeFile, ProgressListener *plistene
         if (cc) {
             for (int i = 0; i < 4; i++) {
                 if (RT_blacklevel_from_constant) {
-                    black_c4[i] = cblack[i] + cc->get_BlackLevel(i, iso_speed);
+                    int blackFromCc = cc->get_BlackLevel(i, iso_speed);
+                    // if black level from camconst > 0xffff it is an absolute value.
+                    black_c4[i] = blackFromCc > 0xffff ? (blackFromCc & 0xffff) : blackFromCc + cblack[i];
                 }
 
                 // load 4 channel white level here, will be used if available
@@ -740,6 +743,22 @@ RawImage::is_supportedThumb() const
     return ( (thumb_width * thumb_height) > 0 &&
              ( write_thumb == &rtengine::RawImage::jpeg_thumb ||
                write_thumb == &rtengine::RawImage::ppm_thumb) &&
+             !thumb_load_raw );
+}
+
+bool
+RawImage::is_jpegThumb() const
+{
+    return ( (thumb_width * thumb_height) > 0 &&
+              write_thumb == &rtengine::RawImage::jpeg_thumb &&
+             !thumb_load_raw );
+}
+
+bool
+RawImage::is_ppmThumb() const
+{
+    return ( (thumb_width * thumb_height) > 0 &&
+             write_thumb == &rtengine::RawImage::ppm_thumb &&
              !thumb_load_raw );
 }
 
