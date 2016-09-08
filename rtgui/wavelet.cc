@@ -71,37 +71,37 @@ Wavelet::Wavelet () : FoldableToolPanel(this, "wavelet", M("TP_WAVELET_LABEL"), 
 
     std::vector<double> defaultCurve;
 
-    expsettings = new MyExpander (false, M("TP_WAVELET_SETTINGS"));
+    expsettings = new MyExpander (false, M("TP_WAVELET_SETTINGS"), this);
     expsettings->signal_button_release_event().connect_notify( sigc::bind( sigc::mem_fun(this, &Wavelet::foldAllButMe), expsettings) );
 
-    expcontrast = new MyExpander (true, M("TP_WAVELET_LEVF"));
+    expcontrast = new MyExpander (true, M("TP_WAVELET_LEVF"), this);
     expcontrast->signal_button_release_event().connect_notify( sigc::bind( sigc::mem_fun(this, &Wavelet::foldAllButMe), expcontrast) );
     enableContrastConn = expcontrast->signal_enabled_toggled().connect ( sigc::bind( sigc::mem_fun(this, &Wavelet::enableToggled), expcontrast) );
 
-    expchroma = new MyExpander (true, M("TP_WAVELET_LEVCH"));
+    expchroma = new MyExpander (true, M("TP_WAVELET_LEVCH"), this);
     expchroma->signal_button_release_event().connect_notify( sigc::bind ( sigc::mem_fun(this, &Wavelet::foldAllButMe), expchroma) );
     enableChromaConn = expchroma->signal_enabled_toggled().connect ( sigc::bind( sigc::mem_fun(this, &Wavelet::enableToggled), expchroma) );
 
-    exptoning = new MyExpander (true, M("TP_WAVELET_TON"));
+    exptoning = new MyExpander (true, M("TP_WAVELET_TON"), this);
     exptoning->signal_button_release_event().connect_notify( sigc::bind ( sigc::mem_fun(this, &Wavelet::foldAllButMe), exptoning) );
     enableToningConn = exptoning->signal_enabled_toggled().connect ( sigc::bind( sigc::mem_fun(this, &Wavelet::enableToggled), exptoning) );
 
-    expnoise = new MyExpander (true, M("TP_WAVELET_NOISE"));
+    expnoise = new MyExpander (true, M("TP_WAVELET_NOISE"), this);
     expnoise->signal_button_release_event().connect_notify( sigc::bind ( sigc::mem_fun(this, &Wavelet::foldAllButMe), expnoise) );
     enableNoiseConn = expnoise->signal_enabled_toggled().connect ( sigc::bind( sigc::mem_fun(this, &Wavelet::enableToggled), expnoise) );
 
-    expedge = new MyExpander (true, M("TP_WAVELET_EDGE"));
+    expedge = new MyExpander (true, M("TP_WAVELET_EDGE"), this);
     expedge->signal_button_release_event().connect_notify( sigc::bind ( sigc::mem_fun(this, &Wavelet::foldAllButMe), expedge) );
     enableEdgeConn = expedge->signal_enabled_toggled().connect ( sigc::bind( sigc::mem_fun(this, &Wavelet::enableToggled), expedge) );
 
-    expgamut = new MyExpander (false, M("TP_WAVELET_CONTR"));
+    expgamut = new MyExpander (false, M("TP_WAVELET_CONTR"), this);
     expgamut->signal_button_release_event().connect_notify( sigc::bind ( sigc::mem_fun(this, &Wavelet::foldAllButMe), expgamut) );
 
-    expresid = new MyExpander (true, M("TP_WAVELET_RESID"));
+    expresid = new MyExpander (true, M("TP_WAVELET_RESID"), this);
     expresid->signal_button_release_event().connect_notify( sigc::bind ( sigc::mem_fun(this, &Wavelet::foldAllButMe), expresid) );
     enableResidConn = expresid->signal_enabled_toggled().connect ( sigc::bind( sigc::mem_fun(this, &Wavelet::enableToggled), expresid) );
 
-    expfinal = new MyExpander (true, M("TP_WAVELET_FINAL"));
+    expfinal = new MyExpander (true, M("TP_WAVELET_FINAL"), this);
     expfinal->signal_button_release_event().connect_notify( sigc::bind ( sigc::mem_fun(this, &Wavelet::foldAllButMe), expfinal) );
     enableFinalConn = expfinal->signal_enabled_toggled().connect ( sigc::bind( sigc::mem_fun(this, &Wavelet::enableToggled), expfinal) );
 

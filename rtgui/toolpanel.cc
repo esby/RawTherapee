@@ -157,9 +157,10 @@ int ToolCounter::getPos(ToolPanel* panel) {
 ToolPanel* ToolCounter::getPanel(int pos) {
 //todo:
 /// in the old code it was
-// panelList = box->get_children ();
-//   ToolPanel* p = ((Expander*)panelList[pos])->getPanel();
-//   return p;
+ panelList = box->get_children ();
+ ToolPanel* p = (ToolPanel*) ((MyExpander*)panelList[pos])->getPanel();
+   return p;
+/*
     size_t i;
     for (i=0; i<envTC->countPanel();i++)
       if (panelList.at(pos) == envTC->getPanel(i)->getExpander())
@@ -167,7 +168,7 @@ ToolPanel* ToolCounter::getPanel(int pos) {
 
      printf("returning NULL when searching for panel at pos=%i", pos);
        return NULL;
-
+*/
 }
 
 // we initiate the nextBox too sinec it's circular
@@ -831,9 +832,9 @@ FoldableToolPanel::FoldableToolPanel(Gtk::Box* content, Glib::ustring toolName, 
         image->set_tooltip_text(M("TP_GENERAL_11SCALE_TOOLTIP"));
         titleHBox->pack_end(*image, Gtk::PACK_SHRINK, 0);
 
-        exp = Gtk::manage (new MyExpander (useEnabled, titleHBox));
+        exp = Gtk::manage (new MyExpander (useEnabled, titleHBox, this ));
     } else {
-        exp = Gtk::manage (new MyExpander (useEnabled, UILabel));
+        exp = Gtk::manage (new MyExpander (useEnabled, UILabel, this));
     }
 
         labelBox = exp->getHeaderHBox();
