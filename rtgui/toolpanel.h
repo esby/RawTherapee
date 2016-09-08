@@ -164,7 +164,7 @@ public:
     void on_style_changed (const Glib::RefPtr<Gtk::Style>& style);
 };
 
-class ToolPanel
+class ToolPanel : public ToolPanelAncestor
 {
 
 protected:

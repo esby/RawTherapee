@@ -137,7 +137,7 @@ Retinex::Retinex () : FoldableToolPanel(this, "retinex", M("TP_RETINEX_LABEL"), 
     vart   = Gtk::manage (new Adjuster (M("TP_RETINEX_VARIANCE"), 50, 500, 1, 200));
     vart->set_tooltip_markup (M("TP_RETINEX_VARIANCE_TOOLTIP"));
 
-    expsettings = new MyExpander (false, M("TP_RETINEX_SETTINGS"));
+    expsettings = new MyExpander (false, M("TP_RETINEX_SETTINGS"), this);
     expsettings->signal_button_release_event().connect_notify( sigc::bind( sigc::mem_fun(this, &Retinex::foldAllButMe), expsettings) );
 
     retinexVBox->pack_start (*str);

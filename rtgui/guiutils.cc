@@ -472,14 +472,19 @@ void MyExpander::init()
     closedPBuf = Gdk::Pixbuf::create_from_file(RTImage::findIconAbsolutePath("expanderClosed.png"));
 }
 
-MyExpander::MyExpander(bool useEnabled, Gtk::Widget* titleWidget) :
-    enabled(false), inconsistent(false), flushEvent(false), expBox(nullptr),
+ToolPanelAncestor*  MyExpander::getPanel() {
+  return panel;
+};
+
+MyExpander::MyExpander(bool useEnabled, Gtk::Widget* titleWidget, ToolPanelAncestor* _panel) :
+    enabled(false), inconsistent(false), flushEvent(false), expBox(NULL),
     child(nullptr), headerWidget(nullptr), statusImage(nullptr),
     label(nullptr), useEnabled(useEnabled)
 {
     set_spacing(options.slimUI ? 0 : 2);
     set_name("MyExpander");
     set_can_focus(false);
+    panel = _panel;
 
     headerHBox = Gtk::manage( new Gtk::HBox());
     headerHBox->set_can_focus(false);
@@ -519,14 +524,16 @@ MyExpander::MyExpander(bool useEnabled, Gtk::Widget* titleWidget) :
     titleEvBox->signal_leave_notify_event().connect( sigc::mem_fun(this, & MyExpander::on_enter_leave_title), false);
 }
 
-MyExpander::MyExpander(bool useEnabled, Glib::ustring titleLabel) :
-    enabled(false), inconsistent(false), flushEvent(false), expBox(nullptr),
+MyExpander::MyExpander(bool useEnabled, Glib::ustring titleLabel, ToolPanelAncestor* _panel) :
+    enabled(false), inconsistent(false), flushEvent(false), expBox(NULL),
     child(nullptr), headerWidget(nullptr), statusImage(nullptr),
     label(nullptr), useEnabled(useEnabled)
 {
     set_spacing(options.slimUI ? 0 : 2);
     set_name("MyExpander");
     set_can_focus(false);
+    
+    panel = _panel;
 
     headerHBox = Gtk::manage( new Gtk::HBox());
     headerHBox->set_can_focus(false);

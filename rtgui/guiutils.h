@@ -130,6 +130,12 @@ public:
     bool on_expose_event(GdkEventExpose* event);
 };
 
+
+class ToolPanelAncestor 
+{
+
+};
+
 /**
  * @brief A custom Expander class, that can handle widgets in the title bar
  *
@@ -182,20 +188,23 @@ protected:
     Gtk::Label* label;          /// Text to display in the header, next to the arrow image ; can be NULL if the "widget" version of the ctor has been used
     bool useEnabled;            /// Set whether to handle an enabled/disabled feature and display the appropriate images
 
+    ToolPanelAncestor* panel;
+
 public:
 
     /** @brief Create a custom expander with a simple header made of a label.
      * @param useEnabled Set whether to handle an enabled/disabled toggle button and display the appropriate image
      * @param titleLabel A string to display in the header. Warning: you won't be able to switch to a widget label.
      */
-    MyExpander(bool useEnabled, Glib::ustring titleLabel);
+    MyExpander(bool useEnabled, Glib::ustring titleLabel, ToolPanelAncestor* _panel);
 
     /** Create a custom expander with a a custom - and responsive - widget
      * @param useEnabled Set whether to handle an enabled/disabled toggle button and display the appropriate image
      * @param titleWidget A widget to display in the header. Warning: you won't be able to switch to a string label.
      */
-    MyExpander(bool useEnabled, Gtk::Widget* titleWidget);
+    MyExpander(bool useEnabled, Gtk::Widget* titleWidget,  ToolPanelAncestor* _panel);
 
+    ToolPanelAncestor* getPanel();
     /// Initialize the class by loading the images
     static void init();
 
