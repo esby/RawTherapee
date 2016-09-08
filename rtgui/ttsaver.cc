@@ -19,7 +19,6 @@
 #include "ttsaver.h"
 #include "options.h"
 #include "guiutils.h"
-#include "../rtengine/safegtk.h"
 #include "rtimage.h"
 #include <sstream>
 #include <fstream>
@@ -103,8 +102,8 @@ void TTSaver::parseProfileFolder()
             }
 
             Glib::ustring fname = Glib::build_filename(realPath, currDir);
-
-            if (safe_file_test (fname, Glib::FILE_TEST_IS_DIR)) {
+            //todo: this used to be safe_file_test, check this does not cause issue under windows
+            if (file_test (fname, Glib::FILE_TEST_IS_DIR)) {
              //   Glib::ustring vp(Glib::build_filename(virtualPath, currDir));
              //   Glib::ustring rp(Glib::build_filename(realPath,    currDir));
              //   fileFound = parseDir (rp, vp, currDir, folder, level + 1, 0);

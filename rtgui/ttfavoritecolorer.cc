@@ -19,7 +19,7 @@
 #include "ttfavoritecolorer.h"
 #include "options.h"
 #include "guiutils.h"
-#include "../rtengine/safegtk.h"
+//#include "../rtengine/safegtk.h"
 #include "rtimage.h"
 #include <sstream>
 
