@@ -317,6 +317,13 @@ ToolPanelCoordinator::ToolPanelCoordinator () : ipc(NULL)
     box->setNextBox(rawPanel);
     env->addVBox(box);
 
+    box =  (ToolVBox*) resize->getPackBox();
+    box->setBoxName("resize");
+    box->setPrevBox(transformPanel);
+    box->setNextBox(transformPanel);
+    env->addVBox(box);
+
+
 
     TOITypes type = options.UseIconNoText ? TOI_ICON : TOI_TEXT;
 
