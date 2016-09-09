@@ -42,7 +42,7 @@ public:
 
     TTSaver ();
 
-    void themeImport(Glib::ustring line);
+    void themeImport(std::ifstream& myfile);
     Glib::ustring themeExport();
 
     void themeLoad();

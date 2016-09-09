@@ -143,64 +143,67 @@ void TTSaver::resetFavoriteAndTrashState()
 
 }
 
-void TTSaver::themeImport(Glib::ustring lines)
+void TTSaver::themeImport(std::ifstream& myfile)
 {
 
   env->disableSwitchPageReaction = true;
   env->state = ENV_STATE_IN_NORM;
   env->prevState = ENV_STATE_IN_NORM;
 
-  std::istringstream linesplitter(lines);
-  std::string line;
-
   std::vector<std::string> favoriteItems;
   std::vector<std::string> normalItems;
   std::vector<std::string> trashItems;
 
-
-  while (getline(linesplitter, line))
+  if (myfile.is_open())
   {
-    std::istringstream tokensplitter(line);
-    std::string token;
-    printf("parsing line: %s\n", line.c_str());
-
-    if (getline(tokensplitter, token, ':'))
+    std::string line;
+    while ( getline (myfile,line) )
     {
- //     printf("%s\n", token.c_str());
-      if (token == getToolName())
+      std::istringstream tokensplitter(line);
+      std::string token;
+      printf("parsing line: %s\n", line.c_str());
+
+      if (getline(tokensplitter, token, ':'))
       {
-        if (getline(tokensplitter, token, ':'))
+   //     printf("%s\n", token.c_str());
+        if (token == getToolName())
         {
-          if (token == "favorite")
+          if (getline(tokensplitter, token, ':'))
           {
-            while(getline(tokensplitter, token, ' '))
+            if (token == "favorite")
+            {
+              while(getline(tokensplitter, token, ' '))
+              { 
+                printf("f(%s)\n", token.c_str());
+                favoriteItems.push_back(token);
+              }
+            }
+
+            if (token == "original")
+            {
+              while(getline(tokensplitter, token, ' '))
+              {
+                printf("(%s)\n", token.c_str());
+                normalItems.push_back(token);
+              }
+            }
+
+            if (token == "trash")
             { 
-              printf("f(%s)\n", token.c_str());
-              favoriteItems.push_back(token);
-            }
-          }
-
-          if (token == "original")
-          {
-            while(getline(tokensplitter, token, ' '))
-            {
-              printf("(%s)\n", token.c_str());
-              normalItems.push_back(token);
-            }
-          }
-
-          if (token == "trash")
-          { 
-            while(getline(tokensplitter, token, ' '))
-            {
-              printf("t(%s)\n", token.c_str());
-              trashItems.push_back(token);
-            }
-          }
+              while(getline(tokensplitter, token, ' '))
+              {
+                printf("t(%s)\n", token.c_str());
+                trashItems.push_back(token);
+              }
+           }
         }
       }
     }
+   }
+    myfile.close();
   }
+  else printf("Unable to open file");
+
 
   // puting the vector element into a map (toolpanel)
   std::vector<ToolPanel*> panels = env->getPanels();
@@ -320,21 +323,10 @@ void TTSaver::themeLoad()
 
 void TTSaver::themeReset()
 {
-  std::string line;
   std::ifstream myfile ("/home/keby/myfile.ttp");
 
   resetFavoriteAndTrashState();
-  if (myfile.is_open())
-  {
-    while ( getline (myfile,line) )
-    {
-      themeImport(line);
-    }
-    myfile.close();
-  }
-
-  else printf("Unable to open file");
-
+  themeImport(myfile);
 }
 
 void TTSaver::themeSave()
