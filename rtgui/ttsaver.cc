@@ -154,55 +154,58 @@ void TTSaver::themeImport(std::ifstream& myfile)
   std::vector<std::string> normalItems;
   std::vector<std::string> trashItems;
 
-  if (myfile.is_open())
+  std::string line;
+  bool condition = true;
+  while (condition)
   {
-    std::string line;
-    while ( getline (myfile,line) )
+    int position = myfile.tellg();
+    condition = getline (myfile,line);
+
+    std::istringstream tokensplitter(line);
+    std::string token;
+    printf("parsing line: %s\n", line.c_str());
+    if (getline(tokensplitter, token, ':'))
     {
-      std::istringstream tokensplitter(line);
-      std::string token;
-      printf("parsing line: %s\n", line.c_str());
-
-      if (getline(tokensplitter, token, ':'))
-      {
    //     printf("%s\n", token.c_str());
-        if (token == getToolName())
+      if (token == getToolName())
+      {
+        if (getline(tokensplitter, token, ':'))
         {
-          if (getline(tokensplitter, token, ':'))
+          if (token == "favorite")
           {
-            if (token == "favorite")
-            {
-              while(getline(tokensplitter, token, ' '))
-              { 
-                printf("f(%s)\n", token.c_str());
-                favoriteItems.push_back(token);
-              }
-            }
-
-            if (token == "original")
-            {
-              while(getline(tokensplitter, token, ' '))
-              {
-                printf("(%s)\n", token.c_str());
-                normalItems.push_back(token);
-              }
-            }
-
-            if (token == "trash")
+            while(getline(tokensplitter, token, ' '))
             { 
-              while(getline(tokensplitter, token, ' '))
-              {
-                printf("t(%s)\n", token.c_str());
-                trashItems.push_back(token);
-              }
-           }
+              printf("f(%s)\n", token.c_str());
+              favoriteItems.push_back(token);
+            }
+          }
+
+          if (token == "original")
+          {
+            while(getline(tokensplitter, token, ' '))
+            {
+              printf("(%s)\n", token.c_str());
+              normalItems.push_back(token);
+            }
+          }
+
+          if (token == "trash")
+          { 
+            while(getline(tokensplitter, token, ' '))
+            {
+              printf("t(%s)\n", token.c_str());
+              trashItems.push_back(token);
+            }
+          }
         }
+      }else
+      {  
+         //we restore the position since it is a line for another tool that we read.
+         myfile.seekg(position);
+         condition = false;
       }
     }
-   }
-    myfile.close();
   }
-  else printf("Unable to open file");
 
 
   // puting the vector element into a map (toolpanel)
@@ -324,9 +327,13 @@ void TTSaver::themeLoad()
 void TTSaver::themeReset()
 {
   std::ifstream myfile ("/home/keby/myfile.ttp");
-
-  resetFavoriteAndTrashState();
-  themeImport(myfile);
+  if (myfile.is_open())
+  {
+    resetFavoriteAndTrashState();
+    themeImport(myfile);
+    myfile.close();
+  }
+  else printf("Unable to open file");
 }
 
 void TTSaver::themeSave()
