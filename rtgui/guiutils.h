@@ -130,10 +130,11 @@ public:
     bool on_expose_event(GdkEventExpose* event);
 };
 
-
+// dummy ancestor class for ToolPanel
 class ToolPanelAncestor 
 {
-
+public:
+  virtual ~ToolPanelAncestor() {} ;
 };
 
 /**
