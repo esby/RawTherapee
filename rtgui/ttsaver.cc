@@ -143,6 +143,152 @@ void TTSaver::resetFavoriteAndTrashState()
 
 }
 
+//todo: 
+//this function job is tot dispatch the lines between the current tools.
+
+void TTSaver::themeSplitter(std::ifstream& myfile)
+{
+  env->disableSwitchPageReaction = true;
+  env->state = ENV_STATE_IN_NORM;
+  env->prevState = ENV_STATE_IN_NORM;
+  
+  bool condition = true;
+  std::string line = "";
+  while (condition)
+  {
+    int position = myfile.tellg();
+    condition = getline (myfile,line);
+
+    std::string currentToken = "";
+    std::istringstream tokensplitter(line);
+    std::string token;
+    printf("parsing line: %s\n", line.c_str());
+
+    if (getline(tokensplitter, token, ':'))
+    {
+      if (currentToken != token)
+      {
+        if (currentToken == "")
+        {
+          currentToken = token;
+        }
+      }
+      for (size_t i=0; i< env->countPanel() ; i++)
+      {
+        FoldableToolPanel* p = static_cast<FoldableToolPanel*> (env->getPanel(i));
+        if ( (p != NULL)
+        && (!(p->canBeIgnored())))
+        {
+          if (p->getToolName() == currentToken )
+          { 
+            printf("Invoking themeImport on %s for %s\n",currentToken.c_str(),line.c_str());
+            myfile.seekg(position);
+            p->themeImport(myfile);
+          }
+        }
+      }
+   }
+ }
+
+}
+
+
+
+
+
+void TTSaver::themeLoad()
+{
+
+}
+
+void TTSaver::themeReset()
+{
+  std::ifstream myfile ("/home/keby/myfile.ttp");
+  if (myfile.is_open())
+  {
+    resetFavoriteAndTrashState();
+    themeSplitter(myfile);
+    myfile.close();
+  }
+  else printf("Unable to open file");
+}
+
+void TTSaver::themeSave()
+{
+  Glib::ustring lines = "";
+  printf("parsing toolPanels \n");
+
+  std::vector<ToolPanel*> panels = env->getPanels();
+  for (size_t i=0; i<panels.size(); i++)
+  {
+    FoldableToolPanel* p = static_cast<FoldableToolPanel*> (panels.at(i));
+    if ((p != NULL)
+    && (!p->canBeIgnored()))
+    { 
+       lines += p->themeExport();
+    }
+
+  }
+
+ // lines = themeExport();
+ // themeImport(lines);
+
+ // printf("%s",  lines.c_str());
+
+  std::ofstream myfile;
+  myfile.open ("/home/keby/myfile.ttp");
+  myfile << lines;
+  myfile.close();
+}
+
+void TTSaver::test(Glib::ustring name)
+{
+  printf("button enbled clicked - %s \n", name.c_str());
+}
+
+Glib::ustring TTSaver::themeExport()
+{
+  Glib::ustring favSettings = getToolName() + ":"  + "favorite:";
+  Glib::ustring oriSettings = getToolName() + ":"  + "original:";
+  Glib::ustring traSettings = getToolName() + ":"  + "trash:";
+
+  std::vector<ToolPanel*> panels = env->getPanels();
+
+  std::sort (panels.begin(), panels.end(), sortByFav);
+
+  for (size_t i=0; i<panels.size(); i++)
+  {
+    FoldableToolPanel* p = static_cast<FoldableToolPanel*> (panels.at(i));
+    if ((p != NULL)
+    && (!p->canBeIgnored()))
+    {
+      int posFav = p->getPosOri();
+      if (p->getFavoriteButton()->get_active())
+        favSettings += p->getToolName() + " ";
+    }
+  }
+
+  std::sort (panels.begin(), panels.end(), sortByOri);
+
+  for (size_t i=0; i<panels.size(); i++)
+  {
+    FoldableToolPanel* p = static_cast<FoldableToolPanel*> (panels.at(i));
+    if ((p != NULL)
+    && (!p->canBeIgnored()))
+    {
+      int posOri = p->getPosOri();
+      if (!(p->getTrashButton()->get_active()))
+         oriSettings += p->getToolName()+ "(" + p->getOriginalBox()->getBoxName() + ":" + IntToString(posOri) + ") ";
+
+      if (p->getTrashButton()->get_active())
+        traSettings += p->getToolName() + " ";
+    }
+  }
+  return favSettings + "\n" +  oriSettings + "\n" + traSettings + "\n";
+}
+
+
+
 void TTSaver::themeImport(std::ifstream& myfile)
 {
 
@@ -277,84 +423,3 @@ void TTSaver::themeImport(std::ifstream& myfile)
   env->disableSwitchPageReaction = false;
 
 }
-
-Glib::ustring TTSaver::themeExport()
-{
-  Glib::ustring favSettings = getToolName() + ":"  + "favorite:";
-  Glib::ustring oriSettings = getToolName() + ":"  + "original:";
-  Glib::ustring traSettings = getToolName() + ":"  + "trash:";
-
-  std::vector<ToolPanel*> panels = env->getPanels();
-
-  std::sort (panels.begin(), panels.end(), sortByFav);
-
-  for (size_t i=0; i<panels.size(); i++)
-  {
-    FoldableToolPanel* p = static_cast<FoldableToolPanel*> (panels.at(i));
-    if ((p != NULL)
-    && (!p->canBeIgnored()))
-    {
-      int posFav = p->getPosOri();
-      if (p->getFavoriteButton()->get_active())
-        favSettings += p->getToolName() + " ";
-    }
-  }
-
-  std::sort (panels.begin(), panels.end(), sortByOri);
-
-  for (size_t i=0; i<panels.size(); i++)
-  {
-    FoldableToolPanel* p = static_cast<FoldableToolPanel*> (panels.at(i));
-    if ((p != NULL)
-    && (!p->canBeIgnored()))
-    {
-      int posOri = p->getPosOri();
-      if (!(p->getTrashButton()->get_active()))
-         oriSettings += p->getToolName()+ "(" + p->getOriginalBox()->getBoxName() + ":" + IntToString(posOri) + ") ";
-
-      if (p->getTrashButton()->get_active())
-        traSettings += p->getToolName() + " ";
-    }
-  }
-  return favSettings + "\n" +  oriSettings + "\n" + traSettings + "\n";
-}
-
-void TTSaver::themeLoad()
-{
-
-}
-
-void TTSaver::themeReset()
-{
-  std::ifstream myfile ("/home/keby/myfile.ttp");
-  if (myfile.is_open())
-  {
-    resetFavoriteAndTrashState();
-    themeImport(myfile);
-    myfile.close();
-  }
-  else printf("Unable to open file");
-}
-
-void TTSaver::themeSave()
-{
-  Glib::ustring lines;
-  printf("parsing toolPanels \n");
-  lines = themeExport();
- // themeImport(lines);
-
- // printf("%s",  lines.c_str());
-
-  std::ofstream myfile;
-  myfile.open ("/home/keby/myfile.ttp");
-  myfile << lines;
-  myfile.close();
-}
-
-void TTSaver::test(Glib::ustring name)
-{
-  printf("button enbled clicked - %s \n", name.c_str());
-}
-
-
-
