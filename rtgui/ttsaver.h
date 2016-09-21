@@ -41,16 +41,16 @@ protected:
 public:
 
     TTSaver ();
-
-    void themeImport(std::ifstream& myfile);
-    Glib::ustring themeExport();
-
+    void themeSplitter(std::ifstream& myfile);
     void themeLoad();
     void themeReset();
     void themeSave();
     void resetFavoriteAndTrashState();
     void test(Glib::ustring name);
     void parseProfileFolder();
+
+    void themeImport(std::ifstream& myfile);
+    Glib::ustring themeExport();
 };
 
 #endif

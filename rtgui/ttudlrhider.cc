@@ -144,4 +144,65 @@ void  TTUDLRHider::actOnPanel(ToolPanel* panel, bool deactivate)
   }
 }
 
+Glib::ustring TTUDLRHider::themeExport()
+{
+  Glib::ustring s_active = getToolName() + ":" + "active " + std::string(  getExpander()->getEnabled() ? "1" : "0") ;
+  Glib::ustring s_hide_arrows = getToolName() + ":"  + "hide_arrows " + std::string( cbHideArrow->get_active() ? "1" : "0" ) ;
+  Glib::ustring s_lock_fav = getToolName() + ":"  + "lock_fav " + std::string( cbLockFav->get_active() ? "1" : "0" ) ;
+  return s_active + "\n" +  s_hide_arrows + "\n" + s_lock_fav + "\n";
+}
+
+void TTUDLRHider::themeImport(std::ifstream& myfile)
+{
+  std::string line;
+  bool condition = true;
+  while (condition)
+  {
+    int position = myfile.tellg();
+    condition = getline (myfile,line);
+
+    std::istringstream tokensplitter(line);
+    std::string token;
+    printf("parsing line: %s\n", line.c_str());
+    if (getline(tokensplitter, token, ':'))
+    {
+       printf("Checking %s \n", token.c_str());
+      if (token == getToolName())
+      {
+        if(getline(tokensplitter, token, ' '))
+        {
+          if (token == "active")
+          {
+            if(getline(tokensplitter, token, ' '))
+            { 
+              getExpander()->setEnabled((token == "1") ? true: false);
+            }
+          }
+
+          if (token == "hide_arrows")
+          {
+            if(getline(tokensplitter, token, ' '))
+            {
+              cbHideArrow->set_active((token == "1") ? true: false);
+            }
+          }
+
+         if (token == "lock_fav")
+         {
+            if(getline(tokensplitter, token, ' '))
+            {
+              cbLockFav->set_active((token == "1") ? true: false);
+            }
+         }
+       }
+     }
+     else
+     {
+        //we restore the position since it is a line for another tool that we read.
+        myfile.seekg(position);
+        condition = false;
+     }
+    }
+  }
+}
 

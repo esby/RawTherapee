@@ -266,6 +266,10 @@ public:
     DummyToolPanel*      getFavoriteDummy() { return originalDummy;}
     ToolVBox*            getFavoriteBox() { return favoriteBox;}
 
+ // tt filters should reimplement these methods, normal filters should not need it
+    virtual void themeImport(std::ifstream& myfile) {}
+    virtual Glib::ustring themeExport() { return ""; }
+
    
     virtual void                 deploy()       {} // used to handle post constructor steps.
 
