@@ -411,7 +411,10 @@ void TTSaver::themeImport(std::ifstream& myfile)
       map.at(map[favoriteItems.at(i)]->getOriginalBox()->getBoxName())->getExpander()->set_expanded(!state);  
       map.at(map[favoriteItems.at(i)]->getOriginalBox()->getBoxName())->getExpander()->set_expanded(state);
     }
-    env->setFavoritePos( map[favoriteItems.at(i)], i);
+// disabled the lines because of side effects in the tt panel 
+// this should be not needed since favorites will be ordered anyway...
+//if (map[favoriteItems.at(i)]->getOriginalBox()->getBoxName() != 'favoritePanel' )
+//    env->setFavoritePos( map[favoriteItems.at(i)], i);
   }
 
  // initializing trash status
