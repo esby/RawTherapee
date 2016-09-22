@@ -169,4 +169,73 @@ void TTFavoriteColorChooser::colorTrash(ToolPanel* panel, bool deactivate)
   }
 }
 
+Glib::ustring TTFavoriteColorChooser::themeExport()
+{
+  Glib::ustring s_active = getToolName() + ":" + "active " + std::string(  getExpander()->getEnabled() ? "1" : "0") ;
+  Glib::ustring s_fav_color = getToolName() + ":"  + "favorite_color " +  cbFavorite->get_color().to_string();
+  Glib::ustring s_trash_color = getToolName() + ":"  + "trash_color " +  cbTrash->get_color().to_string();
+  return s_active + "\n" +  s_fav_color + "\n" + s_trash_color + "\n";
+}
+
+
+void TTFavoriteColorChooser::themeImport(std::ifstream& myfile)
+{
+  std::string line;
+  bool condition = true;
+  while (condition)
+  {
+    int position = myfile.tellg();
+    condition = getline (myfile,line);
+
+    std::istringstream tokensplitter(line);
+    std::string token;
+    printf("parsing line: %s\n", line.c_str());
+    if (getline(tokensplitter, token, ':'))
+    {
+       printf("Checking %s \n", token.c_str());
+      if (token == getToolName())
+      {
+        if(getline(tokensplitter, token, ' '))
+        {
+          if (token == "active")
+          {
+            if(getline(tokensplitter, token, ' '))
+            { 
+              getExpander()->setEnabled((token == "1") ? true: false);
+            }
+          }
+
+          if (token == "favorite_color")
+          {
+            if(getline(tokensplitter, token, ' '))
+            {
+              Gdk::Color color;
+              //todo: verify that this method is safe against buffer overlow
+              color.set(token);
+              cbFavorite->set_color(color);
+            }
+          }
+
+         if (token == "trash_color")
+         {
+            if(getline(tokensplitter, token, ' '))
+            {
+              Gdk::Color color;
+              //todo: verify that this method is safe against buffer overlow
+              color.set(token); 
+              cbTrash->set_color(color);
+            }
+         }
+       }
+     }
+     else
+     {
+        //we restore the position since it is a line for another tool that we read.
+        myfile.seekg(position);
+        condition = false;
+     }
+    }
+  }
+}
+
 

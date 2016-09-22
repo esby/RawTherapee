@@ -60,6 +60,10 @@ public:
  
     bool canBeEnabled() {return true;}
     void test(); 
+
+// implement these to load / save ttp profiles
+    void themeImport(std::ifstream& myfile);
+    Glib::ustring themeExport();
 };
 
 #endif
