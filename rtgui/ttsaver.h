@@ -33,21 +33,28 @@ protected:
     Gtk::HBox* themeBox;
     Gtk::Label* themeLabel;
     Gtk::Button* buttonLoad;
-    Gtk::Button* buttonReset;
     Gtk::Button* buttonSave;
     sigc::connection s;
     MyComboBoxText* profilbox;
+
+    Glib::ustring lastFilename;
+    std::vector<Glib::ustring> entries;
 
 public:
 
     TTSaver ();
     void themeSplitter(std::ifstream& myfile);
     void themeLoad();
-    void themeReset();
-    void themeSave();
+    void load_profile(Glib::ustring filename);
+    void save_profile(Glib::ustring filename);
     void resetFavoriteAndTrashState();
     void test(Glib::ustring name);
+    void save_clicked (GdkEventButton* event);
+   
     void parseProfileFolder();
+
+    void profileBoxChanged();
+
 
     void themeImport(std::ifstream& myfile);
     Glib::ustring themeExport();
