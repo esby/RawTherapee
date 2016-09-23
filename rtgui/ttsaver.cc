@@ -33,8 +33,6 @@ TTSaver::TTSaver () : FoldableToolPanel(this,"ttsaver",M("TP_THEMETOOL_LABEL"),f
 	themeBox = Gtk::manage(new Gtk::HBox());
 	themeBox->set_spacing(4);
 	themeLabel = Gtk::manage(new Gtk::Label(M("GENERAL_FILE")));
-	buttonReset = Gtk::manage(new Gtk::Button());
-	buttonReset->set_image (*Gtk::manage(new RTImage ("gtk-cancel.png")));
         buttonSave = Gtk::manage(new Gtk::Button());
         buttonSave->set_image (*Gtk::manage(new RTImage ("saved.png")));
 
@@ -43,14 +41,18 @@ TTSaver::TTSaver () : FoldableToolPanel(this,"ttsaver",M("TP_THEMETOOL_LABEL"),f
         profilbox = Gtk::manage (new MyComboBoxText ());
         profilbox->set_tooltip_text (M("TP_WAVELET_TILES_TOOLTIP"));
         themeBox->pack_start(*profilbox); //, Gtk::PACK_SHRINK, 0);
-	themeBox->pack_start(*buttonReset, Gtk::PACK_SHRINK, 0);
         themeBox->pack_start(*buttonSave, Gtk::PACK_SHRINK, 0);
      
 	pack_start( *themeBox, Gtk::PACK_SHRINK, 0);
-	buttonReset->signal_clicked().connect( sigc::mem_fun(*this, &TTSaver::themeReset), true );
-        s = buttonSave->signal_clicked().connect( sigc::mem_fun(*this, &TTSaver::themeSave), true );
+//	buttonReset->signal_clicked().connect( sigc::mem_fun(*this, &TTSaver::themeReset), true );
+
+        buttonSave->signal_button_release_event().connect_notify( sigc::mem_fun(*this, &TTSaver::save_clicked) );
+
+//        s = buttonSave->signal_clicked().connect( sigc::mem_fun(*this, &TTSaver::themeSave), true );
 
         parseProfileFolder();
+
+        profilbox->signal_changed ().connect (sigc::mem_fun (this, &TTSaver::profileBoxChanged));
 }
 
 bool sortByFav(ToolPanel* t1, ToolPanel* t2)
@@ -73,25 +75,38 @@ bool sortByOri(ToolPanel* t1, ToolPanel* t2)
   else return (t1->getOriginalBox()->getBoxName() < t2->getOriginalBox()->getBoxName());
 }
 
+void TTSaver::profileBoxChanged()
+{
+   Glib::ustring filename =  profilbox->get_active_text() + paramFileGuiExtension;
+   int row = profilbox->get_active_row_number();
+   Glib::ustring fname = entries[row];
+   load_profile(fname);
+   printf("Loaded Filename : %s - %s\n", filename.c_str(), fname.c_str());
+}
 
 void TTSaver::parseProfileFolder()
 {
-        Glib::ustring p1 = options.getUserProfilePath();
-        Glib::ustring p2 = options.getGlobalProfilePath();
+   Glib::ustring p1 = options.getUserProfilePath();
+   Glib::ustring p2 = options.getGlobalProfilePath();
 
-        printf("p1=%s \n",p1.c_str());
-        printf("p2=%s \n",p2.c_str());
+   printf("p1=%s \n",p1.c_str());
+   printf("p2=%s \n",p2.c_str());
     
-        Glib::ustring realPath;
-        Glib::ustring currDir;
-        Glib::ustring virtualPath;
-        Glib::ustring folder;
-      
+   Glib::ustring realPath;
+   Glib::ustring currDir;
+   Glib::ustring virtualPath;
+   Glib::ustring folder;
 
-
+   int nbpass = 0;
+   do 
+   {
         // walking through the directory
         Glib::Dir* dir = NULL;
-        realPath = p2;
+        if (nbpass == 0) 
+          realPath = p1;
+        else 
+          realPath = p2;
+
         dir = new Glib::Dir (realPath);
 
         for (Glib::DirIterator i = dir->begin(); i != dir->end(); ++i) {
@@ -104,13 +119,10 @@ void TTSaver::parseProfileFolder()
             Glib::ustring fname = Glib::build_filename(realPath, currDir);
             //todo: this used to be safe_file_test, check this does not cause issue under windows
             if (file_test (fname, Glib::FILE_TEST_IS_DIR)) {
-             //   Glib::ustring vp(Glib::build_filename(virtualPath, currDir));
-             //   Glib::ustring rp(Glib::build_filename(realPath,    currDir));
-             //   fileFound = parseDir (rp, vp, currDir, folder, level + 1, 0);
             } else {
                 size_t lastdot = currDir.find_last_of ('.');
 
-                if (lastdot != Glib::ustring::npos && lastdot <= currDir.size() - 4 && !currDir.casefold().compare (lastdot, 4, ".ttp")) {
+                if (lastdot != Glib::ustring::npos && lastdot <= currDir.size() - 4 && !currDir.casefold().compare (lastdot, 4, paramFileGuiExtension)) {
                     // file found
                     printf ("ttp profile detected %s...", fname.c_str());
                     if( options.rtSettings.verbose ) {
@@ -118,14 +130,17 @@ void TTSaver::parseProfileFolder()
                     }
 
                     Glib::ustring name = currDir.substr(0, lastdot);
-                    printf("name=%s",name.c_str());
+                    printf("name=%s\n",name.c_str());
                     profilbox->append_text(name);
+                    entries.push_back(fname);
 
                 }
             }
         }
-
-        delete dir;
+       delete dir;
+       nbpass++;
+  }
+  while  (nbpass<2);
 }
 
 void TTSaver::resetFavoriteAndTrashState() 
@@ -143,7 +158,6 @@ void TTSaver::resetFavoriteAndTrashState()
 
 }
 
-//todo: 
 //this function job is tot dispatch the lines between the current tools.
 
 void TTSaver::themeSplitter(std::ifstream& myfile)
@@ -201,19 +215,19 @@ void TTSaver::themeLoad()
 
 }
 
-void TTSaver::themeReset()
+void TTSaver::load_profile(Glib::ustring filename)
 {
-  std::ifstream myfile ("/home/keby/myfile.ttp");
+  std::ifstream myfile (filename);
   if (myfile.is_open())
   {
     resetFavoriteAndTrashState();
     themeSplitter(myfile);
     myfile.close();
   }
-  else printf("Unable to open file");
+  else printf("Unable to open file: %s ",filename.c_str());
 }
 
-void TTSaver::themeSave()
+void TTSaver::save_profile(Glib::ustring filename)
 {
   Glib::ustring lines = "";
   printf("parsing toolPanels \n");
@@ -230,13 +244,8 @@ void TTSaver::themeSave()
 
   }
 
- // lines = themeExport();
- // themeImport(lines);
-
- // printf("%s",  lines.c_str());
-
   std::ofstream myfile;
-  myfile.open ("/home/keby/myfile.ttp");
+  myfile.open (filename);
   myfile << lines;
   myfile.close();
 }
@@ -245,6 +254,65 @@ void TTSaver::test(Glib::ustring name)
 {
   printf("button enbled clicked - %s \n", name.c_str());
 }
+
+void TTSaver::save_clicked (GdkEventButton* event)
+{
+
+    if (event->button != 1) {
+        return;
+    }
+
+    Gtk::FileChooserDialog dialog (getToplevelWindow (this), M("PROFILEPANEL_SAVEDLGLABEL"), Gtk::FILE_CHOOSER_ACTION_SAVE);
+ //   bindCurrentFolder (dialog, options.loadSaveProfilePath);
+    dialog.set_current_name (lastFilename);
+    dialog.set_current_folder (options.getUserProfilePath()) ; // options.getGlobalProfilePath());
+
+    //Add response buttons the the dialog:
+    dialog.add_button(Gtk::StockID("gtk-cancel"), Gtk::RESPONSE_CANCEL);
+    dialog.add_button(Gtk::StockID("gtk-save"), Gtk::RESPONSE_OK);
+
+    //Add filters, so that only certain file types can be selected:
+
+    Gtk::FileFilter filter_pp;
+    filter_pp.set_name(M("FILECHOOSER_FILTER_TTP"));
+    filter_pp.add_pattern("*" + paramFileGuiExtension);
+    dialog.add_filter(filter_pp);
+
+    Gtk::FileFilter filter_any;
+    filter_any.set_name(M("FILECHOOSER_FILTER_ANY"));
+    filter_any.add_pattern("*");
+    dialog.add_filter(filter_any);
+
+//    dialog.set_do_overwrite_confirmation (true);
+
+    bool done = false;
+
+    do 
+    {
+      if (dialog.run() == Gtk::RESPONSE_OK) 
+      {
+        std::string fname = dialog.get_filename();
+        Glib::ustring ext = getExtension (fname);
+
+        if (("." + ext) != paramFileGuiExtension) 
+        {
+          fname += paramFileGuiExtension;
+        }
+
+        if (!confirmOverwrite (dialog, fname)) 
+        {
+          continue;
+        }
+
+        lastFilename = Glib::path_get_basename (fname);
+        save_profile(fname);
+        done = true;
+      }
+      else done = true;
+    } while (!done);
+    return;
+}
+
 
 Glib::ustring TTSaver::themeExport()
 {
