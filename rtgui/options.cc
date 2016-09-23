@@ -49,6 +49,7 @@ Options options;
 Glib::ustring versionString       = VERSION;
 Glib::ustring versionSuffixString = VERSION_SUFFIX;
 Glib::ustring paramFileExtension = ".pp3";
+Glib::ustring paramFileGuiExtension = ".ttp";
 
 Options::Options ()
 {
