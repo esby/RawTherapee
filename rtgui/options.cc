@@ -48,6 +48,7 @@ Glib::ustring Options::cacheBaseDir;
 Options options;
 Glib::ustring versionString       = RTVERSION;
 Glib::ustring paramFileExtension = ".pp3";
+Glib::ustring paramFileGuiExtension = ".ttp";
 
 Options::Options ()
 {

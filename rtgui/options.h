@@ -345,5 +345,6 @@ extern Glib::ustring argv1;
 extern bool simpleEditor;
 extern Glib::ustring versionString;
 extern Glib::ustring paramFileExtension;
+extern Glib::ustring paramFileGuiExtension;
 
 #endif
