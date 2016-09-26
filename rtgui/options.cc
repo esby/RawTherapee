@@ -1029,6 +1029,15 @@ int Options::readFromFile (Glib::ustring fname)
                 if (keyFile.has_key ("Profiles", "CustomProfileBuilderKeys")) {
                     CPBKeys              = (CPBKeyType)keyFile.get_integer ("Profiles", "CustomProfileBuilderKeys");
                 }
+  
+                if (keyFile.has_key ("Profiles", "AutoloadTTP")) {
+                    AutoloadTTP       = keyFile.get_boolean ("Profiles", "AutoloadTTP");
+                }
+
+                if (keyFile.has_key ("Profiles", "AutoloadTTPValue")) {
+                    AutoloadTTPValue       = keyFile.get_string ("Profiles", "AutoloadTTPValue");
+                }
+
             }
 
             if (keyFile.has_group ("File Browser")) {
@@ -1988,6 +1997,9 @@ int Options::saveToFile (Glib::ustring fname)
         keyFile.set_integer ("Profiles", "LoadParamsFromLocation", paramsLoadLocation);
         keyFile.set_string  ("Profiles", "CustomProfileBuilderPath", CPBPath);
         keyFile.set_integer ("Profiles", "CustomProfileBuilderKeys", CPBKeys);
+        keyFile.set_boolean ("Profiles", "AutoloadTTP", AutoloadTTP);
+        keyFile.set_string  ("Profiles", "AutoloadTTPValue", AutoloadTTPValue);
+
 
         keyFile.set_string  ("GUI", "Font", font);
         keyFile.set_string  ("GUI", "ColorPickerFont", colorPickerFont);

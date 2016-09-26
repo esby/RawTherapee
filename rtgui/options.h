@@ -177,6 +177,8 @@ public:
     Glib::ustring customEditorProg;
     Glib::ustring CPBPath; // Custom Profile Builder's path
     CPBKeyType CPBKeys; // Custom Profile Builder's key type
+    bool AutoloadTTP;  // to load the ttp profiles ot not by default
+    Glib::ustring AutoloadTTPValue; // the profile to load
     int editorToSendTo;
     int maxThumbnailHeight;
     std::size_t maxCacheEntries;
