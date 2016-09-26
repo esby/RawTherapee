@@ -30,29 +30,64 @@ using namespace rtengine::procparams;
 
 TTSaver::TTSaver () : FoldableToolPanel(this,"ttsaver",M("TP_THEMETOOL_LABEL"),false,true)
 {
-	themeBox = Gtk::manage(new Gtk::HBox());
-	themeBox->set_spacing(4);
+	themeBox1 = Gtk::manage(new Gtk::HBox());
+	themeBox1->set_spacing(4);
 	themeLabel = Gtk::manage(new Gtk::Label(M("GENERAL_FILE")));
         buttonSave = Gtk::manage(new Gtk::Button());
         buttonSave->set_image (*Gtk::manage(new RTImage ("saved.png")));
 
-	themeBox->pack_start(*themeLabel, Gtk::PACK_SHRINK, 0);
+	themeBox1->pack_start(*themeLabel, Gtk::PACK_SHRINK, 0);
 
         profilbox = Gtk::manage (new MyComboBoxText ());
         profilbox->set_tooltip_text (M("TP_WAVELET_TILES_TOOLTIP"));
-        themeBox->pack_start(*profilbox); //, Gtk::PACK_SHRINK, 0);
-        themeBox->pack_start(*buttonSave, Gtk::PACK_SHRINK, 0);
+        themeBox1->pack_start(*profilbox); //, Gtk::PACK_SHRINK, 0);
+        themeBox1->pack_start(*buttonSave, Gtk::PACK_SHRINK, 0);
      
-	pack_start( *themeBox, Gtk::PACK_SHRINK, 0);
-//	buttonReset->signal_clicked().connect( sigc::mem_fun(*this, &TTSaver::themeReset), true );
+	pack_start( *themeBox1, Gtk::PACK_SHRINK, 0);
 
-        buttonSave->signal_button_release_event().connect_notify( sigc::mem_fun(*this, &TTSaver::save_clicked) );
+        themeBox2 = Gtk::manage(new Gtk::HBox());
+        themeBox2->set_spacing(4);
 
-//        s = buttonSave->signal_clicked().connect( sigc::mem_fun(*this, &TTSaver::themeSave), true );
+        lbAutoloadSettings = Gtk::manage(new Gtk::Label(M("TT_SAVER_AUTOLOAD_SETTINGS")));
+        cbAutoloadSettings = Gtk::manage(new Gtk::CheckButton());
 
-        parseProfileFolder();
 
-        profilbox->signal_changed ().connect (sigc::mem_fun (this, &TTSaver::profileBoxChanged));
+       themeBox2->pack_start(*lbAutoloadSettings, Gtk::PACK_SHRINK, 0);
+       themeBox2->pack_end(*cbAutoloadSettings, Gtk::PACK_SHRINK, 0);
+       pack_start( *themeBox2, Gtk::PACK_SHRINK, 0);
+
+       themeBox3 = Gtk::manage(new Gtk::HBox());
+       themeBox2->set_spacing(4);
+       
+       lbAutoloadSettingsLine = Gtk::manage(new Gtk::Label(options.AutoloadTTPValue));
+
+       themeBox3->pack_start(*lbAutoloadSettingsLine, Gtk::PACK_SHRINK, 0);
+       pack_start( *themeBox3, Gtk::PACK_SHRINK, 0);
+
+       parseProfileFolder();
+
+       cbAutoloadSettings->set_active(options.AutoloadTTP);
+       buttonSave->signal_button_release_event().connect_notify( sigc::mem_fun(*this, &TTSaver::save_clicked) );
+       cbAutoloadSettings->signal_button_release_event().connect_notify( sigc::mem_fun(*this, &TTSaver::autoload_clicked) );
+       profilbox->signal_changed ().connect (sigc::mem_fun (this, &TTSaver::profileBoxChanged));
+
+      //todo load the value if needed
+
+ 
+  if (options.AutoloadTTP)
+  {
+    //todo use autoloadLine;
+    auto it = std::find(entries.begin(), entries.end(), options.AutoloadTTPValue ) ;
+    if (it != entries.end()) 
+    {
+      int index= std::distance(entries.begin(), it);
+      printf("autoloading index=%i \n" ,index); 
+//todo: do the loading at some point but not during the filter creation
+ //     profilbox->set_active(index);
+    }
+  }
+
+
 }
 
 bool sortByFav(ToolPanel* t1, ToolPanel* t2)
@@ -80,6 +115,7 @@ void TTSaver::profileBoxChanged()
    Glib::ustring filename =  profilbox->get_active_text() + paramFileGuiExtension;
    int row = profilbox->get_active_row_number();
    Glib::ustring fname = entries[row];
+   printf("preparing to load Filename : %s - %s\n", filename.c_str(), fname.c_str());
    load_profile(fname);
    printf("Loaded Filename : %s - %s\n", filename.c_str(), fname.c_str());
 }
@@ -202,7 +238,24 @@ void TTSaver::themeSplitter(std::ifstream& myfile)
         }
       }
    }
+
+  
  }
+ env->disableSwitchPageReaction = false;
+
+// activating enabled buttons for toolpanel of usefulPanel
+// because their configuration depends of reloading the button.
+ for (size_t i=0; i< env->countPanel() ; i++)
+      {
+        FoldableToolPanel* p = static_cast<FoldableToolPanel*> (env->getPanel(i));
+        if ( (p != NULL)
+        && (!(p->canBeIgnored()))
+        && (p->getOriginalBox()->getBoxName() == "usefulPanel"))
+        {        
+           p->getExpander()->setEnabled( not (p->getExpander()->getEnabled()));
+           p->getExpander()->setEnabled( not (p->getExpander()->getEnabled()));
+        }
+     }
 
 }
 
@@ -253,6 +306,28 @@ void TTSaver::save_profile(Glib::ustring filename)
 void TTSaver::test(Glib::ustring name)
 {
   printf("button enbled clicked - %s \n", name.c_str());
+}
+
+
+void TTSaver::autoload_clicked (GdkEventButton* event)
+{
+  if (event->button != 1) {
+        return;
+    }
+   //
+
+  options.AutoloadTTP = not cbAutoloadSettings->get_active(); //(this is swapped by the call)
+
+  Glib::ustring filename =  profilbox->get_active_text() + paramFileGuiExtension;
+  int row = profilbox->get_active_row_number();
+  if (row >-1)
+  {
+    Glib::ustring fname = entries[row];
+    options.AutoloadTTPValue =  fname;
+  }
+  else
+    options.AutoloadTTPValue = "";
+  options.save();
 }
 
 void TTSaver::save_clicked (GdkEventButton* event)
@@ -352,17 +427,23 @@ Glib::ustring TTSaver::themeExport()
         traSettings += p->getToolName() + " ";
     }
   }
-  return favSettings + "\n" +  oriSettings + "\n" + traSettings + "\n";
+
+/*
+  Glib::ustring filename =  profilbox->get_active_text() + paramFileGuiExtension;
+  int row = profilbox->get_active_row_number();
+  Glib::ustring fname = entries[row];
+
+  autoloadSettingsBool += cbAutoloadSettings->get_active() ?  "1" : "0";
+
+  autoloadSettingsLine += fname;
+*/
+  return favSettings + "\n" +  oriSettings + "\n" + traSettings; 
 }
 
 
 
 void TTSaver::themeImport(std::ifstream& myfile)
 {
-
-  env->disableSwitchPageReaction = true;
-  env->state = ENV_STATE_IN_NORM;
-  env->prevState = ENV_STATE_IN_NORM;
 
   std::vector<std::string> favoriteItems;
   std::vector<std::string> normalItems;
@@ -490,7 +571,5 @@ void TTSaver::themeImport(std::ifstream& myfile)
   {
     map[trashItems.at(i)]->getTrashButton()->set_active(true);
   }
-
-  env->disableSwitchPageReaction = false;
 
 }

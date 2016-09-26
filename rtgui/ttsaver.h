@@ -30,12 +30,20 @@ class TTSaver : public ToolParamBlock, public FoldableToolPanel {
 
 protected:
 
-    Gtk::HBox* themeBox;
+    Gtk::HBox* themeBox1;
+    Gtk::HBox* themeBox2;
+    Gtk::HBox* themeBox3;
+
     Gtk::Label* themeLabel;
     Gtk::Button* buttonLoad;
     Gtk::Button* buttonSave;
     sigc::connection s;
     MyComboBoxText* profilbox;
+
+    Gtk::Label* lbAutoloadSettings;
+    Gtk::CheckButton* cbAutoloadSettings;
+
+    Gtk::Label* lbAutoloadSettingsLine;
 
     Glib::ustring lastFilename;
     std::vector<Glib::ustring> entries;
@@ -50,6 +58,7 @@ public:
     void resetFavoriteAndTrashState();
     void test(Glib::ustring name);
     void save_clicked (GdkEventButton* event);
+    void autoload_clicked (GdkEventButton* event);
    
     void parseProfileFolder();
 
