@@ -21,7 +21,7 @@
 #include "guiutils.h"
 //#include "../rtengine/safegtk.h"
 #include "rtimage.h"
-#include <sstream>
+#include <fstream>
 
 using namespace rtengine;
 using namespace rtengine::procparams;
