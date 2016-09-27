@@ -56,7 +56,6 @@ public:
     void load_profile(Glib::ustring filename);
     void save_profile(Glib::ustring filename);
     void resetFavoriteAndTrashState();
-    void test(Glib::ustring name);
     void save_clicked (GdkEventButton* event);
     void autoload_clicked (GdkEventButton* event);
    
