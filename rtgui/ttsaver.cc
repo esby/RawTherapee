@@ -75,21 +75,16 @@ TTSaver::TTSaver () : FoldableToolPanel(this,"ttsaver",M("TP_THEMETOOL_LABEL"),f
 
 void TTSaver::deploy()
 {
-
   if (options.AutoloadTTP)
   {
-     printf("ttp autoloading activated \n");
-    //todo use autoloadLine;
     auto it = std::find(entries.begin(), entries.end(), options.AutoloadTTPValue ) ;
     if (it != entries.end())
     {
       int index= std::distance(entries.begin(), it);
-      printf("checking autoloading index=%i \n" ,index);
-//todo: do the loading at some point but not during the filter creation
+      printf("autoloading index=%i \n" ,index);
       profilbox->set_active(index);
     }
   }
-  else printf("ttp autoloading disabled \n");
 }
 
 bool sortByFav(ToolPanel* t1, ToolPanel* t2)
@@ -305,30 +300,31 @@ void TTSaver::save_profile(Glib::ustring filename)
   myfile.close();
 }
 
-void TTSaver::test(Glib::ustring name)
-{
-  printf("button enbled clicked - %s \n", name.c_str());
-}
-
-
 void TTSaver::autoload_clicked (GdkEventButton* event)
 {
   if (event->button != 1) {
         return;
     }
-   //
-
-  options.AutoloadTTP = not cbAutoloadSettings->get_active(); //(this is swapped by the call)
 
   Glib::ustring filename =  profilbox->get_active_text() + paramFileGuiExtension;
+  Glib::ustring fname = "";
+
   int row = profilbox->get_active_row_number();
-  if (row >-1)
+  if (row >-1) // if a profile was selectd
   {
-    Glib::ustring fname = entries[row];
-    options.AutoloadTTPValue =  fname;
+    fname = entries[row];
   }
-  else
-    options.AutoloadTTPValue = "";
+
+  //the call happends before the value is changed, so we use a not
+  options.AutoloadTTP = not cbAutoloadSettings->get_active();
+
+  if (!options.AutoloadTTP)
+  {
+    fname = "";
+  }
+
+  options.AutoloadTTPValue =  fname;
+  lbAutoloadSettingsLine->set_text(fname);
   options.save();
 }
 
@@ -340,9 +336,8 @@ void TTSaver::save_clicked (GdkEventButton* event)
     }
 
     Gtk::FileChooserDialog dialog (getToplevelWindow (this), M("PROFILEPANEL_SAVEDLGLABEL"), Gtk::FILE_CHOOSER_ACTION_SAVE);
- //   bindCurrentFolder (dialog, options.loadSaveProfilePath);
     dialog.set_current_name (lastFilename);
-    dialog.set_current_folder (options.getUserProfilePath()) ; // options.getGlobalProfilePath());
+    dialog.set_current_folder (options.getUserProfilePath()) ; 
 
     //Add response buttons the the dialog:
     dialog.add_button(Gtk::StockID("gtk-cancel"), Gtk::RESPONSE_CANCEL);
