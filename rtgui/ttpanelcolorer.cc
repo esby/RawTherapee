@@ -20,7 +20,7 @@
 #include "options.h"
 #include "guiutils.h"
 #include "rtimage.h"
-#include <sstream>
+#include <fstream>
 
 using namespace rtengine;
 using namespace rtengine::procparams;
