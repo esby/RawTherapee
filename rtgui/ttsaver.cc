@@ -71,23 +71,25 @@ TTSaver::TTSaver () : FoldableToolPanel(this,"ttsaver",M("TP_THEMETOOL_LABEL"),f
        cbAutoloadSettings->signal_button_release_event().connect_notify( sigc::mem_fun(*this, &TTSaver::autoload_clicked) );
        profilbox->signal_changed ().connect (sigc::mem_fun (this, &TTSaver::profileBoxChanged));
 
-      //todo load the value if needed
+}
 
- 
+void TTSaver::deploy()
+{
+
   if (options.AutoloadTTP)
   {
+     printf("ttp autoloading activated \n");
     //todo use autoloadLine;
     auto it = std::find(entries.begin(), entries.end(), options.AutoloadTTPValue ) ;
-    if (it != entries.end()) 
+    if (it != entries.end())
     {
       int index= std::distance(entries.begin(), it);
-      printf("autoloading index=%i \n" ,index); 
+      printf("checking autoloading index=%i \n" ,index);
 //todo: do the loading at some point but not during the filter creation
- //     profilbox->set_active(index);
+      profilbox->set_active(index);
     }
   }
-
-
+  else printf("ttp autoloading disabled \n");
 }
 
 bool sortByFav(ToolPanel* t1, ToolPanel* t2)
