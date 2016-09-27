@@ -63,6 +63,8 @@ public:
     void parseProfileFolder();
 
     void profileBoxChanged();
+    void deploy();
+
 
 
     void themeImport(std::ifstream& myfile);
