@@ -25,6 +25,16 @@
 #include <sstream>
 #include <iostream>
 
+#define  PANEL_NAME_FAVORITE  "favoritePanel"
+#define  PANEL_NAME_EXPOSURE  "exposurePanel"
+#define  PANEL_NAME_DETAILS   "detailsPanel"
+#define  PANEL_NAME_COLOR     "colorPanel" 
+#define  PANEL_NAME_WAVELET   "waveletPanel"
+#define  PANEL_NAME_TRANSFORM "transformPanel"
+#define  PANEL_NAME_RAW       "rawPanel" 
+#define  PANEL_NAME_TRASH     "trashPanel"
+#define  PANEL_NAME_USEFUL    "usefulPanel"
+
 Glib::ustring escapeHtmlChars(const Glib::ustring &src);
 bool removeIfThere (Gtk::Container* cont, Gtk::Widget* w, bool increference = true);
 void thumbInterp (const unsigned char* src, int sw, int sh, unsigned char* dst, int dw, int dh);
