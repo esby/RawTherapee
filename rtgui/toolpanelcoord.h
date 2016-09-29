@@ -83,6 +83,7 @@
 #include "ttfavoritecolorer.h"
 #include "ttpanelcolorer.h"
 #include "ttudlrhider.h"
+#include "tttabhider.h"
 
 //defining the number of panels for once.
 #define NB_PANEL 9
