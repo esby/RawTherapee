@@ -1029,16 +1029,58 @@ int Options::readFromFile (Glib::ustring fname)
                 if (keyFile.has_key ("Profiles", "CustomProfileBuilderKeys")) {
                     CPBKeys              = (CPBKeyType)keyFile.get_integer ("Profiles", "CustomProfileBuilderKeys");
                 }
-  
-                if (keyFile.has_key ("Profiles", "AutoloadTTP")) {
-                    AutoloadTTP       = keyFile.get_boolean ("Profiles", "AutoloadTTP");
-                }
-
-                if (keyFile.has_key ("Profiles", "AutoloadTTPValue")) {
-                    AutoloadTTPValue       = keyFile.get_string ("Profiles", "AutoloadTTPValue");
-                }
-
             }
+
+            if (keyFile.has_group ("TTP")) {
+                if (keyFile.has_key ("TTP", "Autoload")) {
+                    TTPAutoload       = keyFile.get_boolean ("TTP", "Autoload");
+                }
+
+                if (keyFile.has_key ("TTP", "AutoloadValue")) {
+                    TTPAutoloadValue      = keyFile.get_string ("TTP", "AutoloadValue");
+                }
+
+                if (keyFile.has_key ("TTP", "HideFavorite")) {
+                    TTPHideFavorite       = keyFile.get_boolean ("TTP", "HideFavorite");
+                }
+
+                if (keyFile.has_key ("TTP", "HideExposure")) {
+                    TTPHideExposure       = keyFile.get_boolean ("TTP", "HideExposure");
+                }
+
+                if (keyFile.has_key ("TTP", "HideDetails")) {
+                    TTPHideDetails        = keyFile.get_boolean ("TTP", "HideDetails");
+                }
+
+                if (keyFile.has_key ("TTP", "HideColor")) {
+                    TTPHideColor          = keyFile.get_boolean ("TTP", "HideColor");
+                }
+
+                if (keyFile.has_key ("TTP", "HideWavelet")) {
+                    TTPHideWavelet        = keyFile.get_boolean ("TTP", "HideWavelet");
+                }
+
+                if (keyFile.has_key ("TTP", "HideTransform")) {
+                    TTPHideTransform       = keyFile.get_boolean ("TTP", "HideTransform");
+                }
+
+                if (keyFile.has_key ("TTP", "HideRaw")) {
+                    TTPHideRaw             = keyFile.get_boolean ("TTP", "HideRaw");
+                }
+ 
+                if (keyFile.has_key ("TTP", "HideMetadata")) {
+                    TTPHideMetadata        = keyFile.get_boolean ("TTP", "HideMetadata");
+                }
+
+                if (keyFile.has_key ("TTP", "HideUseful")) {
+                    TTPHideUseful         = keyFile.get_boolean ("TTP", "HideUseful");
+                }
+
+                if (keyFile.has_key ("TTP", "HideTrash")) {
+                    TTPHideTrash          = keyFile.get_boolean ("TTP", "HideTrash");
+                }
+            }
+
 
             if (keyFile.has_group ("File Browser")) {
                 if (keyFile.has_key ("File Browser", "ThumbnailSize")) {
@@ -1997,9 +2039,19 @@ int Options::saveToFile (Glib::ustring fname)
         keyFile.set_integer ("Profiles", "LoadParamsFromLocation", paramsLoadLocation);
         keyFile.set_string  ("Profiles", "CustomProfileBuilderPath", CPBPath);
         keyFile.set_integer ("Profiles", "CustomProfileBuilderKeys", CPBKeys);
-        keyFile.set_boolean ("Profiles", "AutoloadTTP", AutoloadTTP);
-        keyFile.set_string  ("Profiles", "AutoloadTTPValue", AutoloadTTPValue);
 
+        keyFile.set_boolean ("TTP", "Autoload", TTPAutoload);
+        keyFile.set_string  ("TTP", "AutoloadValue", TTPAutoloadValue);
+        keyFile.set_boolean ("TTP", "HideFavorite", TTPHideFavorite);
+        keyFile.set_boolean ("TTP", "HideExposure", TTPHideExposure);
+        keyFile.set_boolean ("TTP", "HideDetails", TTPHideDetails);
+        keyFile.set_boolean ("TTP", "HideColor", TTPHideColor);
+        keyFile.set_boolean ("TTP", "HideWavelet", TTPHideWavelet);
+        keyFile.set_boolean ("TTP", "HideTransform", TTPHideTransform);
+        keyFile.set_boolean ("TTP", "HideRaw", TTPHideRaw);
+        keyFile.set_boolean ("TTP", "HideMetadata", TTPHideMetadata);
+        keyFile.set_boolean ("TTP", "HideUseful", TTPHideUseful);
+        keyFile.set_boolean ("TTP", "HideTrash", TTPHideTrash);
 
         keyFile.set_string  ("GUI", "Font", font);
         keyFile.set_string  ("GUI", "ColorPickerFont", colorPickerFont);
