@@ -1437,14 +1437,16 @@ Gtk::Widget* Preferences::getTTPanel ()
   lbTTPHideTrash = Gtk::manage(new Gtk::Label(M("TP_THEMETOOL_HIDE_TRASH")));
   cbTTPHideTrash = Gtk::manage(new Gtk::CheckButton());
 
+  TTPBox1->pack_start(*cbTTPHideFavorite, Gtk::PACK_SHRINK, 0);
   TTPBox1->pack_start(*lbTTPHideFavorite, Gtk::PACK_SHRINK, 0);
-  TTPBox1->pack_end(*cbTTPHideFavorite, Gtk::PACK_SHRINK, 0);
   
+  TTPBox2->pack_start(*cbTTPHideTrash, Gtk::PACK_SHRINK, 0);
   TTPBox2->pack_start(*lbTTPHideTrash, Gtk::PACK_SHRINK, 0);
-  TTPBox2->pack_end(*cbTTPHideTrash, Gtk::PACK_SHRINK, 0);
   
   pTTP->pack_start(*TTPBox1, Gtk::PACK_SHRINK, 0);
   pTTP->pack_start(*TTPBox2, Gtk::PACK_SHRINK, 0);
+
+  pTTP->set_border_width (4);
 
   return pTTP;
 }
