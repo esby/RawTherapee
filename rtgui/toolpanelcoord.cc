@@ -91,15 +91,15 @@ ToolPanelCoordinator::ToolPanelCoordinator () : ipc(NULL)
     trashPanel      = Gtk::manage (new ToolVBox ());
     usefulPanel     = Gtk::manage (new ToolVBox ());
 
-    favoritePanel->setBoxName("favoritePanel");
-    exposurePanel->setBoxName("exposurePanel");
-    detailsPanel->setBoxName("detailsPanel");
-    colorPanel->setBoxName("colorPanel");
-    waveletPanel->setBoxName("waveletPanel");
-    transformPanel->setBoxName("transformPanel");
-    rawPanel->setBoxName("rawPanel");
-    trashPanel->setBoxName("trashPanel");
-    usefulPanel->setBoxName("usefulPanel");
+    favoritePanel->setBoxName(PANEL_NAME_FAVORITE);
+    exposurePanel->setBoxName(PANEL_NAME_EXPOSURE);
+    detailsPanel->setBoxName (PANEL_NAME_DETAILS);
+    colorPanel->setBoxName(PANEL_NAME_COLOR);
+    waveletPanel->setBoxName(PANEL_NAME_WAVELET);
+    transformPanel->setBoxName(PANEL_NAME_TRANSFORM);
+    rawPanel->setBoxName(PANEL_NAME_RAW);
+    trashPanel->setBoxName(PANEL_NAME_TRASH);
+    usefulPanel->setBoxName(PANEL_NAME_USEFUL);
 
     favoritePanel->setEnvironment(env);
     exposurePanel->setEnvironment(env);
@@ -229,6 +229,7 @@ ToolPanelCoordinator::ToolPanelCoordinator () : ipc(NULL)
 
   // new panels are registered diffently
     env->registerPanel (usefulPanel, Gtk::manage (new TTSaver()));
+    env->registerPanel (usefulPanel, Gtk::manage (new TTTabHider()));
     env->registerPanel (usefulPanel, Gtk::manage (new TTFavoriteColorChooser()));
     env->registerPanel (usefulPanel, Gtk::manage (new TTPanelColorChooser()));
     env->registerPanel (usefulPanel, Gtk::manage (new TTUDLRHider()));
@@ -245,6 +246,7 @@ ToolPanelCoordinator::ToolPanelCoordinator () : ipc(NULL)
 
     metadataPanel = Gtk::manage (new Gtk::Notebook ());
     toolPanelNotebook = new Gtk::Notebook ();
+    env->setToolPanelNotebook(toolPanelNotebook);
 
     metadataPanel->append_page (*exifpanel, M("MAIN_TAB_EXIF"));
     metadataPanel->append_page (*iptcpanel, M("MAIN_TAB_IPTC"));
