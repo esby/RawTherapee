@@ -59,14 +59,14 @@ TTSaver::TTSaver () : FoldableToolPanel(this,"ttsaver",M("TP_THEMETOOL_LABEL"),f
        themeBox3 = Gtk::manage(new Gtk::HBox());
        themeBox2->set_spacing(4);
        
-       lbAutoloadSettingsLine = Gtk::manage(new Gtk::Label(options.AutoloadTTPValue));
+       lbAutoloadSettingsLine = Gtk::manage(new Gtk::Label(options.TTPAutoloadValue));
 
        themeBox3->pack_start(*lbAutoloadSettingsLine, Gtk::PACK_SHRINK, 0);
        pack_start( *themeBox3, Gtk::PACK_SHRINK, 0);
 
        parseProfileFolder();
 
-       cbAutoloadSettings->set_active(options.AutoloadTTP);
+       cbAutoloadSettings->set_active(options.TTPAutoload);
        buttonSave->signal_button_release_event().connect_notify( sigc::mem_fun(*this, &TTSaver::save_clicked) );
        cbAutoloadSettings->signal_button_release_event().connect_notify( sigc::mem_fun(*this, &TTSaver::autoload_clicked) );
        profilbox->signal_changed ().connect (sigc::mem_fun (this, &TTSaver::profileBoxChanged));
@@ -75,9 +75,9 @@ TTSaver::TTSaver () : FoldableToolPanel(this,"ttsaver",M("TP_THEMETOOL_LABEL"),f
 
 void TTSaver::deploy()
 {
-  if (options.AutoloadTTP)
+  if (options.TTPAutoload)
   {
-    auto it = std::find(entries.begin(), entries.end(), options.AutoloadTTPValue ) ;
+    auto it = std::find(entries.begin(), entries.end(), options.TTPAutoloadValue ) ;
     if (it != entries.end())
     {
       int index= std::distance(entries.begin(), it);
@@ -316,14 +316,14 @@ void TTSaver::autoload_clicked (GdkEventButton* event)
   }
 
   //the call happends before the value is changed, so we use a not
-  options.AutoloadTTP = not cbAutoloadSettings->get_active();
+  options.TTPAutoload = not cbAutoloadSettings->get_active();
 
-  if (!options.AutoloadTTP)
+  if (!options.TTPAutoload)
   {
     fname = "";
   }
 
-  options.AutoloadTTPValue =  fname;
+  options.TTPAutoloadValue =  fname;
   lbAutoloadSettingsLine->set_text(fname);
   options.save();
 }
