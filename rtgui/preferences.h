@@ -197,6 +197,16 @@ protected:
     Glib::ustring storedValueRaw;
     Glib::ustring storedValueImg;
 
+    Gtk::HBox* TTPBox1;
+    Gtk::HBox* TTPBox2;
+    Gtk::HBox* TTPBox3;
+
+    Gtk::Label* lbTTPHideFavorite;
+    Gtk::CheckButton* cbTTPHideFavorite;
+    Gtk::Label* lbTTPHideTrash;
+    Gtk::CheckButton* cbTTPHideTrash;
+
+
     Options moptions;
     sigc::connection tconn, sconn, fconn, usethcon, addc, setc, dfconn, ffconn, bpconn, rpconn, ipconn;
     sigc::connection autoMonProfileConn, sndEnableConn, langAutoDetectConn, autocielabConn;
@@ -232,6 +242,7 @@ protected:
     Gtk::Widget* getBatchProcPanel ();
     Gtk::Widget* getPerformancePanel ();
     Gtk::Widget* getSoundPanel ();
+    Gtk::Widget* getTTPanel ();
 
 public:
     explicit Preferences (RTWindow *rtwindow);

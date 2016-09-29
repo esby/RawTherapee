@@ -90,6 +90,7 @@ Preferences::Preferences  (RTWindow *rtwindow) : rprofiles(nullptr), iprofiles(n
 #if defined(WIN32) || defined(__linux__)
     nb->append_page (*getSoundPanel(),          M("PREFERENCES_TAB_SOUND"));
 #endif
+    nb->append_page (*getTTPanel(), M("PREFERENCES_THEME_TOOL"));
     nb->set_current_page (0);
 
     profileStore.addListener(this);
@@ -1419,6 +1420,35 @@ Gtk::Widget* Preferences::getSoundPanel ()
 
     return pSnd;
 }
+
+Gtk::Widget* Preferences::getTTPanel ()
+{
+  Gtk::VBox* pTTP = new Gtk::VBox ();
+
+  TTPBox1 = Gtk::manage(new Gtk::HBox());
+  TTPBox1->set_spacing(4);
+
+  TTPBox2 = Gtk::manage(new Gtk::HBox());
+  TTPBox2->set_spacing(4);
+
+  lbTTPHideFavorite = Gtk::manage(new Gtk::Label(M("TP_THEMETOOL_HIDE_FAVORITE")));
+  cbTTPHideFavorite = Gtk::manage(new Gtk::CheckButton());
+
+  lbTTPHideTrash = Gtk::manage(new Gtk::Label(M("TP_THEMETOOL_HIDE_TRASH")));
+  cbTTPHideTrash = Gtk::manage(new Gtk::CheckButton());
+
+  TTPBox1->pack_start(*lbTTPHideFavorite, Gtk::PACK_SHRINK, 0);
+  TTPBox1->pack_end(*cbTTPHideFavorite, Gtk::PACK_SHRINK, 0);
+  
+  TTPBox2->pack_start(*lbTTPHideTrash, Gtk::PACK_SHRINK, 0);
+  TTPBox2->pack_end(*cbTTPHideTrash, Gtk::PACK_SHRINK, 0);
+  
+  pTTP->pack_start(*TTPBox1, Gtk::PACK_SHRINK, 0);
+  pTTP->pack_start(*TTPBox2, Gtk::PACK_SHRINK, 0);
+
+  return pTTP;
+}
+
 
 void Preferences::parseDir (Glib::ustring dirname, std::vector<Glib::ustring>& items, Glib::ustring ext)
 {
