@@ -47,6 +47,7 @@ BatchToolPanelCoordinator::BatchToolPanelCoordinator (FilePanel* parent) : ToolP
     }
 
     toolPanelNotebook->remove_page (*metadataPanel);
+    env->setMetadataState(false);
     metadataPanel = nullptr;
     toiM = nullptr;
 

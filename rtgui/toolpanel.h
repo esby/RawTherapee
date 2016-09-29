@@ -47,6 +47,7 @@ class Environment {
      std::vector<ToolVBox*> boxList;
      ToolVBox* favoritePanel;
      ToolVBox* trashPanel;
+     Gtk::Notebook* toolPanelNotebook;
 
   public:
      int state;
@@ -54,6 +55,7 @@ class Environment {
      bool moveLeftToBottom;
      bool moveRightToTop;
      bool disableSwitchPageReaction;
+     bool metadataState;
 
      Environment(){ 
        state = ENV_STATE_IN_FAV;
@@ -61,6 +63,7 @@ class Environment {
        moveLeftToBottom = false;
        moveRightToTop = true;
        disableSwitchPageReaction = true;
+       metadataState = true; // means they are activated
      }
 
      ToolPanel*  getPanel(Glib::ustring name);
@@ -70,6 +73,8 @@ class Environment {
      std::vector<ToolPanel*>::iterator panelEnd();  
      void erasePanel(std::vector<ToolPanel*>::iterator it);
      void panelPushBack(ToolPanel* p);
+     void setMetadataState(bool b) {metadataState = b;}
+     bool getMetadataState() {return metadataState;}
 
      MyExpander* getExpander(int pos);
      int countExpander();
@@ -77,12 +82,20 @@ class Environment {
      int countPanel();
      void setFavoritePanel(ToolVBox* p);
      void setTrashPanel(ToolVBox* p);
+
+     void setToolPanelNotebook(Gtk::Notebook* _toolPanelNotebook) { toolPanelNotebook = _toolPanelNotebook;}
+     Gtk::Notebook* getToolPanelNotebook() {return toolPanelNotebook; }
+
      void registerPanel(Gtk::Box* where, ToolPanel* panel);
      void addVBox(ToolVBox* box);
      std::vector<ToolVBox*> getVBoxList() { return boxList; }
     
      void reAttachPanel(ToolPanel *panel, ToolVBox* box, int pos);
      void setFavoritePos(ToolPanel *panel, int pos);
+
+     ToolVBox* getFavoritePanel() { return favoritePanel; }
+     ToolVBox* getTrashPanel() { return trashPanel; }
+
 };
 
 
