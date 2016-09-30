@@ -141,6 +141,11 @@ void TTTabHider::deploy()
   cbHideMetadata->set_active (options.TTPHideMetadata);
   cbHideUseful->set_active (options.TTPHideUseful);
 
+  buttonSave->signal_button_release_event().connect_notify( sigc::mem_fun(*this, &TTTabHider::save_clicked) );
+}
+
+void TTTabHider::deployLate()
+{
   hide_exposure_clicked();
   hide_favorite_clicked ();
   hide_exposure_clicked ();
@@ -152,10 +157,7 @@ void TTTabHider::deploy()
   hide_metadata_clicked ();
   hide_useful_clicked ();
   hide_trash_clicked ();
-
-  buttonSave->signal_button_release_event().connect_notify( sigc::mem_fun(*this, &TTTabHider::save_clicked) );
 }
-
 void TTTabHider::enabled_changed()
 {
 

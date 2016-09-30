@@ -86,6 +86,7 @@ EditWindow::EditWindow (RTWindow* p) : parent(p) , isFullscreen(false)
 
     add (*mainBox);
     show_all ();
+    
 }
 
 void EditWindow::on_realize ()

@@ -921,7 +921,6 @@ void FoldableToolPanel::setEnabledTooltipText(Glib::ustring tooltipText)
     }
 }
 
-
 void FoldableToolPanel::deploy() {
 //todo: check that this method should be called or not.
 //  labelWidget->set_markup(Glib::ustring("<b>") + uilabel + Glib::ustring("</b>"));
@@ -934,7 +933,9 @@ void FoldableToolPanel::deploy() {
  // exp->set_label_widget(*hbox);
  // exp->set_label_fill();
 }
-
+void FoldableToolPanel::deployLate()
+{
+}
 
 DummyToolPanel::DummyToolPanel(Glib::ustring name, Environment* _env) : FoldableToolPanel(this,name,name,false,true)
 {

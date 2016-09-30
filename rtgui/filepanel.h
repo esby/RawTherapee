@@ -79,6 +79,7 @@ public:
     ExportPanel* exportPanel;
     FileCatalog* fileCatalog;
     Gtk::Paned *ribbonPane;
+    void doDeployLate();
 
     void setParent (RTWindow* p)
     {
