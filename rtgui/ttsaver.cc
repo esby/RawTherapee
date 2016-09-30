@@ -133,6 +133,9 @@ void TTSaver::parseProfileFolder()
    int nbpass = 0;
    do 
    {
+        // the code is a simplified version of ProfileStore::ParseDir 
+        // from profilestore.cc
+
         // walking through the directory
         Glib::Dir* dir = NULL;
         if (nbpass == 0) 
@@ -378,6 +381,16 @@ void TTSaver::save_clicked (GdkEventButton* event)
 
         lastFilename = Glib::path_get_basename (fname);
         save_profile(fname);
+
+        size_t lastdot = lastFilename.find_last_of ('.');
+        Glib::ustring name = lastFilename.substr(0, lastdot);
+        
+        if ( std::find(entries.begin(),entries.end(),fname) == entries.end() )
+        {
+          profilbox->append_text(name);
+          entries.push_back(fname);
+        }
+
         done = true;
       }
       else done = true;
@@ -557,10 +570,9 @@ void TTSaver::themeImport(std::ifstream& myfile)
       map.at(map[favoriteItems.at(i)]->getOriginalBox()->getBoxName())->getExpander()->set_expanded(!state);  
       map.at(map[favoriteItems.at(i)]->getOriginalBox()->getBoxName())->getExpander()->set_expanded(state);
     }
-// disabled the lines because of side effects in the tt panel 
-// this should be not needed since favorites will be ordered anyway...
-//if (map[favoriteItems.at(i)]->getOriginalBox()->getBoxName() != 'favoritePanel' )
-//    env->setFavoritePos( map[favoriteItems.at(i)], i);
+// element from toolPanel will not be sorted out - because of side effects in the tt panel 
+if (map[favoriteItems.at(i)]->getOriginalBox()->getBoxName() != "favoritePanel" )
+    env->setFavoritePos( map[favoriteItems.at(i)], i);
   }
 
  // initializing trash status
