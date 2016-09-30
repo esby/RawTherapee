@@ -434,7 +434,7 @@ Glib::ustring TTSaver::themeExport()
 
   autoloadSettingsLine += fname;
 */
-  return favSettings + "\n" +  oriSettings + "\n" + traSettings; 
+  return favSettings + "\n" +  oriSettings + "\n" + traSettings +"\n"; 
 }
 
 
