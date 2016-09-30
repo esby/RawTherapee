@@ -33,11 +33,37 @@ protected:
     Gtk::HBox* themeBox1;
     Gtk::HBox* themeBox2;
     Gtk::HBox* themeBox3;
+    Gtk::HBox* themeBox4;
+    Gtk::HBox* themeBox5;
+    Gtk::HBox* themeBox6;
+    Gtk::HBox* themeBox7;
+    Gtk::HBox* themeBox8;
+    Gtk::HBox* themeBox9;
+
 
     Gtk::Label* lbHideFavorite;
     Gtk::CheckButton* cbHideFavorite;
+    Gtk::Label* lbHideExposure;
+    Gtk::CheckButton* cbHideExposure;
+    Gtk::Label* lbHideDetails;
+    Gtk::CheckButton* cbHideDetails;
+    Gtk::Label* lbHideColor;
+    Gtk::CheckButton* cbHideColor;
+    Gtk::Label* lbHideWavelet;
+    Gtk::CheckButton* cbHideWavelet;
+    Gtk::Label* lbHideTransform;
+    Gtk::CheckButton* cbHideTransform;
+    Gtk::Label* lbHideRaw;
+    Gtk::CheckButton* cbHideRaw;
+    Gtk::Label* lbHideMetadata;
+    Gtk::CheckButton* cbHideMetadata;
+    Gtk::Label* lbHideUseful;
+    Gtk::CheckButton* cbHideUseful;
     Gtk::Label* lbHideTrash;
     Gtk::CheckButton* cbHideTrash;
+
+    Gtk::Button* buttonSave;
+
 
 
 public:
@@ -46,7 +72,17 @@ public:
     void deploy();
     void enabled_changed ();
     void hide_favorite_clicked ();
+    void hide_exposure_clicked ();
+    void hide_details_clicked ();
+    void hide_color_clicked ();
+    void hide_wavelet_clicked ();
+    void hide_transform_clicked ();
+    void hide_raw_clicked ();
+    void hide_metadata_clicked ();
+    void hide_useful_clicked ();
     void hide_trash_clicked ();
+
+    void save_clicked (GdkEventButton* event);
 
     void themeImport(std::ifstream& myfile);
     Glib::ustring themeExport();
