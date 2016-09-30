@@ -197,15 +197,36 @@ protected:
     Glib::ustring storedValueRaw;
     Glib::ustring storedValueImg;
 
-    Gtk::HBox* TTPBox1;
-    Gtk::HBox* TTPBox2;
-    Gtk::HBox* TTPBox3;
+    Gtk::HBox* themeBox1;
+    Gtk::HBox* themeBox2;
+    Gtk::HBox* themeBox3;
+    Gtk::HBox* themeBox4;
+    Gtk::HBox* themeBox5;
+    Gtk::HBox* themeBox6;
+    Gtk::HBox* themeBox7;
+    Gtk::HBox* themeBox8;
+    Gtk::HBox* themeBox9;
 
-    Gtk::Label* lbTTPHideFavorite;
-    Gtk::CheckButton* cbTTPHideFavorite;
-    Gtk::Label* lbTTPHideTrash;
-    Gtk::CheckButton* cbTTPHideTrash;
-
+    Gtk::Label* lbHideFavorite;
+    Gtk::CheckButton* cbHideFavorite;
+    Gtk::Label* lbHideExposure;
+    Gtk::CheckButton* cbHideExposure;
+    Gtk::Label* lbHideDetails;
+    Gtk::CheckButton* cbHideDetails;
+    Gtk::Label* lbHideColor;
+    Gtk::CheckButton* cbHideColor;
+    Gtk::Label* lbHideWavelet;
+    Gtk::CheckButton* cbHideWavelet;
+    Gtk::Label* lbHideTransform;
+    Gtk::CheckButton* cbHideTransform;
+    Gtk::Label* lbHideRaw;
+    Gtk::CheckButton* cbHideRaw;
+    Gtk::Label* lbHideMetadata;
+    Gtk::CheckButton* cbHideMetadata;
+    Gtk::Label* lbHideUseful;
+    Gtk::CheckButton* cbHideUseful;
+    Gtk::Label* lbHideTrash;
+    Gtk::CheckButton* cbHideTrash;
 
     Options moptions;
     sigc::connection tconn, sconn, fconn, usethcon, addc, setc, dfconn, ffconn, bpconn, rpconn, ipconn;
