@@ -32,8 +32,9 @@
 #define  PANEL_NAME_WAVELET   "waveletPanel"
 #define  PANEL_NAME_TRANSFORM "transformPanel"
 #define  PANEL_NAME_RAW       "rawPanel" 
-#define  PANEL_NAME_TRASH     "trashPanel"
+// it lacks metadata definition, but it's normal.
 #define  PANEL_NAME_USEFUL    "usefulPanel"
+#define  PANEL_NAME_TRASH     "trashPanel"
 
 Glib::ustring escapeHtmlChars(const Glib::ustring &src);
 bool removeIfThere (Gtk::Container* cont, Gtk::Widget* w, bool increference = true);
