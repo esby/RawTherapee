@@ -209,28 +209,33 @@ void TTPanelColorChooser::pangoPanel(ToolPanel* panel, bool deactivate)
   //todo fix issue and disable return
   if (!panel->getNeed100Percent())
   {
-  l0 = (Gtk::Label*) v.at(1);
-  Glib::ustring s0 = l0->get_text();
+  l0 = dynamic_cast<Gtk::Label*> (v.at(1));
+  if (l0)
+  { 
+    Glib::ustring s0 = l0->get_text();
 //  Glib::ustring s1 = l1->get_text();
  
-  
-  int state;
-  state = getState(panel);
-  //  printf("state %i - %s - %s \n", state,  s0.c_str(), s1.c_str());
-  if ((deactivate) || (state>-1))
-  { 
-     if (!deactivate &&  (state>0))
+    s0 = escapeHtmlChars(s0);
+//    s1 = escapeHtmlChars(s1);
+    int state;
+    state = getState(panel);
+    //  printf("state %i - %s - %s \n", state,  s0.c_str(), s1.c_str());
+    if ((deactivate) || (state>-1))
     { 
-      Gdk::Color color;
-      color = getColor(panel, state);
-      Glib::ustring colorName = color.to_string();
-      l0->set_markup("<tt><span color=\"" + colorName + "\">" +  s0 + "</span></tt>");
-//      l1->set_markup("<b><span color=\"" + colorName + "\">" +  s1 + "</span></b>");
-    }
-    else
-    {
-      l0->set_markup("<tt><span>" + s0 + "</span></tt>");
+       if (!deactivate &&  (state>0))
+      { 
+        Gdk::Color color;
+        color = getColor(panel, state);
+        Glib::ustring colorName = color.to_string();
+        l0->set_markup("<tt><span color=\"" + colorName + "\">" +  s0 + "</span></tt>");
+//        l1->set_markup("<b><span color=\"" + colorName + "\">" +  s1 + "</span></b>");
+      }
+      else
+      {
+//       printf("s0=%s\n",s0.c_str());
+        l0->set_markup("<tt><span>" + s0 + "</span></tt>");
 //      l1->set_markup("<b><span>" + s1 + "</span></b>");
+      }
     }
   }
   }
