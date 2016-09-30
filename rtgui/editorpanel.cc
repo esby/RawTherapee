@@ -489,6 +489,7 @@ EditorPanel::EditorPanel (FilePanel* filePanel)
     updateHistogramPosition (0, options.histogramPosition);
 
     show_all ();
+    tpc->doDeployLate();
     /*
         // save as dialog
         if (Glib::file_test (options.lastSaveAsPath, Glib::FILE_TEST_IS_DIR))
@@ -620,6 +621,11 @@ EditorPanel::~EditorPanel ()
     if(iRightPanel_1_Hide) {
         delete iRightPanel_1_Hide;
     }
+}
+
+void EditorPanel::doDeployLate()
+{
+  tpc->doDeployLate();
 }
 
 void EditorPanel::leftPaneButtonReleased(GdkEventButton *event)

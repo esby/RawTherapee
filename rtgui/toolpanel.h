@@ -285,6 +285,7 @@ public:
 
    
     virtual void                 deploy()       {} // used to handle post constructor steps.
+    virtual void        deployLate() {} // used to handle post operations in a later way than deploy
 
     void                setToolName(Glib::ustring _name) { toolName = _name; }
     Glib::ustring               getToolName() { return toolName; } 
@@ -397,6 +398,7 @@ public:
     void set_inconsistent(bool isInconsistent);  // related to the enabled/disabled state
 
     void deploy();
+    void deployLate(); 
     bool canBeIgnored() {return false;}
 
     // Functions that want to receive an enabled/disabled event from this class

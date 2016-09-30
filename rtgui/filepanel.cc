@@ -136,6 +136,11 @@ FilePanel::FilePanel () : parent(NULL)
     show_all ();
 }
 
+void FilePanel::doDeployLate()
+{
+  tpc->doDeployLate();
+}
+
 FilePanel::~FilePanel ()
 {
     rightNotebookSwitchConn.disconnect();

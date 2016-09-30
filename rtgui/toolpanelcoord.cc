@@ -356,15 +356,7 @@ ToolPanelCoordinator::ToolPanelCoordinator () : ipc(NULL)
     toolPanelNotebook->set_scrollable ();
     toolPanelNotebook->show_all ();
 
-    //todo
-    printf("deploying panels \n");
-
-    for (size_t i=0; i<env->countPanel(); i++)
-    {
-//      printf("panel nb=%i \n",  i);
-      env->getPanel(i)->deploy();
-    }
-
+    doDeploy();
 
     for (size_t i=0; i<env->countPanel(); i++)
       env->getPanel(i)->setListener (this);
@@ -387,6 +379,26 @@ ToolPanelCoordinator::ToolPanelCoordinator () : ipc(NULL)
 
 }
 
+void ToolPanelCoordinator::doDeploy()
+{
+    printf("panel deployment \n");
+    for (size_t i=0; i<env->countPanel(); i++)
+    {
+//      printf("panel nb=%i \n",  i);
+      env->getPanel(i)->deploy();
+    }
+}
+
+void ToolPanelCoordinator::doDeployLate()
+{
+     printf("late panel deployment \n");
+    for (size_t i=0; i<env->countPanel(); i++)
+    {   
+//      printf("panel nb=%i \n",  i);
+      env->getPanel(i)->deployLate();
+    }
+
+}
 /*
 //removed from the code
 void ToolPanelCoordinator::addPanel (Gtk::Box* where, FoldableToolPanel* panel)

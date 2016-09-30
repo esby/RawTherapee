@@ -141,6 +141,8 @@ public:
     EditorPanel (FilePanel* filePanel = NULL);
     virtual ~EditorPanel ();
 
+    void doDeployLate();
+
     void open (Thumbnail* tmb, rtengine::InitialImage* isrc);
     void setAspect ();
     void on_realize ();

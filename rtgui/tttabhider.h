@@ -70,6 +70,7 @@ public:
 
     TTTabHider ();
     void deploy();
+    void deployLate();
     void enabled_changed ();
     void hide_favorite_clicked ();
     void hide_exposure_clicked ();

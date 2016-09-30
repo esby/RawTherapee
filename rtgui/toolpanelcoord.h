@@ -256,6 +256,9 @@ public:
         paramcListeners.push_back (pp);
     }
 
+    void doDeploy();
+    void doDeployLate();
+
     // toolpanellistener interface
     void panelChanged   (rtengine::ProcEvent event, const Glib::ustring& descr);
 
