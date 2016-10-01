@@ -52,7 +52,6 @@ public:
 
     TTSaver ();
     void themeSplitter(std::ifstream& myfile);
-    void themeLoad();
     void load_profile(Glib::ustring filename);
     void save_profile(Glib::ustring filename);
     void resetFavoriteAndTrashState();
