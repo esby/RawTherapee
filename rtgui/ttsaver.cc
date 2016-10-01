@@ -194,7 +194,7 @@ void TTSaver::resetFavoriteAndTrashState()
 
 }
 
-//this function job is tot dispatch the lines between the current tools.
+//this function job is to dispatch the lines between the current tools.
 
 void TTSaver::themeSplitter(std::ifstream& myfile)
 {
@@ -256,15 +256,6 @@ void TTSaver::themeSplitter(std::ifstream& myfile)
            p->getExpander()->setEnabled( not (p->getExpander()->getEnabled()));
         }
      }
-
-}
-
-
-
-
-
-void TTSaver::themeLoad()
-{
 
 }
 
@@ -449,8 +440,6 @@ Glib::ustring TTSaver::themeExport()
 */
   return favSettings + "\n" +  oriSettings + "\n" + traSettings +"\n"; 
 }
-
-
 
 void TTSaver::themeImport(std::ifstream& myfile)
 {
