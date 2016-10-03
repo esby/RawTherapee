@@ -374,9 +374,6 @@ ToolPanelCoordinator::ToolPanelCoordinator () : ipc(NULL)
     toolBar->setToolBarListener(this);
 
     toolPanelNotebook->signal_switch_page().connect (sigc::mem_fun(*this,  &ToolPanelCoordinator::on_notebook_switch_page) );
-
-    env->disableSwitchPageReaction = false;
-
 }
 
 void ToolPanelCoordinator::doDeploy()
@@ -397,6 +394,8 @@ void ToolPanelCoordinator::doDeployLate()
 //      printf("panel nb=%i \n",  i);
       env->getPanel(i)->deployLate();
     }
+    printf("enabling switch page reaction\n");
+    env->disableSwitchPageReaction = false;
 
 }
 /*
