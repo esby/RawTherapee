@@ -486,13 +486,6 @@ int  ToolPanel::getPosFav()
     return -1;
   int posFav = favoriteBox->getPos(this);
   if (posFav == -1) posFav = favoriteBox->getPos(favoriteDummy);
-
-  if (this->getToolName() == "distortion")
-  { 
-    printf("posFav=%i for %s - %s \n", posFav, getToolName().c_str(), favoriteDummy->getToolName().c_str());
-
-  }
-
   return posFav;
 }
 
