@@ -216,7 +216,6 @@ protected:
     Gtk::Button* moveRButton;
 
 
-    virtual void cleanBox();
     virtual void moveToFavorite(int posFav, int posOri);
     virtual void moveToOriginal(int posFav, int posOri);
     virtual void moveToTrash(int posFav, int posOri);
@@ -275,10 +274,12 @@ public:
     Gtk::Button*         getMoveDButton() { return moveDButton; }
     Gtk::Button*         getMoveLButton() { return moveLButton; }
     Gtk::Button*         getMoveRButton() { return moveRButton; }
+    void                 setOriginalBox(ToolVBox* tc) {originalBox = tc; }
     ToolCounter*         getOriginalBox() { return originalBox; }
     DummyToolPanel*      getFavoriteDummy() { return originalDummy;}
     ToolVBox*            getFavoriteBox() { return favoriteBox;}
 
+    virtual void cleanBox();
  // tt filters should reimplement these methods, normal filters should not need it
     virtual void themeImport(std::ifstream& myfile) {}
     virtual Glib::ustring themeExport() { return ""; }
