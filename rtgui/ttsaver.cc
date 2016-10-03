@@ -179,6 +179,10 @@ void TTSaver::parseProfileFolder()
   while  (nbpass<2);
 }
 
+//this function does two jobs:
+// * reset the favorite / trash status of each panel.
+// * call cleanBox to all panels, so they can be reaffected safely during load
+
 void TTSaver::resetFavoriteAndTrashState() 
 {
   std::vector<ToolPanel*> panels = env->getPanels();
@@ -186,12 +190,12 @@ void TTSaver::resetFavoriteAndTrashState()
   {
     if (!panels.at(i)->canBeIgnored())
     {
-      // resetting favorite and trash status
       panels.at(i)->getFavoriteButton()->set_active(false);
       panels.at(i)->getTrashButton()->set_active(false);
+      ToolPanel* p = panels.at(i);
+      p->cleanBox();
     }
   }
-
 }
 
 //this function job is to dispatch the lines between the current tools.
@@ -502,7 +506,7 @@ void TTSaver::themeImport(std::ifstream& myfile)
   }
 
 
-  // puting the vector element into a map (toolpanel)
+  // putting the panels into a map 
   std::vector<ToolPanel*> panels = env->getPanels();
   std::map<std::string,ToolPanel*> map;
   for (size_t i=0; i<panels.size(); i++)
@@ -513,7 +517,7 @@ void TTSaver::themeImport(std::ifstream& myfile)
     }
   }
  
- // putting the vector element into a map (vbox)
+ // putting the container tabs (vbox) into a map 
  std::vector<ToolVBox*> boxList = env->getVBoxList();
  std::map<std::string,ToolVBox*> mapVBox;
  for (size_t i=0; i<boxList.size(); i++)
@@ -540,7 +544,8 @@ void TTSaver::themeImport(std::ifstream& myfile)
         {
           int pos =  atoi(spos.c_str());
           printf("pos: :%i\n", pos);
-          env->reAttachPanel(map[fname], mapVBox[vname], pos);
+          mapVBox[vname]->addPanel(map[fname],pos);
+          map[fname]->setOriginalBox(mapVBox[vname]);
         }
       }
     }
