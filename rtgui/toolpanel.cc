@@ -112,11 +112,7 @@ void Environment::reAttachPanel(ToolPanel *panel, ToolVBox* box, int pos)
   printf("reattaching panel %s from %s to %s \n", panel->getToolName().c_str(), panel->getOriginalBox()->getBoxName().c_str(), box->getBoxName().c_str());
   Gtk::Container* c = (Gtk::Container*)box;
   panel->getOriginalBox()->remPanel(panel);
-//  box->remPanel(panel);
   box->addPanel(panel, pos);
-//  c->remove(*panel->getExpander());
-//  box->pack_start(*panel->getExpander());
-//  box->reorder_child(*panel->getExpander(), pos);
 }
 
 void Environment::setFavoritePos(ToolPanel *panel, int pos)
