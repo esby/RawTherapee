@@ -24,6 +24,7 @@ using namespace rtengine::procparams;
 
 
 // Environment implementation
+// todo: use another faster implementation relying on a map.
 ToolPanel* Environment::getPanel(Glib::ustring name)
 {
   for (size_t i=0; i<toolPanels.size(); i++)
@@ -139,6 +140,7 @@ int ToolCounter::size() {
              return panelList.size ();
 }
 
+//todo use another (faster) implementation 
 int ToolCounter::getPos(ToolPanel* panel) {
            panelList = box->get_children ();
            size_t i;
@@ -151,7 +153,7 @@ int ToolCounter::getPos(ToolPanel* panel) {
 }
 
 ToolPanel* ToolCounter::getPanel(int pos) {
-//todo:
+//todo: faster implementation needed
 /// in the old code it was
  panelList = box->get_children ();
  ToolPanel* p = (ToolPanel*) ((MyExpander*)panelList[pos])->getPanel();
