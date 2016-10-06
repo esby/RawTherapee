@@ -157,6 +157,7 @@ ToolPanel* ToolCounter::getPanel(int pos) {
  panelList = box->get_children ();
  ToolPanel* p = (ToolPanel*) ((MyExpander*)panelList[pos])->getPanel();
    return p;
+}
 
 // we initiate the nextBox too sinec it's circular
 void ToolCounter::setPrevBox(Gtk::VBox* _box) {
