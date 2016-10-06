@@ -324,7 +324,7 @@ void TTPanelColorChooser::themeImport(std::ifstream& myfile)
   while (condition)
   {
     int position = myfile.tellg();
-    condition = getline (myfile,line);
+    condition = (bool) getline (myfile,line);
 
     std::istringstream tokensplitter(line);
     std::string token;
