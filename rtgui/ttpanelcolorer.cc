@@ -328,10 +328,10 @@ void TTPanelColorChooser::themeImport(std::ifstream& myfile)
 
     std::istringstream tokensplitter(line);
     std::string token;
-    printf("parsing line: %s\n", line.c_str());
+//    printf("parsing line: %s\n", line.c_str());
     if (getline(tokensplitter, token, ':'))
     {
-       printf("Checking %s \n", token.c_str());
+//       printf("Checking %s \n", token.c_str());
       if (token == getToolName())
       {
         if(getline(tokensplitter, token, ' '))

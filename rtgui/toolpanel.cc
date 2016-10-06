@@ -111,7 +111,7 @@ void Environment::addVBox(ToolVBox* box)
 
 void Environment::reAttachPanel(ToolPanel *panel, ToolVBox* box, int pos)
 {
-  printf("reattaching panel %s from %s to %s \n", panel->getToolName().c_str(), panel->getOriginalBox()->getBoxName().c_str(), box->getBoxName().c_str());
+//  printf("reattaching panel %s from %s to %s \n", panel->getToolName().c_str(), panel->getOriginalBox()->getBoxName().c_str(), box->getBoxName().c_str());
   Gtk::Container* c = (Gtk::Container*)box;
   panel->getOriginalBox()->remPanel(panel);
   box->addPanel(panel, pos);
@@ -121,7 +121,7 @@ void Environment::setFavoritePos(ToolPanel *panel, int pos)
 {
   panel->getFavoriteBox()->remPanel(panel->getFavoriteDummy());
   panel->getOriginalBox()->remPanel(panel);
-  printf("panel:%s box:%s \n", panel->getToolName().c_str(), panel->getOriginalBox()->getBoxName().c_str());
+//  printf("panel:%s box:%s \n", panel->getToolName().c_str(), panel->getOriginalBox()->getBoxName().c_str());
   if (pos > -1)
     panel->getFavoriteBox()->addPanel(panel, pos);
 }
@@ -292,10 +292,10 @@ void ToolPanel::moveUp () {
   ToolVBox* box;
 
   if (env->state == ENV_STATE_IN_FAV) {
-     printf("moveTop favorite - ");
+//     printf("moveTop favorite - ");
      box = favoriteBox;
   }else {
-     printf("moveTop nopefav  - ");
+//     printf("moveTop nopefav  - ");
      box = originalBox;
   }
   pos = box->getPos(this);
@@ -303,11 +303,11 @@ void ToolPanel::moveUp () {
   count = box->size();
 
   if (npos > -1){
-     printf("- realized.\n");
+//     printf("- realized.\n");
      box->reorder_child(*getExpander(), npos); 
      updateLabelInfo();
      box->getPanel(pos)->updateLabelInfo(); // since we swapped it's pos and not npos
-  }else  printf("- canceled.\n");
+  }//else  printf("- canceled.\n");
 }
 
 void ToolPanel::moveDown () { 
@@ -317,10 +317,10 @@ void ToolPanel::moveDown () {
   ToolVBox* box;
 
   if (env->state == ENV_STATE_IN_FAV) {
-     printf("moveDown favorite - ");
+//     printf("moveDown favorite - ");
      box = favoriteBox;
   }else {
-     printf("moveDown nopefav   - ");
+//     printf("moveDown nopefav   - ");
      box = originalBox;
   }
   pos = box->getPos(this);
@@ -328,11 +328,11 @@ void ToolPanel::moveDown () {
   count = box->size();
 
   if (npos < count-2){ // since there are two elements at the end...
-     printf("- realized.\n");
+//     printf("- realized.\n");
      box->reorder_child(*getExpander(), npos);     
      updateLabelInfo();
      box->getPanel(pos)->updateLabelInfo(); // since we swapped it's pos and not npos
-  }else  printf("- canceled.\n");
+  }//else  printf("- canceled.\n");
 
 }
 
@@ -342,7 +342,7 @@ void ToolPanel::moveLeft() {
 
   if (env->state == ENV_STATE_IN_NORM)
   {
-    printf("Moving %s from %s to %s \n", this->getToolName().c_str(), box->getBoxName().c_str(), nbox->getBoxName().c_str());
+//    printf("Moving %s from %s to %s \n", this->getToolName().c_str(), box->getBoxName().c_str(), nbox->getBoxName().c_str());
 
     //getting the page number where the object will be moved 
     Gtk::Notebook* notebook = (Gtk::Notebook*)nbox->getParent();
@@ -363,7 +363,7 @@ void ToolPanel::moveLeft() {
     else
       nbox->reorder_child(*this->getExpander(), nbox->size()-1);
 
-    printf("page %i \n" , page_num);
+//    printf("page %i \n" , page_num);
 
     // the original box is changed
     this->originalBox = nbox;
@@ -384,7 +384,7 @@ void ToolPanel::moveRight() {
 
   if (env->state == ENV_STATE_IN_NORM)
   {
-    printf("Moving %s from %s to %s \n", this->getToolName().c_str(), box->getBoxName().c_str(), nbox->getBoxName().c_str());
+ //   printf("Moving %s from %s to %s \n", this->getToolName().c_str(), box->getBoxName().c_str(), nbox->getBoxName().c_str());
 
     //getting the page number where the object will be moved 
     Gtk::Notebook* notebook = (Gtk::Notebook*) nbox->getParent();
@@ -406,7 +406,7 @@ void ToolPanel::moveRight() {
       nbox->reorder_child(*this->getExpander(), nbox->size()-1);
       
 
-    printf("page %i \n" , page_num);
+//    printf("page %i \n" , page_num);
 
     // the original box is changed
     this->originalBox = nbox;

@@ -81,7 +81,7 @@ void TTSaver::deploy()
     if (it != entries.end())
     {
       int index= std::distance(entries.begin(), it);
-      printf("autoloading index=%i \n" ,index);
+//      printf("autoloading index=%i \n" ,index);
       profilbox->set_active(index);
     }
   }
@@ -112,9 +112,9 @@ void TTSaver::profileBoxChanged()
    Glib::ustring filename =  profilbox->get_active_text() + paramFileGuiExtension;
    int row = profilbox->get_active_row_number();
    Glib::ustring fname = entries[row];
-   printf("preparing to load Filename : %s - %s\n", filename.c_str(), fname.c_str());
+//   printf("preparing to load Filename : %s - %s\n", filename.c_str(), fname.c_str());
    load_profile(fname);
-   printf("Loaded Filename : %s - %s\n", filename.c_str(), fname.c_str());
+   printf("Loaded ttp profile : %s - %s\n", filename.c_str(), fname.c_str());
 }
 
 void TTSaver::parseProfileFolder()
@@ -122,8 +122,8 @@ void TTSaver::parseProfileFolder()
    Glib::ustring p1 = options.getUserProfilePath();
    Glib::ustring p2 = options.getGlobalProfilePath();
 
-   printf("p1=%s \n",p1.c_str());
-   printf("p2=%s \n",p2.c_str());
+//   printf("p1=%s \n",p1.c_str());
+//   printf("p2=%s \n",p2.c_str());
     
    Glib::ustring realPath;
    Glib::ustring currDir;
@@ -160,13 +160,12 @@ void TTSaver::parseProfileFolder()
 
                 if (lastdot != Glib::ustring::npos && lastdot <= currDir.size() - 4 && !currDir.casefold().compare (lastdot, 4, paramFileGuiExtension)) {
                     // file found
-                    printf ("ttp profile detected %s...", fname.c_str());
                     if( options.rtSettings.verbose ) {
                         printf ("ttp profile detected %s...", fname.c_str());
                     }
 
                     Glib::ustring name = currDir.substr(0, lastdot);
-                    printf("name=%s\n",name.c_str());
+//                    printf("name=%s\n",name.c_str());
                     profilbox->append_text(name);
                     entries.push_back(fname);
 
@@ -216,7 +215,7 @@ void TTSaver::themeSplitter(std::ifstream& myfile)
     std::string currentToken = "";
     std::istringstream tokensplitter(line);
     std::string token;
-    printf("parsing line: %s\n", line.c_str());
+//    printf("parsing line: %s\n", line.c_str());
 
     if (getline(tokensplitter, token, ':'))
     {
@@ -235,7 +234,7 @@ void TTSaver::themeSplitter(std::ifstream& myfile)
         {
           if (p->getToolName() == currentToken )
           { 
-            printf("Invoking themeImport on %s for %s\n",currentToken.c_str(),line.c_str());
+//            printf("Invoking themeImport on %s for %s\n",currentToken.c_str(),line.c_str());
             myfile.seekg(position);
             p->themeImport(myfile);
           }
@@ -278,7 +277,7 @@ void TTSaver::load_profile(Glib::ustring filename)
 void TTSaver::save_profile(Glib::ustring filename)
 {
   Glib::ustring lines = "";
-  printf("parsing toolPanels \n");
+//  printf("parsing toolPanels \n");
 
   std::vector<ToolPanel*> panels = env->getPanels();
   for (size_t i=0; i<panels.size(); i++)
@@ -461,7 +460,7 @@ void TTSaver::themeImport(std::ifstream& myfile)
 
     std::istringstream tokensplitter(line);
     std::string token;
-    printf("parsing line: %s\n", line.c_str());
+//    printf("parsing line: %s\n", line.c_str());
     if (getline(tokensplitter, token, ':'))
     {
    //     printf("%s\n", token.c_str());
@@ -473,7 +472,7 @@ void TTSaver::themeImport(std::ifstream& myfile)
           {
             while(getline(tokensplitter, token, ' '))
             { 
-              printf("f(%s)\n", token.c_str());
+//              printf("f(%s)\n", token.c_str());
               favoriteItems.push_back(token);
             }
           }
@@ -482,7 +481,7 @@ void TTSaver::themeImport(std::ifstream& myfile)
           {
             while(getline(tokensplitter, token, ' '))
             {
-              printf("(%s)\n", token.c_str());
+//              printf("(%s)\n", token.c_str());
               normalItems.push_back(token);
             }
           }
@@ -491,7 +490,7 @@ void TTSaver::themeImport(std::ifstream& myfile)
           { 
             while(getline(tokensplitter, token, ' '))
             {
-              printf("t(%s)\n", token.c_str());
+//              printf("t(%s)\n", token.c_str());
               trashItems.push_back(token);
             }
           }
@@ -534,16 +533,16 @@ void TTSaver::themeImport(std::ifstream& myfile)
     std::string spos;
     if (getline(tokensplitter, fname, '('))
     {
-      printf("act on:%s\n", fname.c_str());
+ //     printf("act on:%s\n", fname.c_str());
       
       if (getline(tokensplitter, vname, ':'))
       {
-        printf("of: :%s\n", vname.c_str());
+//        printf("of: :%s\n", vname.c_str());
 
         if (getline(tokensplitter, spos, ')'))
         {
           int pos =  atoi(spos.c_str());
-          printf("pos: :%i\n", pos);
+//          printf("pos: :%i\n", pos);
           mapVBox[vname]->addPanel(map[fname],pos);
           map[fname]->setOriginalBox(mapVBox[vname]);
         }
@@ -555,7 +554,7 @@ void TTSaver::themeImport(std::ifstream& myfile)
   for (size_t i=0; i<favoriteItems.size(); i++)
   {
     map[favoriteItems.at(i)]->getFavoriteButton()->set_active(true);
-    printf("favorite:%s at:%i \n",map[favoriteItems.at(i)]->getToolName().c_str(), i);
+ //   printf("favorite:%s at:%i \n",map[favoriteItems.at(i)]->getToolName().c_str(), i);
     if (map.count( map[favoriteItems.at(i)]->getOriginalBox()->getBoxName())>0)
     {
       //  hack : when the panel is in a collapsed container, 
