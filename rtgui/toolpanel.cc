@@ -27,6 +27,7 @@ using namespace rtengine::procparams;
 // todo: use another faster implementation relying on a map.
 ToolPanel* Environment::getPanel(Glib::ustring name)
 {
+  printf("call to a potentially slow method : getPanel of Environement\n");
   for (size_t i=0; i<toolPanels.size(); i++)
    {
       FoldableToolPanel* p = static_cast<FoldableToolPanel*> (toolPanels[i]);
@@ -153,21 +154,9 @@ int ToolCounter::getPos(ToolPanel* panel) {
 }
 
 ToolPanel* ToolCounter::getPanel(int pos) {
-//todo: faster implementation needed
-/// in the old code it was
  panelList = box->get_children ();
  ToolPanel* p = (ToolPanel*) ((MyExpander*)panelList[pos])->getPanel();
    return p;
-/*
-    size_t i;
-    for (i=0; i<envTC->countPanel();i++)
-      if (panelList.at(pos) == envTC->getPanel(i)->getExpander())
-        return envTC->getPanel(i);
-
-     printf("returning NULL when searching for panel at pos=%i", pos);
-       return NULL;
-*/
-}
 
 // we initiate the nextBox too sinec it's circular
 void ToolCounter::setPrevBox(Gtk::VBox* _box) {
@@ -257,7 +246,6 @@ void ToolParamBlock::on_style_changed (const Glib::RefPtr<Gtk::Style>& style)
 }
 
 void ToolPanel::updateLabelInfo() {
- //todo: check
  if ((this->getExpander() != NULL)
   && ((!this->canBeIgnored()))) {
 
@@ -912,17 +900,10 @@ void FoldableToolPanel::setEnabledTooltipText(Glib::ustring tooltipText)
     }
 }
 
-void FoldableToolPanel::deploy() {
-//todo: check that this method should be called or not.
-//  labelWidget->set_markup(Glib::ustring("<b>") + uilabel + Glib::ustring("</b>"));
+void FoldableToolPanel::deploy() 
+{
+// the empty implementation has to stay even if the method is empty because of linking issue if the implementation is in the .h include.
 
-//  if (need100Percent){
-//    RTImage *image = Gtk::manage (new RTImage("zoom-100-identifier.png"));
-//    image->set_tooltip_text(M("TP_GENERAL_11SCALE_TOOLTIP"));
-//    labelBox->pack_end(*image, false, false, 0);
-//  }
- // exp->set_label_widget(*hbox);
- // exp->set_label_fill();
 }
 void FoldableToolPanel::deployLate()
 {
