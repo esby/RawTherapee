@@ -210,7 +210,7 @@ void TTSaver::themeSplitter(std::ifstream& myfile)
   while (condition)
   {
     int position = myfile.tellg();
-    condition = static_cast<bool> getline (myfile,line);
+    condition = static_cast<bool> (getline (myfile,line));
 
     std::string currentToken = "";
     std::istringstream tokensplitter(line);
@@ -456,7 +456,7 @@ void TTSaver::themeImport(std::ifstream& myfile)
   while (condition)
   {
     int position = myfile.tellg();
-    condition = static_cast<bool> getline (myfile,line);
+    condition = static_cast<bool> (getline (myfile,line));
 
     std::istringstream tokensplitter(line);
     std::string token;
