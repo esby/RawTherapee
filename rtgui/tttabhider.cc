@@ -120,16 +120,6 @@ TTTabHider::TTTabHider () : FoldableToolPanel(this,"tttabhider",M("TP_THEMETOOL_
 void TTTabHider::deploy()
 {
   getExpander()->signal_enabled_toggled().connect(sigc::mem_fun(this, &TTTabHider::enabledChanged));
-  cbHideFavorite->signal_clicked().connect( sigc::mem_fun(this, &TTTabHider::hide_favorite_clicked));
-  cbHideExposure->signal_clicked().connect( sigc::mem_fun(this, &TTTabHider::hide_exposure_clicked));
-  cbHideDetails->signal_clicked().connect( sigc::mem_fun(this, &TTTabHider::hide_details_clicked));
-  cbHideColor->signal_clicked().connect( sigc::mem_fun(this, &TTTabHider::hide_color_clicked));
-  cbHideWavelet->signal_clicked().connect( sigc::mem_fun(this, &TTTabHider::hide_wavelet_clicked));
-  cbHideTransform->signal_clicked().connect( sigc::mem_fun(this, &TTTabHider::hide_transform_clicked));
-  cbHideRaw->signal_clicked().connect( sigc::mem_fun(this, &TTTabHider::hide_raw_clicked));
-  cbHideMetadata->signal_clicked().connect( sigc::mem_fun(this, &TTTabHider::hide_metadata_clicked));
-  cbHideUseful->signal_clicked().connect( sigc::mem_fun(this, &TTTabHider::hide_useful_clicked));
-  cbHideTrash->signal_clicked().connect( sigc::mem_fun(this, &TTTabHider::hide_trash_clicked));
 
   cbHideFavorite->set_active (options.TTPHideFavorite);
   cbHideExposure->set_active (options.TTPHideExposure);
@@ -140,6 +130,17 @@ void TTTabHider::deploy()
   cbHideRaw->set_active (options.TTPHideRaw);
   cbHideMetadata->set_active (options.TTPHideMetadata);
   cbHideUseful->set_active (options.TTPHideUseful);
+
+  cbHideFavorite->signal_clicked().connect( sigc::mem_fun(this, &TTTabHider::hide_favorite_clicked));
+  cbHideExposure->signal_clicked().connect( sigc::mem_fun(this, &TTTabHider::hide_exposure_clicked));
+  cbHideDetails->signal_clicked().connect( sigc::mem_fun(this, &TTTabHider::hide_details_clicked));
+  cbHideColor->signal_clicked().connect( sigc::mem_fun(this, &TTTabHider::hide_color_clicked));
+  cbHideWavelet->signal_clicked().connect( sigc::mem_fun(this, &TTTabHider::hide_wavelet_clicked));
+  cbHideTransform->signal_clicked().connect( sigc::mem_fun(this, &TTTabHider::hide_transform_clicked));
+  cbHideRaw->signal_clicked().connect( sigc::mem_fun(this, &TTTabHider::hide_raw_clicked));
+  cbHideMetadata->signal_clicked().connect( sigc::mem_fun(this, &TTTabHider::hide_metadata_clicked));
+  cbHideUseful->signal_clicked().connect( sigc::mem_fun(this, &TTTabHider::hide_useful_clicked));
+  cbHideTrash->signal_clicked().connect( sigc::mem_fun(this, &TTTabHider::hide_trash_clicked));
 
   buttonSave->signal_button_release_event().connect_notify( sigc::mem_fun(*this, &TTTabHider::save_clicked) );
 }
@@ -198,7 +199,8 @@ void TTTabHider::hide_color_clicked ()
 }
 
 void TTTabHider::hide_wavelet_clicked ()
-{ printf("hiding wavelet\n"); 
+{ 
+//  printf("hiding wavelet\n"); 
   env->getToolPanelNotebook()->get_nth_page(4)->set_visible(not cbHideWavelet->get_active() );
   options.TTPHideWavelet = cbHideWavelet->get_active();
 }
@@ -301,7 +303,7 @@ void TTTabHider::themeImport(std::ifstream& myfile)
 
     std::istringstream tokensplitter(line);
     std::string token;
-    printf("parsing line: %s\n", line.c_str());
+ //   printf("parsing line: %s\n", line.c_str());
     if (getline(tokensplitter, token, ':'))
     {
       if (token == getToolName())
