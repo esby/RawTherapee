@@ -31,7 +31,7 @@ using namespace rtengine::procparams;
 void ToolPanelCoordinator::on_notebook_switch_page(GtkNotebookPage* page, guint page_num){
 
     if (env->disableSwitchPageReaction)
-      exit;
+      return;
 
     env->prevState = env->state;
      
