@@ -299,7 +299,7 @@ void TTTabHider::themeImport(std::ifstream& myfile)
   while (condition)
   {
     int position = myfile.tellg();
-    condition = (bool) getline (myfile,line);
+    condition = static_cast<bool> getline (myfile,line);
 
     std::istringstream tokensplitter(line);
     std::string token;
