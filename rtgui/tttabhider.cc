@@ -146,7 +146,6 @@ void TTTabHider::deploy()
 
 void TTTabHider::deployLate()
 {
-  hide_exposure_clicked();
   hide_favorite_clicked ();
   hide_exposure_clicked ();
   hide_details_clicked ();
