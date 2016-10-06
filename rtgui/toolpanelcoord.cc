@@ -56,9 +56,14 @@ void ToolPanelCoordinator::on_notebook_switch_page(GtkNotebookPage* page, guint 
    if (!((env->state == env->prevState)
     && (env->state != ENV_STATE_IN_NORM)))
    {
- 
+
+     printf("before favorite_other_tabs group calledl\n");
+     // todo: fix the performance issue.
+     // most of the time is spend on this loop
+     // there is probably an optimization that needs to be performed at some point.
      for (size_t i=0; i<env->countPanel(); i++)
          env->getPanel(i)->favorite_others_tabs_switch();
+     printf("after favorite_other_tabs group called\n");
 
     //putting the ending panels and separator to the end
     for (int i=0; i< NB_PANEL; i++){
@@ -73,6 +78,8 @@ void ToolPanelCoordinator::on_notebook_switch_page(GtkNotebookPage* page, guint 
     // updating the label info (currently the position number)
     for (size_t i=0; i<env->countPanel(); i++)
        env->getPanel(i)->updateLabelInfo();
+    printf("after label info update\n");
+
 }
 
 
