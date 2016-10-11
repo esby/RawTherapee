@@ -141,16 +141,15 @@ int ToolCounter::size() {
              return panelList.size ();
 }
 
-//todo use another (faster) implementation 
 int ToolCounter::getPos(ToolPanel* panel) {
-           panelList = box->get_children ();
-           size_t i;
-           for (i=0; i<panelList.size() && panelList.at(i) != panel->getExpander(); i++);
-           if (i==panelList.size()) {
-             return -1;
-           } else {
-             return i;
-           }
+
+  panelList = box->get_children ();
+  Gtk::Widget *w = panel->getExpander();
+  auto it = std::find(panelList.begin(), panelList.end(), w);
+  if (it == panelList.end())
+    return -1;
+  else
+    return  std::distance(panelList.begin(), it);
 }
 
 ToolPanel* ToolCounter::getPanel(int pos) {
