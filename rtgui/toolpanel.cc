@@ -488,161 +488,151 @@ int  ToolPanel::getPosTra()
 }
 
 
-void ToolPanel::favorite_others_tabs_switch() {
+void ToolPanel::favorite_others_tabs_switch(int dc) 
+{
 
-  if ((this->getExpander() != NULL) 
-  && ((!this->canBeIgnored()))) {
+  if ((this->getExpander() != NULL)
+    && ((!this->canBeIgnored())))
+  {
 
-    int dc=0;
-    if (env->prevState == ENV_STATE_IN_FAV) dc+= 10;
-    if (env->prevState == ENV_STATE_IN_TRASH) dc+= 30;
-    if (env->prevState == ENV_STATE_IN_NORM) dc+= 20;
-
-    if (env->state == ENV_STATE_IN_FAV) dc+= 1;
-    if (env->state == ENV_STATE_IN_TRASH) dc+= 3;
-    if (env->state == ENV_STATE_IN_NORM) dc+= 2;
-
+    // dc determine the tabs that was displayed before the tab switch
+    // 11 for favorite to favorite tabs.
+    // 12 for favorite to normal tabs.
+    // 13 for favorite to trash tabs.
+    // 21 for normal to favorite tabs.
+    // 22 n -> n
+    // 23 n -> t
+    // 31 t -> f
+    // 32 t -> n
+    // 33 t -> t
 
     int posOri = getPosOri();
     int posFav = getPosFav();
     int posTra = getPosTra();
-//    printf("dc=%i\n",dc);
+    //    printf("dc=%i\n",dc);
 
     // handling all the possible cases
-    if (dc == 11) // fav to fav
-    { 
-       //we do nothing
-    }
-    if (dc == 12) // Fav to normal
-    {  
- //      favoriteBox->remPanel(this);
-       if (favoriteButton->get_active())
-       {
+    switch(dc)
+    {
+      case 11:                   // fav to fav
+        //we do nothing
+        break;
+      case 12:                   // fav to normal
+        if (favoriteButton->get_active())
+        {
           if (trashButton->get_active())
           {
-             moveToTrash(posFav,posOri);
+            moveToTrash(posFav,posOri);
           }
           else
           {
-             moveToOriginal(posFav,posOri);
-          }
-       }
-       else 
-       { 
-         if (trashButton->get_active())
-         {
-            moveToTrash(posFav,posOri);
-         }
-         else
-         {
             moveToOriginal(posFav,posOri);
-         }
-       }
-    }
-
-    if (dc == 13)  // fav to trash
-    {
+          }
+        }
+        else
+        {
+          if (trashButton->get_active())
+          {
+            moveToTrash(posFav,posOri);
+          }
+          else
+          {
+            moveToOriginal(posFav,posOri);
+          }
+        }
+        break;
+      case 13:                   // fav to trash
         if (favoriteButton->get_active())
-       {
+        {
           if(trashButton->get_active())
           {
-             moveToTrash(posFav,posOri);
+            moveToTrash(posFav,posOri);
           }
           else
           {
-             moveToOriginal(posFav,posOri);
+            moveToOriginal(posFav,posOri);
           }
-  
-       }
-       else
-       {
-        if(trashButton->get_active())
+
+        }
+        else
+        {
+          if(trashButton->get_active())
           {
-             moveToTrash(posFav,posOri);
+            moveToTrash(posFav,posOri);
           }
           else
           {
-             moveToOriginal(posFav,posOri);
+            moveToOriginal(posFav,posOri);
           }
-       }
-    }
-
-    if (dc == 21) // normal -> favorite
-    {
-    
-       if (favoriteButton->get_active())
-       {
-         moveToFavorite(posFav,posOri);
-       }
-       else
-       {
-         moveToOriginal(posFav, posOri);
-       }
-
-    }
-    if (dc == 22) // normal -> normal 
-    { // 
-      if (trashButton->get_active())
-      {
-         moveToTrash(posFav,posOri);
-      }
-      else 
-      {
-         moveToOriginal(posFav,posOri);
-      } 
-    }
-
-    if (dc == 23) // normal -> trash
-    { 
-      if (trashButton->get_active())
-      {
-        moveToTrash(posFav,posOri);
-      }
-      else // resume check here
-      {
-        moveToOriginal(posFav, posOri);
-      }
-
-    }
-
-     if (dc == 31) // trash -> favorite
-    {
-      
-       if (trashButton->get_active())
-       {
-         if (favoriteButton->get_active())
-         {
-           moveToFavorite(posFav,posOri);
-         }
-         else
-         {
-           moveToOriginal(posFav,posOri);
-         }
-       }
-       else // not trash
-       {   
+        }
+        break;
+      case 21:                   // normal to favorite
         if (favoriteButton->get_active())
-         {
-           moveToFavorite(posFav,posOri);
-         }
-         else
-         {
-           moveToOriginal(posFav,posOri);
-         }
-       }
-    }
-    if (dc == 32) // trash -> normal
-    {
+        {
+          moveToFavorite(posFav,posOri);
+        }
+        else
+        {
+          moveToOriginal(posFav, posOri);
+        }
+        break;
 
-       if (!trashButton->get_active())
-       {
-         moveToOriginal(posFav,posOri);
-       }
-    }
+      case 22:                   // normal to normal
+        if (trashButton->get_active())
+        {
+          moveToTrash(posFav,posOri);
+        }
+        else
+        {
+          moveToOriginal(posFav,posOri);
+        }
+        break;
 
-    if (dc == 33) // trash -> trash - nothing to be done
-    {
+      case 23:                   // normal -> trash
+        if (trashButton->get_active())
+        {
+          moveToTrash(posFav,posOri);
+        }
+        else                     // resume check here
+        {
+          moveToOriginal(posFav, posOri);
+        }
+        break;
 
+      case 31:                   // trash -> favorite
+        if (trashButton->get_active())
+        {
+          if (favoriteButton->get_active())
+          {
+            moveToFavorite(posFav,posOri);
+          }
+          else
+          {
+            moveToOriginal(posFav,posOri);
+          }
+        }
+        else                     // not trash
+        {
+          if (favoriteButton->get_active())
+          {
+            moveToFavorite(posFav,posOri);
+          }
+          else
+          {
+            moveToOriginal(posFav,posOri);
+          }
+        }
+        break;
+
+      case 32:                   // trash -> normal
+        if (!trashButton->get_active())
+        {
+          moveToOriginal(posFav,posOri);
+        }
+        break;
+
+      case 33:                   // trash -> trash - nothing to be done
+        break;
     }
   }
 }

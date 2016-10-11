@@ -61,8 +61,29 @@ void ToolPanelCoordinator::on_notebook_switch_page(GtkNotebookPage* page, guint 
      // todo: fix the performance issue.
      // most of the time is spend on this loop
      // there is probably an optimization that needs to be performed at some point.
+
+   // dc determine the tabs that was displayed before the tab switch 
+    // 11 for favorite to favorite tabs.
+    // 12 for favorite to normal tabs.
+    // 13 for favorite to trash tabs.
+    // 21 for normal to favorite tabs.
+    // 22 n -> n
+    // 23 n -> t
+    // 31 t -> f
+    // 32 t -> n
+    // 33 t -> t
+
+    int dc=0;
+    if (env->prevState == ENV_STATE_IN_FAV) dc+= 10;
+    if (env->prevState == ENV_STATE_IN_TRASH) dc+= 30;
+    if (env->prevState == ENV_STATE_IN_NORM) dc+= 20;
+
+    if (env->state == ENV_STATE_IN_FAV) dc+= 1;
+    if (env->state == ENV_STATE_IN_TRASH) dc+= 3;
+    if (env->state == ENV_STATE_IN_NORM) dc+= 2;
+
      for (size_t i=0; i<env->countPanel(); i++)
-         env->getPanel(i)->favorite_others_tabs_switch();
+         env->getPanel(i)->favorite_others_tabs_switch(dc);
      printf("after favorite_other_tabs group called\n");
 
     //putting the ending panels and separator to the end
