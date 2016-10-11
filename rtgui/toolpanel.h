@@ -188,6 +188,11 @@ protected:
     bool batchMode;  // True if the ToolPanel is used in Batch mode
     bool multiImage; // True if more than one image are being edited at the same time (also imply that batchMode=true), false otherwise
     bool need100Percent;
+    // 0 for favorite tabs.
+    // 1 for normal tabs.
+    // 2 for trash tabs.
+    // this integer should be used to speed-up moveTo() methods that are not necessary.
+    int location;
 
     ToolVBox* originalBox;
     ToolVBox* favoriteBox;
@@ -225,6 +230,7 @@ public:
     ToolPanel (Glib::ustring toolName = "", bool need11 = false) : toolName(toolName), listener(NULL), tmp(NULL), batchMode(false), multiImage(false), need100Percent(need11) 
     { 
           labelBox = NULL;
+          location = 1; // normal panel location
     }
     virtual ~ToolPanel() {}
 

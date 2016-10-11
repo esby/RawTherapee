@@ -438,26 +438,38 @@ void ToolPanel::cleanBox() {
 
 void ToolPanel::moveToFavorite(int posFav, int posOri)
 {
-  cleanBox();
-  originalBox->addPanel(originalDummy,posOri);
-  favoriteBox->addPanel(this, posFav);
+  if (location != 0)
+  {
+    cleanBox();
+    originalBox->addPanel(originalDummy,posOri);
+    favoriteBox->addPanel(this, posFav);
+    location = 0;
+  }
 }
 
 void ToolPanel::moveToOriginal(int posFav, int posOri)
 {
-  cleanBox();
-  if (posFav > -1)
-    favoriteBox->addPanel(favoriteDummy,posFav);
-  originalBox->addPanel(this, posOri);
+  if (location != 1)
+  {
+    cleanBox();
+    if (posFav > -1)
+      favoriteBox->addPanel(favoriteDummy,posFav);
+    originalBox->addPanel(this, posOri);
+    location = 1;
+  }
 }
 
 void ToolPanel::moveToTrash(int posFav, int posOri)
 {
-  cleanBox();
-  if (posFav>-1)
-    favoriteBox->addPanel(favoriteDummy,posFav);
-  originalBox->addPanel(originalDummy,posOri);
-  trashBox->addPanel(this, -1); // there is no pos saved for this one
+ if (location != 2)
+  {
+    cleanBox();
+    if (posFav>-1)
+      favoriteBox->addPanel(favoriteDummy,posFav);
+    originalBox->addPanel(originalDummy,posOri);
+    trashBox->addPanel(this, -1); // there is no pos saved for this one
+    location =2;
+  }
 }
 
 int  ToolPanel::getPosOri()
