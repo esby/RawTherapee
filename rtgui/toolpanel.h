@@ -326,7 +326,7 @@ public:
     }
 
     Glib::ustring getThemeInfo ();
-    void favorite_others_tabs_switch();
+    void favorite_others_tabs_switch(int dc);
     void initVBox(ToolVBox* _originalBox, ToolVBox* _favoriteBox, ToolVBox* _trashBox, Environment* _env);
     void on_toggle_button_favorite();
     void on_toggle_button_trash();
