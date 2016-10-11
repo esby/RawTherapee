@@ -130,6 +130,7 @@ void TTTabHider::deploy()
   cbHideRaw->set_active (options.TTPHideRaw);
   cbHideMetadata->set_active (options.TTPHideMetadata);
   cbHideUseful->set_active (options.TTPHideUseful);
+  cbHideTrash->set_active (options.TTPHideTrash);
 
   cbHideFavorite->signal_clicked().connect( sigc::mem_fun(this, &TTTabHider::hide_favorite_clicked));
   cbHideExposure->signal_clicked().connect( sigc::mem_fun(this, &TTTabHider::hide_exposure_clicked));
