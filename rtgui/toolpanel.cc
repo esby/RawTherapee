@@ -199,7 +199,8 @@ void ToolCounter::addPanel(ToolPanel* t, int pos)
   {
 //    printf("adding Panel: %s to %s \n", t->getToolName().c_str(), this->getBoxName().c_str());
     v->pack_start(*exp, false,false);
-    v->reorder_child(*exp, pos);
+    if (pos !=-1)
+      v->reorder_child(*exp, pos);
   }
 }
 
@@ -428,6 +429,7 @@ void ToolPanel::on_toggle_button_trash() {
 
 
 void ToolPanel::cleanBox() {
+  location = -1;
   favoriteBox->remPanel(favoriteDummy);
   originalBox->remPanel(originalDummy);
   favoriteBox->remPanel(this);

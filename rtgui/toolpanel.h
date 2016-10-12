@@ -222,10 +222,11 @@ protected:
 
 
     virtual void moveToFavorite(int posFav, int posOri);
-    virtual void moveToOriginal(int posFav, int posOri);
     virtual void moveToTrash(int posFav, int posOri);
 
 public:
+
+    virtual void moveToOriginal(int posFav, int posOri);
 
     ToolPanel (Glib::ustring toolName = "", bool need11 = false) : toolName(toolName), listener(NULL), tmp(NULL), batchMode(false), multiImage(false), need100Percent(need11) 
     { 
@@ -292,13 +293,16 @@ public:
 
    
     virtual void                 deploy()       {} // used to handle post constructor steps.
-    virtual void        deployLate() {} // used to handle post operations in a later way than deploy
+    virtual void        deployLate() {} // used to handle post operations in a later way than deploy.
 
     void                setToolName(Glib::ustring _name) { toolName = _name; }
     Glib::ustring               getToolName() { return toolName; } 
   
     void                setNeed100Percent(bool b) { need100Percent = b; }
     bool                getNeed100Percent() { return need100Percent; }
+
+    virtual int getLocation() {return location;}
+    int setLocation(int _location) { location = _location;}
 
     /** @brief Disable the event broadcasting mechanism
      *
