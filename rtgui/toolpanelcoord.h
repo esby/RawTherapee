@@ -84,6 +84,7 @@
 #include "ttpanelcolorer.h"
 #include "ttudlrhider.h"
 #include "tttabhider.h"
+#include "ttautodistortionclicker.h"
 
 //defining the number of panels for once.
 #define NB_PANEL 9
@@ -258,6 +259,7 @@ public:
 
     void doDeploy();
     void doDeployLate();
+    void doReact();
 
     // toolpanellistener interface
     void panelChanged   (rtengine::ProcEvent event, const Glib::ustring& descr);

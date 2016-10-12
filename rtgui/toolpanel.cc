@@ -909,8 +909,15 @@ void FoldableToolPanel::deploy()
 // the empty implementation has to stay even if the method is empty because of linking issue if the implementation is in the .h include.
 
 }
+
 void FoldableToolPanel::deployLate()
 {
+// same remark as deploy()
+}
+
+void FoldableToolPanel::react()
+{
+// same remark as deploy()
 }
 
 DummyToolPanel::DummyToolPanel(Glib::ustring name, Environment* _env) : FoldableToolPanel(this,name,name,false,true)
