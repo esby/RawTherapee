@@ -28,7 +28,7 @@ using namespace rtengine;
 using namespace rtengine::procparams;
 
 
-TTSaver::TTSaver () : FoldableToolPanel(this,"ttsaver",M("TP_THEMETOOL_LABEL"),false,true)
+TTSaver::TTSaver () : FoldableToolPanel(this,"ttsaver",M("TP_THEMETOOL_LABEL"),false,false)
 {
 	themeBox1 = Gtk::manage(new Gtk::HBox());
 	themeBox1->set_spacing(4);
@@ -543,13 +543,19 @@ void TTSaver::themeImport(std::ifstream& myfile)
         {
           int pos =  atoi(spos.c_str());
 //          printf("pos: :%i\n", pos);
-          mapVBox[vname]->addPanel(map[fname],pos);
-          map[fname]->setOriginalBox(mapVBox[vname]);
+          // if a panel is not defined anymore.
+          // either the name got changed or the user used an older version.
+          if (map[fname])
+          {
+            mapVBox[vname]->addPanel(map[fname],pos);
+            map[fname]->setOriginalBox(mapVBox[vname]);
+          }
         }
       }
     }
   }
 
+  //todo: there might be a bug with panel not existing
   // initializing favorite status
   for (size_t i=0; i<favoriteItems.size(); i++)
   {
@@ -568,6 +574,7 @@ if (map[favoriteItems.at(i)]->getOriginalBox()->getBoxName() != "favoritePanel" 
     env->setFavoritePos( map[favoriteItems.at(i)], i);
   }
 
+  //todo: there might be a bug with panel not existing
  // initializing trash status
   for (size_t i=0; i<trashItems.size(); i++)
   {
