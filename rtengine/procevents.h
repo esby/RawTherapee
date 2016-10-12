@@ -28,7 +28,7 @@ namespace rtengine
 // Aligned so the first entry starts on line 30
 enum ProcEvent {
     EvPhotoLoaded = 0,
-    EvProfileLoaded = 1,
+    EvProfileLoaded = 1, // seems superseded by EvProfileChanged
     EvProfileChanged = 2,
     EvHistoryBrowsed = 3,
     EvBrightness = 4,
