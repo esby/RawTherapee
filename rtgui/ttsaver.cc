@@ -549,6 +549,7 @@ void TTSaver::themeImport(std::ifstream& myfile)
           {
             mapVBox[vname]->addPanel(map[fname],pos);
             map[fname]->setOriginalBox(mapVBox[vname]);
+            map[fname]->setLocation(1);// 1 is for normal panel.
           }
         }
       }
@@ -580,5 +581,21 @@ if (map[favoriteItems.at(i)]->getOriginalBox()->getBoxName() != "favoritePanel" 
   {
     map[trashItems.at(i)]->getTrashButton()->set_active(true);
   }
+
+  // getting panels that were not displayed at all. could be caused by loading an other ttp profile coupled with cleanBox call.
+  
+  for (size_t i=0; i< env->countPanel() ; i++)
+   {
+      FoldableToolPanel* p = static_cast<FoldableToolPanel*> (env->getPanel(i));
+      if ( (p != NULL)
+      && (!(p->canBeIgnored()))
+      && (p->getLocation() ==-1))
+      {
+        if (options.rtSettings.verbose)
+          printf("panel %s has a non correct location - it is probably absent from the ttp profile - correcting this\n", p->getToolName().c_str());
+        p->moveToOriginal(-1,-1);
+      }
+  }
+
 
 }
