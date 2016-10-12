@@ -556,9 +556,9 @@ void TTSaver::themeImport(std::ifstream& myfile)
     }
   }
 
-  //todo: there might be a bug with panel not existing
   // initializing favorite status
   for (size_t i=0; i<favoriteItems.size(); i++)
+  if (map[favoriteItems.at(i)])
   {
     map[favoriteItems.at(i)]->getFavoriteButton()->set_active(true);
  //   printf("favorite:%s at:%i \n",map[favoriteItems.at(i)]->getToolName().c_str(), i);
@@ -575,11 +575,11 @@ if (map[favoriteItems.at(i)]->getOriginalBox()->getBoxName() != "favoritePanel" 
     env->setFavoritePos( map[favoriteItems.at(i)], i);
   }
 
-  //todo: there might be a bug with panel not existing
  // initializing trash status
   for (size_t i=0; i<trashItems.size(); i++)
   {
-    map[trashItems.at(i)]->getTrashButton()->set_active(true);
+    if (map[trashItems.at(i)])
+      map[trashItems.at(i)]->getTrashButton()->set_active(true);
   }
 
   // getting panels that were not displayed at all. could be caused by loading an other ttp profile coupled with cleanBox call.
