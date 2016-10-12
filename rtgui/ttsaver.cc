@@ -545,7 +545,7 @@ void TTSaver::themeImport(std::ifstream& myfile)
 //          printf("pos: :%i\n", pos);
           // if a panel is not defined anymore.
           // either the name got changed or the user used an older version.
-          if (map[fname])
+          if ((map[fname]) && (mapVBox[vname]))
           {
             mapVBox[vname]->addPanel(map[fname],pos);
             map[fname]->setOriginalBox(mapVBox[vname]);
