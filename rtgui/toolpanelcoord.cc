@@ -34,21 +34,24 @@ void ToolPanelCoordinator::on_notebook_switch_page(GtkNotebookPage* page, guint 
       return;
 
     env->prevState = env->state;
-     
-    printf("notebook switch page");
+    if (options.rtSettings.verbose)     
+      printf("notebook switch page");
     if (toolPanelNotebook->get_current_page() == toolPanelNotebook->page_num(*favoritePanelSW))
     {
-       printf(" -> favorite panel\n");
+       if (options.rtSettings.verbose)
+         printf(" -> favorite panel\n");
        env->state = ENV_STATE_IN_FAV;      
     }
     else 
     if(toolPanelNotebook->get_current_page() == toolPanelNotebook->page_num(*trashPanelSW)) 
     {
-       printf(" -> trash panel\n");
+       if (options.rtSettings.verbose)
+         printf(" -> trash panel\n");
        env->state = ENV_STATE_IN_TRASH;
     }else
     {
-      printf(" -> normal panel\n");
+      if (options.rtSettings.verbose)
+        printf(" -> normal panel\n");
       env->state = ENV_STATE_IN_NORM;
     }
 
@@ -57,7 +60,6 @@ void ToolPanelCoordinator::on_notebook_switch_page(GtkNotebookPage* page, guint 
     && (env->state != ENV_STATE_IN_NORM)))
    {
 
-     printf("before favorite_other_tabs group calledl\n");
      // todo: fix the performance issue.
      // most of the time is spend on this loop
      // there is probably an optimization that needs to be performed at some point.
@@ -84,7 +86,6 @@ void ToolPanelCoordinator::on_notebook_switch_page(GtkNotebookPage* page, guint 
 
      for (size_t i=0; i<env->countPanel(); i++)
          env->getPanel(i)->favorite_others_tabs_switch(dc);
-     printf("after favorite_other_tabs group called\n");
 
     //putting the ending panels and separator to the end
     for (int i=0; i< NB_PANEL; i++){
@@ -99,7 +100,6 @@ void ToolPanelCoordinator::on_notebook_switch_page(GtkNotebookPage* page, guint 
     // updating the label info (currently the position number)
     for (size_t i=0; i<env->countPanel(); i++)
        env->getPanel(i)->updateLabelInfo();
-    printf("after label info update\n");
 
 }
 
@@ -261,6 +261,8 @@ ToolPanelCoordinator::ToolPanelCoordinator () : ipc(NULL)
     env->registerPanel (usefulPanel, Gtk::manage (new TTFavoriteColorChooser()));
     env->registerPanel (usefulPanel, Gtk::manage (new TTPanelColorChooser()));
     env->registerPanel (usefulPanel, Gtk::manage (new TTUDLRHider()));
+    env->registerPanel (usefulPanel, Gtk::manage (new TTAutoDistortionClicker()));
+
 
 
     env->panelPushBack (coarse);
@@ -422,10 +424,21 @@ void ToolPanelCoordinator::doDeployLate()
 //      printf("panel nb=%i \n",  i);
       env->getPanel(i)->deployLate();
     }
-    printf("enabling switch page reaction\n");
     env->disableSwitchPageReaction = false;
 
 }
+
+void ToolPanelCoordinator::doReact()
+{
+     printf("enabling panel react\n");
+    for (size_t i=0; i<env->countPanel(); i++)
+    {
+//      printf("panel nb=%i \n",  i);
+      env->getPanel(i)->react();
+    }
+}
+
+
 /*
 //removed from the code
 void ToolPanelCoordinator::addPanel (Gtk::Box* where, FoldableToolPanel* panel)
