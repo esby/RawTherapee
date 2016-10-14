@@ -689,11 +689,11 @@ void ToolPanel::initVBox(ToolVBox* _originalBox, ToolVBox* _favoriteBox, ToolVBo
      favoriteBox = _favoriteBox;
      trashBox = _trashBox;
 
-     ToolParamBlock* t =  dynamic_cast<ToolParamBlock*> (this);
-     std::vector<Gtk::Widget*> panelList;
-     panelList = t->get_children ();
+//     ToolParamBlock* t =  dynamic_cast<ToolParamBlock*> (this);
+//     std::vector<Gtk::Widget*> panelList;
+//     panelList = t->get_children ();
 
-     Gtk::Box* b = getFUDLRBox(); //// adynamic_cast<Gtk::Box*> (panelList.at(0)); // hldr Box.
+ //    Gtk::Box* b = getFUDLRBox(); //// adynamic_cast<Gtk::Box*> (panelList.at(0)); // hldr Box.
 
      //enabledButtonRef = exp->
  //    return;
