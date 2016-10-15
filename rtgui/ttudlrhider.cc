@@ -119,13 +119,13 @@ void  TTUDLRHider::actOnPanel(ToolPanel* panel)
 
       if (cbLockFav->get_active())
       {
-//        panel->getFavoriteButton()->set_sensitive(false);
-//        panel->getTrashButton()->set_sensitive(false);
+        panel->getFavoriteButton()->set_sensitive(false);
+        panel->getTrashButton()->set_sensitive(false);
       }
       else
       {
-//        panel->getFavoriteButton()->set_sensitive(true);
-//        panel->getTrashButton()->set_sensitive(true);
+        panel->getFavoriteButton()->set_sensitive(true);
+        panel->getTrashButton()->set_sensitive(true);
       }
     }
     else
@@ -134,8 +134,8 @@ void  TTUDLRHider::actOnPanel(ToolPanel* panel)
       panel->getMoveLButton()->show();
       panel->getMoveUButton()->show();
       panel->getMoveDButton()->show();
-//      panel->getFavoriteButton()->set_sensitive(true);
-//      panel->getTrashButton()->set_sensitive(true);
+      panel->getFavoriteButton()->set_sensitive(true);
+      panel->getTrashButton()->set_sensitive(true);
     }
 
  
