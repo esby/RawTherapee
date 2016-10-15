@@ -66,14 +66,17 @@ void TTUDLRHider::deploy()
       }
    }*/
  //  enabledChanged();
-//  enabledChanged();
-
 
   // button enable / disable
    getExpander()->signal_enabled_toggled().connect(sigc::mem_fun(this, &TTUDLRHider::enabledChanged));
    cbLockFav->signal_toggled().connect( sigc::mem_fun(this, &TTUDLRHider::enabledChanged));
    cbHideArrow->signal_toggled().connect( sigc::mem_fun(this, &TTUDLRHider::enabledChanged));
 
+}
+
+void TTUDLRHider::deployLate()
+{
+  enabledChanged();
 }
 
 //void TTUDLRHider::on_toggle_button()

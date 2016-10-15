@@ -43,6 +43,7 @@ public:
     TTUDLRHider();
 
     void deploy();
+    void deployLate();
     void enabledChanged  ();
 
     void actOnPanel(ToolPanel* panel);
