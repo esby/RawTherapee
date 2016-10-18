@@ -137,39 +137,6 @@ void  TTUDLRHider::actOnPanel(ToolPanel* panel)
       panel->getFavoriteButton()->set_sensitive(true);
       panel->getTrashButton()->set_sensitive(true);
     }
-
- 
-/*
-    //if((!deactivate) && (getEnabledButton()->get_active()))
-    if((!deactivate) && (getExpander()->getEnabled()))
-    {
-      if (!deactivate && cbHideArrow->get_active())
-      {
-        panel->getMoveRButton()->hide();
-        panel->getMoveLButton()->hide();
-        panel->getMoveUButton()->hide();
-        panel->getMoveDButton()->hide();
-      }
-      else
-      {
-        panel->getMoveRButton()->show();
-        panel->getMoveLButton()->show();
-        panel->getMoveUButton()->show();
-        panel->getMoveDButton()->show();
-      }
-
-      if (!deactivate && cbLockFav->get_active())
-      { 
-        panel->getFavoriteButton()->set_sensitive(false);
-        panel->getTrashButton()->set_sensitive(false);
-      }
-      else
-      {
-        panel->getFavoriteButton()->set_sensitive(true);
-        panel->getTrashButton()->set_sensitive(true);
-      }    
-    }   
-*/
   }
 }
 
