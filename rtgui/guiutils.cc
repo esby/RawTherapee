@@ -584,7 +584,9 @@ bool MyExpander::on_enter_leave_title (GdkEventCrossing* event)
 {
     if (is_sensitive()) {
         if (event->type == GDK_ENTER_NOTIFY) {
-            titleEvBox->set_state(Gtk::STATE_PRELIGHT);
+            //todo find why this is causing problems with items sensitivity when they are in headerHBox...
+            // maybe only the tool name should be set to prelight state.
+            //titleEvBox->set_state(Gtk::STATE_PRELIGHT);
             queue_draw();
         } else if (event->type == GDK_LEAVE_NOTIFY) {
             titleEvBox->set_state(Gtk::STATE_NORMAL);
