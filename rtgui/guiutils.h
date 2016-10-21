@@ -170,7 +170,10 @@ private:
     bool enabled;               /// Enabled feature (default to true)
     bool inconsistent;          /// True if the enabled button is inconsistent
     Gtk::EventBox *titleEvBox;  /// EventBox of the title, to get a connector from it
+    Gtk::EventBox *buttonBox;   /// EventBox of the button on the left on the title.
+    Gtk::HBox *titleContainer; 
     Gtk::HBox *headerHBox;
+    Gtk::HBox *buttonHBox;
     bool flushEvent;            /// Flag to control the weird event mechanism of Gtk (please prove me wrong!)
     ExpanderBox* expBox;        /// Frame that includes the child and control its visibility
     Gtk::EventBox *imageEvBox;  /// Enable/Disable or Open/Close arrow event box
@@ -216,6 +219,9 @@ public:
      */
     MyExpander(bool useEnabled, Gtk::Widget* titleWidget,  ToolPanelAncestor* _panel);
 
+    /** Retrieve the panel associated with the expander
+    *
+    */
     ToolPanelAncestor* getPanel();
     /// Initialize the class by loading the images
     static void init();
@@ -266,7 +272,9 @@ public:
     /// Warning: do not manually Show/Hide the widget, because this parameter is handled by the click on the Expander's title
     void add  (Gtk::Container& widget);
 
+   Gtk::HBox* getTitleContainer() {return titleContainer; }
    Gtk::HBox* getHeaderHBox() {return headerHBox; }
+   Gtk::HBox* getButtonHBox() {return buttonHBox; }
 };
 
 
