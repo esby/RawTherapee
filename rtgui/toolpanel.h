@@ -214,6 +214,7 @@ protected:
     // this is retrieved dynamically for now...
  //   Gtk::CheckButton* enabledButtonRef;
     Gtk::HBox* labelBox;
+    Gtk::HBox* buttonBox;
 
     Gtk::Button* moveUButton;
     Gtk::Button* moveDButton;
@@ -231,6 +232,7 @@ public:
     ToolPanel (Glib::ustring toolName = "", bool need11 = false) : toolName(toolName), listener(NULL), tmp(NULL), batchMode(false), multiImage(false), need100Percent(need11) 
     { 
           labelBox = NULL;
+          buttonBox = NULL;
           location = 1; // normal panel location
     }
     virtual ~ToolPanel() {}
@@ -275,6 +277,7 @@ public:
     virtual Gtk::ToggleButton*   getFavoriteButton() { return favoriteButton;}
     virtual Gtk::ToggleButton*   getTrashButton()    { return trashButton;}
     virtual Gtk::HBox*           getLabelBox()       { return labelBox;}
+    virtual Gtk::HBox*           getButtonBox()       { return buttonBox;}
     virtual Gtk::Button*         getLabelInfoNotifier() { return labelInfoNotifier;}
     Gtk::HBox*           getFUDLRBox()  { return fudlrBox; }                
     Gtk::Button*         getMoveUButton() { return moveUButton; }

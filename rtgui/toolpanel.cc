@@ -819,10 +819,11 @@ FoldableToolPanel::FoldableToolPanel(Gtk::Box* content, Glib::ustring toolName, 
     } else {
         exp = Gtk::manage (new MyExpander (useEnabled, UILabel, this));
     }
-
         labelBox = exp->getHeaderHBox();
-        labelBox->pack_start(*labelInfo, false, false,0);
-        labelBox->pack_start(*fudlrBox, Gtk::PACK_EXPAND_WIDGET, true, 0);
+        labelBox->pack_end(*labelInfo, false, false,0);
+
+        buttonBox = exp->getButtonHBox();
+        buttonBox->pack_start(*fudlrBox, Gtk::PACK_EXPAND_WIDGET, true, 0);
 //todo: this might not be necessary anymore
 /*        labelWidget = Gtk::manage (new Gtk::Label("this will be updated later"));
         labelWidget->set_use_markup();

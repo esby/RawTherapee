@@ -489,6 +489,9 @@ MyExpander::MyExpander(bool useEnabled, Gtk::Widget* titleWidget, ToolPanelAnces
     headerHBox = Gtk::manage( new Gtk::HBox());
     headerHBox->set_can_focus(false);
 
+    buttonHBox = Gtk::manage( new Gtk::HBox());
+    buttonHBox->set_can_focus(false);
+
     if (useEnabled) {
         statusImage = Gtk::manage(new Gtk::Image(disabledPBuf));
         imageEvBox = Gtk::manage(new Gtk::EventBox());
@@ -516,7 +519,18 @@ MyExpander::MyExpander(bool useEnabled, Gtk::Widget* titleWidget, ToolPanelAnces
     titleEvBox->set_above_child(false);  // this is the key! By making it below the child, they will get the events first.
     titleEvBox->set_can_focus(false);
 
-    pack_start(*titleEvBox, Gtk::PACK_EXPAND_WIDGET, 0);
+    titleContainer = Gtk::manage(new Gtk::HBox());
+    pack_start(*titleContainer, Gtk::PACK_EXPAND_WIDGET, 0);
+
+    titleContainer->pack_start(*titleEvBox, Gtk::PACK_EXPAND_WIDGET, 0);
+
+    buttonBox = Gtk::manage(new Gtk::EventBox());
+    buttonBox->set_name("MyExpanderButtons");
+    buttonBox->add(*buttonHBox);
+    buttonBox->set_above_child(false);  // this is the key! By making it below the child, they will get the events first.
+    buttonBox->set_can_focus(false);
+
+    titleContainer->pack_start(*buttonBox, Gtk::PACK_SHRINK, 0);
 
     updateStyle();
     titleEvBox->signal_button_release_event().connect( sigc::mem_fun(this, & MyExpander::on_toggle) );
@@ -538,6 +552,8 @@ MyExpander::MyExpander(bool useEnabled, Glib::ustring titleLabel, ToolPanelAnces
     headerHBox = Gtk::manage( new Gtk::HBox());
     headerHBox->set_can_focus(false);
 
+    buttonHBox = Gtk::manage( new Gtk::HBox());
+    buttonHBox->set_can_focus(false);
 
     if (useEnabled) {
         statusImage = Gtk::manage(new Gtk::Image(disabledPBuf));
@@ -572,7 +588,19 @@ MyExpander::MyExpander(bool useEnabled, Glib::ustring titleLabel, ToolPanelAnces
     titleEvBox->set_above_child(false);  // this is the key! By make it below the child, they will get the events first.
     titleEvBox->set_can_focus(false);
 
-    pack_start(*titleEvBox, Gtk::PACK_EXPAND_WIDGET, 0);
+    titleContainer = Gtk::manage(new Gtk::HBox());
+    pack_start(*titleContainer, Gtk::PACK_EXPAND_WIDGET, 0);
+
+    titleContainer->pack_start(*titleEvBox, Gtk::PACK_EXPAND_WIDGET, 0);
+
+
+    buttonBox = Gtk::manage(new Gtk::EventBox());
+    buttonBox->set_name("MyExpanderButtons");
+    buttonBox->add(*buttonHBox);
+    buttonBox->set_above_child(false);  // this is the key! By making it below the child, they will get the events first.
+    buttonBox->set_can_focus(false);
+
+    titleContainer->pack_start(*buttonBox, Gtk::PACK_SHRINK, 0);
 
     updateStyle();
     titleEvBox->signal_button_release_event().connect( sigc::mem_fun(this, & MyExpander::on_toggle));
@@ -586,7 +614,7 @@ bool MyExpander::on_enter_leave_title (GdkEventCrossing* event)
         if (event->type == GDK_ENTER_NOTIFY) {
             //todo find why this is causing problems with items sensitivity when they are in headerHBox...
             // maybe only the tool name should be set to prelight state.
-            //titleEvBox->set_state(Gtk::STATE_PRELIGHT);
+            titleEvBox->set_state(Gtk::STATE_PRELIGHT);
             queue_draw();
         } else if (event->type == GDK_LEAVE_NOTIFY) {
             titleEvBox->set_state(Gtk::STATE_NORMAL);
@@ -636,6 +664,8 @@ void MyExpander::setLabel (Gtk::Widget *newWidget)
     if (headerWidget) {
         removeIfThere(headerHBox, headerWidget, false);
         headerHBox->pack_start(*newWidget, Gtk::PACK_EXPAND_WIDGET, 0);
+        headerWidget = newWidget;
+        printf("SetLabel call \n");
     }
 }
 
