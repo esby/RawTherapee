@@ -57,7 +57,7 @@ void TTAutoDistortionClicker::react()
    for (size_t i=0; i< env->countPanel() ; i++)
    {
       FoldableToolPanel* p = static_cast<FoldableToolPanel*> (env->getPanel(i));
-      if ( (p != NULL)
+      if ( (p != nullptr)
       && (!(p->canBeIgnored())))
       {
         if (p->getToolName() == "distortion")

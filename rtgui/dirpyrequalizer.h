@@ -14,7 +14,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
  *
- *  © 2010 Emil Martinec <ejmartin@uchicago.edu>
+ *  (C) 2010 Emil Martinec <ejmartin@uchicago.edu>
  */
 
 #ifndef DIRPYREQUALIZER_H_INCLUDED
@@ -57,9 +57,9 @@ public:
     DirPyrEqualizer ();
     virtual ~DirPyrEqualizer ();
 
-    void read                (const rtengine::procparams::ProcParams* pp, const ParamsEdited* pedited = NULL);
-    void write               (rtengine::procparams::ProcParams* pp, ParamsEdited* pedited = NULL);
-    void setDefaults         (const rtengine::procparams::ProcParams* defParams, const ParamsEdited* pedited = NULL);
+    void read                (const rtengine::procparams::ProcParams* pp, const ParamsEdited* pedited = nullptr);
+    void write               (rtengine::procparams::ProcParams* pp, ParamsEdited* pedited = nullptr);
+    void setDefaults         (const rtengine::procparams::ProcParams* defParams, const ParamsEdited* pedited = nullptr);
     void setBatchMode        (bool batchMode);
     void setAdjusterBehavior (bool multiplieradd, bool thresholdadd, bool skinadd);
     void trimValues          (rtengine::procparams::ProcParams* pp);

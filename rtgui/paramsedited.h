@@ -544,6 +544,7 @@ public:
     bool working;
     bool output;
     bool outputIntent;
+    bool outputBPC;
     bool gamma;
     bool gampos;
     bool slpos;
@@ -783,7 +784,7 @@ public:
     bool                          exif;
     bool                          iptc;
 
-    ParamsEdited (bool value = false);
+    explicit ParamsEdited (bool value = false);
 
     void set   (bool v);
     void initFrom (const std::vector<rtengine::procparams::ProcParams>& src);

@@ -1,7 +1,7 @@
 /*
  *  This file is part of RawTherapee.
  *
- *  Copyright (c) 2016 Flössie <floessie.mail@gmail.com>
+ *  Copyright (C) 2016 Flössie <floessie.mail@gmail.com>
  *
  *  RawTherapee is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -64,7 +64,7 @@ public:
         virtual void onDestroy() = 0;
     };
 
-    Cache(unsigned long _size, Hook* _hook = 0) :
+    Cache(unsigned long _size, Hook* _hook = nullptr) :
         store_size(_size),
         hook(_hook)
     {

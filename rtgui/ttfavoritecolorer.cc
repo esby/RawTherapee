@@ -63,7 +63,7 @@ void TTFavoriteColorChooser::deploy()
    for (size_t i=0; i< env->countPanel() ; i++)
    { 
       FoldableToolPanel* p = static_cast<FoldableToolPanel*> (env->getPanel(i));
-      if ( (p != NULL)
+      if ( (p != nullptr)
       && (!(p->canBeIgnored())))
       {
  //       printf("connecting to %s \n", p->getToolName().c_str());
@@ -78,16 +78,6 @@ void TTFavoriteColorChooser::deploy()
   getExpander()->signal_enabled_toggled().connect( sigc::mem_fun(this, &TTFavoriteColorChooser::enabledChanged));
 }
 
-void TTFavoriteColorChooser::read(const rtengine::procparams::ProcParams* pp, const ParamsEdited* pedited)
-{
-
-}
-
-void TTFavoriteColorChooser::write( rtengine::procparams::ProcParams* pp, ParamsEdited* pedited)
-{
-
-}
-
 //void TTFavoriteColorChooser::on_toggle_button()
 void TTFavoriteColorChooser::enabledChanged()
 {  
@@ -96,7 +86,7 @@ void TTFavoriteColorChooser::enabledChanged()
    for (size_t i=0; i< env->countPanel() ; i++)
    {
       FoldableToolPanel* p = static_cast<FoldableToolPanel*> (env->getPanel(i));
-      if ( (p != NULL)
+      if ( (p != nullptr)
       && (!(p->canBeIgnored())))
       {
         colorFavorite(p);
@@ -107,7 +97,7 @@ void TTFavoriteColorChooser::enabledChanged()
   for (size_t i=0; i< env->countPanel() ; i++)
   {
      FoldableToolPanel* p = static_cast<FoldableToolPanel*> (env->getPanel(i));
-      if ( (p != NULL)
+      if ( (p != nullptr)
       && (!(p->canBeIgnored())))
       {
         colorFavorite(p, true);
@@ -153,7 +143,7 @@ void  TTFavoriteColorChooser::colorButton(Gtk::ToggleButton* button, Gdk::Color 
 
 void TTFavoriteColorChooser::colorFavorite(ToolPanel* panel, bool deactivate)
 {
-  if (panel!=NULL)
+  if (panel!=nullptr)
   {
     Gtk::ToggleButton* b = panel->getFavoriteButton();
     colorButton(b, cbFavorite->get_color(), deactivate);
@@ -162,7 +152,7 @@ void TTFavoriteColorChooser::colorFavorite(ToolPanel* panel, bool deactivate)
 
 void TTFavoriteColorChooser::colorTrash(ToolPanel* panel, bool deactivate)
 {
-  if (panel!=NULL)
+  if (panel!=nullptr)
   {
     Gtk::ToggleButton* b = panel->getTrashButton();
     colorButton(b, cbTrash->get_color(), deactivate);

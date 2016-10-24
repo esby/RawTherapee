@@ -20,8 +20,10 @@
 #define __RAWIMAGE_H
 
 #include <ctime>
+
 #include "dcraw.h"
 #include "imageio.h"
+#include "noncopyable.h"
 
 namespace rtengine
 {
@@ -32,7 +34,8 @@ struct badPix {
     badPix( uint16_t xc, uint16_t yc ): x(xc), y(yc) {}
 };
 
-class PixelsMap
+class PixelsMap :
+    public NonCopyable
 {
     int w; // line width in base_t units
     int h; // height
@@ -48,6 +51,7 @@ public:
         pm = new base_t [h * w ];
         memset(pm, 0, h * w * base_t_size );
     }
+
     ~PixelsMap()
     {
         delete [] pm;
@@ -99,10 +103,10 @@ class RawImage: public DCraw
 {
 public:
 
-    RawImage(  const Glib::ustring &name );
+    explicit RawImage( const Glib::ustring &name );
     ~RawImage();
 
-    int loadRaw (bool loadData = true, bool closeFile = true, ProgressListener *plistener = 0, double progressRange = 1.0);
+    int loadRaw (bool loadData = true, bool closeFile = true, ProgressListener *plistener = nullptr, double progressRange = 1.0);
     void get_colorsCoeff( float* pre_mul_, float* scale_mul_, float* cblack_, bool forceAutoWB );
     void set_prefilters()
     {

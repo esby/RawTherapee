@@ -26,8 +26,8 @@
 #include "multilangmgr.h"
 #include "rtimage.h"
 
-CurveEditorGroup::CurveEditorGroup (Glib::ustring& curveDir, Glib::ustring groupLabel) : curveDir(curveDir), curve_reset(NULL),
-    displayedCurve(0), flatSubGroup(0), diagonalSubGroup(0), cl(NULL), numberOfPackedCurve(0)
+CurveEditorGroup::CurveEditorGroup (Glib::ustring& curveDir, Glib::ustring groupLabel) : curveDir(curveDir), curve_reset(nullptr),
+    displayedCurve(nullptr), flatSubGroup(nullptr), diagonalSubGroup(nullptr), cl(nullptr), numberOfPackedCurve(0)
 {
 
     // We set the label to the one provided as parameter, even if it's an empty string
@@ -101,11 +101,11 @@ CurveEditor* CurveEditorGroup::addCurve(CurveType cType, Glib::ustring curveLabe
     }
 
     default:
-        return (static_cast<CurveEditor*>(NULL));
+        return (static_cast<CurveEditor*>(nullptr));
         break;
     }
 
-    return NULL; // to avoid complains from Gcc
+    return nullptr; // to avoid complains from Gcc
 }
 
 /*
@@ -113,10 +113,9 @@ CurveEditor* CurveEditorGroup::addCurve(CurveType cType, Glib::ustring curveLabe
  */
 void CurveEditorGroup::newLine()
 {
-    Gtk::HBox* headerBox;
 
     if (curveEditors.size() > numberOfPackedCurve) {
-        headerBox = Gtk::manage (new Gtk::HBox ());
+        Gtk::HBox* headerBox = Gtk::manage (new Gtk::HBox ());
 
         if (!numberOfPackedCurve) {
             headerBox->pack_start(*curveGroupLabel, Gtk::PACK_SHRINK, 2);
@@ -135,13 +134,13 @@ void CurveEditorGroup::newLine()
         bool hasRelatedWidget = false;
 
         for (int i = (int)(curveEditors.size()) - 1; i >= j; i--) {
-            if (curveEditors[i]->relatedWidget != NULL) {
+            if (curveEditors[i]->relatedWidget != nullptr) {
                 hasRelatedWidget = true;
             }
         }
 
         for (int i = (int)(curveEditors.size()) - 1; i >= j; i--) {
-            if (curveEditors[i]->relatedWidget != NULL) {
+            if (curveEditors[i]->relatedWidget != nullptr) {
                 headerBox->pack_end (*curveEditors[i]->relatedWidget, Gtk::PACK_EXPAND_WIDGET, 2);
             }
 
@@ -258,7 +257,7 @@ void CurveEditorGroup::curveTypeToggled(CurveEditor* ce)
         }
     } else {
         // The button is now released, so we have to hide this CurveEditor
-        displayedCurve = 0;
+        displayedCurve = nullptr;
     }
 
     ce->subGroup->switchGUI();
@@ -356,7 +355,7 @@ void CurveEditorGroup::setTooltip( Glib::ustring ttip)
 void CurveEditorGroup::setBatchMode (bool batchMode)
 {
     for (std::vector<CurveEditor*>::iterator i = curveEditors.begin(); i != curveEditors.end(); ++i) {
-        (*i)->curveType->addEntry("curveType-unchanged.png", M("GENERAL_UNCHANGED"));
+        (*i)->curveType->addEntry("unchanged-18.png", M("GENERAL_UNCHANGED"));
         (*i)->curveType->show();
     }
 }
@@ -381,10 +380,10 @@ void CurveEditorGroup::setUnChanged (bool uc, CurveEditor* ce)
     }
 }
 
-CurveEditorSubGroup::CurveEditorSubGroup(Glib::ustring& curveDir) : curveDir(curveDir), lastFilename("")
+CurveEditorSubGroup::CurveEditorSubGroup(Glib::ustring& curveDir) : curveDir(curveDir), lastFilename(""), valLinear(0), valUnchanged(0), parent(nullptr), curveBBoxPos(0)
 {
-    leftBar = NULL;
-    bottomBar = NULL;
+    leftBar = nullptr;
+    bottomBar = nullptr;
 }
 
 CurveEditorSubGroup::~CurveEditorSubGroup()

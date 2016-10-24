@@ -57,7 +57,7 @@ void TTUDLRHider::deploy()
    for (size_t i=0; i< env->countPanel() ; i++)
    { 
       FoldableToolPanel* p = static_cast<FoldableToolPanel*> (env->getPanel(i));
-      if ( (p != NULL)
+      if ( (p != nullptr)
       && (!(p->canBeIgnored())))
       {
 //        printf("connecting to %s \n", p->getToolName().c_str());
@@ -87,7 +87,7 @@ void TTUDLRHider::enabledChanged  ()
    for (size_t i=0; i< env->countPanel() ; i++)
    {
       FoldableToolPanel* p = static_cast<FoldableToolPanel*> (env->getPanel(i));
-      if ( (p != NULL)
+      if ( (p != nullptr)
       && (!(p->canBeIgnored())))
       {
         actOnPanel(p);
@@ -98,7 +98,7 @@ void TTUDLRHider::enabledChanged  ()
 
 void  TTUDLRHider::actOnPanel(ToolPanel* panel)
 {  
-  if (panel != NULL)
+  if (panel != nullptr)
   {
     if (getExpander()->getEnabled())
     {

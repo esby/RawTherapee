@@ -42,8 +42,6 @@ public:
 
     TTFavoriteColorChooser();
 
-    void read           (const rtengine::procparams::ProcParams* pp, const ParamsEdited* pedited=NULL);
-    void write          (rtengine::procparams::ProcParams* pp, ParamsEdited* pedited=NULL);
     void deploy();
    
    // void on_toggle_button();

@@ -97,6 +97,7 @@ protected:
     Gtk::FileChooserButton* iccDir;
     Gtk::ComboBoxText* monProfile;
     Gtk::ComboBoxText* monIntent;
+    Gtk::CheckButton* monBPC;
     Gtk::CheckButton* cbAutoMonProfile;
     //Gtk::CheckButton* cbAutocielab;
     Gtk::CheckButton* cbciecamfloat;
@@ -131,6 +132,7 @@ protected:
     Gtk::HBox* hbtheme;
     Gtk::CheckButton* chUseSystemTheme;
     Gtk::FontButton* fontbutton;
+    Gtk::FontButton* colorPickerFontButton;
     Gtk::ColorButton* butCropCol;
     Gtk::ColorButton* butNavGuideCol;
 
@@ -261,7 +263,7 @@ protected:
     Gtk::Widget* getTTPanel ();
 
 public:
-    Preferences (RTWindow *rtwindow);
+    explicit Preferences (RTWindow *rtwindow);
     ~Preferences ();
 
     void savePressed ();

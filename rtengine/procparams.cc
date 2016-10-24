@@ -753,13 +753,13 @@ void WaveletParams::setDefaults()
     hhcurve.push_back(FCT_Linear);
     Chcurve.clear ();
     Chcurve.push_back(FCT_Linear);
-    expcontrast = true;
-    expchroma = true;
-    expedge = true;
-    expresid = true;
-    expfinal = true;
-    exptoning = true;
-    expnoise = true;
+    expcontrast = false;
+    expchroma = false;
+    expedge = false;
+    expresid = false;
+    expfinal = false;
+    exptoning = false;
+    expnoise = false;
 
     for(int i = 0; i < 9; i ++) {
         c[i] = 0;
@@ -927,6 +927,7 @@ void ColorManagementParams::setDefaults()
     working = "ProPhoto";
     output  = "RT_sRGB";
     outputIntent  = RI_RELATIVE;
+    outputBPC = true;
     gamma  = "default";
     gampos = 2.22;
     slpos = 4.5;
@@ -2662,6 +2663,10 @@ int ProcParams::save (const Glib::ustring &fname, const Glib::ustring &fname2, b
             keyFile.set_string  ("Color Management", "OutputProfileIntent", intent);
         }
 
+        if (!pedited || pedited->icm.outputBPC) {
+            keyFile.set_boolean  ("Color Management", "OutputBPC",  icm.outputBPC);
+        }
+
         if (!pedited || pedited->icm.gamma) {
             keyFile.set_string  ("Color Management", "Gammafree",  icm.gamma);
         }
@@ -3431,7 +3436,7 @@ int ProcParams::write (const Glib::ustring &fname, const Glib::ustring &content)
         FILE *f;
         f = g_fopen (fname.c_str (), "wt");
 
-        if (f == NULL) {
+        if (f == nullptr) {
             error = 1;
         } else {
             fprintf (f, "%s", content.c_str());
@@ -5921,6 +5926,14 @@ int ProcParams::load (const Glib::ustring &fname, ParamsEdited* pedited)
                 }
             }
 
+            if (keyFile.has_key ("Color Management", "OutputBPC"))      {
+                icm.outputBPC      = keyFile.get_boolean ("Color Management", "OutputBPC");
+
+                if (pedited) {
+                    pedited->icm.outputBPC = true;
+                }
+            }
+
             if (keyFile.has_key ("Color Management", "Gammafree"))      {
                 icm.gamma          = keyFile.get_string ("Color Management", "Gammafree");
 
@@ -7549,11 +7562,7 @@ bool operator==(const DirPyrEqualizerParams & a, const DirPyrEqualizerParams & b
         }
     }
 
-    if (a.threshold != b.threshold) {
-        return false;
-    }
-
-    return true;
+    return a.threshold == b.threshold;
 }
 
 /*bool operator==(const ExifPairs& a, const ExifPairs& b) {
@@ -8010,8 +8019,8 @@ PartialProfile::PartialProfile(bool createInstance, bool paramsEditedValue)
         pparams = new ProcParams();
         pedited = new ParamsEdited(paramsEditedValue);
     } else {
-        pparams = NULL;
-        pedited = NULL;
+        pparams = nullptr;
+        pedited = nullptr;
     }
 }
 
@@ -8035,13 +8044,13 @@ PartialProfile::PartialProfile(const ProcParams* pp, const ParamsEdited* pe)
     if (pp) {
         pparams = new ProcParams(*pp);
     } else {
-        pparams = NULL;
+        pparams = nullptr;
     }
 
     if (pe) {
         pedited = new ParamsEdited(*pe);
     } else {
-        pedited = NULL;
+        pedited = nullptr;
     }
 }
 
@@ -8066,12 +8075,12 @@ void PartialProfile::deleteInstance ()
 {
     if (pparams) {
         delete pparams;
-        pparams = NULL;
+        pparams = nullptr;
     }
 
     if (pedited) {
         delete pedited;
-        pedited = NULL;
+        pedited = nullptr;
     }
 }
 

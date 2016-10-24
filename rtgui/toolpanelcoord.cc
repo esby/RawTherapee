@@ -104,7 +104,7 @@ void ToolPanelCoordinator::on_notebook_switch_page(GtkNotebookPage* page, guint 
 }
 
 
-ToolPanelCoordinator::ToolPanelCoordinator () : ipc(NULL)
+ToolPanelCoordinator::ToolPanelCoordinator () : ipc(nullptr)
 {
     env =  new Environment();
 
@@ -677,7 +677,7 @@ void ToolPanelCoordinator::closeImage ()
 
     if (ipc) {
         ipc->stopProcessing ();
-        ipc = NULL;
+        ipc = nullptr;
     }
 }
 
@@ -814,7 +814,7 @@ void ToolPanelCoordinator::autoCropRequested ()
 rtengine::RawImage* ToolPanelCoordinator::getDF()
 {
     if (!ipc) {
-        return NULL;
+        return nullptr;
     }
 
     const rtengine::ImageMetaData *imd = ipc->getInitialImage()->getMetaData();
@@ -829,13 +829,13 @@ rtengine::RawImage* ToolPanelCoordinator::getDF()
         return rtengine::dfm.searchDarkFrame( maker, model, iso, shutter, timestamp);
     }
 
-    return NULL;
+    return nullptr;
 }
 
 rtengine::RawImage* ToolPanelCoordinator::getFF()
 {
     if (!ipc) {
-        return NULL;
+        return nullptr;
     }
 
     const rtengine::ImageMetaData *imd = ipc->getInitialImage()->getMetaData();
@@ -853,7 +853,7 @@ rtengine::RawImage* ToolPanelCoordinator::getFF()
         return rtengine::ffm.searchFlatField( maker, model, lens, focallength, aperture, timestamp);
     }
 
-    return NULL;
+    return nullptr;
 }
 
 Glib::ustring ToolPanelCoordinator::GetCurrentImageFilePath()
@@ -932,7 +932,7 @@ void ToolPanelCoordinator::foldAllButOne (Gtk::Box* parent, FoldableToolPanel* o
 {
 
    for (size_t i=0; i<env->countPanel(); i++) {
-        if (env->getPanel(i)->getParent() != NULL) {
+        if (env->getPanel(i)->getParent() != nullptr) {
             ToolPanel* currentTP = env->getPanel(i);
             if ((currentTP->getParent() == parent) 
             && (!currentTP->canBeIgnored())) {

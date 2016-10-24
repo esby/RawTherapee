@@ -40,6 +40,7 @@ public:
 
     Glib::ustring   monitorProfile;         ///< ICC profile name used for the monitor
     RenderingIntent monitorIntent;          ///< Colorimetric intent used with the above profile
+    bool            monitorBPC;             ///< Black Point Compensation for the Labimage->Monitor transform (directly, i.e. not soft-proofing and no WCS in between)
     bool            autoMonitorProfile;     ///< Try to auto-determine the correct monitor color profile
     bool            autocielab;
     bool            rgbcurveslumamode_gamut;// controls gamut enforcement for RGB curves in lumamode
@@ -71,7 +72,7 @@ public:
     int             nrwavlevel;
     bool            daubech;
     bool            ciebadpixgauss;
-    int             CRI_color; // N� for display Lab value  ; 0 disabled
+    int             CRI_color; // Number for display Lab value; 0 = disabled
     int             denoiselabgamma; // 0=gamma 26 11   1=gamma 40 5  2 =gamma 55 10
     //  double          colortoningab; //
     //  double          decaction;

@@ -23,6 +23,9 @@
 #include "mytime.h"
 #include "sleef.c"
 #include "opthelper.h"
+#include "iccstore.h"
+
+#define pow_F(a,b) (xexpf(b*xlogf(a)))
 
 using namespace std;
 
@@ -41,15 +44,10 @@ LUTf Color::igammatab_srgb;
 LUTf Color::igammatab_srgb1;
 LUTf Color::gammatab_srgb;
 LUTf Color::gammatab_srgb1;
-//  LUTf Color::igammatab_709;
-//  LUTf Color::gammatab_709;
-LUTf Color::igammatab_55;
-LUTf Color::gammatab_55;
-LUTf Color::igammatab_4;
-LUTf Color::gammatab_4;
 
-LUTf Color::igammatab_26_11;
-LUTf Color::gammatab_26_11;
+LUTf Color::denoiseGammaTab;
+LUTf Color::denoiseIGammaTab;
+
 LUTf Color::igammatab_24_17;
 LUTf Color::gammatab_24_17a;
 LUTf Color::gammatab_13_2;
@@ -148,13 +146,10 @@ void Color::init ()
     igammatab_srgb1(maxindex, 0);
     gammatab_srgb(maxindex, 0);
     gammatab_srgb1(maxindex, 0);
-    igammatab_55(maxindex, 0);
-    gammatab_55(maxindex, 0);
-    igammatab_4(maxindex, 0);
-    gammatab_4(maxindex, 0);
 
-    igammatab_26_11(maxindex, 0);
-    gammatab_26_11(maxindex, 0);
+    denoiseGammaTab(maxindex, 0);
+    denoiseIGammaTab(maxindex, 0);
+
     igammatab_24_17(maxindex, 0);
     gammatab_24_17a(maxindex, LUT_CLIP_ABOVE | LUT_CLIP_BELOW);
     gammatab_13_2(maxindex, 0);
@@ -193,6 +188,7 @@ void Color::init ()
             {
                 gammatab_srgb[i] = gammatab_srgb1[i] = gamma2(i / 65535.0);
             }
+
             gammatab_srgb *= 65535.f;
             gamma2curve.share(gammatab_srgb, LUT_CLIP_BELOW | LUT_CLIP_ABOVE); // shares the buffer with gammatab_srgb but has different clip flags
         }
@@ -200,9 +196,11 @@ void Color::init ()
         #pragma omp section
 #endif
         {
-            for (int i = 0; i < maxindex; i++) {
+            for (int i = 0; i < maxindex; i++)
+            {
                 igammatab_srgb[i] = igammatab_srgb1[i] = igamma2 (i / 65535.0);
             }
+
             igammatab_srgb *= 65535.f;
         }
 #ifdef _OPENMP
@@ -211,42 +209,74 @@ void Color::init ()
         {
             double rsRGBGamma = 1.0 / sRGBGamma;
 
-            for (int i = 0; i < maxindex; i++) {
+            for (int i = 0; i < maxindex; i++)
+            {
                 double val = pow (i / 65535.0, rsRGBGamma);
                 gammatab[i] = 65535.0 * val;
                 gammatabThumb[i] = (unsigned char)(255.0 * val);
             }
         }
+
 #ifdef _OPENMP
         #pragma omp section
 #endif
+        // modify arbitrary data for Lab..I have test : nothing, gamma 2.6 11 - gamma 4 5 - gamma 5.5 10
+        // we can put other as gamma g=2.6 slope=11, etc.
+        // but noting to do with real gamma !!!: it's only for data Lab # data RGB
+        // finally I opted for gamma55 and with options we can change
 
-        for (int i = 0; i < maxindex; i++) {
-            gammatab_55[i] = 65535.0 * gamma55 (i / 65535.0);
+        switch(settings->denoiselabgamma) {
+            case 0:
+                for (int i = 0; i < maxindex; i++) {
+                    denoiseGammaTab[i] = 65535.0 * gamma26_11 (i / 65535.0);
+                }
+
+                break;
+
+            case 1:
+                for (int i = 0; i < maxindex; i++) {
+                    denoiseGammaTab[i] = 65535.0 * gamma4 (i / 65535.0);
+                }
+
+                break;
+
+            default:
+                for (int i = 0; i < maxindex; i++) {
+                    denoiseGammaTab[i] = 65535.0 * gamma55 (i / 65535.0);
+                }
+
+                break;
         }
 
 #ifdef _OPENMP
         #pragma omp section
 #endif
+        // modify arbitrary data for Lab..I have test : nothing, gamma 2.6 11 - gamma 4 5 - gamma 5.5 10
+        // we can put other as gamma g=2.6 slope=11, etc.
+        // but noting to do with real gamma !!!: it's only for data Lab # data RGB
+        // finally I opted for gamma55 and with options we can change
 
-        for (int i = 0; i < maxindex; i++) {
-            igammatab_55[i] = 65535.0 * igamma55 (i / 65535.0);
-        }
+        switch(settings->denoiselabgamma) {
+            case 0:
+                for (int i = 0; i < maxindex; i++) {
+                    denoiseIGammaTab[i] = 65535.0 * igamma26_11 (i / 65535.0);
+                }
 
-#ifdef _OPENMP
-        #pragma omp section
-#endif
+                break;
 
-        for (int i = 0; i < maxindex; i++) {
-            gammatab_4[i] = 65535.0 * gamma4 (i / 65535.0);
-        }
+            case 1:
+                for (int i = 0; i < maxindex; i++) {
+                    denoiseIGammaTab[i] = 65535.0 * igamma4 (i / 65535.0);
+                }
 
-#ifdef _OPENMP
-        #pragma omp section
-#endif
+                break;
 
-        for (int i = 0; i < maxindex; i++) {
-            igammatab_4[i] = 65535.0 * igamma4 (i / 65535.0);
+            default:
+                for (int i = 0; i < maxindex; i++) {
+                    denoiseIGammaTab[i] = 65535.0 * igamma55 (i / 65535.0);
+                }
+
+                break;
         }
 
 #ifdef _OPENMP
@@ -302,22 +332,6 @@ void Color::init ()
 #endif
 
         for (int i = 0; i < maxindex; i++) {
-            gammatab_26_11[i] = 65535.0 * gamma26_11 (i / 65535.0);
-        }
-
-#ifdef _OPENMP
-        #pragma omp section
-#endif
-
-        for (int i = 0; i < maxindex; i++) {
-            igammatab_26_11[i] = 65535.0 * igamma26_11 (i / 65535.0);
-        }
-
-#ifdef _OPENMP
-        #pragma omp section
-#endif
-
-        for (int i = 0; i < maxindex; i++) {
             gammatab_24_17a[i] = gamma24_17(i / 65535.0);
         }
 
@@ -337,7 +351,7 @@ void Color::init ()
 #ifdef _OPENMP
         #pragma omp section
 #endif
-        linearGammaTRC = cmsBuildGamma(NULL, 1.0);
+        linearGammaTRC = cmsBuildGamma(nullptr, 1.0);
     }
 }
 
@@ -346,6 +360,153 @@ void Color::cleanup ()
     if (linearGammaTRC) {
         cmsFreeToneCurve(linearGammaTRC);
     }
+}
+
+void Color::rgb2lab (Glib::ustring profile, Glib::ustring profileW, int r, int g, int b, float &LAB_l, float &LAB_a, float &LAB_b, bool workingSpace)
+{
+    double xyz_rgb[3][3];
+    const double ep = 216.0 / 24389.0;
+    const double ka = 24389.0 / 27.0;
+
+    double var_R = r / 65535.0;
+    double var_G = g / 65535.0;
+    double var_B = b / 65535.0;
+
+    Glib::ustring profileCalc;
+    profileCalc = "sRGB"; //default
+
+    if (workingSpace) {
+        profileCalc = profileW;    //display working
+    }
+
+    else {// if you want display = output space
+        if (profile == "RT_sRGB" || profile == "RT_sRGB_gBT709" || profile == "RT_sRGB_g10") {
+            profileCalc = "sRGB";
+        }
+
+        if (profile == "ProPhoto" || profile == "RT_Large_gBT709" || profile == "RT_Large_g10"  || profile == "RT_Large_gsRGB") {
+            profileCalc = "ProPhoto";
+        }
+
+        if (profile == "AdobeRGB1998" || profile == "RT_Medium_gsRGB") {
+            profileCalc = "Adobe RGB";
+        }
+
+        if (profile == "WideGamutRGB") {
+            profileCalc = "WideGamut";
+        }
+    }
+
+    if (workingSpace) {//display working
+        if (profileW == "sRGB") { //apply sRGB inverse gamma
+
+            if ( var_R > 0.04045 ) {
+                var_R = pow ( ( ( var_R + 0.055 ) / 1.055 ), rtengine::Color::sRGBGammaCurve);
+            } else {
+                var_R = var_R / 12.92;
+            }
+
+            if ( var_G > 0.04045 ) {
+                var_G = pow ( ( ( var_G + 0.055 ) / 1.055 ), rtengine::Color::sRGBGammaCurve);
+            } else {
+                var_G = var_G / 12.92;
+            }
+
+            if ( var_B > 0.04045 ) {
+                var_B = pow ( ( ( var_B + 0.055 ) / 1.055 ), rtengine::Color::sRGBGammaCurve);
+            } else {
+                var_B = var_B / 12.92;
+            }
+        } else if (profileW == "ProPhoto") { // apply inverse gamma 1.8
+            var_R = pow ( var_R, 1.8);
+            var_G = pow ( var_G, 1.8);
+            var_B = pow ( var_B, 1.8);
+        } else { // apply inverse gamma 2.2
+            var_R = pow ( var_R, 2.2);
+            var_G = pow ( var_G, 2.2);
+            var_B = pow ( var_B, 2.2);
+        }
+    } else { //display outout profile
+
+        if (profile == "RT_sRGB" || profile == "RT_Large_gsRGB"  || profile == "RT_Medium_gsRGB") { //apply sRGB inverse gamma
+            if ( var_R > 0.04045 ) {
+                var_R = pow ( ( ( var_R + 0.055 ) / 1.055 ), rtengine::Color::sRGBGammaCurve);
+            } else {
+                var_R = var_R / 12.92;
+            }
+
+            if ( var_G > 0.04045 ) {
+                var_G = pow ( ( ( var_G + 0.055 ) / 1.055 ), rtengine::Color::sRGBGammaCurve);
+            } else {
+                var_G = var_G / 12.92;
+            }
+
+            if ( var_B > 0.04045 ) {
+                var_B = pow ( ( ( var_B + 0.055 ) / 1.055 ), rtengine::Color::sRGBGammaCurve);
+            } else {
+                var_B = var_B / 12.92;
+            }
+        }
+
+        else if (profile == "RT_sRGB_gBT709"  || profile == "RT_Large_gBT709") { //
+            if ( var_R > 0.0795 ) {
+                var_R = pow ( ( ( var_R + 0.0954 ) / 1.0954 ), 2.2);
+            } else {
+                var_R = var_R / 4.5;
+            }
+
+            if ( var_G > 0.0795 ) {
+                var_G = pow ( ( ( var_G + 0.0954 ) / 1.0954 ), 2.2);
+            } else {
+                var_G = var_G / 4.5;
+            }
+
+            if ( var_B > 0.0795 ) {
+                var_B = pow ( ( ( var_B + 0.0954 ) / 1.0954 ), 2.2);
+            } else {
+                var_B = var_B / 4.5;
+            }
+
+        } else if (profile == "ProPhoto") { // apply inverse gamma 1.8
+
+            var_R = pow ( var_R, 1.8);
+            var_G = pow ( var_G, 1.8);
+            var_B = pow ( var_B, 1.8);
+        } else if (profile == "RT_sRGB_g10"  || profile == "RT_Large_g10") { // apply inverse gamma 1.8
+
+            var_R = pow ( var_R, 1.);
+            var_G = pow ( var_G, 1.);
+            var_B = pow ( var_B, 1.);
+        }
+
+        else {// apply inverse gamma 2.2
+            var_R = pow ( var_R, 2.2);
+            var_G = pow ( var_G, 2.2);
+            var_B = pow ( var_B, 2.2);
+        }
+    }
+
+    // TMatrix wprof = rtengine::ICCStore::getInstance()->workingSpaceMatrix (profileW);
+
+    TMatrix wprof = rtengine::ICCStore::getInstance()->workingSpaceMatrix (profileCalc);
+
+    for (int m = 0; m < 3; m++)
+        for (int n = 0; n < 3; n++) {
+            xyz_rgb[m][n] = wprof[m][n];
+        }
+
+    double varxx, varyy, varzz;
+    double var_X = ( xyz_rgb[0][0] * var_R + xyz_rgb[0][1] * var_G + xyz_rgb[0][2] * var_B ) / Color::D50x;
+    double var_Y = ( xyz_rgb[1][0] * var_R + xyz_rgb[1][1] * var_G + xyz_rgb[1][2] * var_B ) ;
+    double var_Z = ( xyz_rgb[2][0] * var_R + xyz_rgb[2][1] * var_G + xyz_rgb[2][2] * var_B ) / Color::D50z;
+
+    varxx = var_X > ep ? cbrt(var_X) : ( ka * var_X  +  16.0) / 116.0 ;
+    varyy = var_Y > ep ? cbrt(var_Y) : ( ka * var_Y  +  16.0) / 116.0 ;
+    varzz = var_Z > ep ? cbrt(var_Z) : ( ka * var_Z  +  16.0) / 116.0 ;
+    LAB_l = ( 116 * varyy ) - 16;
+    LAB_a = 500 * ( varxx - varyy );
+    LAB_b = 200 * ( varyy - varzz );
+
 }
 
 void Color::rgb2hsl(float r, float g, float b, float &h, float &s, float &l)
@@ -382,7 +543,7 @@ void Color::rgb2hsl(float r, float g, float b, float &h, float &s, float &l)
             h_ = 4. + (var_R - var_G) / C;
         }
 
-        h = float(h_ /= 6.0);
+        h = float(h_ / 6.0);
 
         if ( h < 0.f ) {
             h += 1.f;
@@ -763,7 +924,7 @@ void Color::hsv2rgb (float h, float s, float v, int &r, int &g, int &b)
         r1 = t;
         g1 = p;
         b1 = v;
-    } else if (i == 5) {
+    } else /*if (i == 5)*/ {
         r1 = v;
         g1 = p;
         b1 = q;
@@ -857,6 +1018,14 @@ void Color::xyz2rgb (float x, float y, float z, float &r, float &g, float &b, co
     b = ((rgb_xyz[2][0] * x + rgb_xyz[2][1] * y + rgb_xyz[2][2] * z)) ;
 }
 
+void Color::xyz2r (float x, float y, float z, float &r, const double rgb_xyz[3][3]) // for black & white we need only r channel
+{
+    //Transform to output color.  Standard sRGB is D65, but internal representation is D50
+    //Note that it is only at this point that we should have need of clipping color data
+
+    r = ((rgb_xyz[0][0] * x + rgb_xyz[0][1] * y + rgb_xyz[0][2] * z)) ;
+}
+
 // same for float
 void Color::xyz2rgb (float x, float y, float z, float &r, float &g, float &b, const float rgb_xyz[3][3])
 {
@@ -874,19 +1043,65 @@ void Color::xyz2rgb (vfloat x, vfloat y, vfloat z, vfloat &r, vfloat &g, vfloat 
 }
 #endif // __SSE2__
 
+#ifdef __SSE2__
 void Color::trcGammaBW (float &r, float &g, float &b, float gammabwr, float gammabwg, float gammabwb)
 {
-    // correct gamma for black and white image : pseudo TRC curve of ICC profil
-    b /= 65535.0f;
-    b = pow (max(b, 0.0f), gammabwb);
+    // correct gamma for black and white image : pseudo TRC curve of ICC profile
+    vfloat rgbv = _mm_set_ps(0.f, r, r, r); // input channel is always r
+    vfloat gammabwv = _mm_set_ps(0.f, gammabwb, gammabwg, gammabwr);
+    vfloat c65535v = F2V(65535.f);
+    rgbv /= c65535v;
+    rgbv = vmaxf(rgbv, ZEROV);
+    rgbv = pow_F(rgbv, gammabwv);
+    rgbv *= c65535v;
+    float temp[4] ALIGNED16;
+    STVF(temp[0], rgbv);
+    r = temp[0];
+    g = temp[1];
+    b = temp[2];
+}
+void Color::trcGammaBWRow (float *r, float *g, float *b, int width, float gammabwr, float gammabwg, float gammabwb)
+{
+    // correct gamma for black and white image : pseudo TRC curve of ICC profile
+    vfloat c65535v = F2V(65535.f);
+    vfloat gammabwrv = F2V(gammabwr);
+    vfloat gammabwgv = F2V(gammabwg);
+    vfloat gammabwbv = F2V(gammabwb);
+    int i = 0;
+    for(; i < width - 3; i += 4 ) {
+        vfloat inv = _mm_loadu_ps(&r[i]); // input channel is always r
+        inv /= c65535v;
+        inv = vmaxf(inv, ZEROV);
+        vfloat rv = pow_F(inv, gammabwrv);
+        vfloat gv = pow_F(inv, gammabwgv);
+        vfloat bv = pow_F(inv, gammabwbv);
+        rv *= c65535v;
+        gv *= c65535v;
+        bv *= c65535v;
+        _mm_storeu_ps(&r[i], rv);
+        _mm_storeu_ps(&g[i], gv);
+        _mm_storeu_ps(&b[i], bv);
+    }
+    for(; i < width; i++) {
+        trcGammaBW(r[i], g[i], b[i], gammabwr, gammabwg, gammabwb);
+    }
+}
+
+#else
+void Color::trcGammaBW (float &r, float &g, float &b, float gammabwr, float gammabwg, float gammabwb)
+{
+    // correct gamma for black and white image : pseudo TRC curve of ICC profile
+    float in = r; // input channel is always r
+    in /= 65535.0f;
+    in = max(in, 0.f);
+    b = pow_F (in, gammabwb);
     b *= 65535.0f;
-    r /= 65535.0f;
-    r = pow (max(r, 0.0f), gammabwr);
+    r = pow_F (in, gammabwr);
     r *= 65535.0f;
-    g /= 65535.0f;
-    g = pow (max(g, 0.0f), gammabwg);
+    g = pow_F (in, gammabwg);
     g *= 65535.0f;
 }
+#endif
 
 /** @brief Compute the B&W constants for the B&W processing and its tool's GUI
  *
@@ -1433,7 +1648,7 @@ void Color::interpolateRGBColor (float realL, float iplow, float iphigh, int alg
     Color::xyz2rgb(X, Y, Z, ro, go, bo, rgb_xyz);// ro go bo in gamut
 }
 
-void Color::calcGamma (double pwr, double ts, int mode, int imax, double &gamma0, double &gamma1, double &gamma2, double &gamma3, double &gamma4, double &gamma5)
+void Color::calcGamma (double pwr, double ts, int mode, int imax, GammaValues &gamma)
 {
     //from Dcraw (D.Coffin)
     int i;
@@ -1469,14 +1684,89 @@ void Color::calcGamma (double pwr, double ts, int mode, int imax, double &gamma0
     }
 
     if (!mode--) {
-        gamma0 = g[0];
-        gamma1 = g[1];
-        gamma2 = g[2];
-        gamma3 = g[3];
-        gamma4 = g[4];
-        gamma5 = g[5];
+        gamma[0] = g[0];
+        gamma[1] = g[1];
+        gamma[2] = g[2];
+        gamma[3] = g[3];
+        gamma[4] = g[4];
+        gamma[5] = g[5];
+        gamma[6] = 0.;
         return;
     }
+}
+void Color::gammaf2lut (LUTf &gammacurve, float gamma, float start, float slope, float divisor, float factor)
+{
+#ifdef __SSE2__
+    // SSE2 version is more than 6 times faster than scalar version
+    vfloat iv = _mm_set_ps(3.f, 2.f, 1.f, 0.f);
+    vfloat fourv = F2V(4.f);
+    vfloat gammav = F2V(1.f / gamma);
+    vfloat slopev = F2V((slope / divisor) * factor);
+    vfloat divisorv = F2V(xlogf(divisor));
+    vfloat factorv = F2V(factor);
+    vfloat comparev = F2V(start * divisor);
+    int border = start * divisor;
+    int border1 = border - (border & 3);
+    int border2 = border1 + 4;
+    int i = 0;
+
+    for(; i < border1; i += 4) {
+        vfloat resultv = iv * slopev;
+        STVFU(gammacurve[i], resultv);
+        iv += fourv;
+    }
+
+    for(; i < border2; i += 4) {
+        vfloat result0v = iv * slopev;
+        vfloat result1v = xexpf((xlogf(iv) - divisorv) * gammav) * factorv;
+        STVFU(gammacurve[i], vself(vmaskf_le(iv, comparev), result0v, result1v));
+        iv += fourv;
+    }
+
+    for(; i < 65536; i += 4) {
+        vfloat resultv = xexpfNoCheck((xlogfNoCheck(iv) - divisorv) * gammav) * factorv;
+        STVFU(gammacurve[i], resultv);
+        iv += fourv;
+    }
+
+#else
+
+    for (int i = 0; i < 65536; ++i) {
+        gammacurve[i] = gammaf(static_cast<float>(i) / divisor, gamma, start, slope) * factor;
+    }
+
+#endif
+}
+
+void Color::gammanf2lut (LUTf &gammacurve, float gamma, float divisor, float factor)           //standard gamma without slope...
+{
+#ifdef __SSE2__
+    // SSE2 version is more than 6 times faster than scalar version
+    vfloat iv = _mm_set_ps(3.f, 2.f, 1.f, 0.f);
+    vfloat fourv = F2V(4.f);
+    vfloat gammav = F2V(1.f / gamma);
+    vfloat divisorv = F2V(xlogf(divisor));
+    vfloat factorv = F2V(factor);
+
+    // first input value is zero => we have to use the xlogf function which checks this
+    vfloat resultv = xexpf((xlogf(iv) - divisorv) * gammav) * factorv;
+    STVFU(gammacurve[0], resultv);
+    iv += fourv;
+
+    // inside the loop we can use xlogfNoCheck and xexpfNoCheck because we know about the input values
+    for(int i = 4; i < 65536; i += 4) {
+        resultv = xexpfNoCheck((xlogfNoCheck(iv) - divisorv) * gammav) * factorv;
+        STVFU(gammacurve[i], resultv);
+        iv += fourv;
+    }
+
+#else
+
+    for (int i = 0; i < 65536; ++i) {
+        gammacurve[i] = Color::gammanf(static_cast<float>(i) / divisor, gamma) * factor;
+    }
+
+#endif
 }
 
 void Color::Lab2XYZ(float L, float a, float b, float &x, float &y, float &z)
@@ -1491,6 +1781,17 @@ void Color::Lab2XYZ(float L, float a, float b, float &x, float &y, float &z)
     z = 65535.0f * f2xyz(fz) * D50z;
     y = (LL > epskap) ? 65535.0f * fy * fy * fy : 65535.0f * LL / kappa;
 }
+
+void Color::L2XYZ(float L, float &x, float &y, float &z) // for black & white
+{
+    float LL = L / 327.68f;
+    float fy = (0.00862069f * LL) + 0.137932f; // (L+16)/116
+    float fxz = 65535.f * f2xyz(fy);
+    x = fxz * D50x;
+    z = fxz * D50z;
+    y = (LL > epskap) ? 65535.0f * fy * fy * fy : 65535.0f * LL / kappa;
+}
+
 
 #ifdef __SSE2__
 void Color::Lab2XYZ(vfloat L, vfloat a, vfloat b, vfloat &x, vfloat &y, vfloat &z)
@@ -1697,7 +1998,6 @@ void Color::skinred ( double J, double h, double sres, double Sp, float dred, fl
     float factorskin, factorsat, factor, factorskinext, interm;
     float scale = 100.0f / 100.1f; //reduction in normal zone
     float scaleext = 1.0f; //reduction in transition zone
-    float protect_redh;
     float deltaHH = 0.3f; //HH value transition : I have choice 0.3 radians
     float HH;
     bool doskin = false;
@@ -1778,7 +2078,6 @@ void Color::skinredfloat ( float J, float h, float sres, float Sp, float dred, f
 
     if(doskin) {
         float factorskin, factorsat, factor, factorskinext;
-        float protect_redh;
         float deltaHH = 0.3f; //HH value transition : I have choice 0.3 radians
         float chromapro = sres / Sp;
 
@@ -1949,7 +2248,7 @@ void Color::AllMunsellLch(bool lumaMuns, float Lprov1, float Loldd, float HH, fl
 
                         correctionHueLum = 0.0;
 
-                        if(contin1 == true && contin2 == true) {
+                        if(contin1 && contin2) {
                             correctlum = correctlumprov2 - correctlumprov;
                         }
 
@@ -2143,6 +2442,7 @@ void Color::gamutLchonly (float HH, float2 sincosval, float &Lprov1, float &Chpr
     neg = false, more_rgb = false;
 #endif
     float ChprovSave = Chprov1;
+
     do {
         inGamut = true;
 
@@ -2165,6 +2465,7 @@ void Color::gamutLchonly (float HH, float2 sincosval, float &Lprov1, float &Chpr
 #ifdef _DEBUG
             neg = true;
 #endif
+
             if (isnan(HH)) {
                 float atemp = ChprovSave * sincosval.y * 327.68;
                 float btemp = ChprovSave * sincosval.x * 327.68;
@@ -2337,7 +2638,7 @@ SSEFUNCTION  void Color::LabGamutMunsell(float *labL, float *laba, float *labb, 
     MyTime t1e, t2e;
     t1e.set();
     int negat = 0, moreRGB = 0;
-    MunsellDebugInfo* MunsDebugInfo = NULL;
+    MunsellDebugInfo* MunsDebugInfo = nullptr;
 
     if (corMunsell) {
         MunsDebugInfo = new MunsellDebugInfo();
@@ -2456,8 +2757,8 @@ SSEFUNCTION  void Color::LabGamutMunsell(float *labL, float *laba, float *labb, 
         printf("   Gamut              : G1negat=%iiter G165535=%iiter \n", negat, moreRGB);
 
         if (MunsDebugInfo) {
-            printf("   Munsell chrominance: MaxBP=%1.2frad  MaxRY=%1.2frad  MaxGY=%1.2frad  MaxRP=%1.2frad  depass=%i\n", MunsDebugInfo->maxdhue[0],    MunsDebugInfo->maxdhue[1],    MunsDebugInfo->maxdhue[2],    MunsDebugInfo->maxdhue[3],    MunsDebugInfo->depass);
-            printf("   Munsell luminance  : MaxBP=%1.2frad  MaxRY=%1.2frad  MaxGY=%1.2frad  MaxRP=%1.2frad  depass=%i\n", MunsDebugInfo->maxdhuelum[0] , MunsDebugInfo->maxdhuelum[1], MunsDebugInfo->maxdhuelum[2], MunsDebugInfo->maxdhuelum[3], MunsDebugInfo->depassLum);
+            printf("   Munsell chrominance: MaxBP=%1.2frad  MaxRY=%1.2frad  MaxGY=%1.2frad  MaxRP=%1.2frad  depass=%u\n", MunsDebugInfo->maxdhue[0],    MunsDebugInfo->maxdhue[1],    MunsDebugInfo->maxdhue[2],    MunsDebugInfo->maxdhue[3],    MunsDebugInfo->depass);
+            printf("   Munsell luminance  : MaxBP=%1.2frad  MaxRY=%1.2frad  MaxGY=%1.2frad  MaxRP=%1.2frad  depass=%u\n", MunsDebugInfo->maxdhuelum[0] , MunsDebugInfo->maxdhuelum[1], MunsDebugInfo->maxdhuelum[2], MunsDebugInfo->maxdhuelum[3], MunsDebugInfo->depassLum);
         } else {
             printf("   Munsell correction wasn't requested\n");
         }

@@ -98,7 +98,7 @@ void TTPanelColorChooser::deploy()
    for (size_t i=0; i< env->countPanel() ; i++)
    { 
       FoldableToolPanel* p = static_cast<FoldableToolPanel*> (env->getPanel(i));
-      if ( (p != NULL)
+      if ( (p != nullptr)
       && (!(p->canBeIgnored())))
       {
 //        printf("connecting to %s \n", p->getToolName().c_str());
@@ -127,7 +127,7 @@ void TTPanelColorChooser::on_toggle_button()
    for (size_t i=0; i< env->countPanel() ; i++)
    {
       FoldableToolPanel* p = static_cast<FoldableToolPanel*> (env->getPanel(i));
-      if ( (p != NULL)
+      if ( (p != nullptr)
       && (!(p->canBeIgnored())))
       {
         colorPanel(p);
@@ -138,23 +138,13 @@ void TTPanelColorChooser::on_toggle_button()
   for (size_t i=0; i< env->countPanel() ; i++)
   {
      FoldableToolPanel* p = static_cast<FoldableToolPanel*> (env->getPanel(i));
-      if ( (p != NULL)
+      if ( (p != nullptr)
       && (!(p->canBeIgnored())))
       {
         colorPanel(p, true); 
         pangoPanel(p, true);
       }
   }
-
-}
-
-void TTPanelColorChooser::read(const rtengine::procparams::ProcParams* pp, const ParamsEdited* pedited)
-{
-
-}
-
-void TTPanelColorChooser::write( rtengine::procparams::ProcParams* pp, ParamsEdited* pedited)
-{
 
 }
 
@@ -178,7 +168,7 @@ int TTPanelColorChooser::getState(ToolPanel* panel)
 //getEnabledButton()->get_active())
   {
     state = 0;
-    if (panel->getEnabledButton() == NULL)
+    if (panel->getEnabledButton() == nullptr)
       state = 2;
     else
     if (panel->getEnabledButton()->get_active())
@@ -292,7 +282,7 @@ void  TTPanelColorChooser::colorPanel(ToolPanel* panel, bool deactivate)
 
 void TTPanelColorChooser::colorer(ToolPanel* panel)
 {
-  if (panel!=NULL)
+  if (panel!=nullptr)
   {
     colorPanel(panel);
     pangoPanel(panel);
@@ -303,7 +293,7 @@ void TTPanelColorChooser::colorer(ToolPanel* panel)
 
 void TTPanelColorChooser::pangorer(ToolPanel* panel)
 {
-  if (panel!=NULL)
+  if (panel!=nullptr)
   {
     pangoPanel(panel);
   }

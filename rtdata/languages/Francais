@@ -376,7 +376,7 @@ HISTORY_MSG_145;Microcontraste - Uniformité
 HISTORY_MSG_146;Netteté des bords
 HISTORY_MSG_147;Bords - Luminance uniquement
 HISTORY_MSG_148;Microcontraste
-HISTORY_MSG_149;Microcontraste - Matrice 3x3
+HISTORY_MSG_149;Microcontraste - Matrice 3×3
 HISTORY_MSG_150;Réduction du bruit/artefact post-dématriçage
 HISTORY_MSG_151;Vibrance
 HISTORY_MSG_152;Vib. - Tons pastels
@@ -632,6 +632,7 @@ HISTORY_MSG_403;O - NB - Sensibilité des bords
 HISTORY_MSG_404;O - NB - Base amplification
 HISTORY_MSG_405;O - Débruitage - Niveau 4
 HISTORY_MSG_406;O - NB - Pixels voisins
+HISTORY_MSG_443;Compensation du Point Noir de Sortie
 HISTORY_NEWSNAPSHOT;Ajouter
 HISTORY_NEWSNAPSHOT_TOOLTIP;Raccourci: <b>Alt-s</b>
 HISTORY_SNAPSHOT;Capture
@@ -954,6 +955,7 @@ PREFERENCES_MENUGROUPRANK;Classement
 PREFERENCES_MENUOPTIONS;Options du menu
 PREFERENCES_METADATA;Metadonnées
 PREFERENCES_MIN;Mini (100x115)
+PREFERENCES_MONBPC;Compensation du Point Noir pour la transformation L*a*b*->Moniteur
 PREFERENCES_MULTITAB;Éditeurs multiple
 PREFERENCES_MULTITABDUALMON;Éditeurs multiple, si possible sur un second moniteur
 PREFERENCES_NAVGUIDEBRUSH;Couleur du cadre dans le Navigateur
@@ -988,7 +990,8 @@ PREFERENCES_REMEMBERZOOMPAN;Se souvenir de niveau de zoom et de la position de l
 PREFERENCES_REMEMBERZOOMPAN_TOOLTIP;Retient le niveau de zoom et la position de l'image courante lors de l'ouverture d'une nouvelle image.\n\nCette option ne fonctionne que dans le mode "Éditeur unique" et quand "Méthode de dématriçage utilisé pour l'aperçu à un zoom <100%" is set to "Idem PP3".
 PREFERENCES_RGBDTL_LABEL;Nombre maximum d'unités de calcul pour la Réduction du bruit
 PREFERENCES_RGBDTL_TOOLTIP;La réduction du bruit nécessite un minimum d'à peu près 128Mo de RAM pour une image de 10MPix ou 512Mo pour une image de 40MPix, ainsi que 128Mo de RAM supplémentaire par unité de calcul. Plus il y aura d'unités de calcul travaillant en parallèle, plus ce sera rapide. Laissez la valeur à "0" pour utiliser automatiquement autant d'unités de calcul que possible.
-PREFERENCES_SELECTFONT;Police de caractère
+PREFERENCES_SELECTFONT;Police générale
+PREFERENCES_SELECTFONT_COLPICKER;Police des pipette à couleur
 PREFERENCES_SELECTLANG;Choix de la langue
 PREFERENCES_SELECTTHEME;Choisissez un thème
 PREFERENCES_SERIALIZE_TIFF_READ;Réglage de lecture des images TIFF
@@ -1082,6 +1085,8 @@ SAVEDLG_SUBSAMP_3;Meilleure qualité
 SAVEDLG_TIFFUNCOMPRESSED;TIFF non compressé
 SAVEDLG_WARNFILENAME;Le fichier sera nommé
 SHCSELECTOR_TOOLTIP;Cliquez le bouton droit de la souris\npour réinitialiser la position de ces 3 curseurs
+SOFTPROOF_GAMUTCHECK_TOOLTIP;Si activé, indique en gris les pixels dont la couleurs est en dehors du gamut du profile de sortie
+SOFTPROOF_TOOLTIP;Épreuvage écran\nSi activé, simule le rendu généré par le profiles de sortie de l'outil ICM. Particulièrement utile pour simuler le rendu en sortie d'imprimante.
 THRESHOLDSELECTOR_B;Bas
 THRESHOLDSELECTOR_BL;Bas-gauche
 THRESHOLDSELECTOR_BR;Bas-droite
@@ -1089,6 +1094,7 @@ THRESHOLDSELECTOR_HINT;Maintenez la touche <b>Shift</b> appuyée pour déplacer 
 THRESHOLDSELECTOR_T;Haut
 THRESHOLDSELECTOR_TL;Haut-Gauche
 THRESHOLDSELECTOR_TR;Haut-droite
+TOOLBAR_TOOLTIP_COLORPICKER;Ancre de Vérification Couleur\n\nLorque activé:\nCliquez la zone d'image avec le bouton gauche de la souris pour ajouter une ancre\nDéplacez-le en le "tirant" avec le bouton gauche de la souris\nSupprimez une ancre en cliquant dessus avec le bouton droit de la souris\nSupprimez toutes les ancres avec Shift + click avec le bouton droit\nCliquez avec le bouton droit de la souris en dehors de toute ancre pour revenir au mode Déplacement
 TOOLBAR_TOOLTIP_CROP;Sélection du recadrage\nRaccourci: <b>c</b>\nDéplacez le recadrage en utilisant Shift + Glisser
 TOOLBAR_TOOLTIP_HAND;Outil de navigation\nRaccourci: <b>h</b>
 TOOLBAR_TOOLTIP_STRAIGHTEN;Sélection de la ligne d'horizon\nRaccourci: <b>s</b>\n\nIndiquez la verticale ou l'horizontale en dessinant une ligne à travers l'image de prévisualisation. L'angle de rotation sera affiché près de la ligne guide. Le centre de rotation est le centre géométrique de l'image.
@@ -1295,11 +1301,6 @@ TP_DARKFRAME_LABEL;Trame Noire
 TP_DEFRINGE_LABEL;Aberration chromatique
 TP_DEFRINGE_RADIUS;Rayon
 TP_DEFRINGE_THRESHOLD;Seuil
-TP_DIRPYRDENOISE_33;3×3 fort
-TP_DIRPYRDENOISE_55;5×5 fort
-TP_DIRPYRDENOISE_55SOFT;5×5
-TP_DIRPYRDENOISE_77;7×7 (lent)
-TP_DIRPYRDENOISE_99;9x9 (très lent)
 TP_DIRPYRDENOISE_ABM;Chroma uniquement
 TP_DIRPYRDENOISE_AUT;Global automatique
 TP_DIRPYRDENOISE_AUTO;Global automatique
@@ -1315,7 +1316,6 @@ TP_DIRPYRDENOISE_CUR;Courbe
 TP_DIRPYRDENOISE_CURVEEDITOR_CC;Chroma
 TP_DIRPYRDENOISE_CURVEEDITOR_CC_TOOLTIP;Augmente (multiplie) la valeur de tousles curseurs de chrominance.\nCette courbe vous permet d'ajuster la force de la réduction de bruit chromatique en fonction de la chromaticité, par exemple pour augmenter l'action dans les zones peu saturées et pour la réduire dans ceux celles très saturées.
 TP_DIRPYRDENOISE_CURVEEDITOR_L_TOOLTIP;Module l'action du débruitage de 'Luminance'
-TP_DIRPYRDENOISE_ENABLED_TOOLTIP;Peut être utilisé sur les images raw et non-raw.\n\nPour les images non-raw, la réduction de bruit de luminance dépend du gamma du profil couleur d'entée. Un gamma sRGB est supposé, c'est pourquoi si l'image a un profil couleur d'un gamma différent, la réduction de bruit de luminance variera.
 TP_DIRPYRDENOISE_ENH;Mode amélioré
 TP_DIRPYRDENOISE_ENH_TOOLTIP;Augmente la qualité du débruitage, mais augmente le temps de traitement d'environ 20%
 TP_DIRPYRDENOISE_GAMMA;Gamma
@@ -1330,24 +1330,20 @@ TP_DIRPYRDENOISE_LPLABM;L* pondéré (faiblement) + a*b* (normal)
 TP_DIRPYRDENOISE_LTYPE;Contrôle de luminance
 TP_DIRPYRDENOISE_LUMA;Luminance
 TP_DIRPYRDENOISE_LUMAFR;Luminance
-TP_DIRPYRDENOISE_LUMAFR_TOOLTIP;Ondelettes pour la luminance et transformé de Fourier pour les détails de luminance
 TP_DIRPYRDENOISE_MAN;Manuel
 TP_DIRPYRDENOISE_MANU;Manuel
 TP_DIRPYRDENOISE_MED;Filtre Médian
 TP_DIRPYRDENOISE_MEDMETHOD;Méthode
 TP_DIRPYRDENOISE_MEDTYPE;Type de médiane
-TP_DIRPYRDENOISE_MED_TOOLTIP;Active le débruitage médian
 TP_DIRPYRDENOISE_METHOD;Méthode
 TP_DIRPYRDENOISE_METHOD11;Qualité
 TP_DIRPYRDENOISE_METHOD11_TOOLTIP;La qualité peut être adapté à la trame du bruit. Régler sur "haut" augmentera l'effet de la réduction de bruit au prix d'un temps de traitement plus long.
 TP_DIRPYRDENOISE_METHOD_TOOLTIP;Pour les images raw, les méthodes RVB ou Lab peuvent être utilisées.\n\nPour les images non-raw la méthode Lab sera utilisée, indépendamment de ce qu'indique ce bouton.
 TP_DIRPYRDENOISE_METM_TOOLTIP;Lorsque vous utilisez les méthodes "Luminance seulement" et "Lab", un filtrage médian sera effectué juste après l'étape des ondelettes dans le pipeline de la réduction de bruit.\nEm mode "RVB", il sera effectué à la toute fin du pipeline de la réduction de bruit.
-TP_DIRPYRDENOISE_MET_TOOLTIP;Applique un filtre médian de la taille souhaité. Plus il est large, plus cela prendra de temps.\n\n3x3 soft: treats 5 pixels in a 1-pixel range.\n3x3: treats 9 pixels in a 1-pixel range.\n5x5 soft: treats 13 pixels in a 2-pixel range.\n5x5: treats 25 pixels in a 2-pixel range.\n7x7: treats 49 pixels in a 3-pixel range.\n\nSometimes it is possible to achieve higher quality running several iterations with a small range than one iteration with a large range.
 TP_DIRPYRDENOISE_NOISELABEL;Bruit de l'aperçu: Moyen=%1  Haut=%2
 TP_DIRPYRDENOISE_NOISELABELEMPTY;Bruit de l'aperçu: Moyen= -   Haut= -
 TP_DIRPYRDENOISE_NRESID_TOOLTIP;Affiche les niveaux de bruit résiduel de la partie de l'image visible dans l'<b>aperçu</b> après les ondelettes.\n\n>300 Très bruité\n100-300 Bruité\n50-100 Peu bruité\n<50 Très peu bruité\n\nAttention, les valeurs diffèreront entre le mode RVB et L*a*b*. Les valeurs RVB sont moins précises car le mode RVB ne séparent pas complètement la luminance et la chrominance.
 TP_DIRPYRDENOISE_PASSE;Itérations
-TP_DIRPYRDENOISE_PASSES_TOOLTIP;Appliquer 3 itération du filtre médian 3x3 donne de meilleurs résultats qu'appliquer une seule fois le filtre 7x7.
 TP_DIRPYRDENOISE_PON;Multi-zones auto
 TP_DIRPYRDENOISE_PRE;Aperçu multi-zones
 TP_DIRPYRDENOISE_PREV;Aperçu
@@ -1358,7 +1354,6 @@ TP_DIRPYRDENOISE_RGBM;RVB
 TP_DIRPYRDENOISE_SHAL;Standard
 TP_DIRPYRDENOISE_SHALBI;Haut
 TP_DIRPYRDENOISE_SLI;Curseur
-TP_DIRPYRDENOISE_SOFT;3x3
 TP_DIRPYRDENOISE_TILELABEL;Taille des tuiles =%1, Centre: Tx=%2  Ty=%3
 TP_DIRPYREQUALIZER_ALGO;Domaine des tons chairs
 TP_DIRPYREQUALIZER_ALGO_TOOLTIP;Fin: plus proche des tons chairs, minimisant l'actions sur les autres couleurs\nLarge: évite plus d'artéfacts
@@ -1462,6 +1457,8 @@ TP_ICM_APPLYLOOKTABLE;Table de recherche
 TP_ICM_APPLYLOOKTABLE_TOOLTIP;Utilise la table de recherche (LUT) contenu dans le profil DCP. Ce réglage n'est possible que si le profil DCP sélectionné en contient une.
 TP_ICM_BLENDCMSMATRIX;Mélange des hautes lumières\ndu profil ICC avec la matrice
 TP_ICM_BLENDCMSMATRIX_TOOLTIP;Activer la récupération des zones brûlées lorsque les profils ICC basés sur la LUT sont utilisés
+TP_ICM_BPC;Compensation du  Point Noir
+TP_ICM_BPC_TOOLTIP;Activez ceci pour faire correspondre le canal Luminosité à l'espace couleur de sortie avec un Point Blanc fixe
 TP_ICM_DCPILLUMINANT;Illuminant
 TP_ICM_DCPILLUMINANT_INTERPOLATED;Interpolé
 TP_ICM_DCPILLUMINANT_TOOLTIP;Sélectionne quel illuminant DCP inclus utiliser. La valeur par défaut est "Interpolé", qui est un mix entre les 2 profils inclus basé sur la Balance des Blancs choisie. Ce paramètre n'est actif que si un fichier DCP Bi-Illuminant avec support de l'interpolation est choisi.
@@ -1889,6 +1886,8 @@ ZOOMPANEL_ZOOMOUT;Zoom Arrière\nRaccourci: <b>-</b>
 !!!!!!!!!!!!!!!!!!!!!!!!!
 
 !FILEBROWSER_SHOWORIGINALHINT;Show only original images.\n\nWhen several images exist with the same filename but different extensions, the one considered original is the one whose extension is nearest the top of the parsed extensions list in Preferences > File Browser > Parsed Extensions.
+!GENERAL_APPLY;Apply
+!GENERAL_OPEN;Open
 !HISTORY_MSG_166;Exposure - Reset
 !HISTORY_MSG_407;Retinex - Method
 !HISTORY_MSG_408;Retinex - Radius
@@ -1942,7 +1941,15 @@ ZOOMPANEL_ZOOMOUT;Zoom Arrière\nRaccourci: <b>-</b>
 !TP_CBDL_METHOD;Process located
 !TP_CBDL_METHOD_TOOLTIP;Choose whether the Contrast by Detail Levels tool is to be positioned after the Black-and-White tool, which makes it work in L*a*b* space, or before it, which makes it work in RGB space.
 !TP_COLORTONING_NEUTRAL;Reset sliders
+!TP_DIRPYRDENOISE_3X3;3×3
+!TP_DIRPYRDENOISE_3X3_SOFT;3×3 soft
+!TP_DIRPYRDENOISE_5X5;5×5
+!TP_DIRPYRDENOISE_5X5_SOFT;5×5 soft
+!TP_DIRPYRDENOISE_7X7;7×7
+!TP_DIRPYRDENOISE_9X9;9×9
+!TP_DIRPYRDENOISE_MET_TOOLTIP;Apply a median filter of the desired window size. The larger the window's size, the longer it takes.\n\n3×3 soft: treats 5 pixels in a 3×3 pixel window.\n3×3: treats 9 pixels in a 3×3 pixel window.\n5×5 soft: treats 13 pixels in a 5×5 pixel window.\n5×5: treats 25 pixels in a 5×5 pixel window.\n7×7: treats 49 pixels in a 7×7 pixel window.\n9×9: treats 81 pixels in a 9×9 pixel window.\n\nSometimes it is possible to achieve higher quality running several iterations with a smaller window size than one iteration with a larger one.
 !TP_DIRPYRDENOISE_PASSES;Median iterations
+!TP_DIRPYRDENOISE_PASSES_TOOLTIP;Applying three median filter iterations with a 3×3 window size often leads to better results than using one median filter iteration with a 7×7 window size.
 !TP_FILMSIMULATION_SLOWPARSEDIR;RawTherapee is configured to look for Hald CLUT images, which are used for the Film Simulation tool, in a folder which is taking too long to load.\nGo to Preferences > Image Processing > Film Simulation\nto see which folder is being used. You should either point RawTherapee to a folder which contains only Hald CLUT images and nothing more, or to an empty folder if you don't want to use the Film Simulation tool.\n\nRead the Film Simulation article in RawPedia for more information.\n\nDo you want to cancel the scan now?
 !TP_ICM_PROFILEINTENT;Rendering Intent
 !TP_NEUTRAL;Reset

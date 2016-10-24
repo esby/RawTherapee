@@ -42,10 +42,14 @@ BatchToolPanelCoordinator::BatchToolPanelCoordinator (FilePanel* parent) : ToolP
         env->erasePanel (ipi);
     }
 
+    if (toolBar) {
+        toolBar->setBatchMode ();
+    }
+
     toolPanelNotebook->remove_page (*metadataPanel);
     env->setMetadataState(false);
-    metadataPanel = 0;
-    toiM = 0;
+    metadataPanel = nullptr;
+    toiM = nullptr;
 
     for (size_t i = 0; i < env->countPanel(); i++) {
         env->getPanel(i)->setBatchMode (true);
@@ -96,7 +100,7 @@ void BatchToolPanelCoordinator::closeSession (bool save)
                 env->getPanel(j)->trimValues (&newParams);
             }
 
-            selected[i]->setProcParams (newParams, NULL, BATCHEDITOR, true);
+            selected[i]->setProcParams (newParams, nullptr, BATCHEDITOR, true);
         }
     }
 
@@ -845,7 +849,7 @@ void BatchToolPanelCoordinator::panelChanged (rtengine::ProcEvent event, const G
             env->getPanel(j)->trimValues (&newParams);
         }
 
-        selected[i]->setProcParams (newParams, NULL, BATCHEDITOR, false);
+        selected[i]->setProcParams (newParams, nullptr, BATCHEDITOR, false);
     }
 
     for (size_t i = 0; i < paramcListeners.size(); i++) {
@@ -947,7 +951,7 @@ void BatchToolPanelCoordinator::profileChange  (const rtengine::procparams::Part
     for (size_t i = 0; i < selected.size(); i++) {
         newParams = initialPP[i];
         pparamsEdited.combine (newParams, pparams, selected.size() == 1);
-        selected[i]->setProcParams (newParams, NULL, BATCHEDITOR, false);
+        selected[i]->setProcParams (newParams, nullptr, BATCHEDITOR, false);
     }
 
     for (size_t i = 0; i < paramcListeners.size(); i++) {

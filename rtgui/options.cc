@@ -75,11 +75,7 @@ inline bool Options::checkProfilePath(Glib::ustring &path)
 
     p = getGlobalProfilePath();
 
-    if (!p.empty() && Glib::file_test (path + paramFileExtension, Glib::FILE_TEST_EXISTS)) {
-        return true;
-    } else {
-        return false;
-    }
+    return !p.empty() && Glib::file_test (path + paramFileExtension, Glib::FILE_TEST_EXISTS);
 }
 
 bool Options::checkDirPath(Glib::ustring &path, Glib::ustring errString)
@@ -293,6 +289,7 @@ void Options::setDefaults ()
 {
 
     font = "sans, 8";
+    colorPickerFont = "sans, 8";
     windowWidth = 1200;
     windowHeight = 680;
     windowX = 0;
@@ -394,8 +391,8 @@ void Options::setDefaults ()
     gimpDir = "";
     psDir = "";
     customEditorProg = "";
+    CPBKeys = CPBKT_TID;
     editorToSendTo = 1;
-    liveThumbnails = true;
     favoriteDirs.clear();
     tpOpen.clear ();
     //crvOpen.clear ();
@@ -472,6 +469,7 @@ void Options::setDefaults ()
     fastexport_icm_working               = "ProPhoto";
     fastexport_icm_output                = "RT_sRGB";
     fastexport_icm_outputIntent          = rtengine::RI_RELATIVE;
+    fastexport_icm_outputBPC             = true;
     fastexport_icm_gamma                 = "default";
     fastexport_resize_enabled            = true;
     fastexport_resize_scale              = 1;
@@ -637,6 +635,7 @@ void Options::setDefaults ()
 
     rtSettings.monitorProfile = Glib::ustring();
     rtSettings.monitorIntent = rtengine::RI_RELATIVE;
+    rtSettings.monitorBPC = true;
     rtSettings.autoMonitorProfile = false;
     rtSettings.adobe = "RT_Medium_gsRGB"; // put the name of yours profiles (here windows)
     rtSettings.prophoto = "RT_Large_gBT709"; // these names appear in the menu "output profile"
@@ -1142,10 +1141,6 @@ int Options::readFromFile (Glib::ustring fname)
                     thumbInterp    = keyFile.get_integer ("File Browser", "ThumbnailInterpolation");
                 }
 
-                if (keyFile.has_key ("File Browser", "LiveThumbnails")) {
-                    liveThumbnails     = keyFile.get_boolean ("File Browser", "LiveThumbnails");
-                }
-
                 if (keyFile.has_key ("File Browser", "FavoriteDirs")) {
                     favoriteDirs       = keyFile.get_string_list ("File Browser", "FavoriteDirs");
                 }
@@ -1296,6 +1291,10 @@ int Options::readFromFile (Glib::ustring fname)
             if (keyFile.has_group ("GUI")) {
                 if (keyFile.has_key ("GUI", "Font")) {
                     font            = keyFile.get_string  ("GUI", "Font");
+                }
+
+                if (keyFile.has_key ("GUI", "ColorPickerFont")) {
+                    colorPickerFont = keyFile.get_string  ("GUI", "ColorPickerFont");
                 }
 
                 if (keyFile.has_key ("GUI", "WindowWidth")) {
@@ -1521,6 +1520,10 @@ int Options::readFromFile (Glib::ustring fname)
 
                 if (keyFile.has_key ("Color Management", "Intent")) {
                     rtSettings.monitorIntent   = static_cast<rtengine::RenderingIntent>(keyFile.get_integer("Color Management", "Intent"));
+                }
+
+                if (keyFile.has_key ("Color Management", "MonitorBPC")) {
+                    rtSettings.monitorBPC           = keyFile.get_boolean("Color Management", "MonitorBPC");
                 }
 
                 if (keyFile.has_key ("Color Management", "CRI")) {
@@ -1779,6 +1782,10 @@ int Options::readFromFile (Glib::ustring fname)
                     fastexport_icm_outputIntent           = static_cast<rtengine::RenderingIntent>(keyFile.get_integer  ("Fast Export", "fastexport_icm_output_intent"        ));
                 }
 
+                if (keyFile.has_key ("Fast Export", "fastexport_icm_output_bpc"        )) {
+                    fastexport_icm_outputBPC              = keyFile.get_boolean ("Fast Export", "fastexport_icm_output_bpc"           );
+                }
+
                 if (keyFile.has_key ("Fast Export", "fastexport_icm_gamma"                )) {
                     fastexport_icm_gamma                  = keyFile.get_string  ("Fast Export", "fastexport_icm_gamma"                );
                 }
@@ -1838,13 +1845,9 @@ int Options::readFromFile (Glib::ustring fname)
 
         }
     } catch (Glib::Error &err) {
-        if (options.rtSettings.verbose) {
-            printf("Options::readFromFile / Error code %d while reading values from \"%s\":\n%s\n", err.code(), fname.c_str(), err.what().c_str());
-        }
+        printf("Options::readFromFile / Error code %d while reading values from \"%s\":\n%s\n", err.code(), fname.c_str(), err.what().c_str());
     } catch (...) {
-        if (options.rtSettings.verbose) {
-            printf("Options::readFromFile / Unknown exception while trying to load \"%s\"!\n", fname.c_str());
-        }
+        printf("Options::readFromFile / Unknown exception while trying to load \"%s\"!\n", fname.c_str());
     }
 
     return 1;
@@ -1935,7 +1938,6 @@ int Options::saveToFile (Glib::ustring fname)
         keyFile.set_integer_list ("File Browser", "ParseExtensionsEnabled", pextena);
         keyFile.set_integer ("File Browser", "ThumbnailArrangement", fbArrangement);
         keyFile.set_integer ("File Browser", "ThumbnailInterpolation", thumbInterp);
-        keyFile.set_boolean ("File Browser", "LiveThumbnails", liveThumbnails);
         Glib::ArrayHandle<Glib::ustring> pfav = favoriteDirs;
         keyFile.set_string_list ("File Browser", "FavoriteDirs", pfav);
         Glib::ArrayHandle<Glib::ustring> pren = renameTemplates;
@@ -2038,6 +2040,7 @@ int Options::saveToFile (Glib::ustring fname)
         keyFile.set_boolean ("TTP", "HideTrash", TTPHideTrash);
 
         keyFile.set_string  ("GUI", "Font", font);
+        keyFile.set_string  ("GUI", "ColorPickerFont", colorPickerFont);
         keyFile.set_integer ("GUI", "WindowWidth", windowWidth);
         keyFile.set_integer ("GUI", "WindowHeight", windowHeight);
         keyFile.set_integer ("GUI", "WindowX", windowX);
@@ -2099,6 +2102,7 @@ int Options::saveToFile (Glib::ustring fname)
         keyFile.set_boolean ("Color Management", "Autocielab", rtSettings.autocielab);
         keyFile.set_boolean ("Color Management", "RGBcurvesLumamode_Gamut", rtSettings.rgbcurveslumamode_gamut);
         keyFile.set_integer ("Color Management", "Intent", rtSettings.monitorIntent);
+        keyFile.set_boolean ("Color Management", "MonitorBPC", rtSettings.monitorBPC);
         keyFile.set_integer ("Color Management", "view", rtSettings.viewingdevice);
         keyFile.set_integer ("Color Management", "grey", rtSettings.viewingdevicegrey);
         keyFile.set_integer ("Color Management", "greySc", rtSettings.viewinggreySc);
@@ -2167,6 +2171,7 @@ int Options::saveToFile (Glib::ustring fname)
         keyFile.set_string  ("Fast Export", "fastexport_icm_working"               , fastexport_icm_working              );
         keyFile.set_string  ("Fast Export", "fastexport_icm_output"                , fastexport_icm_output               );
         keyFile.set_integer ("Fast Export", "fastexport_icm_output_intent"         , fastexport_icm_outputIntent         );
+        keyFile.set_boolean ("Fast Export", "fastexport_icm_output_bpc"            , fastexport_icm_outputBPC            );
         keyFile.set_string  ("Fast Export", "fastexport_icm_gamma"                 , fastexport_icm_gamma                );
         keyFile.set_boolean ("Fast Export", "fastexport_resize_enabled"            , fastexport_resize_enabled           );
         keyFile.set_double  ("Fast Export", "fastexport_resize_scale"              , fastexport_resize_scale             );
@@ -2201,7 +2206,7 @@ int Options::saveToFile (Glib::ustring fname)
 
     FILE *f = g_fopen (fname.c_str (), "wt");
 
-    if (f == NULL) {
+    if (f == nullptr) {
         if (options.rtSettings.verbose) {
             printf("Options::saveToFile / Error: unable to open file \"%s\" with write access!\n", fname.c_str());
         }
@@ -2224,7 +2229,7 @@ bool Options::load ()
 
     path = g_getenv("RT_SETTINGS");
 
-    if (path != NULL) {
+    if (path != nullptr) {
         rtdir = Glib::ustring(path);
 
         if (!Glib::path_is_absolute(rtdir)) {
@@ -2233,9 +2238,9 @@ bool Options::load ()
     } else {
 #ifdef WIN32
         WCHAR pathW[MAX_PATH] = {0};
-        char pathA[MAX_PATH];
 
         if (SHGetSpecialFolderPathW(NULL, pathW, CSIDL_LOCAL_APPDATA, false)) {
+            char pathA[MAX_PATH];
             WideCharToMultiByte(CP_UTF8, 0, pathW, -1, pathA, MAX_PATH, 0, 0);
             rtdir = Glib::build_filename(Glib::ustring(pathA), Glib::ustring(CACHEFOLDERNAME));
         }
@@ -2258,7 +2263,7 @@ bool Options::load ()
     // Modify the path of the cache folder to the one provided in RT_CACHE environment variable
     path = g_getenv("RT_CACHE");
 
-    if (path != NULL) {
+    if (path != nullptr) {
         cacheBaseDir = Glib::ustring(path);
 
         if (!Glib::path_is_absolute(cacheBaseDir)) {
@@ -2383,7 +2388,7 @@ bool Options::load ()
 void Options::save ()
 {
 
-    if (options.multiUser == false) {
+    if (!options.multiUser) {
         options.saveToFile (Glib::build_filename(argv0, "options"));
     } else {
         options.saveToFile (Glib::build_filename(rtdir, "options"));

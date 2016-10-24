@@ -23,13 +23,14 @@
 #include "rt_math.h"
 #include "LUT.h"
 #include "labimage.h"
-#include "iccstore.h"
 #include "iccmatrices.h"
 #include "sleef.c"
 #define SAT(a,b,c) ((float)max(a,b,c)-(float)min(a,b,c))/(float)max(a,b,c)
 
 namespace rtengine
 {
+
+typedef std::array<double, 7> GammaValues;
 
 #ifdef _DEBUG
 
@@ -46,6 +47,7 @@ public:
 };
 
 #endif
+
 
 class Color
 {
@@ -132,13 +134,10 @@ public:
     static LUTf igammatab_srgb1;
     static LUTf gammatab_srgb;
     static LUTf gammatab_srgb1;
-    static LUTf igammatab_55;
-    static LUTf gammatab_55;
-    static LUTf igammatab_4;
-    static LUTf gammatab_4;
 
-    static LUTf igammatab_26_11;
-    static LUTf gammatab_26_11;
+    static LUTf denoiseGammaTab;
+    static LUTf denoiseIGammaTab;
+
     static LUTf igammatab_24_17;
     static LUTf gammatab_24_17a;
     static LUTf gammatab_13_2;
@@ -176,6 +175,22 @@ public:
     {
         return r * 0.2126729 + g * 0.7151521 + b * 0.0721750;
     }
+
+
+    /**
+    * @brief Convert red/green/blue to L*a*b
+    * @brief Convert red/green/blue to hue/saturation/luminance
+    * @param profile output profile name
+    * @param profileW working profile name
+    * @param r red channel [0 ; 65535]
+    * @param g green channel [0 ; 65535]
+    * @param b blue channel [0 ; 65535]
+    * @param L Lab L channel [0 ; 1] (return value)
+    * @param a Lab  a channel [0 ; 1] (return value)
+    * @param b Lab b channel [0; 1] (return value)
+    * @param workingSpace true: compute the Lab value using the Working color space ; false: use the Output color space
+    */
+    static void rgb2lab (Glib::ustring profile, Glib::ustring profileW, int r, int g, int b, float &LAB_l, float &LAB_a, float &LAB_b, bool workingSpace);
 
 
     /**
@@ -408,6 +423,7 @@ public:
     * @param rgb_xyz[3][3] transformation matrix to use for the conversion
     */
     static void xyz2rgb (float x, float y, float z, float &r, float &g, float &b, const double rgb_xyz[3][3]);
+    static void xyz2r (float x, float y, float z, float &r, const double rgb_xyz[3][3]);
     static void xyz2rgb (float x, float y, float z, float &r, float &g, float &b, const float rgb_xyz[3][3]);
 #ifdef __SSE2__
     static void xyz2rgb (vfloat x, vfloat y, vfloat z, vfloat &r, vfloat &g, vfloat &b, const vfloat rgb_xyz[3][3]);
@@ -441,6 +457,7 @@ public:
     * @param z Z coordinate [0 ; 65535] ; can be negative! (return value)
     */
     static void Lab2XYZ(float L, float a, float b, float &x, float &y, float &z);
+    static void L2XYZ(float L, float &x, float &y, float &z);
 
 #ifdef __SSE2__
     static void Lab2XYZ(vfloat L, vfloat a, vfloat b, vfloat &x, vfloat &y, vfloat &z);
@@ -865,21 +882,21 @@ public:
         return h;
     }
 
-
     /**
     * @brief Get the gamma curves' parameters used by LCMS2
     * @param pwr gamma value [>1]
     * @param ts slope [0 ; 20]
     * @param mode [always 0]
     * @imax imax [always 0]
-    * @param gamma0 used in ip2Lab2rgb [0 ; 1], usually near 0.5 (return value)
-    * @param gamma1 used in ip2Lab2rgb [0 ; 20], can be superior to 20, but it's quite unusual(return value)
-    * @param gamma2 used in ip2Lab2rgb [0 ; 1], usually near 0.03(return value)
-    * @param gamma3 used in ip2Lab2rgb [0 ; 1], usually near 0.003(return value)
-    * @param gamma4 used in ip2Lab2rgb [0 ; 1], usually near 0.03(return value)
-    * @param gamma5 used in ip2Lab2rgb [0 ; 1], usually near 0.5 (return value)
+    * @param gamma a pointer to an array of 6 double gamma values:
+    *        gamma0 used in ip2Lab2rgb [0 ; 1], usually near 0.5 (return value)
+    *        gamma1 used in ip2Lab2rgb [0 ; 20], can be superior to 20, but it's quite unusual(return value)
+    *        gamma2 used in ip2Lab2rgb [0 ; 1], usually near 0.03(return value)
+    *        gamma3 used in ip2Lab2rgb [0 ; 1], usually near 0.003(return value)
+    *        gamma4 used in ip2Lab2rgb [0 ; 1], usually near 0.03(return value)
+    *        gamma5 used in ip2Lab2rgb [0 ; 1], usually near 0.5 (return value)
     */
-    static void calcGamma (double pwr, double ts, int mode, int imax, double &gamma0, double &gamma1, double &gamma2, double &gamma3, double &gamma4, double &gamma5);
+    static void calcGamma (double pwr, double ts, int mode, int imax, GammaValues &gamma);
 
 
     /**
@@ -892,6 +909,9 @@ public:
     * @param gammabwb gamma value for red channel [>0]
     */
     static void trcGammaBW (float &r, float &g, float &b, float gammabwr, float gammabwg, float gammabwb);
+#ifdef __SSE2__
+    static void trcGammaBWRow (float *r, float *g, float *b, int width, float gammabwr, float gammabwg, float gammabwb);
+#endif
 
 
     /** @brief Compute the B&W constants for the Black and White processing and its GUI
@@ -1104,6 +1124,15 @@ public:
     {
         return (x <= start ? x*slope : exp(log(x) / gamma) * mul - add);
     }
+
+    static inline float gammaf      (float x, float gamma, float start, float slope)
+    {
+        return x <= start ? x * slope : xexpf(xlogf(x) / gamma);
+    }
+
+    //fills a LUT of size 65536 using gamma with slope...
+    static void gammaf2lut (LUTf &gammacurve, float gamma, float start, float slope, float divisor, float factor);
+
     static inline double igamma     (double x, double gamma, double start, double slope, double mul, double add)
     {
         return (x <= start * slope ? x / slope : exp(log((x + add) / mul) * gamma) );
@@ -1118,7 +1147,7 @@ public:
     */
     static inline double gamman      (double x, double gamma)           //standard gamma without slope...
     {
-        return (x = exp(log(x) / gamma));
+        return exp(log(x) / gamma);
     }
 
     /**
@@ -1129,9 +1158,10 @@ public:
     */
     static inline float gammanf      (float x, float gamma)           //standard gamma without slope...
     {
-        return (x = xexpf(xlogf(x) / gamma));
+        return xexpf(xlogf(x) / gamma);
     }
-
+    //fills a LUT of size 65536 using gamma without slope...
+    static void gammanf2lut (LUTf &gammacurve, float gamma, float divisor, float factor);
 
     /**
     * @brief Very simply inverse gamma
@@ -1141,7 +1171,7 @@ public:
     */
     static inline double igamman     (double x, double gamma)           //standard inverse gamma without slope...
     {
-        return (x = exp(log(x) * gamma) );
+        return exp(log(x) * gamma);
     }
 
 

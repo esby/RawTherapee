@@ -137,7 +137,7 @@ void TTSaver::parseProfileFolder()
         // from profilestore.cc
 
         // walking through the directory
-        Glib::Dir* dir = NULL;
+        Glib::Dir* dir = nullptr;
         if (nbpass == 0) 
           realPath = p1;
         else 
@@ -229,7 +229,7 @@ void TTSaver::themeSplitter(std::ifstream& myfile)
       for (size_t i=0; i< env->countPanel() ; i++)
       {
         FoldableToolPanel* p = static_cast<FoldableToolPanel*> (env->getPanel(i));
-        if ( (p != NULL)
+        if ( (p != nullptr)
         && (!(p->canBeIgnored())))
         {
           if (p->getToolName() == currentToken )
@@ -251,7 +251,7 @@ void TTSaver::themeSplitter(std::ifstream& myfile)
  for (size_t i=0; i< env->countPanel() ; i++)
       {
         FoldableToolPanel* p = static_cast<FoldableToolPanel*> (env->getPanel(i));
-        if ( (p != NULL)
+        if ( (p != nullptr)
         && (!(p->canBeIgnored()))
         && (p->getOriginalBox()->getBoxName() == "usefulPanel"))
         {        
@@ -283,7 +283,7 @@ void TTSaver::save_profile(Glib::ustring filename)
   for (size_t i=0; i<panels.size(); i++)
   {
     FoldableToolPanel* p = static_cast<FoldableToolPanel*> (panels.at(i));
-    if ((p != NULL)
+    if ((p != nullptr)
     && (!p->canBeIgnored()))
     { 
        lines += p->themeExport();
@@ -406,7 +406,7 @@ Glib::ustring TTSaver::themeExport()
   for (size_t i=0; i<panels.size(); i++)
   {
     FoldableToolPanel* p = static_cast<FoldableToolPanel*> (panels.at(i));
-    if ((p != NULL)
+    if ((p != nullptr)
     && (!p->canBeIgnored()))
     {
       int posFav = p->getPosOri();
@@ -420,7 +420,7 @@ Glib::ustring TTSaver::themeExport()
   for (size_t i=0; i<panels.size(); i++)
   {
     FoldableToolPanel* p = static_cast<FoldableToolPanel*> (panels.at(i));
-    if ((p != NULL)
+    if ((p != nullptr)
     && (!p->canBeIgnored()))
     {
       int posOri = p->getPosOri();
@@ -587,7 +587,7 @@ if (map[favoriteItems.at(i)]->getOriginalBox()->getBoxName() != "favoritePanel" 
   for (size_t i=0; i< env->countPanel() ; i++)
    {
       FoldableToolPanel* p = static_cast<FoldableToolPanel*> (env->getPanel(i));
-      if ( (p != NULL)
+      if ( (p != nullptr)
       && (!(p->canBeIgnored()))
       && (p->getLocation() ==-1))
       {

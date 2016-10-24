@@ -1,5 +1,5 @@
---- dcraw.c	2016-06-04 20:34:18.405932434 +0200
-+++ dcraw.cc	2016-07-09 17:40:46.405632563 +0200
+--- dcraw.c	2016-10-11 13:24:24 +0000
++++ dcraw.cc	2016-10-17 19:32:24 +0000
 @@ -1,3 +1,16 @@
 +/*RT*/#include <glib.h>
 +/*RT*/#include <glib/gstdio.h>
@@ -778,7 +778,19 @@
  }
  
  void CLASS samsung_load_raw()
-@@ -3038,7 +3354,7 @@
+@@ -2905,7 +3221,10 @@
+       diff = diff ? -diff : 0x80;
+     if (ftell(ifp) + 12 >= seg[1][1])
+       diff = 0;
+-    raw_image[pix] = pred[pix & 1] += diff;
++    if(pix>=raw_width*raw_height)
++      derror();
++    else
++      raw_image[pix] = pred[pix & 1] += diff;
+     if (!(pix & 1) && HOLE(pix / raw_width)) pix += 2;
+   }
+   maximum = 0xff;
+@@ -3038,7 +3357,7 @@
  
  void CLASS foveon_decoder (unsigned size, unsigned code)
  {
@@ -787,7 +799,7 @@
    struct decode *cur;
    int i, len;
  
-@@ -3135,7 +3451,7 @@
+@@ -3135,7 +3454,7 @@
  	pred[c] += diff[dindex->leaf];
  	if (pred[c] >> 16 && ~pred[c] >> 16) derror();
        }
@@ -796,7 +808,7 @@
      }
    }
  }
-@@ -3746,6 +4062,8 @@
+@@ -3746,6 +4065,8 @@
    if (load_raw == &CLASS phase_one_load_raw ||
        load_raw == &CLASS phase_one_load_raw_c)
      phase_one_correct();
@@ -805,7 +817,7 @@
    if (fuji_width) {
      for (row=0; row < raw_height-top_margin*2; row++) {
        for (col=0; col < fuji_width << !fuji_layout; col++) {
-@@ -3761,10 +4079,13 @@
+@@ -3761,10 +4082,13 @@
        }
      }
    } else {
@@ -821,10 +833,468 @@
    if (mask[0][3] > 0) goto mask_set;
    if (load_raw == &CLASS canon_load_raw ||
        load_raw == &CLASS lossless_jpeg_load_raw) {
-@@ -4366,239 +4687,8 @@
-     }
+@@ -3808,127 +4132,127 @@
+   }
  }
  
+-void CLASS remove_zeroes()
+-{
+-  unsigned row, col, tot, n, r, c;
+-
+-  for (row=0; row < height; row++)
+-    for (col=0; col < width; col++)
+-      if (BAYER(row,col) == 0) {
+-	tot = n = 0;
+-	for (r = row-2; r <= row+2; r++)
+-	  for (c = col-2; c <= col+2; c++)
+-	    if (r < height && c < width &&
+-		FC(r,c) == FC(row,col) && BAYER(r,c))
+-	      tot += (n++,BAYER(r,c));
+-	if (n) BAYER(row,col) = tot/n;
+-      }
+-}
++//void CLASS remove_zeroes()
++//{
++//  unsigned row, col, tot, n, r, c;
++//
++//  for (row=0; row < height; row++)
++//    for (col=0; col < width; col++)
++//      if (BAYER(row,col) == 0) {
++//	tot = n = 0;
++//	for (r = row-2; r <= row+2; r++)
++//	  for (c = col-2; c <= col+2; c++)
++//	    if (r < height && c < width &&
++//		FC(r,c) == FC(row,col) && BAYER(r,c))
++//	      tot += (n++,BAYER(r,c));
++//	if (n) BAYER(row,col) = tot/n;
++//      }
++//}
+ 
+ /*
+    Seach from the current directory up to the root looking for
+    a ".badpixels" file, and fix those pixels now.
+  */
+-void CLASS bad_pixels (const char *cfname)
+-{
+-  FILE *fp=0;
+-  char *fname, *cp, line[128];
+-  int len, time, row, col, r, c, rad, tot, n, fixed=0;
+-
+-  if (!filters) return;
+-  if (cfname)
+-    fp = fopen (cfname, "r");
+-  else {
+-    for (len=32 ; ; len *= 2) {
+-      fname = (char *) malloc (len);
+-      if (!fname) return;
+-      if (getcwd (fname, len-16)) break;
+-      free (fname);
+-      if (errno != ERANGE) return;
+-    }
+-#if defined(WIN32) || defined(DJGPP)
+-    if (fname[1] == ':')
+-      memmove (fname, fname+2, len-2);
+-    for (cp=fname; *cp; cp++)
+-      if (*cp == '\\') *cp = '/';
+-#endif
+-    cp = fname + strlen(fname);
+-    if (cp[-1] == '/') cp--;
+-    while (*fname == '/') {
+-      strcpy (cp, "/.badpixels");
+-      if ((fp = fopen (fname, "r"))) break;
+-      if (cp == fname) break;
+-      while (*--cp != '/');
+-    }
+-    free (fname);
+-  }
+-  if (!fp) return;
+-  while (fgets (line, 128, fp)) {
+-    cp = strchr (line, '#');
+-    if (cp) *cp = 0;
+-    if (sscanf (line, "%d %d %d", &col, &row, &time) != 3) continue;
+-    if ((unsigned) col >= width || (unsigned) row >= height) continue;
+-    if (time > timestamp) continue;
+-    for (tot=n=0, rad=1; rad < 3 && n==0; rad++)
+-      for (r = row-rad; r <= row+rad; r++)
+-	for (c = col-rad; c <= col+rad; c++)
+-	  if ((unsigned) r < height && (unsigned) c < width &&
+-		(r != row || c != col) && fcol(r,c) == fcol(row,col)) {
+-	    tot += BAYER2(r,c);
+-	    n++;
+-	  }
+-    BAYER2(row,col) = tot/n;
+-    if (verbose) {
+-      if (!fixed++)
+-	fprintf (stderr,_("Fixed dead pixels at:"));
+-      fprintf (stderr, " %d,%d", col, row);
+-    }
+-  }
+-  if (fixed) fputc ('\n', stderr);
+-  fclose (fp);
+-}
+-
+-void CLASS subtract (const char *fname)
+-{
+-  FILE *fp;
+-  int dim[3]={0,0,0}, comment=0, number=0, error=0, nd=0, c, row, col;
+-  ushort *pixel;
+-
+-  if (!(fp = fopen (fname, "rb"))) {
+-    perror (fname);  return;
+-  }
+-  if (fgetc(fp) != 'P' || fgetc(fp) != '5') error = 1;
+-  while (!error && nd < 3 && (c = fgetc(fp)) != EOF) {
+-    if (c == '#')  comment = 1;
+-    if (c == '\n') comment = 0;
+-    if (comment) continue;
+-    if (isdigit(c)) number = 1;
+-    if (number) {
+-      if (isdigit(c)) dim[nd] = dim[nd]*10 + c -'0';
+-      else if (isspace(c)) {
+-	number = 0;  nd++;
+-      } else error = 1;
+-    }
+-  }
+-  if (error || nd < 3) {
+-    fprintf (stderr,_("%s is not a valid PGM file!\n"), fname);
+-    fclose (fp);  return;
+-  } else if (dim[0] != width || dim[1] != height || dim[2] != 65535) {
+-    fprintf (stderr,_("%s has the wrong dimensions!\n"), fname);
+-    fclose (fp);  return;
+-  }
+-  pixel = (ushort *) calloc (width, sizeof *pixel);
+-  merror (pixel, "subtract()");
+-  for (row=0; row < height; row++) {
+-    fread (pixel, 2, width, fp);
+-    for (col=0; col < width; col++)
+-      BAYER(row,col) = MAX (BAYER(row,col) - ntohs(pixel[col]), 0);
+-  }
+-  free (pixel);
+-  fclose (fp);
+-  memset (cblack, 0, sizeof cblack);
+-  black = 0;
+-}
++//void CLASS bad_pixels (const char *cfname)
++//{
++//  FILE *fp=0;
++//  char *fname, *cp, line[128];
++//  int len, time, row, col, r, c, rad, tot, n, fixed=0;
++//
++//  if (!filters) return;
++//  if (cfname)
++//    fp = fopen (cfname, "r");
++//  else {
++//    for (len=32 ; ; len *= 2) {
++//      fname = (char *) malloc (len);
++//      if (!fname) return;
++//      if (getcwd (fname, len-16)) break;
++//      free (fname);
++//      if (errno != ERANGE) return;
++//    }
++//#if defined(WIN32) || defined(DJGPP)
++//    if (fname[1] == ':')
++//      memmove (fname, fname+2, len-2);
++//    for (cp=fname; *cp; cp++)
++//      if (*cp == '\\') *cp = '/';
++//#endif
++//    cp = fname + strlen(fname);
++//    if (cp[-1] == '/') cp--;
++//    while (*fname == '/') {
++//      strcpy (cp, "/.badpixels");
++//      if ((fp = fopen (fname, "r"))) break;
++//      if (cp == fname) break;
++//      while (*--cp != '/');
++//    }
++//    free (fname);
++//  }
++//  if (!fp) return;
++//  while (fgets (line, 128, fp)) {
++//    cp = strchr (line, '#');
++//    if (cp) *cp = 0;
++//    if (sscanf (line, "%d %d %d", &col, &row, &time) != 3) continue;
++//    if ((unsigned) col >= width || (unsigned) row >= height) continue;
++//    if (time > timestamp) continue;
++//    for (tot=n=0, rad=1; rad < 3 && n==0; rad++)
++//      for (r = row-rad; r <= row+rad; r++)
++//	for (c = col-rad; c <= col+rad; c++)
++//	  if ((unsigned) r < height && (unsigned) c < width &&
++//		(r != row || c != col) && fcol(r,c) == fcol(row,col)) {
++//	    tot += BAYER2(r,c);
++//	    n++;
++//	  }
++//    BAYER2(row,col) = tot/n;
++//    if (verbose) {
++//      if (!fixed++)
++//	fprintf (stderr,_("Fixed dead pixels at:"));
++//      fprintf (stderr, " %d,%d", col, row);
++//    }
++//  }
++//  if (fixed) fputc ('\n', stderr);
++//  fclose (fp);
++//}
++
++//void CLASS subtract (const char *fname)
++//{
++//  FILE *fp;
++//  int dim[3]={0,0,0}, comment=0, number=0, error=0, nd=0, c, row, col;
++//  ushort *pixel;
++//
++//  if (!(fp = fopen (fname, "rb"))) {
++//    perror (fname);  return;
++//  }
++//  if (fgetc(fp) != 'P' || fgetc(fp) != '5') error = 1;
++//  while (!error && nd < 3 && (c = fgetc(fp)) != EOF) {
++//    if (c == '#')  comment = 1;
++//    if (c == '\n') comment = 0;
++//    if (comment) continue;
++//    if (isdigit(c)) number = 1;
++//    if (number) {
++//      if (isdigit(c)) dim[nd] = dim[nd]*10 + c -'0';
++//      else if (isspace(c)) {
++//	number = 0;  nd++;
++//      } else error = 1;
++//    }
++//  }
++//  if (error || nd < 3) {
++//    fprintf (stderr,_("%s is not a valid PGM file!\n"), fname);
++//    fclose (fp);  return;
++//  } else if (dim[0] != width || dim[1] != height || dim[2] != 65535) {
++//    fprintf (stderr,_("%s has the wrong dimensions!\n"), fname);
++//    fclose (fp);  return;
++//  }
++//  pixel = (ushort *) calloc (width, sizeof *pixel);
++//  merror (pixel, "subtract()");
++//  for (row=0; row < height; row++) {
++//    fread (pixel, 2, width, fp);
++//    for (col=0; col < width; col++)
++//      BAYER(row,col) = MAX (BAYER(row,col) - ntohs(pixel[col]), 0);
++//  }
++//  free (pixel);
++//  fclose (fp);
++//  memset (cblack, 0, sizeof cblack);
++//  black = 0;
++//}
+ 
+ void CLASS gamma_curve (double pwr, double ts, int mode, int imax)
+ {
+@@ -4093,94 +4417,94 @@
+ }
+ #endif
+ 
+-void CLASS hat_transform (float *temp, float *base, int st, int size, int sc)
+-{
+-  int i;
+-  for (i=0; i < sc; i++)
+-    temp[i] = 2*base[st*i] + base[st*(sc-i)] + base[st*(i+sc)];
+-  for (; i+sc < size; i++)
+-    temp[i] = 2*base[st*i] + base[st*(i-sc)] + base[st*(i+sc)];
+-  for (; i < size; i++)
+-    temp[i] = 2*base[st*i] + base[st*(i-sc)] + base[st*(2*size-2-(i+sc))];
+-}
+-
+-void CLASS wavelet_denoise()
+-{
+-  float *fimg=0, *temp, thold, mul[2], avg, diff;
+-  int scale=1, size, lev, hpass, lpass, row, col, nc, c, i, wlast, blk[2];
+-  ushort *window[4];
+-  static const float noise[] =
+-  { 0.8002,0.2735,0.1202,0.0585,0.0291,0.0152,0.0080,0.0044 };
+-
+-  if (verbose) fprintf (stderr,_("Wavelet denoising...\n"));
+-
+-  while (maximum << scale < 0x10000) scale++;
+-  maximum <<= --scale;
+-  black <<= scale;
+-  FORC4 cblack[c] <<= scale;
+-  if ((size = iheight*iwidth) < 0x15550000)
+-    fimg = (float *) malloc ((size*3 + iheight + iwidth) * sizeof *fimg);
+-  merror (fimg, "wavelet_denoise()");
+-  temp = fimg + size*3;
+-  if ((nc = colors) == 3 && filters) nc++;
+-  FORC(nc) {			/* denoise R,G1,B,G3 individually */
+-    for (i=0; i < size; i++)
+-      fimg[i] = 256 * sqrt(image[i][c] << scale);
+-    for (hpass=lev=0; lev < 5; lev++) {
+-      lpass = size*((lev & 1)+1);
+-      for (row=0; row < iheight; row++) {
+-	hat_transform (temp, fimg+hpass+row*iwidth, 1, iwidth, 1 << lev);
+-	for (col=0; col < iwidth; col++)
+-	  fimg[lpass + row*iwidth + col] = temp[col] * 0.25;
+-      }
+-      for (col=0; col < iwidth; col++) {
+-	hat_transform (temp, fimg+lpass+col, iwidth, iheight, 1 << lev);
+-	for (row=0; row < iheight; row++)
+-	  fimg[lpass + row*iwidth + col] = temp[row] * 0.25;
+-      }
+-      thold = threshold * noise[lev];
+-      for (i=0; i < size; i++) {
+-	fimg[hpass+i] -= fimg[lpass+i];
+-	if	(fimg[hpass+i] < -thold) fimg[hpass+i] += thold;
+-	else if (fimg[hpass+i] >  thold) fimg[hpass+i] -= thold;
+-	else	 fimg[hpass+i] = 0;
+-	if (hpass) fimg[i] += fimg[hpass+i];
+-      }
+-      hpass = lpass;
+-    }
+-    for (i=0; i < size; i++)
+-      image[i][c] = CLIP(SQR(fimg[i]+fimg[lpass+i])/0x10000);
+-  }
+-  if (filters && colors == 3) {  /* pull G1 and G3 closer together */
+-    for (row=0; row < 2; row++) {
+-      mul[row] = 0.125 * pre_mul[FC(row+1,0) | 1] / pre_mul[FC(row,0) | 1];
+-      blk[row] = cblack[FC(row,0) | 1];
+-    }
+-    for (i=0; i < 4; i++)
+-      window[i] = (ushort *) fimg + width*i;
+-    for (wlast=-1, row=1; row < height-1; row++) {
+-      while (wlast < row+1) {
+-	for (wlast++, i=0; i < 4; i++)
+-	  window[(i+3) & 3] = window[i];
+-	for (col = FC(wlast,1) & 1; col < width; col+=2)
+-	  window[2][col] = BAYER(wlast,col);
+-      }
+-      thold = threshold/512;
+-      for (col = (FC(row,0) & 1)+1; col < width-1; col+=2) {
+-	avg = ( window[0][col-1] + window[0][col+1] +
+-		window[2][col-1] + window[2][col+1] - blk[~row & 1]*4 )
+-	      * mul[row & 1] + (window[1][col] + blk[row & 1]) * 0.5;
+-	avg = avg < 0 ? 0 : sqrt(avg);
+-	diff = sqrt(BAYER(row,col)) - avg;
+-	if      (diff < -thold) diff += thold;
+-	else if (diff >  thold) diff -= thold;
+-	else diff = 0;
+-	BAYER(row,col) = CLIP(SQR(avg+diff) + 0.5);
+-      }
+-    }
+-  }
+-  free (fimg);
+-}
++//void CLASS hat_transform (float *temp, float *base, int st, int size, int sc)
++//{
++//  int i;
++//  for (i=0; i < sc; i++)
++//    temp[i] = 2*base[st*i] + base[st*(sc-i)] + base[st*(i+sc)];
++//  for (; i+sc < size; i++)
++//    temp[i] = 2*base[st*i] + base[st*(i-sc)] + base[st*(i+sc)];
++//  for (; i < size; i++)
++//    temp[i] = 2*base[st*i] + base[st*(i-sc)] + base[st*(2*size-2-(i+sc))];
++//}
++
++//void CLASS wavelet_denoise()
++//{
++//  float *fimg=0, *temp, thold, mul[2], avg, diff;
++//  int scale=1, size, lev, hpass, lpass, row, col, nc, c, i, wlast, blk[2];
++//  ushort *window[4];
++//  static const float noise[] =
++//  { 0.8002,0.2735,0.1202,0.0585,0.0291,0.0152,0.0080,0.0044 };
++//
++//  if (verbose) fprintf (stderr,_("Wavelet denoising...\n"));
++//
++//  while (maximum << scale < 0x10000) scale++;
++//  maximum <<= --scale;
++//  black <<= scale;
++//  FORC4 cblack[c] <<= scale;
++//  if ((size = iheight*iwidth) < 0x15550000)
++//    fimg = (float *) malloc ((size*3 + iheight + iwidth) * sizeof *fimg);
++//  merror (fimg, "wavelet_denoise()");
++//  temp = fimg + size*3;
++//  if ((nc = colors) == 3 && filters) nc++;
++//  FORC(nc) {			/* denoise R,G1,B,G3 individually */
++//    for (i=0; i < size; i++)
++//      fimg[i] = 256 * sqrt(image[i][c] << scale);
++//    for (hpass=lev=0; lev < 5; lev++) {
++//      lpass = size*((lev & 1)+1);
++//      for (row=0; row < iheight; row++) {
++//	hat_transform (temp, fimg+hpass+row*iwidth, 1, iwidth, 1 << lev);
++//	for (col=0; col < iwidth; col++)
++//	  fimg[lpass + row*iwidth + col] = temp[col] * 0.25;
++//      }
++//      for (col=0; col < iwidth; col++) {
++//	hat_transform (temp, fimg+lpass+col, iwidth, iheight, 1 << lev);
++//	for (row=0; row < iheight; row++)
++//	  fimg[lpass + row*iwidth + col] = temp[row] * 0.25;
++//      }
++//      thold = threshold * noise[lev];
++//      for (i=0; i < size; i++) {
++//	fimg[hpass+i] -= fimg[lpass+i];
++//	if	(fimg[hpass+i] < -thold) fimg[hpass+i] += thold;
++//	else if (fimg[hpass+i] >  thold) fimg[hpass+i] -= thold;
++//	else	 fimg[hpass+i] = 0;
++//	if (hpass) fimg[i] += fimg[hpass+i];
++//      }
++//      hpass = lpass;
++//    }
++//    for (i=0; i < size; i++)
++//      image[i][c] = CLIP(SQR(fimg[i]+fimg[lpass+i])/0x10000);
++//  }
++//  if (filters && colors == 3) {  /* pull G1 and G3 closer together */
++//    for (row=0; row < 2; row++) {
++//      mul[row] = 0.125 * pre_mul[FC(row+1,0) | 1] / pre_mul[FC(row,0) | 1];
++//      blk[row] = cblack[FC(row,0) | 1];
++//    }
++//    for (i=0; i < 4; i++)
++//      window[i] = (ushort *) fimg + width*i;
++//    for (wlast=-1, row=1; row < height-1; row++) {
++//      while (wlast < row+1) {
++//	for (wlast++, i=0; i < 4; i++)
++//	  window[(i+3) & 3] = window[i];
++//	for (col = FC(wlast,1) & 1; col < width; col+=2)
++//	  window[2][col] = BAYER(wlast,col);
++//      }
++//      thold = threshold/512;
++//      for (col = (FC(row,0) & 1)+1; col < width-1; col+=2) {
++//	avg = ( window[0][col-1] + window[0][col+1] +
++//		window[2][col-1] + window[2][col+1] - blk[~row & 1]*4 )
++//	      * mul[row & 1] + (window[1][col] + blk[row & 1]) * 0.5;
++//	avg = avg < 0 ? 0 : sqrt(avg);
++//	diff = sqrt(BAYER(row,col)) - avg;
++//	if      (diff < -thold) diff += thold;
++//	else if (diff >  thold) diff -= thold;
++//	else diff = 0;
++//	BAYER(row,col) = CLIP(SQR(avg+diff) + 0.5);
++//      }
++//    }
++//  }
++//  free (fimg);
++//}
+ 
+ void CLASS scale_colors()
+ {
+@@ -4238,7 +4562,7 @@
+   if (pre_mul[3] == 0) pre_mul[3] = colors < 4 ? pre_mul[1] : 1;
+   dark = black;
+   sat = maximum;
+-  if (threshold) wavelet_denoise();
++//  if (threshold) wavelet_denoise();
+   maximum -= black;
+   for (dmin=DBL_MAX, dmax=c=0; c < 4; c++) {
+     if (dmin > pre_mul[c])
+@@ -4344,776 +4668,440 @@
+   if (half_size) filters = 0;
+ }
+ 
+-void CLASS border_interpolate (int border)
+-{
+-  unsigned row, col, y, x, f, c, sum[8];
+-
+-  for (row=0; row < height; row++)
+-    for (col=0; col < width; col++) {
+-      if (col==border && row >= border && row < height-border)
+-	col = width-border;
+-      memset (sum, 0, sizeof sum);
+-      for (y=row-1; y != row+2; y++)
+-	for (x=col-1; x != col+2; x++)
+-	  if (y < height && x < width) {
+-	    f = fcol(y,x);
+-	    sum[f] += image[y*width+x][f];
+-	    sum[f+4]++;
+-	  }
+-      f = fcol(row,col);
+-      FORCC if (c != f && sum[c+4])
+-	image[row*width+col][c] = sum[c] / sum[c+4];
+-    }
+-}
+-
 -void CLASS lin_interpolate()
 -{
 -  int code[16][16][32], size=16, *ip, sum[4];
@@ -1016,8 +1486,7 @@
 -
 -  border_interpolate(3);
 -  if (verbose) fprintf (stderr,_("PPG interpolation...\n"));
-+/* RT: delete interpolation functions */
- 
+-
 -/*  Fill in the green layer with gradients and pattern recognition: */
 -  for (row=3; row < height-3; row++)
 -    for (col=3+(FC(row,3) & 1), c=FC(row,col); col < width-3; col+=2) {
@@ -1059,13 +1528,271 @@
 -	pix[0][c] = CLIP((guess[0]+guess[1]) >> 2);
 -    }
 -}
- 
- void CLASS cielab (ushort rgb[3], short lab[3])
- {
-@@ -4864,112 +4954,7 @@
- }
- #undef fcol
- 
+-
+-void CLASS cielab (ushort rgb[3], short lab[3])
+-{
+-  int c, i, j, k;
+-  float r, xyz[3];
+-  static float cbrt[0x10000], xyz_cam[3][4];
+-
+-  if (!rgb) {
+-    for (i=0; i < 0x10000; i++) {
+-      r = i / 65535.0;
+-      cbrt[i] = r > 0.008856 ? pow(r,1/3.0) : 7.787*r + 16/116.0;
+-    }
+-    for (i=0; i < 3; i++)
+-      for (j=0; j < colors; j++)
+-	for (xyz_cam[i][j] = k=0; k < 3; k++)
+-	  xyz_cam[i][j] += xyz_rgb[i][k] * rgb_cam[k][j] / d65_white[i];
+-    return;
+-  }
+-  xyz[0] = xyz[1] = xyz[2] = 0.5;
+-  FORCC {
+-    xyz[0] += xyz_cam[0][c] * rgb[c];
+-    xyz[1] += xyz_cam[1][c] * rgb[c];
+-    xyz[2] += xyz_cam[2][c] * rgb[c];
+-  }
+-  xyz[0] = cbrt[CLIP((int) xyz[0])];
+-  xyz[1] = cbrt[CLIP((int) xyz[1])];
+-  xyz[2] = cbrt[CLIP((int) xyz[2])];
+-  lab[0] = 64 * (116 * xyz[1] - 16);
+-  lab[1] = 64 * 500 * (xyz[0] - xyz[1]);
+-  lab[2] = 64 * 200 * (xyz[1] - xyz[2]);
+-}
+-
+-#define TS 512		/* Tile Size */
+-#define fcol(row,col) xtrans[(row+6) % 6][(col+6) % 6]
+-
+-/*
+-   Frank Markesteijn's algorithm for Fuji X-Trans sensors
+- */
+-void CLASS xtrans_interpolate (int passes)
+-{
+-  int c, d, f, g, h, i, v, ng, row, col, top, left, mrow, mcol;
+-  int val, ndir, pass, hm[8], avg[4], color[3][8];
+-  static const short orth[12] = { 1,0,0,1,-1,0,0,-1,1,0,0,1 },
+-	patt[2][16] = { { 0,1,0,-1,2,0,-1,0,1,1,1,-1,0,0,0,0 },
+-			{ 0,1,0,-2,1,0,-2,0,1,1,-2,-2,1,-1,-1,1 } },
+-	dir[4] = { 1,TS,TS+1,TS-1 };
+-  short allhex[3][3][2][8], *hex;
+-  ushort min, max, sgrow, sgcol;
+-  ushort (*rgb)[TS][TS][3], (*rix)[3], (*pix)[4];
+-   short (*lab)    [TS][3], (*lix)[3];
+-   float (*drv)[TS][TS], diff[6], tr;
+-   char (*homo)[TS][TS], *buffer;
+-
+-  if (verbose)
+-    fprintf (stderr,_("%d-pass X-Trans interpolation...\n"), passes);
+-
+-  cielab (0,0);
+-  ndir = 4 << (passes > 1);
+-  buffer = (char *) malloc (TS*TS*(ndir*11+6));
+-  merror (buffer, "xtrans_interpolate()");
+-  rgb  = (ushort(*)[TS][TS][3]) buffer;
+-  lab  = (short (*)    [TS][3])(buffer + TS*TS*(ndir*6));
+-  drv  = (float (*)[TS][TS])   (buffer + TS*TS*(ndir*6+6));
+-  homo = (char  (*)[TS][TS])   (buffer + TS*TS*(ndir*10+6));
+-
+-/* Map a green hexagon around each non-green pixel and vice versa:	*/
+-  for (row=0; row < 3; row++)
+-    for (col=0; col < 3; col++)
+-      for (ng=d=0; d < 10; d+=2) {
+-	g = fcol(row,col) == 1;
+-	if (fcol(row+orth[d],col+orth[d+2]) == 1) ng=0; else ng++;
+-	if (ng == 4) { sgrow = row; sgcol = col; }
+-	if (ng == g+1) FORC(8) {
+-	  v = orth[d  ]*patt[g][c*2] + orth[d+1]*patt[g][c*2+1];
+-	  h = orth[d+2]*patt[g][c*2] + orth[d+3]*patt[g][c*2+1];
+-	  allhex[row][col][0][c^(g*2 & d)] = h + v*width;
+-	  allhex[row][col][1][c^(g*2 & d)] = h + v*TS;
+-	}
+-      }
+-
+-/* Set green1 and green3 to the minimum and maximum allowed values:	*/
+-  for (row=2; row < height-2; row++)
+-    for (min=~(max=0), col=2; col < width-2; col++) {
+-      if (fcol(row,col) == 1 && (min=~(max=0))) continue;
+-      pix = image + row*width + col;
+-      hex = allhex[row % 3][col % 3][0];
+-      if (!max) FORC(6) {
+-	val = pix[hex[c]][1];
+-	if (min > val) min = val;
+-	if (max < val) max = val;
+-      }
+-      pix[0][1] = min;
+-      pix[0][3] = max;
+-      switch ((row-sgrow) % 3) {
+-	case 1: if (row < height-3) { row++; col--; } break;
+-	case 2: if ((min=~(max=0)) && (col+=2) < width-3 && row > 2) row--;
+-      }
+-    }
+-
+-  for (top=3; top < height-19; top += TS-16)
+-    for (left=3; left < width-19; left += TS-16) {
+-      mrow = MIN (top+TS, height-3);
+-      mcol = MIN (left+TS, width-3);
+-      for (row=top; row < mrow; row++)
+-	for (col=left; col < mcol; col++)
+-	  memcpy (rgb[0][row-top][col-left], image[row*width+col], 6);
+-      FORC3 memcpy (rgb[c+1], rgb[0], sizeof *rgb);
+-
+-/* Interpolate green horizontally, vertically, and along both diagonals: */
+-      for (row=top; row < mrow; row++)
+-	for (col=left; col < mcol; col++) {
+-	  if ((f = fcol(row,col)) == 1) continue;
+-	  pix = image + row*width + col;
+-	  hex = allhex[row % 3][col % 3][0];
+-	  color[1][0] = 174 * (pix[  hex[1]][1] + pix[  hex[0]][1]) -
+-			 46 * (pix[2*hex[1]][1] + pix[2*hex[0]][1]);
+-	  color[1][1] = 223 *  pix[  hex[3]][1] + pix[  hex[2]][1] * 33 +
+-			 92 * (pix[      0 ][f] - pix[ -hex[2]][f]);
+-	  FORC(2) color[1][2+c] =
+-		164 * pix[hex[4+c]][1] + 92 * pix[-2*hex[4+c]][1] + 33 *
+-		(2*pix[0][f] - pix[3*hex[4+c]][f] - pix[-3*hex[4+c]][f]);
+-	  FORC4 rgb[c^!((row-sgrow) % 3)][row-top][col-left][1] =
+-		LIM(color[1][c] >> 8,pix[0][1],pix[0][3]);
+-	}
+-
+-      for (pass=0; pass < passes; pass++) {
+-	if (pass == 1)
+-	  memcpy (rgb+=4, buffer, 4*sizeof *rgb);
+-
+-/* Recalculate green from interpolated values of closer pixels:	*/
+-	if (pass) {
+-	  for (row=top+2; row < mrow-2; row++)
+-	    for (col=left+2; col < mcol-2; col++) {
+-	      if ((f = fcol(row,col)) == 1) continue;
+-	      pix = image + row*width + col;
+-	      hex = allhex[row % 3][col % 3][1];
+-	      for (d=3; d < 6; d++) {
+-		rix = &rgb[(d-2)^!((row-sgrow) % 3)][row-top][col-left];
+-		val = rix[-2*hex[d]][1] + 2*rix[hex[d]][1]
+-		    - rix[-2*hex[d]][f] - 2*rix[hex[d]][f] + 3*rix[0][f];
+-		rix[0][1] = LIM(val/3,pix[0][1],pix[0][3]);
+-	      }
+-	    }
+-	}
+-
+-/* Interpolate red and blue values for solitary green pixels:	*/
+-	for (row=(top-sgrow+4)/3*3+sgrow; row < mrow-2; row+=3)
+-	  for (col=(left-sgcol+4)/3*3+sgcol; col < mcol-2; col+=3) {
+-	    rix = &rgb[0][row-top][col-left];
+-	    h = fcol(row,col+1);
+-	    memset (diff, 0, sizeof diff);
+-	    for (i=1, d=0; d < 6; d++, i^=TS^1, h^=2) {
+-	      for (c=0; c < 2; c++, h^=2) {
+-		g = 2*rix[0][1] - rix[i<<c][1] - rix[-i<<c][1];
+-		color[h][d] = g + rix[i<<c][h] + rix[-i<<c][h];
+-		if (d > 1)
+-		  diff[d] += SQR (rix[i<<c][1] - rix[-i<<c][1]
+-				- rix[i<<c][h] + rix[-i<<c][h]) + SQR(g);
+-	      }
+-	      if (d > 1 && (d & 1))
+-		if (diff[d-1] < diff[d])
+-		  FORC(2) color[c*2][d] = color[c*2][d-1];
+-	      if (d < 2 || (d & 1)) {
+-		FORC(2) rix[0][c*2] = CLIP(color[c*2][d]/2);
+-		rix += TS*TS;
+-	      }
+-	    }
+-	  }
+-
+-/* Interpolate red for blue pixels and vice versa:		*/
+-	for (row=top+3; row < mrow-3; row++)
+-	  for (col=left+3; col < mcol-3; col++) {
+-	    if ((f = 2-fcol(row,col)) == 1) continue;
+-	    rix = &rgb[0][row-top][col-left];
+-	    c = (row-sgrow) % 3 ? TS:1;
+-	    h = 3 * (c ^ TS ^ 1);
+-	    for (d=0; d < 4; d++, rix += TS*TS) {
+-	      i = d > 1 || ((d ^ c) & 1) ||
+-		 ((ABS(rix[0][1]-rix[c][1])+ABS(rix[0][1]-rix[-c][1])) <
+-		2*(ABS(rix[0][1]-rix[h][1])+ABS(rix[0][1]-rix[-h][1]))) ? c:h;
+-	      rix[0][f] = CLIP((rix[i][f] + rix[-i][f] +
+-		  2*rix[0][1] - rix[i][1] - rix[-i][1])/2);
+-	    }
+-	  }
+-
+-/* Fill in red and blue for 2x2 blocks of green:		*/
+-	for (row=top+2; row < mrow-2; row++) if ((row-sgrow) % 3)
+-	  for (col=left+2; col < mcol-2; col++) if ((col-sgcol) % 3) {
+-	    rix = &rgb[0][row-top][col-left];
+-	    hex = allhex[row % 3][col % 3][1];
+-	    for (d=0; d < ndir; d+=2, rix += TS*TS)
+-	      if (hex[d] + hex[d+1]) {
+-		g = 3*rix[0][1] - 2*rix[hex[d]][1] - rix[hex[d+1]][1];
+-		for (c=0; c < 4; c+=2) rix[0][c] =
+-			CLIP((g + 2*rix[hex[d]][c] + rix[hex[d+1]][c])/3);
+-	      } else {
+-		g = 2*rix[0][1] - rix[hex[d]][1] - rix[hex[d+1]][1];
+-		for (c=0; c < 4; c+=2) rix[0][c] =
+-			CLIP((g + rix[hex[d]][c] + rix[hex[d+1]][c])/2);
+-	      }
+-	  }
+-      }
+-      rgb = (ushort(*)[TS][TS][3]) buffer;
+-      mrow -= top;
+-      mcol -= left;
+-
+-/* Convert to CIELab and differentiate in all directions:	*/
+-      for (d=0; d < ndir; d++) {
+-	for (row=2; row < mrow-2; row++)
+-	  for (col=2; col < mcol-2; col++)
+-	    cielab (rgb[d][row][col], lab[row][col]);
+-	for (f=dir[d & 3],row=3; row < mrow-3; row++)
+-	  for (col=3; col < mcol-3; col++) {
+-	    lix = &lab[row][col];
+-	    g = 2*lix[0][0] - lix[f][0] - lix[-f][0];
+-	    drv[d][row][col] = SQR(g)
+-	      + SQR((2*lix[0][1] - lix[f][1] - lix[-f][1] + g*500/232))
+-	      + SQR((2*lix[0][2] - lix[f][2] - lix[-f][2] - g*500/580));
+-	  }
+-      }
+-
+-/* Build homogeneity maps from the derivatives:			*/
+-      memset(homo, 0, ndir*TS*TS);
+-      for (row=4; row < mrow-4; row++)
+-	for (col=4; col < mcol-4; col++) {
+-	  for (tr=FLT_MAX, d=0; d < ndir; d++)
+-	    if (tr > drv[d][row][col])
+-		tr = drv[d][row][col];
+-	  tr *= 8;
+-	  for (d=0; d < ndir; d++)
+-	    for (v=-1; v <= 1; v++)
+-	      for (h=-1; h <= 1; h++)
+-		if (drv[d][row+v][col+h] <= tr)
+-		  homo[d][row][col]++;
+-	}
+-
+-/* Average the most homogenous pixels for the final result:	*/
+-      if (height-top < TS+4) mrow = height-top+2;
+-      if (width-left < TS+4) mcol = width-left+2;
+-      for (row = MIN(top,8); row < mrow-8; row++)
+-	for (col = MIN(left,8); col < mcol-8; col++) {
+-	  for (d=0; d < ndir; d++)
+-	    for (hm[d]=0, v=-2; v <= 2; v++)
+-	      for (h=-2; h <= 2; h++)
+-		hm[d] += homo[d][row+v][col+h];
+-	  for (d=0; d < ndir-4; d++)
+-	    if (hm[d] < hm[d+4]) hm[d  ] = 0; else
+-	    if (hm[d] > hm[d+4]) hm[d+4] = 0;
+-	  for (max=hm[0],d=1; d < ndir; d++)
+-	    if (max < hm[d]) max = hm[d];
+-	  max -= max >> 3;
+-	  memset (avg, 0, sizeof avg);
+-	  for (d=0; d < ndir; d++)
+-	    if (hm[d] >= max) {
+-	      FORC3 avg[c] += rgb[d][row][col][c];
+-	      avg[3]++;
+-	    }
+-	  FORC3 image[(row+top)*width+col+left][c] = avg[c]/avg[3];
+-	}
+-    }
+-  free(buffer);
+-  border_interpolate(8);
+-}
+-#undef fcol
+-
 -/*
 -   Adaptive Homogeneity-Directed interpolation is based on
 -   the work of Keigo Hirakawa, Thomas Parks, and Paul Lee.
@@ -1091,7 +1818,7 @@
 -
 -  for (top=2; top < height-5; top += TS-6)
 -    for (left=2; left < width-5; left += TS-6) {
- 
+-
 -/*  Interpolate green horizontally and vertically:		*/
 -      for (row=top; row < top+TS && row < height-2; row++) {
 -	col = left + (FC(row,left) & 1);
@@ -1172,10 +1899,588 @@
 -    }
 -  free (buffer);
 -}
- #undef TS
+-#undef TS
+-
+-void CLASS median_filter()
+-{
+-  ushort (*pix)[4];
+-  int pass, c, i, j, k, med[9];
+-  static const uchar opt[] =	/* Optimal 9-element median search */
+-  { 1,2, 4,5, 7,8, 0,1, 3,4, 6,7, 1,2, 4,5, 7,8,
+-    0,3, 5,8, 4,7, 3,6, 1,4, 2,5, 4,7, 4,2, 6,4, 4,2 };
+-
+-  for (pass=1; pass <= med_passes; pass++) {
+-    if (verbose)
+-      fprintf (stderr,_("Median filter pass %d...\n"), pass);
+-    for (c=0; c < 3; c+=2) {
+-      for (pix = image; pix < image+width*height; pix++)
+-	pix[0][3] = pix[0][c];
+-      for (pix = image+width; pix < image+width*(height-1); pix++) {
+-	if ((pix-image+1) % width < 2) continue;
+-	for (k=0, i = -width; i <= width; i += width)
+-	  for (j = i-1; j <= i+1; j++)
+-	    med[k++] = pix[j][3] - pix[j][1];
+-	for (i=0; i < sizeof opt; i+=2)
+-	  if     (med[opt[i]] > med[opt[i+1]])
+-	    SWAP (med[opt[i]] , med[opt[i+1]]);
+-	pix[0][c] = CLIP(med[4] + pix[0][1]);
+-      }
+-    }
+-  }
+-}
+-
+-void CLASS blend_highlights()
+-{
+-  int clip=INT_MAX, row, col, c, i, j;
+-  static const float trans[2][4][4] =
+-  { { { 1,1,1 }, { 1.7320508,-1.7320508,0 }, { -1,-1,2 } },
+-    { { 1,1,1,1 }, { 1,-1,1,-1 }, { 1,1,-1,-1 }, { 1,-1,-1,1 } } };
+-  static const float itrans[2][4][4] =
+-  { { { 1,0.8660254,-0.5 }, { 1,-0.8660254,-0.5 }, { 1,0,1 } },
+-    { { 1,1,1,1 }, { 1,-1,1,-1 }, { 1,1,-1,-1 }, { 1,-1,-1,1 } } };
+-  float cam[2][4], lab[2][4], sum[2], chratio;
+-
+-  if ((unsigned) (colors-3) > 1) return;
+-  if (verbose) fprintf (stderr,_("Blending highlights...\n"));
+-  FORCC if (clip > (i = 65535*pre_mul[c])) clip = i;
+-  for (row=0; row < height; row++)
+-    for (col=0; col < width; col++) {
+-      FORCC if (image[row*width+col][c] > clip) break;
+-      if (c == colors) continue;
+-      FORCC {
+-	cam[0][c] = image[row*width+col][c];
+-	cam[1][c] = MIN(cam[0][c],clip);
+-      }
+-      for (i=0; i < 2; i++) {
+-	FORCC for (lab[i][c]=j=0; j < colors; j++)
+-	  lab[i][c] += trans[colors-3][c][j] * cam[i][j];
+-	for (sum[i]=0,c=1; c < colors; c++)
+-	  sum[i] += SQR(lab[i][c]);
+-      }
+-      chratio = sqrt(sum[1]/sum[0]);
+-      for (c=1; c < colors; c++)
+-	lab[0][c] *= chratio;
+-      FORCC for (cam[0][c]=j=0; j < colors; j++)
+-	cam[0][c] += itrans[colors-3][c][j] * lab[0][j];
+-      FORCC image[row*width+col][c] = cam[0][c] / colors;
+-    }
+-}
+-
+-#define SCALE (4 >> shrink)
+-void CLASS recover_highlights()
+-{
+-  float *map, sum, wgt, grow;
+-  int hsat[4], count, spread, change, val, i;
+-  unsigned high, wide, mrow, mcol, row, col, kc, c, d, y, x;
+-  ushort *pixel;
+-  static const signed char dir[8][2] =
+-    { {-1,-1}, {-1,0}, {-1,1}, {0,1}, {1,1}, {1,0}, {1,-1}, {0,-1} };
+-
+-  if (verbose) fprintf (stderr,_("Rebuilding highlights...\n"));
+-
+-  grow = pow (2, 4-highlight);
+-  FORCC hsat[c] = 32000 * pre_mul[c];
+-  for (kc=0, c=1; c < colors; c++)
+-    if (pre_mul[kc] < pre_mul[c]) kc = c;
+-  high = height / SCALE;
+-  wide =  width / SCALE;
+-  map = (float *) calloc (high, wide*sizeof *map);
+-  merror (map, "recover_highlights()");
+-  FORCC if (c != kc) {
+-    memset (map, 0, high*wide*sizeof *map);
+-    for (mrow=0; mrow < high; mrow++)
+-      for (mcol=0; mcol < wide; mcol++) {
+-	sum = wgt = count = 0;
+-	for (row = mrow*SCALE; row < (mrow+1)*SCALE; row++)
+-	  for (col = mcol*SCALE; col < (mcol+1)*SCALE; col++) {
+-	    pixel = image[row*width+col];
+-	    if (pixel[c] / hsat[c] == 1 && pixel[kc] > 24000) {
+-	      sum += pixel[c];
+-	      wgt += pixel[kc];
+-	      count++;
+-	    }
+-	  }
+-	if (count == SCALE*SCALE)
+-	  map[mrow*wide+mcol] = sum / wgt;
+-      }
+-    for (spread = 32/grow; spread--; ) {
+-      for (mrow=0; mrow < high; mrow++)
+-	for (mcol=0; mcol < wide; mcol++) {
+-	  if (map[mrow*wide+mcol]) continue;
+-	  sum = count = 0;
+-	  for (d=0; d < 8; d++) {
+-	    y = mrow + dir[d][0];
+-	    x = mcol + dir[d][1];
+-	    if (y < high && x < wide && map[y*wide+x] > 0) {
+-	      sum  += (1 + (d & 1)) * map[y*wide+x];
+-	      count += 1 + (d & 1);
+-	    }
+-	  }
+-	  if (count > 3)
+-	    map[mrow*wide+mcol] = - (sum+grow) / (count+grow);
+-	}
+-      for (change=i=0; i < high*wide; i++)
+-	if (map[i] < 0) {
+-	  map[i] = -map[i];
+-	  change = 1;
+-	}
+-      if (!change) break;
+-    }
+-    for (i=0; i < high*wide; i++)
+-      if (map[i] == 0) map[i] = 1;
+-    for (mrow=0; mrow < high; mrow++)
+-      for (mcol=0; mcol < wide; mcol++) {
+-	for (row = mrow*SCALE; row < (mrow+1)*SCALE; row++)
+-	  for (col = mcol*SCALE; col < (mcol+1)*SCALE; col++) {
+-	    pixel = image[row*width+col];
+-	    if (pixel[c] / hsat[c] > 1) {
+-	      val = pixel[kc] * map[mrow*wide+mcol];
+-	      if (pixel[c] < val) pixel[c] = CLIP(val);
+-	    }
+-	  }
+-      }
+-  }
+-  free (map);
+-}
+-#undef SCALE
++//void CLASS border_interpolate (int border)
++//{
++//  unsigned row, col, y, x, f, c, sum[8];
++//
++//  for (row=0; row < height; row++)
++//    for (col=0; col < width; col++) {
++//      if (col==border && row >= border && row < height-border)
++//	col = width-border;
++//      memset (sum, 0, sizeof sum);
++//      for (y=row-1; y != row+2; y++)
++//	for (x=col-1; x != col+2; x++)
++//	  if (y < height && x < width) {
++//	    f = fcol(y,x);
++//	    sum[f] += image[y*width+x][f];
++//	    sum[f+4]++;
++//	  }
++//      f = fcol(row,col);
++//      FORCC if (c != f && sum[c+4])
++//	image[row*width+col][c] = sum[c] / sum[c+4];
++//    }
++//}
++
++/* RT: delete interpolation functions */
++
++
++//void CLASS cielab (ushort rgb[3], short lab[3])
++//{
++//  int c, i, j, k;
++//  float r, xyz[3];
++//  static float cbrt[0x10000], xyz_cam[3][4];
++//
++//  if (!rgb) {
++//    for (i=0; i < 0x10000; i++) {
++//      r = i / 65535.0;
++//      cbrt[i] = r > 0.008856 ? pow(r,1/3.0) : 7.787*r + 16/116.0;
++//    }
++//    for (i=0; i < 3; i++)
++//      for (j=0; j < colors; j++)
++//	for (xyz_cam[i][j] = k=0; k < 3; k++)
++//	  xyz_cam[i][j] += xyz_rgb[i][k] * rgb_cam[k][j] / d65_white[i];
++//    return;
++//  }
++//  xyz[0] = xyz[1] = xyz[2] = 0.5;
++//  FORCC {
++//    xyz[0] += xyz_cam[0][c] * rgb[c];
++//    xyz[1] += xyz_cam[1][c] * rgb[c];
++//    xyz[2] += xyz_cam[2][c] * rgb[c];
++//  }
++//  xyz[0] = cbrt[CLIP((int) xyz[0])];
++//  xyz[1] = cbrt[CLIP((int) xyz[1])];
++//  xyz[2] = cbrt[CLIP((int) xyz[2])];
++//  lab[0] = 64 * (116 * xyz[1] - 16);
++//  lab[1] = 64 * 500 * (xyz[0] - xyz[1]);
++//  lab[2] = 64 * 200 * (xyz[1] - xyz[2]);
++//}
++//
++//#define TS 512		/* Tile Size */
++//#define fcol(row,col) xtrans[(row+6) % 6][(col+6) % 6]
++//
++///*
++//   Frank Markesteijn's algorithm for Fuji X-Trans sensors
++// */
++//void CLASS xtrans_interpolate (int passes)
++//{
++//  int c, d, f, g, h, i, v, ng, row, col, top, left, mrow, mcol;
++//  int val, ndir, pass, hm[8], avg[4], color[3][8];
++//  static const short orth[12] = { 1,0,0,1,-1,0,0,-1,1,0,0,1 },
++//	patt[2][16] = { { 0,1,0,-1,2,0,-1,0,1,1,1,-1,0,0,0,0 },
++//			{ 0,1,0,-2,1,0,-2,0,1,1,-2,-2,1,-1,-1,1 } },
++//	dir[4] = { 1,TS,TS+1,TS-1 };
++//  short allhex[3][3][2][8], *hex;
++//  ushort min, max, sgrow, sgcol;
++//  ushort (*rgb)[TS][TS][3], (*rix)[3], (*pix)[4];
++//   short (*lab)    [TS][3], (*lix)[3];
++//   float (*drv)[TS][TS], diff[6], tr;
++//   char (*homo)[TS][TS], *buffer;
++//
++//  if (verbose)
++//    fprintf (stderr,_("%d-pass X-Trans interpolation...\n"), passes);
++//
++//  cielab (0,0);
++//  ndir = 4 << (passes > 1);
++//  buffer = (char *) malloc (TS*TS*(ndir*11+6));
++//  merror (buffer, "xtrans_interpolate()");
++//  rgb  = (ushort(*)[TS][TS][3]) buffer;
++//  lab  = (short (*)    [TS][3])(buffer + TS*TS*(ndir*6));
++//  drv  = (float (*)[TS][TS])   (buffer + TS*TS*(ndir*6+6));
++//  homo = (char  (*)[TS][TS])   (buffer + TS*TS*(ndir*10+6));
++//
++///* Map a green hexagon around each non-green pixel and vice versa:	*/
++//  for (row=0; row < 3; row++)
++//    for (col=0; col < 3; col++)
++//      for (ng=d=0; d < 10; d+=2) {
++//	g = fcol(row,col) == 1;
++//	if (fcol(row+orth[d],col+orth[d+2]) == 1) ng=0; else ng++;
++//	if (ng == 4) { sgrow = row; sgcol = col; }
++//	if (ng == g+1) FORC(8) {
++//	  v = orth[d  ]*patt[g][c*2] + orth[d+1]*patt[g][c*2+1];
++//	  h = orth[d+2]*patt[g][c*2] + orth[d+3]*patt[g][c*2+1];
++//	  allhex[row][col][0][c^(g*2 & d)] = h + v*width;
++//	  allhex[row][col][1][c^(g*2 & d)] = h + v*TS;
++//	}
++//      }
++//
++///* Set green1 and green3 to the minimum and maximum allowed values:	*/
++//  for (row=2; row < height-2; row++)
++//    for (min=~(max=0), col=2; col < width-2; col++) {
++//      if (fcol(row,col) == 1 && (min=~(max=0))) continue;
++//      pix = image + row*width + col;
++//      hex = allhex[row % 3][col % 3][0];
++//      if (!max) FORC(6) {
++//	val = pix[hex[c]][1];
++//	if (min > val) min = val;
++//	if (max < val) max = val;
++//      }
++//      pix[0][1] = min;
++//      pix[0][3] = max;
++//      switch ((row-sgrow) % 3) {
++//	case 1: if (row < height-3) { row++; col--; } break;
++//	case 2: if ((min=~(max=0)) && (col+=2) < width-3 && row > 2) row--;
++//      }
++//    }
++//
++//  for (top=3; top < height-19; top += TS-16)
++//    for (left=3; left < width-19; left += TS-16) {
++//      mrow = MIN (top+TS, height-3);
++//      mcol = MIN (left+TS, width-3);
++//      for (row=top; row < mrow; row++)
++//	for (col=left; col < mcol; col++)
++//	  memcpy (rgb[0][row-top][col-left], image[row*width+col], 6);
++//      FORC3 memcpy (rgb[c+1], rgb[0], sizeof *rgb);
++//
++///* Interpolate green horizontally, vertically, and along both diagonals: */
++//      for (row=top; row < mrow; row++)
++//	for (col=left; col < mcol; col++) {
++//	  if ((f = fcol(row,col)) == 1) continue;
++//	  pix = image + row*width + col;
++//	  hex = allhex[row % 3][col % 3][0];
++//	  color[1][0] = 174 * (pix[  hex[1]][1] + pix[  hex[0]][1]) -
++//			 46 * (pix[2*hex[1]][1] + pix[2*hex[0]][1]);
++//	  color[1][1] = 223 *  pix[  hex[3]][1] + pix[  hex[2]][1] * 33 +
++//			 92 * (pix[      0 ][f] - pix[ -hex[2]][f]);
++//	  FORC(2) color[1][2+c] =
++//		164 * pix[hex[4+c]][1] + 92 * pix[-2*hex[4+c]][1] + 33 *
++//		(2*pix[0][f] - pix[3*hex[4+c]][f] - pix[-3*hex[4+c]][f]);
++//	  FORC4 rgb[c^!((row-sgrow) % 3)][row-top][col-left][1] =
++//		LIM(color[1][c] >> 8,pix[0][1],pix[0][3]);
++//	}
++//
++//      for (pass=0; pass < passes; pass++) {
++//	if (pass == 1)
++//	  memcpy (rgb+=4, buffer, 4*sizeof *rgb);
++//
++///* Recalculate green from interpolated values of closer pixels:	*/
++//	if (pass) {
++//	  for (row=top+2; row < mrow-2; row++)
++//	    for (col=left+2; col < mcol-2; col++) {
++//	      if ((f = fcol(row,col)) == 1) continue;
++//	      pix = image + row*width + col;
++//	      hex = allhex[row % 3][col % 3][1];
++//	      for (d=3; d < 6; d++) {
++//		rix = &rgb[(d-2)^!((row-sgrow) % 3)][row-top][col-left];
++//		val = rix[-2*hex[d]][1] + 2*rix[hex[d]][1]
++//		    - rix[-2*hex[d]][f] - 2*rix[hex[d]][f] + 3*rix[0][f];
++//		rix[0][1] = LIM(val/3,pix[0][1],pix[0][3]);
++//	      }
++//	    }
++//	}
++//
++///* Interpolate red and blue values for solitary green pixels:	*/
++//	for (row=(top-sgrow+4)/3*3+sgrow; row < mrow-2; row+=3)
++//	  for (col=(left-sgcol+4)/3*3+sgcol; col < mcol-2; col+=3) {
++//	    rix = &rgb[0][row-top][col-left];
++//	    h = fcol(row,col+1);
++//	    memset (diff, 0, sizeof diff);
++//	    for (i=1, d=0; d < 6; d++, i^=TS^1, h^=2) {
++//	      for (c=0; c < 2; c++, h^=2) {
++//		g = 2*rix[0][1] - rix[i<<c][1] - rix[-i<<c][1];
++//		color[h][d] = g + rix[i<<c][h] + rix[-i<<c][h];
++//		if (d > 1)
++//		  diff[d] += SQR (rix[i<<c][1] - rix[-i<<c][1]
++//				- rix[i<<c][h] + rix[-i<<c][h]) + SQR(g);
++//	      }
++//	      if (d > 1 && (d & 1))
++//		if (diff[d-1] < diff[d])
++//		  FORC(2) color[c*2][d] = color[c*2][d-1];
++//	      if (d < 2 || (d & 1)) {
++//		FORC(2) rix[0][c*2] = CLIP(color[c*2][d]/2);
++//		rix += TS*TS;
++//	      }
++//	    }
++//	  }
++//
++///* Interpolate red for blue pixels and vice versa:		*/
++//	for (row=top+3; row < mrow-3; row++)
++//	  for (col=left+3; col < mcol-3; col++) {
++//	    if ((f = 2-fcol(row,col)) == 1) continue;
++//	    rix = &rgb[0][row-top][col-left];
++//	    c = (row-sgrow) % 3 ? TS:1;
++//	    h = 3 * (c ^ TS ^ 1);
++//	    for (d=0; d < 4; d++, rix += TS*TS) {
++//	      i = d > 1 || ((d ^ c) & 1) ||
++//		 ((ABS(rix[0][1]-rix[c][1])+ABS(rix[0][1]-rix[-c][1])) <
++//		2*(ABS(rix[0][1]-rix[h][1])+ABS(rix[0][1]-rix[-h][1]))) ? c:h;
++//	      rix[0][f] = CLIP((rix[i][f] + rix[-i][f] +
++//		  2*rix[0][1] - rix[i][1] - rix[-i][1])/2);
++//	    }
++//	  }
++//
++///* Fill in red and blue for 2x2 blocks of green:		*/
++//	for (row=top+2; row < mrow-2; row++) if ((row-sgrow) % 3)
++//	  for (col=left+2; col < mcol-2; col++) if ((col-sgcol) % 3) {
++//	    rix = &rgb[0][row-top][col-left];
++//	    hex = allhex[row % 3][col % 3][1];
++//	    for (d=0; d < ndir; d+=2, rix += TS*TS)
++//	      if (hex[d] + hex[d+1]) {
++//		g = 3*rix[0][1] - 2*rix[hex[d]][1] - rix[hex[d+1]][1];
++//		for (c=0; c < 4; c+=2) rix[0][c] =
++//			CLIP((g + 2*rix[hex[d]][c] + rix[hex[d+1]][c])/3);
++//	      } else {
++//		g = 2*rix[0][1] - rix[hex[d]][1] - rix[hex[d+1]][1];
++//		for (c=0; c < 4; c+=2) rix[0][c] =
++//			CLIP((g + rix[hex[d]][c] + rix[hex[d+1]][c])/2);
++//	      }
++//	  }
++//      }
++//      rgb = (ushort(*)[TS][TS][3]) buffer;
++//      mrow -= top;
++//      mcol -= left;
++//
++///* Convert to CIELab and differentiate in all directions:	*/
++//      for (d=0; d < ndir; d++) {
++//	for (row=2; row < mrow-2; row++)
++//	  for (col=2; col < mcol-2; col++)
++//	    cielab (rgb[d][row][col], lab[row][col]);
++//	for (f=dir[d & 3],row=3; row < mrow-3; row++)
++//	  for (col=3; col < mcol-3; col++) {
++//	    lix = &lab[row][col];
++//	    g = 2*lix[0][0] - lix[f][0] - lix[-f][0];
++//	    drv[d][row][col] = SQR(g)
++//	      + SQR((2*lix[0][1] - lix[f][1] - lix[-f][1] + g*500/232))
++//	      + SQR((2*lix[0][2] - lix[f][2] - lix[-f][2] - g*500/580));
++//	  }
++//      }
++//
++///* Build homogeneity maps from the derivatives:			*/
++//      memset(homo, 0, ndir*TS*TS);
++//      for (row=4; row < mrow-4; row++)
++//	for (col=4; col < mcol-4; col++) {
++//	  for (tr=FLT_MAX, d=0; d < ndir; d++)
++//	    if (tr > drv[d][row][col])
++//		tr = drv[d][row][col];
++//	  tr *= 8;
++//	  for (d=0; d < ndir; d++)
++//	    for (v=-1; v <= 1; v++)
++//	      for (h=-1; h <= 1; h++)
++//		if (drv[d][row+v][col+h] <= tr)
++//		  homo[d][row][col]++;
++//	}
++//
++///* Average the most homogenous pixels for the final result:	*/
++//      if (height-top < TS+4) mrow = height-top+2;
++//      if (width-left < TS+4) mcol = width-left+2;
++//      for (row = MIN(top,8); row < mrow-8; row++)
++//	for (col = MIN(left,8); col < mcol-8; col++) {
++//	  for (d=0; d < ndir; d++)
++//	    for (hm[d]=0, v=-2; v <= 2; v++)
++//	      for (h=-2; h <= 2; h++)
++//		hm[d] += homo[d][row+v][col+h];
++//	  for (d=0; d < ndir-4; d++)
++//	    if (hm[d] < hm[d+4]) hm[d  ] = 0; else
++//	    if (hm[d] > hm[d+4]) hm[d+4] = 0;
++//	  for (max=hm[0],d=1; d < ndir; d++)
++//	    if (max < hm[d]) max = hm[d];
++//	  max -= max >> 3;
++//	  memset (avg, 0, sizeof avg);
++//	  for (d=0; d < ndir; d++)
++//	    if (hm[d] >= max) {
++//	      FORC3 avg[c] += rgb[d][row][col][c];
++//	      avg[3]++;
++//	    }
++//	  FORC3 image[(row+top)*width+col+left][c] = avg[c]/avg[3];
++//	}
++//    }
++//  free(buffer);
++//  border_interpolate(8);
++//}
++//#undef fcol
++//
++//
++//#undef TS
++
++//void CLASS median_filter()
++//{
++//  ushort (*pix)[4];
++//  int pass, c, i, j, k, med[9];
++//  static const uchar opt[] =	/* Optimal 9-element median search */
++//  { 1,2, 4,5, 7,8, 0,1, 3,4, 6,7, 1,2, 4,5, 7,8,
++//    0,3, 5,8, 4,7, 3,6, 1,4, 2,5, 4,7, 4,2, 6,4, 4,2 };
++//
++//  for (pass=1; pass <= med_passes; pass++) {
++//    if (verbose)
++//      fprintf (stderr,_("Median filter pass %d...\n"), pass);
++//    for (c=0; c < 3; c+=2) {
++//      for (pix = image; pix < image+width*height; pix++)
++//	pix[0][3] = pix[0][c];
++//      for (pix = image+width; pix < image+width*(height-1); pix++) {
++//	if ((pix-image+1) % width < 2) continue;
++//	for (k=0, i = -width; i <= width; i += width)
++//	  for (j = i-1; j <= i+1; j++)
++//	    med[k++] = pix[j][3] - pix[j][1];
++//	for (i=0; i < sizeof opt; i+=2)
++//	  if     (med[opt[i]] > med[opt[i+1]])
++//	    SWAP (med[opt[i]] , med[opt[i+1]]);
++//	pix[0][c] = CLIP(med[4] + pix[0][1]);
++//      }
++//    }
++//  }
++//}
++//
++//void CLASS blend_highlights()
++//{
++//  int clip=INT_MAX, row, col, c, i, j;
++//  static const float trans[2][4][4] =
++//  { { { 1,1,1 }, { 1.7320508,-1.7320508,0 }, { -1,-1,2 } },
++//    { { 1,1,1,1 }, { 1,-1,1,-1 }, { 1,1,-1,-1 }, { 1,-1,-1,1 } } };
++//  static const float itrans[2][4][4] =
++//  { { { 1,0.8660254,-0.5 }, { 1,-0.8660254,-0.5 }, { 1,0,1 } },
++//    { { 1,1,1,1 }, { 1,-1,1,-1 }, { 1,1,-1,-1 }, { 1,-1,-1,1 } } };
++//  float cam[2][4], lab[2][4], sum[2], chratio;
++//
++//  if ((unsigned) (colors-3) > 1) return;
++//  if (verbose) fprintf (stderr,_("Blending highlights...\n"));
++//  FORCC if (clip > (i = 65535*pre_mul[c])) clip = i;
++//  for (row=0; row < height; row++)
++//    for (col=0; col < width; col++) {
++//      FORCC if (image[row*width+col][c] > clip) break;
++//      if (c == colors) continue;
++//      FORCC {
++//	cam[0][c] = image[row*width+col][c];
++//	cam[1][c] = MIN(cam[0][c],clip);
++//      }
++//      for (i=0; i < 2; i++) {
++//	FORCC for (lab[i][c]=j=0; j < colors; j++)
++//	  lab[i][c] += trans[colors-3][c][j] * cam[i][j];
++//	for (sum[i]=0,c=1; c < colors; c++)
++//	  sum[i] += SQR(lab[i][c]);
++//      }
++//      chratio = sqrt(sum[1]/sum[0]);
++//      for (c=1; c < colors; c++)
++//	lab[0][c] *= chratio;
++//      FORCC for (cam[0][c]=j=0; j < colors; j++)
++//	cam[0][c] += itrans[colors-3][c][j] * lab[0][j];
++//      FORCC image[row*width+col][c] = cam[0][c] / colors;
++//    }
++//}
++//
++//#define SCALE (4 >> shrink)
++//void CLASS recover_highlights()
++//{
++//  float *map, sum, wgt, grow;
++//  int hsat[4], count, spread, change, val, i;
++//  unsigned high, wide, mrow, mcol, row, col, kc, c, d, y, x;
++//  ushort *pixel;
++//  static const signed char dir[8][2] =
++//    { {-1,-1}, {-1,0}, {-1,1}, {0,1}, {1,1}, {1,0}, {1,-1}, {0,-1} };
++//
++//  if (verbose) fprintf (stderr,_("Rebuilding highlights...\n"));
++//
++//  grow = pow (2, 4-highlight);
++//  FORCC hsat[c] = 32000 * pre_mul[c];
++//  for (kc=0, c=1; c < colors; c++)
++//    if (pre_mul[kc] < pre_mul[c]) kc = c;
++//  high = height / SCALE;
++//  wide =  width / SCALE;
++//  map = (float *) calloc (high, wide*sizeof *map);
++//  merror (map, "recover_highlights()");
++//  FORCC if (c != kc) {
++//    memset (map, 0, high*wide*sizeof *map);
++//    for (mrow=0; mrow < high; mrow++)
++//      for (mcol=0; mcol < wide; mcol++) {
++//	sum = wgt = count = 0;
++//	for (row = mrow*SCALE; row < (mrow+1)*SCALE; row++)
++//	  for (col = mcol*SCALE; col < (mcol+1)*SCALE; col++) {
++//	    pixel = image[row*width+col];
++//	    if (pixel[c] / hsat[c] == 1 && pixel[kc] > 24000) {
++//	      sum += pixel[c];
++//	      wgt += pixel[kc];
++//	      count++;
++//	    }
++//	  }
++//	if (count == SCALE*SCALE)
++//	  map[mrow*wide+mcol] = sum / wgt;
++//      }
++//    for (spread = 32/grow; spread--; ) {
++//      for (mrow=0; mrow < high; mrow++)
++//	for (mcol=0; mcol < wide; mcol++) {
++//	  if (map[mrow*wide+mcol]) continue;
++//	  sum = count = 0;
++//	  for (d=0; d < 8; d++) {
++//	    y = mrow + dir[d][0];
++//	    x = mcol + dir[d][1];
++//	    if (y < high && x < wide && map[y*wide+x] > 0) {
++//	      sum  += (1 + (d & 1)) * map[y*wide+x];
++//	      count += 1 + (d & 1);
++//	    }
++//	  }
++//	  if (count > 3)
++//	    map[mrow*wide+mcol] = - (sum+grow) / (count+grow);
++//	}
++//      for (change=i=0; i < high*wide; i++)
++//	if (map[i] < 0) {
++//	  map[i] = -map[i];
++//	  change = 1;
++//	}
++//      if (!change) break;
++//    }
++//    for (i=0; i < high*wide; i++)
++//      if (map[i] == 0) map[i] = 1;
++//    for (mrow=0; mrow < high; mrow++)
++//      for (mcol=0; mcol < wide; mcol++) {
++//	for (row = mrow*SCALE; row < (mrow+1)*SCALE; row++)
++//	  for (col = mcol*SCALE; col < (mcol+1)*SCALE; col++) {
++//	    pixel = image[row*width+col];
++//	    if (pixel[c] / hsat[c] > 1) {
++//	      val = pixel[kc] * map[mrow*wide+mcol];
++//	      if (pixel[c] < val) pixel[c] = CLIP(val);
++//	    }
++//	  }
++//      }
++//  }
++//  free (map);
++//}
++//#undef SCALE
  
- void CLASS median_filter()
-@@ -5139,7 +5124,7 @@
+ void CLASS tiff_get (unsigned base,
+ 	unsigned *tag, unsigned *type, unsigned *len, unsigned *save)
+@@ -5139,7 +5127,7 @@
    }
  }
  
@@ -1184,7 +2489,7 @@
  
  void CLASS parse_makernote (int base, int uptag)
  {
-@@ -5244,6 +5229,11 @@
+@@ -5244,6 +5232,11 @@
      tag |= uptag << 16;
      if (tag == 2 && strstr(make,"NIKON") && !iso_speed)
        iso_speed = (get2(),get2());
@@ -1196,7 +2501,7 @@
      if (tag == 4 && len > 26 && len < 35) {
        if ((i=(get4(),get2())) != 0x7fff && !iso_speed)
  	iso_speed = 50 * pow (2, i/32.0 - 4);
-@@ -5296,12 +5286,16 @@
+@@ -5296,12 +5289,16 @@
  	cam_mul[2] = get4() << 2;
        }
      }
@@ -1214,7 +2519,7 @@
      if (tag == 0x1d)
        while ((c = fgetc(ifp)) && c != EOF)
  	serial = serial*10 + (isdigit(c) ? c - '0' : c % 10);
-@@ -5491,14 +5485,14 @@
+@@ -5491,14 +5488,14 @@
    while (entries--) {
      tiff_get (base, &tag, &type, &len, &save);
      switch (tag) {
@@ -1232,7 +2537,7 @@
  		     shutter = pow (2, expo);		break;
        case 37378:  aperture = pow (2, getreal(type)/2);	break;
        case 37386:  focal_len = getreal(type);		break;
-@@ -5667,28 +5661,33 @@
+@@ -5667,28 +5664,33 @@
    }
  }
  
@@ -1272,7 +2577,7 @@
    entries = get2();
    if (entries > 512) return 1;
    while (entries--) {
-@@ -5758,7 +5757,8 @@
+@@ -5758,7 +5760,8 @@
  	fgets (make, 64, ifp);
  	break;
        case 272:				/* Model */
@@ -1282,7 +2587,7 @@
  	break;
        case 280:				/* Panasonic RW2 offset */
  	if (type != 4) break;
-@@ -5818,6 +5818,9 @@
+@@ -5818,6 +5821,9 @@
        case 315:				/* Artist */
  	fread (artist, 64, 1, ifp);
  	break;
@@ -1292,7 +2597,7 @@
        case 322:				/* TileWidth */
  	tiff_ifd[ifd].tile_width = getint(type);
  	break;
-@@ -5833,6 +5836,9 @@
+@@ -5833,6 +5839,9 @@
  	  is_raw = 5;
  	}
  	break;
@@ -1302,7 +2607,7 @@
        case 330:				/* SubIFDs */
  	if (!strcmp(model,"DSLR-A100") && tiff_ifd[ifd].width == 3872) {
  	  load_raw = &CLASS sony_arw_load_raw;
-@@ -5846,6 +5852,9 @@
+@@ -5846,6 +5855,9 @@
  	  fseek (ifp, i+4, SEEK_SET);
  	}
  	break;
@@ -1312,7 +2617,7 @@
        case 400:
  	strcpy (make, "Sarnoff");
  	maximum = 0xfff;
-@@ -6063,12 +6072,21 @@
+@@ -6063,12 +6075,21 @@
        case 61450:
  	cblack[4] = cblack[5] = MIN(sqrt(len),64);
        case 50714:			/* BlackLevel */
@@ -1340,7 +2645,7 @@
        case 50715:			/* BlackLevelDeltaH */
        case 50716:			/* BlackLevelDeltaV */
  	for (num=i=0; i < (len & 0xffff); i++)
-@@ -6085,13 +6103,13 @@
+@@ -6085,13 +6106,13 @@
        case 50721:			/* ColorMatrix1 */
        case 50722:			/* ColorMatrix2 */
  	FORCC for (j=0; j < 3; j++)
@@ -1356,7 +2661,7 @@
  	break;
        case 50727:			/* AnalogBalance */
  	FORCC ab[c] = getreal(type);
-@@ -6114,6 +6132,11 @@
+@@ -6114,6 +6135,11 @@
        case 50752:
  	read_shorts (cr2_slice, 3);
  	break;
@@ -1368,7 +2673,7 @@
        case 50829:			/* ActiveArea */
  	top_margin = getint(type);
  	left_margin = getint(type);
-@@ -6146,21 +6169,27 @@
+@@ -6146,21 +6172,27 @@
      fread (buf, sony_length, 1, ifp);
      sony_decrypt (buf, sony_length/4, 1, sony_key);
      sfp = ifp;
@@ -1404,7 +2709,7 @@
      cam_xyz_coeff (cmatrix, cam_xyz);
    }
    if (asn[0]) {
-@@ -6168,13 +6197,14 @@
+@@ -6168,13 +6200,14 @@
      FORCC cam_mul[c] = 1 / asn[c];
    }
    if (!use_cm)
@@ -1420,7 +2725,7 @@
  
    fseek (ifp, base, SEEK_SET);
    order = get2();
-@@ -6206,6 +6236,7 @@
+@@ -6206,6 +6239,7 @@
        shutter = tiff_ifd[i].shutter;
      tiff_ifd[i].shutter = shutter;
    }
@@ -1428,7 +2733,7 @@
    for (i=0; i < tiff_nifds; i++) {
      if (max_samp < tiff_ifd[i].samples)
  	max_samp = tiff_ifd[i].samples;
-@@ -6266,7 +6297,12 @@
+@@ -6266,7 +6300,12 @@
  	  case  8: load_raw = &CLASS eight_bit_load_raw;	break;
  	  case 12: if (tiff_ifd[raw].phint == 2)
  		     load_flags = 6;
@@ -1442,7 +2747,7 @@
  	  case 14: load_flags = 0;
  	  case 16: load_raw = &CLASS unpacked_load_raw;
  		   if (!strncmp(make,"OLYMPUS",7) &&
-@@ -6305,6 +6341,7 @@
+@@ -6305,6 +6344,7 @@
  	  case 32803: load_raw = &CLASS kodak_65000_load_raw;
  	}
        case 32867: case 34892: break;
@@ -1450,7 +2755,7 @@
        default: is_raw = 0;
      }
    if (!dng_version)
-@@ -6390,7 +6427,7 @@
+@@ -6390,7 +6430,7 @@
  {
    const char *file, *ext;
    char *jname, *jfile, *jext;
@@ -1459,7 +2764,7 @@
  
    ext  = strrchr (ifname, '.');
    file = strrchr (ifname, '/');
-@@ -6412,13 +6449,14 @@
+@@ -6412,13 +6452,14 @@
    } else
      while (isdigit(*--jext)) {
        if (*jext != '9') {
@@ -1476,7 +2781,7 @@
        if (verbose)
  	fprintf (stderr,_("Reading metadata from %s ...\n"), jname);
        parse_tiff (12);
-@@ -6693,6 +6731,7 @@
+@@ -6693,6 +6734,7 @@
    load_raw = ph1.format < 3 ?
  	&CLASS phase_one_load_raw : &CLASS phase_one_load_raw_c;
    maximum = 0xffff;
@@ -1484,7 +2789,7 @@
    strcpy (make, "Phase One");
    if (model[0]) return;
    switch (raw_height) {
-@@ -6761,7 +6800,11 @@
+@@ -6761,7 +6803,11 @@
      order = get2();
      hlen  = get4();
      if (get4() == 0x48454150)		/* "HEAP" */
@@ -1496,7 +2801,7 @@
      if (parse_tiff (save+6)) apply_tiff();
      fseek (ifp, save+len, SEEK_SET);
    }
-@@ -7033,7 +7076,8 @@
+@@ -7033,7 +7079,8 @@
  {
    static const struct {
      const char *prefix;
@@ -1506,7 +2811,7 @@
    } table[] = {
      { "AgfaPhoto DC-833m", 0, 0,	/* DJC */
  	{ 11438,-3762,-1115,-2409,9914,2497,-1227,2295,5300 } },
-@@ -7977,12 +8021,12 @@
+@@ -7977,12 +8024,12 @@
  	{ 6596,-2079,-562,-4782,13016,1933,-970,1581,5181 } },
      { "Sony DSC-RX100", 0, 0,
  	{ 8651,-2754,-1057,-3464,12207,1373,-568,1398,4434 } },
@@ -1521,7 +2826,7 @@
      { "Sony DSLR-A100", 0, 0xfeb,
  	{ 9437,-2811,-774,-8405,16215,2290,-710,596,7181 } },
      { "Sony DSLR-A290", 0, 0,
-@@ -8088,6 +8132,33 @@
+@@ -8088,6 +8135,33 @@
        }
        break;
      }
@@ -1555,7 +2860,7 @@
  }
  
  void CLASS simple_coeff (int index)
-@@ -8410,7 +8481,7 @@
+@@ -8410,7 +8484,7 @@
    tiff_flip = flip = filters = UINT_MAX;	/* unknown */
    raw_height = raw_width = fuji_width = fuji_layout = cr2_slice[0] = 0;
    maximum = height = width = top_margin = left_margin = 0;
@@ -1564,7 +2869,7 @@
    iso_speed = shutter = aperture = focal_len = unique_id = 0;
    tiff_nifds = 0;
    memset (tiff_ifd, 0, sizeof tiff_ifd);
-@@ -8442,13 +8513,20 @@
+@@ -8442,13 +8516,20 @@
    fread (head, 1, 32, ifp);
    fseek (ifp, 0, SEEK_END);
    flen = fsize = ftell(ifp);
@@ -1587,7 +2892,7 @@
        parse_ciff (hlen, flen-hlen, 0);
        load_raw = &CLASS canon_load_raw;
      } else if (parse_tiff(0)) apply_tiff();
-@@ -8494,6 +8572,7 @@
+@@ -8494,6 +8575,7 @@
      fseek (ifp, 100+28*(shot_select > 0), SEEK_SET);
      parse_tiff (data_offset = get4());
      parse_tiff (thumb_offset+12);
@@ -1595,7 +2900,7 @@
      apply_tiff();
    } else if (!memcmp (head,"RIFF",4)) {
      fseek (ifp, 0, SEEK_SET);
-@@ -8607,9 +8686,10 @@
+@@ -8607,9 +8689,10 @@
    if (make[0] == 0) parse_smal (0, flen);
    if (make[0] == 0) {
      parse_jpeg(0);
@@ -1609,7 +2914,7 @@
        strcpy (make, "OmniVision");
        data_offset = ftell(ifp) + 0x8000-32;
        width = raw_width;
-@@ -8618,6 +8698,7 @@
+@@ -8618,6 +8701,7 @@
        filters = 0x16161616;
      } else is_raw = 0;
    }
@@ -1617,7 +2922,7 @@
  
    for (i=0; i < sizeof corp / sizeof *corp; i++)
      if (strcasestr (make, corp[i]))	/* Simplify company names */
-@@ -8649,7 +8730,7 @@
+@@ -8649,7 +8733,7 @@
    if (height == 3136 && width == 4864)  /* Pentax K20D and Samsung GX20 */
      { height  = 3124;   width  = 4688; filters = 0x16161616; }
    if (width == 4352 && (!strcmp(model,"K-r") || !strcmp(model,"K-x")))
@@ -1626,7 +2931,7 @@
    if (width >= 4960 && !strncmp(model,"K-5",3))
      { left_margin = 10; width  = 4950; filters = 0x16161616; }
    if (width == 4736 && !strcmp(model,"K-7"))
-@@ -8669,6 +8750,7 @@
+@@ -8669,6 +8753,7 @@
        case 0:
        case 1:     load_raw = &CLASS   packed_dng_load_raw;  break;
        case 7:     load_raw = &CLASS lossless_dng_load_raw;  break;
@@ -1634,7 +2939,7 @@
        case 34892: load_raw = &CLASS    lossy_dng_load_raw;  break;
        default:    load_raw = 0;
      }
-@@ -8725,6 +8807,7 @@
+@@ -8725,6 +8810,7 @@
      if (height   > width) pixel_aspect = 2;
      filters = 0;
      simple_coeff(0);
@@ -1642,7 +2947,7 @@
    } else if (!strcmp(make,"Canon") && tiff_bps == 15) {
      switch (width) {
        case 3344: width -= 66;
-@@ -9034,24 +9117,53 @@
+@@ -9034,24 +9120,53 @@
      if (load_raw == &CLASS lossless_jpeg_load_raw)
        load_raw = &CLASS hasselblad_load_raw;
      if (raw_width == 7262) {
@@ -1701,7 +3006,7 @@
      } else if (raw_width == 4090) {
        strcpy (model, "V96C");
        height -= (top_margin = 6);
-@@ -9109,6 +9221,7 @@
+@@ -9109,6 +9224,7 @@
        filters = 0x16161616;
      }
    } else if (!strcmp(make,"Leica") || !strcmp(make,"Panasonic")) {
@@ -1709,7 +3014,7 @@
      if ((flen - data_offset) / (raw_width*8/7) == raw_height)
        load_raw = &CLASS panasonic_load_raw;
      if (!load_raw) {
-@@ -9126,6 +9239,7 @@
+@@ -9126,6 +9242,7 @@
        }
      filters = 0x01010101 * (uchar) "\x94\x61\x49\x16"
  	[((filters-1) ^ (left_margin & 1) ^ (top_margin << 1)) & 3];
@@ -1717,7 +3022,7 @@
    } else if (!strcmp(model,"C770UZ")) {
      height = 1718;
      width  = 2304;
-@@ -9201,13 +9315,15 @@
+@@ -9201,13 +9318,15 @@
        width -= 6;
    } else if (!strcmp(make,"Sony") && raw_width == 7392) {
      width -= 30;
@@ -1740,7 +3045,7 @@
    } else if (!strcmp(model,"DSLR-A100")) {
      if (width == 3880) {
        height--;
-@@ -9357,6 +9473,18 @@
+@@ -9357,6 +9476,18 @@
      memcpy (rgb_cam, cmatrix, sizeof cmatrix);
      raw_color = 0;
    }
@@ -1759,7 +3064,7 @@
    if (raw_color) adobe_coeff (make, model);
    if (load_raw == &CLASS kodak_radc_load_raw)
      if (raw_color) adobe_coeff ("Apple","Quicktake");
-@@ -9371,9 +9499,9 @@
+@@ -9371,9 +9502,9 @@
      if (raw_width  < width ) raw_width  = width;
    }
    if (!tiff_bps) tiff_bps = 12;
@@ -1771,9 +3076,141 @@
      is_raw = 0;
  #ifdef NO_JASPER
    if (load_raw == &CLASS redcine_load_raw) {
-@@ -9452,199 +9580,250 @@
+@@ -9402,249 +9533,300 @@
+   if (flip == UINT_MAX) flip = 0;
  }
- #endif
+ 
+-#ifndef NO_LCMS
+-void CLASS apply_profile (const char *input, const char *output)
+-{
+-  char *prof;
+-  cmsHPROFILE hInProfile=0, hOutProfile=0;
+-  cmsHTRANSFORM hTransform;
+-  FILE *fp;
+-  unsigned size;
+-
+-  if (strcmp (input, "embed"))
+-    hInProfile = cmsOpenProfileFromFile (input, "r");
+-  else if (profile_length) {
+-    prof = (char *) malloc (profile_length);
+-    merror (prof, "apply_profile()");
+-    fseek (ifp, profile_offset, SEEK_SET);
+-    fread (prof, 1, profile_length, ifp);
+-    hInProfile = cmsOpenProfileFromMem (prof, profile_length);
+-    free (prof);
+-  } else
+-    fprintf (stderr,_("%s has no embedded profile.\n"), ifname);
+-  if (!hInProfile) return;
+-  if (!output)
+-    hOutProfile = cmsCreate_sRGBProfile();
+-  else if ((fp = fopen (output, "rb"))) {
+-    fread (&size, 4, 1, fp);
+-    fseek (fp, 0, SEEK_SET);
+-    oprof = (unsigned *) malloc (size = ntohl(size));
+-    merror (oprof, "apply_profile()");
+-    fread (oprof, 1, size, fp);
+-    fclose (fp);
+-    if (!(hOutProfile = cmsOpenProfileFromMem (oprof, size))) {
+-      free (oprof);
+-      oprof = 0;
++//#ifndef NO_LCMS
++//void CLASS apply_profile (const char *input, const char *output)
++//{
++//  char *prof;
++//  cmsHPROFILE hInProfile=0, hOutProfile=0;
++//  cmsHTRANSFORM hTransform;
++//  FILE *fp;
++//  unsigned size;
++//
++//  if (strcmp (input, "embed"))
++//    hInProfile = cmsOpenProfileFromFile (input, "r");
++//  else if (profile_length) {
++//    prof = (char *) malloc (profile_length);
++//    merror (prof, "apply_profile()");
++//    fseek (ifp, profile_offset, SEEK_SET);
++//    fread (prof, 1, profile_length, ifp);
++//    hInProfile = cmsOpenProfileFromMem (prof, profile_length);
++//    free (prof);
++//  } else
++//    fprintf (stderr,_("%s has no embedded profile.\n"), ifname);
++//  if (!hInProfile) return;
++//  if (!output)
++//    hOutProfile = cmsCreate_sRGBProfile();
++//  else if ((fp = fopen (output, "rb"))) {
++//    fread (&size, 4, 1, fp);
++//    fseek (fp, 0, SEEK_SET);
++//    oprof = (unsigned *) malloc (size = ntohl(size));
++//    merror (oprof, "apply_profile()");
++//    fread (oprof, 1, size, fp);
++//    fclose (fp);
++//    if (!(hOutProfile = cmsOpenProfileFromMem (oprof, size))) {
++//      free (oprof);
++//      oprof = 0;
++//    }
++//  } else
++//    fprintf (stderr,_("Cannot open file %s!\n"), output);
++//  if (!hOutProfile) goto quit;
++//  if (verbose)
++//    fprintf (stderr,_("Applying color profile...\n"));
++//  hTransform = cmsCreateTransform (hInProfile, TYPE_RGBA_16,
++//	hOutProfile, TYPE_RGBA_16, INTENT_PERCEPTUAL, 0);
++//  cmsDoTransform (hTransform, image, image, width*height);
++//  raw_color = 1;		/* Don't use rgb_cam with a profile */
++//  cmsDeleteTransform (hTransform);
++//  cmsCloseProfile (hOutProfile);
++//quit:
++//  cmsCloseProfile (hInProfile);
++//}
++//#endif
++
++/* RT: DNG Float */
++
++#include <zlib.h>
++#include <stdint.h>
++
++static void decodeFPDeltaRow(Bytef * src, Bytef * dst, size_t tileWidth, size_t realTileWidth, int bytesps, int factor) {
++  // DecodeDeltaBytes
++  for (size_t col = factor; col < realTileWidth*bytesps; ++col) {
++    src[col] += src[col - factor];
++  }
++  // Reorder bytes into the image
++  // 16 and 32-bit versions depend on local architecture, 24-bit does not
++  if (bytesps == 3) {
++    for (size_t col = 0; col < tileWidth; ++col) {
++      dst[col*3] = src[col];
++      dst[col*3 + 1] = src[col + realTileWidth];
++      dst[col*3 + 2] = src[col + realTileWidth*2];
+     }
+-  } else
+-    fprintf (stderr,_("Cannot open file %s!\n"), output);
+-  if (!hOutProfile) goto quit;
+-  if (verbose)
+-    fprintf (stderr,_("Applying color profile...\n"));
+-  hTransform = cmsCreateTransform (hInProfile, TYPE_RGBA_16,
+-	hOutProfile, TYPE_RGBA_16, INTENT_PERCEPTUAL, 0);
+-  cmsDoTransform (hTransform, image, image, width*height);
+-  raw_color = 1;		/* Don't use rgb_cam with a profile */
+-  cmsDeleteTransform (hTransform);
+-  cmsCloseProfile (hOutProfile);
+-quit:
+-  cmsCloseProfile (hInProfile);
++  } else {
++    union X { uint32_t x; uint8_t c; };
++    if (((union X){1}).c) {
++		for (size_t col = 0; col < tileWidth; ++col) {
++			for (size_t byte = 0; byte < bytesps; ++byte)
++				dst[col*bytesps + byte] = src[col + realTileWidth*(bytesps-byte-1)];  // Little endian
++		}
++    } else {
++		for (size_t col = 0; col < tileWidth; ++col) {
++			for (size_t byte = 0; byte < bytesps; ++byte)
++				dst[col*bytesps + byte] = src[col + realTileWidth*byte];
++        }
++      }
++    }
++
+ }
+-#endif
  
 -void CLASS convert_to_rgb()
 -{
@@ -1860,41 +3297,6 @@
 -      for (j=0; j < colors; j++)
 -	for (out_cam[i][j] = k=0; k < 3; k++)
 -	  out_cam[i][j] += out_rgb[output_color-1][i][k] * rgb_cam[k][j];
-+/* RT: DNG Float */
-+
-+#include <zlib.h>
-+#include <stdint.h>
-+
-+static void decodeFPDeltaRow(Bytef * src, Bytef * dst, size_t tileWidth, size_t realTileWidth, int bytesps, int factor) {
-+  // DecodeDeltaBytes
-+  for (size_t col = factor; col < realTileWidth*bytesps; ++col) {
-+    src[col] += src[col - factor];
-+  }
-+  // Reorder bytes into the image
-+  // 16 and 32-bit versions depend on local architecture, 24-bit does not
-+  if (bytesps == 3) {
-+    for (size_t col = 0; col < tileWidth; ++col) {
-+      dst[col*3] = src[col];
-+      dst[col*3 + 1] = src[col + realTileWidth];
-+      dst[col*3 + 2] = src[col + realTileWidth*2];
-+    }
-+  } else {
-+    union X { uint32_t x; uint8_t c; };
-+    if (((union X){1}).c) {
-+		for (size_t col = 0; col < tileWidth; ++col) {
-+			for (size_t byte = 0; byte < bytesps; ++byte)
-+				dst[col*bytesps + byte] = src[col + realTileWidth*(bytesps-byte-1)];  // Little endian
-+		}
-+    } else {
-+		for (size_t col = 0; col < tileWidth; ++col) {
-+			for (size_t byte = 0; byte < bytesps; ++byte)
-+				dst[col*bytesps + byte] = src[col + realTileWidth*byte];
-+        }
-+      }
-+    }
-+
-+}
-+
 +// From DNG SDK dng_utils.h
 +static inline uint32_t DNG_HalfToFloat(uint16_t halfValue) {
 +  int32_t sign     = (halfValue >> 15) & 0x00000001;
@@ -2205,7 +3607,7 @@
  struct tiff_tag {
    ushort tag, type;
    int count;
-@@ -9667,594 +9846,11 @@
+@@ -9667,594 +9849,11 @@
    char desc[512], make[64], model[64], soft[32], date[20], artist[64];
  };
  
