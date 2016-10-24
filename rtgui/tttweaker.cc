@@ -16,7 +16,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include "ttautodistortionclicker.h"
+#include "tttweaker.h"
 #include "options.h"
 #include "guiutils.h"
 #include "rtimage.h"
@@ -26,12 +26,12 @@
 using namespace rtengine;
 using namespace rtengine::procparams;
 
-TTAutoDistortionClicker::TTAutoDistortionClicker() : FoldableToolPanel(this,"ttautodistortionclicker",M("TT_AUTO_DISTORTION_CLICKER_LABEL"),false,false)
+TTTweaker::TTTweaker() : FoldableToolPanel(this,"TTTweaker",M("TT_TWEAKER_LABEL"),false,false)
 {
   themeBox1 = Gtk::manage(new Gtk::HBox());
   themeBox1->set_spacing(4);
 
-  lbAutoDistortionCorrect = Gtk::manage(new Gtk::Label(M("TT_AUTO_DISTORTION_CORRECTION")));
+  lbAutoDistortionCorrect = Gtk::manage(new Gtk::Label(M("TT_TWEAKER_AUTO_DISTORTION_CORRECTION")));
   cbAutoDistortionCorrect = Gtk::manage(new Gtk::CheckButton());
 
   themeBox1->pack_start(*lbAutoDistortionCorrect, Gtk::PACK_SHRINK, 0);
@@ -41,17 +41,17 @@ TTAutoDistortionClicker::TTAutoDistortionClicker() : FoldableToolPanel(this,"tta
 
 }
 
-void TTAutoDistortionClicker::deploy()
+void TTTweaker::deploy()
 {
   FoldableToolPanel::deploy();
   // button enable / disable
 
-//   getExpander()->signal_enabled_toggled().connect(sigc::mem_fun(this, &TTAutoDistortionClicker::enabledChanged));
-//   cbAutoDistortionCorrect->signal_clicked().connect( sigc::mem_fun(this, &TTAutoDistortionClicker::enabledChanged));
+//   getExpander()->signal_enabled_toggled().connect(sigc::mem_fun(this, &TTTweaker::enabledChanged));
+//   cbAutoDistortionCorrect->signal_clicked().connect( sigc::mem_fun(this, &TTTweaker::enabledChanged));
 
 }
 
-void TTAutoDistortionClicker::react()
+void TTTweaker::react()
 {
   if (cbAutoDistortionCorrect->get_active())
    for (size_t i=0; i< env->countPanel() ; i++)
@@ -70,22 +70,22 @@ void TTAutoDistortionClicker::react()
   }
 }
 
-void TTAutoDistortionClicker::enabledChanged  () 
+void TTTweaker::enabledChanged  () 
 {  
 }
 
-Glib::ustring TTAutoDistortionClicker::themeExport()
+Glib::ustring TTTweaker::themeExport()
 {
   Glib::ustring s_active = getToolName() + ":" + "active " + std::string(  getExpander()->getEnabled() ? "1" : "0") ;
   Glib::ustring s_enable_auto = getToolName() + ":"  + "enable_auto_Distortion_correction " + std::string( cbAutoDistortionCorrect->get_active() ? "1" : "0" ) ;
   return s_active + "\n" +  s_enable_auto + "\n";
 }
 
-void TTAutoDistortionClicker::deployLate()
+void TTTweaker::deployLate()
 {
 }
 
-void TTAutoDistortionClicker::themeImport(std::ifstream& myfile)
+void TTTweaker::themeImport(std::ifstream& myfile)
 {
   std::string line;
   bool condition = true;

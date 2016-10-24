@@ -261,7 +261,7 @@ ToolPanelCoordinator::ToolPanelCoordinator () : ipc(NULL)
     env->registerPanel (usefulPanel, Gtk::manage (new TTFavoriteColorChooser()));
     env->registerPanel (usefulPanel, Gtk::manage (new TTPanelColorChooser()));
     env->registerPanel (usefulPanel, Gtk::manage (new TTUDLRHider()));
-    env->registerPanel (usefulPanel, Gtk::manage (new TTAutoDistortionClicker()));
+    env->registerPanel (usefulPanel, Gtk::manage (new TTTweaker()));
 
 
 
