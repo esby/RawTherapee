@@ -84,7 +84,7 @@
 #include "ttpanelcolorer.h"
 #include "ttudlrhider.h"
 #include "tttabhider.h"
-#include "ttautodistortionclicker.h"
+#include "tttweaker.h"
 
 //defining the number of panels for once.
 #define NB_PANEL 9

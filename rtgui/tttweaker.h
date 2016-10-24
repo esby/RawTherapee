@@ -16,8 +16,8 @@
  *  You should have received a copy of the GNU General Public License
  *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef _THEMETOOLAUTO_DISTORSION_CLICKER_H_
-#define _THEMETOOLAUTO_DISTORSION_CLICKER_H_
+#ifndef _THEMETOOL_TWEAKER_H_
+#define _THEMETOOL_TWEAKER_H_
 
 #include <memory>
 #include <gtkmm.h>
@@ -26,7 +26,7 @@
 #include "guiutils.h"
 
 
-class TTAutoDistortionClicker : public ToolParamBlock, public FoldableToolPanel {
+class TTTweaker : public ToolParamBlock, public FoldableToolPanel {
 
 protected:
 
@@ -37,7 +37,7 @@ protected:
 
 public:
 
-    TTAutoDistortionClicker();
+    TTTweaker();
     void deploy();
     void deployLate();
     void react();
