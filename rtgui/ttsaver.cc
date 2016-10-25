@@ -114,7 +114,8 @@ void TTSaver::profileBoxChanged()
    Glib::ustring fname = entries[row];
 //   printf("preparing to load Filename : %s - %s\n", filename.c_str(), fname.c_str());
    load_profile(fname);
-   printf("Loaded ttp profile : %s - %s\n", filename.c_str(), fname.c_str());
+   if( options.rtSettings.verbose ) 
+     printf("Loaded ttp profile : %s - %s\n", filename.c_str(), fname.c_str());
 }
 
 void TTSaver::parseProfileFolder()
