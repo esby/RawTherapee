@@ -65,6 +65,7 @@ class Environment {
   public:
      int state;
      int prevState;
+     // this can be customized in theory - panel can be moved to bottom instead of top when moving left.
      bool moveLeftToBottom;
      bool moveRightToTop;
      bool disableSwitchPageReaction;
@@ -73,8 +74,8 @@ class Environment {
      Environment(){ 
        state = ENV_STATE_IN_FAV;
        prevState = ENV_STATE_IN_FAV;
-       moveLeftToBottom = false;
-       moveRightToTop = true;
+       moveLeftToBottom = false; // moving left adds to top.
+       moveRightToTop = true; // moving right adds to top.
        disableSwitchPageReaction = true;
        metadataState = true; // true if metadata tab is here
      }
@@ -158,12 +159,15 @@ class ToolCounter
       virtual void setBoxName(Glib::ustring _name) { boxName = _name; }
       virtual Glib::ustring getBoxName() { return boxName; }
 
+      // return the number of element the box contains.
       virtual int size();
 
       virtual int getPos(ToolPanel* panel);
       virtual ToolPanel* getPanel(int pos);
 
+      // return the box a panel should be moved to when using left arrow.
       virtual Gtk::VBox* getPrevBox();
+      // return the box a panel should be moved to when using right arrow.
       virtual Gtk::VBox* getNextBox();
 
       virtual void remPanel(ToolPanel* t);
