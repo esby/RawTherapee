@@ -428,13 +428,13 @@ void ToolPanelCoordinator::doDeployLate()
 
 }
 
-void ToolPanelCoordinator::doReact()
+void ToolPanelCoordinator::doReact(rtengine::ProcEvent ev)
 {
      printf("enabling panel react\n");
     for (size_t i=0; i<env->countPanel(); i++)
     {
 //      printf("panel nb=%i \n",  i);
-      env->getPanel(i)->react();
+      env->getPanel(i)->react(ev);
     }
 }
 

@@ -924,7 +924,7 @@ void EditorPanel::procParamsChanged (rtengine::procparams::ProcParams* params, r
 
   if ((ev == rtengine::EvPhotoLoaded)
     || (ev == rtengine::EvProfileChanged))  
-    tpc->doReact();
+    tpc->doReact(ev);
 //  printf("ev=%i %s\n",ev, descr.c_str());
 }
 
@@ -1602,6 +1602,9 @@ bool EditorPanel::idle_imageSaved(ProgressConnector<int> *pc, rtengine::IImage16
 
     delete pc;
     SoundManager::playSoundAsync(options.sndBatchQueueDone);
+    //todo call to tt filter chain
+    tpc->doReact(rtengine::EvFileSaved);
+
     isProcessing = false;
     return false;
 }

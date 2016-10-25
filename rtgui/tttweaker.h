@@ -31,16 +31,21 @@ class TTTweaker : public ToolParamBlock, public FoldableToolPanel {
 protected:
 
     Gtk::HBox* themeBox1;
+    Gtk::HBox* themeBox2;
+
 
     Gtk::Label* lbAutoDistortionCorrect;
     Gtk::CheckButton* cbAutoDistortionCorrect; 
+
+    Gtk::Label* lbCloseAfterSave;
+    Gtk::CheckButton* cbCloseAfterSave;
 
 public:
 
     TTTweaker();
     void deploy();
     void deployLate();
-    void react();
+    void react(rtengine::ProcEvent ev);
     void enabledChanged  ();
 
     bool canBeEnabled() {return true;}

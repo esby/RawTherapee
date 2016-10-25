@@ -259,7 +259,7 @@ public:
 
     void doDeploy();
     void doDeployLate();
-    void doReact();
+    void doReact(rtengine::ProcEvent ev);
 
     // toolpanellistener interface
     void panelChanged   (rtengine::ProcEvent event, const Glib::ustring& descr);
