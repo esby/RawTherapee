@@ -24,7 +24,6 @@ using namespace rtengine::procparams;
 
 
 // Environment implementation
-// todo: use another faster implementation relying on a map.
 ToolPanel* Environment::getPanel(Glib::ustring name)
 {
   printf("call to a potentially slow method : getPanel of Environement\n");

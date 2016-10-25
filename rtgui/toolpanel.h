@@ -36,9 +36,22 @@
 class ToolPanel;
 class FoldableToolPanel;
 
+// Nomenclature note:
+// a "box" is either a tab containing toolpanels or a tool(panel) containing other tool(panel)s.
+// a panel is a tool(panel).
+
+
 class DummyToolPanel;
 class ToolVBox;
 
+
+// the Environment is a class containing several information.
+// the list of toolPanels.
+// the list of corresponding expanders.
+// the list of toolVbox 
+// other information
+
+// there are several instances of Environement inside the application, usually one per editor window and one for the main application.
 
 class Environment {
   protected:
@@ -63,8 +76,10 @@ class Environment {
        moveLeftToBottom = false;
        moveRightToTop = true;
        disableSwitchPageReaction = true;
-       metadataState = true; // means they are activated
+       metadataState = true; // true if metadata tab is here
      }
+
+     virtual ~Environment() {} ;
 
      ToolPanel*  getPanel(Glib::ustring name);
      ToolPanel*  getPanel(int pos);     
@@ -126,6 +141,7 @@ class ToolCounter
 
    public:
       ToolCounter();
+      virtual ~ToolCounter() {} ;
   
       virtual void setEnvironment(Environment* _env) { envTC = _env; }
       
@@ -202,8 +218,6 @@ protected:
 
     Glib::ustring uilabel;
 
-//        int positionOriginal;
-//        int positionFavorite;
     Gtk::Label* labelWidget;
     Gtk::Label* labelInfo;  
     Gtk::Button* labelInfoNotifier;
@@ -211,8 +225,6 @@ protected:
 
     Gtk::ToggleButton* favoriteButton;
     Gtk::ToggleButton* trashButton;
-    // this is retrieved dynamically for now...
- //   Gtk::CheckButton* enabledButtonRef;
     Gtk::HBox* labelBox;
     Gtk::HBox* buttonBox;
 
@@ -290,14 +302,14 @@ public:
     ToolVBox*            getFavoriteBox() { return favoriteBox;}
 
     virtual void cleanBox();
- // tt filters should reimplement these methods, normal filters should not need it
+ // tt filters should reimplement these methods, normal filters should not need these
     virtual void themeImport(std::ifstream& myfile) {}
     virtual Glib::ustring themeExport() { return ""; }
 
    
-    virtual void                 deploy()       {} // used to handle post constructor steps.
-    virtual void        deployLate() {} // used to handle post operations in a later way than deploy.
-    virtual void react(rtengine::ProcEvent ev) {} // used to react to external event like image loading. should be called when an image was loaded or a profile loaded
+    virtual void                 deploy()       {} // used to handle post operations steps.
+    virtual void        deployLate() {} // used to handle post operations in a later way than deploy ie: for hiding stuf.
+    virtual void react(rtengine::ProcEvent ev) {} // used to react to external event like image loading / image saving / profile loading etc. 
 
     void                setToolName(Glib::ustring _name) { toolName = _name; }
     Glib::ustring               getToolName() { return toolName; } 
@@ -426,24 +438,15 @@ public:
     }
 };
 
-
+// this class is used to keep the position of a favorited or trashed panel. this is used to preserve the orders of the toolpanel relative to the others in its Vbox.
 class DummyToolPanel : public ToolParamBlock , public FoldableToolPanel {
 
   protected:
-//        Gtk::Box* parentContainer;
-//        Expander* exp;
 
 
   public:
 
         DummyToolPanel(Glib::ustring, Environment* _env);
-
-//        Expander* getExpander() { return exp; }
-//        void setExpanded (bool expanded) {  }
-//        bool getExpanded () { return false; }
-//        void setParent (Gtk::Box* parent) { parentContainer = parent; }
-//        Gtk::Box* getParent () { return parentContainer; }
-
         bool   canBeIgnored() { return true; }
 };
 
