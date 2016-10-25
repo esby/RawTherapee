@@ -82,7 +82,6 @@ void TTUDLRHider::deployLate()
 //void TTUDLRHider::on_toggle_button()
 void TTUDLRHider::enabledChanged  () 
 {
-  printf("enabled=%i hidarrow=%i lockFav=%i \n", (getExpander()->getEnabled()?1:0), (cbHideArrow->get_active()?1:0), (cbLockFav->get_active()?1:0));
    
    for (size_t i=0; i< env->countPanel() ; i++)
    {
@@ -93,7 +92,6 @@ void TTUDLRHider::enabledChanged  ()
         actOnPanel(p);
       }
   }
-  printf("enabled changed done\n");
 }
 
 void  TTUDLRHider::actOnPanel(ToolPanel* panel)
@@ -172,9 +170,6 @@ void TTUDLRHider::themeImport(std::ifstream& myfile)
             if(getline(tokensplitter, token, ' '))
             { 
               getExpander()->setEnabled((token == "1") ? true: false);
-              printf("conf loading: enabled=%s\n", token.c_str());
-
-              printf("enabled=%i hidarrow=%i lockFav=%i \n", (getExpander()->getEnabled()?1:0), (cbHideArrow->get_active()?1:0), (cbLockFav->get_active()?1:0));
 
             }
           }
@@ -184,8 +179,6 @@ void TTUDLRHider::themeImport(std::ifstream& myfile)
             if(getline(tokensplitter, token, ' '))
             {
               cbHideArrow->set_active((token == "1") ? true: false);
-              printf("conf loading: settings hide arrow=%s\n", token.c_str()); 
-              printf("enabled=%i hidarrow=%i lockFav=%i \n", (getExpander()->getEnabled()?1:0), (cbHideArrow->get_active()?1:0), (cbLockFav->get_active()?1:0));
             }
           }
 
@@ -194,8 +187,6 @@ void TTUDLRHider::themeImport(std::ifstream& myfile)
             if(getline(tokensplitter, token, ' '))
             {
               cbLockFav->set_active((token == "1") ? true: false);
-              printf("conf loading: settings lock_fav=%s\n", token.c_str()); 
-              printf("enabled=%i hidarrow=%i lockFav=%i \n", (getExpander()->getEnabled()?1:0), (cbHideArrow->get_active()?1:0), (cbLockFav->get_active()?1:0));
             }
          }
        }
