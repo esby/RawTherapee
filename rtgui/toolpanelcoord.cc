@@ -408,7 +408,8 @@ ToolPanelCoordinator::ToolPanelCoordinator () : ipc(NULL)
 
 void ToolPanelCoordinator::doDeploy()
 {
-    printf("panel deployment \n");
+    if( options.rtSettings.verbose ) 
+      printf("panel deployment \n");
     for (size_t i=0; i<env->countPanel(); i++)
     {
 //      printf("panel nb=%i \n",  i);
@@ -418,7 +419,8 @@ void ToolPanelCoordinator::doDeploy()
 
 void ToolPanelCoordinator::doDeployLate()
 {
-     printf("late panel deployment \n");
+    if( options.rtSettings.verbose )
+      printf("late panel deployment \n");
     for (size_t i=0; i<env->countPanel(); i++)
     {   
 //      printf("panel nb=%i \n",  i);
@@ -430,7 +432,8 @@ void ToolPanelCoordinator::doDeployLate()
 
 void ToolPanelCoordinator::doReact(rtengine::ProcEvent ev)
 {
-     printf("enabling panel react\n");
+    if( options.rtSettings.verbose ) 
+      printf("enabling panel react\n");
     for (size_t i=0; i<env->countPanel(); i++)
     {
 //      printf("panel nb=%i \n",  i);
