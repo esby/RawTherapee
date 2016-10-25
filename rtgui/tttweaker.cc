@@ -39,6 +39,17 @@ TTTweaker::TTTweaker() : FoldableToolPanel(this,"TTTweaker",M("TT_TWEAKER_LABEL"
 
   pack_start(*themeBox1, Gtk::PACK_SHRINK, 0);
 
+  themeBox2 = Gtk::manage(new Gtk::HBox());
+  themeBox2->set_spacing(4);
+
+  lbCloseAfterSave = Gtk::manage(new Gtk::Label(M("TT_TWEAKER_CLOSE_AFTER_SAVE")));
+  cbCloseAfterSave = Gtk::manage(new Gtk::CheckButton());
+
+  themeBox2->pack_start(*lbCloseAfterSave, Gtk::PACK_SHRINK, 0);
+  themeBox2->pack_end(*cbCloseAfterSave, Gtk::PACK_SHRINK, 0);
+
+  pack_start(*themeBox2, Gtk::PACK_SHRINK, 0);
+ 
 }
 
 void TTTweaker::deploy()
@@ -51,11 +62,14 @@ void TTTweaker::deploy()
 
 }
 
-void TTTweaker::react()
+void TTTweaker::react(rtengine::ProcEvent ev)
 {
   if (cbAutoDistortionCorrect->get_active())
-   for (size_t i=0; i< env->countPanel() ; i++)
-   {
+  {
+    if ((ev == rtengine::EvPhotoLoaded)
+    || (ev == rtengine::EvProfileChanged))
+    for (size_t i=0; i< env->countPanel() ; i++)
+    {
       FoldableToolPanel* p = static_cast<FoldableToolPanel*> (env->getPanel(i));
       if ( (p != NULL)
       && (!(p->canBeIgnored())))
@@ -67,6 +81,13 @@ void TTTweaker::react()
           d->idPressed();
         }
       }
+    }
+    if ((ev == rtengine::EvFileSaved)) //todo find event for saving an image done
+    {
+      if (cbCloseAfterSave->get_active())
+      //todo exit application
+
+    }
   }
 }
 

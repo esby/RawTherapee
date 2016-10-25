@@ -297,7 +297,7 @@ public:
    
     virtual void                 deploy()       {} // used to handle post constructor steps.
     virtual void        deployLate() {} // used to handle post operations in a later way than deploy.
-    virtual void react() {} // used to react to external event like image loading. should be called when an image was loaded or a profile loaded
+    virtual void react(rtengine::ProcEvent ev) {} // used to react to external event like image loading. should be called when an image was loaded or a profile loaded
 
     void                setToolName(Glib::ustring _name) { toolName = _name; }
     Glib::ustring               getToolName() { return toolName; } 
@@ -414,7 +414,7 @@ public:
 
     void deploy();
     void deployLate(); 
-    void react();
+    void react(rtengine::ProcEvent ev);
     bool canBeIgnored() {return false;}
 
     // Functions that want to receive an enabled/disabled event from this class
