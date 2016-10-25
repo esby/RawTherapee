@@ -208,10 +208,10 @@ protected:
     Gtk::Image* imgIconP;
     Gtk::Image* imgIconU;
 
-    Gtk::Image* imgPanelEnd[NB_PANEL]; // note: maybe we should not be using static arrays...
+    Gtk::Image* imgPanelEnd[NB_PANEL]; 
     Gtk::VBox* vbPanelEnd[NB_PANEL];
-    Gtk::HSeparator* hsPanelEnd[NB_PANEL]; // this was missing
-    Gtk::VBox* vbPanel[NB_PANEL]; // seriously? this was not defined ?
+    Gtk::HSeparator* hsPanelEnd[NB_PANEL]; 
+    Gtk::VBox* vbPanel[NB_PANEL]; // 
 
     Gtk::ScrolledWindow* favoritePanelSW;
     Gtk::ScrolledWindow* exposurePanelSW;
