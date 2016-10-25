@@ -42,7 +42,7 @@ TTTweaker::TTTweaker() : FoldableToolPanel(this,"TTTweaker",M("TT_TWEAKER_LABEL"
   themeBox2 = Gtk::manage(new Gtk::HBox());
   themeBox2->set_spacing(4);
 
-  lbCloseAfterSave = Gtk::manage(new Gtk::Label(M("TT_TWEAKER_CLOSE_AFTER_SAVE")));
+  lbCloseAfterSave = Gtk::manage(new Gtk::Label(M("TT_TWEAKER_CLOSE_AFTER_SAVE_IN_SE")));
   cbCloseAfterSave = Gtk::manage(new Gtk::CheckButton());
 
   themeBox2->pack_start(*lbCloseAfterSave, Gtk::PACK_SHRINK, 0);
@@ -82,11 +82,15 @@ void TTTweaker::react(rtengine::ProcEvent ev)
         }
       }
     }
-    if ((ev == rtengine::EvFileSaved)) //todo find event for saving an image done
-    {
-      if (cbCloseAfterSave->get_active())
-      //todo exit application
 
+  }
+  if ((ev == rtengine::EvFileSaved)) //todo find event for saving an image done
+  {
+    if (cbCloseAfterSave->get_active() && simpleEditor)
+    {
+      // sleep(1); // sleep might not be multi platform
+      printf("exiting the program after file saving was performed\n");
+      gtk_main_quit();
     }
   }
 }
@@ -98,8 +102,10 @@ void TTTweaker::enabledChanged  ()
 Glib::ustring TTTweaker::themeExport()
 {
   Glib::ustring s_active = getToolName() + ":" + "active " + std::string(  getExpander()->getEnabled() ? "1" : "0") ;
-  Glib::ustring s_enable_auto = getToolName() + ":"  + "enable_auto_Distortion_correction " + std::string( cbAutoDistortionCorrect->get_active() ? "1" : "0" ) ;
-  return s_active + "\n" +  s_enable_auto + "\n";
+  Glib::ustring s_enable_auto = getToolName() + ":"  + "enable_auto_distortion_correction " + std::string( cbAutoDistortionCorrect->get_active() ? "1" : "0" ) ;
+  Glib::ustring s_close_after_save = getToolName() + ":"  + "enable_close_after_save " + std::string( cbCloseAfterSave->get_active() ? "1" : "0" ) ;
+
+  return s_active + "\n" +  s_enable_auto + "\n" + s_close_after_save + "\n";
 }
 
 void TTTweaker::deployLate()
@@ -133,10 +139,18 @@ void TTTweaker::themeImport(std::ifstream& myfile)
             }
           }
 
-          if (token == "enable_auto_Distortion_correction")
+          if (token == "enable_close_after_save")
           {
             if(getline(tokensplitter, token, ' '))
             {
+              cbCloseAfterSave->set_active((token == "1") ? true: false);
+            }
+          }
+
+          if (token == "enable_auto_distortion_correction")
+          { 
+            if(getline(tokensplitter, token, ' '))
+            { 
               cbAutoDistortionCorrect->set_active((token == "1") ? true: false);
             }
           }
