@@ -963,11 +963,10 @@ void EditorPanel::procParamsChanged (rtengine::procparams::ProcParams* params, r
 
 //    if (ev!=EvPhotoLoaded)
 //        saveLabel->set_markup (Glib::ustring("<span foreground=\"#AA0000\" weight=\"bold\">") + M("MAIN_BUTTON_SAVE") + "</span>");
-
+//  printf("ev=%i %s\n",ev, descr.c_str());
   if ((ev == rtengine::EvPhotoLoaded)
     || (ev == rtengine::EvProfileChanged))  
     tpc->doReact(ev);
-//  printf("ev=%i %s\n",ev, descr.c_str());
 }
 
 struct spsparams {
