@@ -21,6 +21,8 @@
 #include "guiutils.h"
 #include "rtimage.h"
 #include "distortion.h"
+#include <chrono>
+#include <thread>
 #include <fstream>
 
 using namespace rtengine;
@@ -84,11 +86,12 @@ void TTTweaker::react(rtengine::ProcEvent ev)
     }
 
   }
-  if ((ev == rtengine::EvFileSaved)) //todo find event for saving an image done
+  if ((ev == rtengine::EvFileSaved)) 
   {
     if (cbCloseAfterSave->get_active() && simpleEditor)
     {
-      // sleep(1); // sleep might not be multi platform
+      // sleep(1); // note: sleep might not be multi platform
+      std::this_thread::sleep_for(std::chrono::seconds(1));
       printf("exiting the program after file saving was performed\n");
       gtk_main_quit();
     }
