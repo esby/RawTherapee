@@ -1601,7 +1601,7 @@ bool EditorPanel::idle_imageSaved(ProgressConnector<int> *pc, rtengine::IImage16
 
     delete pc;
     SoundManager::playSoundAsync(options.sndBatchQueueDone);
-    //todo call to tt filter chain
+
     tpc->doReact(rtengine::EvFileSaved);
 
     isProcessing = false;

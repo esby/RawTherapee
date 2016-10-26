@@ -287,7 +287,6 @@ RTWindow::RTWindow ()
         add (*mainBox);
         show_all ();
   
-        //todo: add doDeploylate call
         fpanel->doDeployLate();
         if (epanel) 
           epanel->doDeployLate();
