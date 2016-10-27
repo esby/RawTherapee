@@ -45,8 +45,12 @@ protected:
 
     Gtk::Label* lbAutoloadSettingsLine;
 
-    Glib::ustring lastFilename;
     std::vector<Glib::ustring> entries;
+
+
+protected:
+
+    Glib::ustring getInternalSelected();
 
 public:
 

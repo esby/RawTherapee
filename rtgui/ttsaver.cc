@@ -334,7 +334,10 @@ void TTSaver::save_clicked (GdkEventButton* event)
     }
 
     Gtk::FileChooserDialog dialog (getToplevelWindow (this), M("PROFILEPANEL_SAVEDLGLABEL"), Gtk::FILE_CHOOSER_ACTION_SAVE);
-    dialog.set_current_name (lastFilename);
+
+    Glib::ustring filename =  profilbox->get_active_text() + paramFileGuiExtension;
+
+    dialog.set_current_name (filename);
     dialog.set_current_folder (options.getUserProfilePath()) ; 
 
     //Add response buttons the the dialog:
@@ -374,7 +377,7 @@ void TTSaver::save_clicked (GdkEventButton* event)
           continue;
         }
 
-        lastFilename = Glib::path_get_basename (fname);
+        Glib::ustring lastFilename = Glib::path_get_basename (fname);
         save_profile(fname);
 
         size_t lastdot = lastFilename.find_last_of ('.');
@@ -433,15 +436,6 @@ Glib::ustring TTSaver::themeExport()
     }
   }
 
-/*
-  Glib::ustring filename =  profilbox->get_active_text() + paramFileGuiExtension;
-  int row = profilbox->get_active_row_number();
-  Glib::ustring fname = entries[row];
-
-  autoloadSettingsBool += cbAutoloadSettings->get_active() ?  "1" : "0";
-
-  autoloadSettingsLine += fname;
-*/
   return favSettings + "\n" +  oriSettings + "\n" + traSettings +"\n"; 
 }
 
