@@ -26,6 +26,7 @@
 #include "../rtengine/ffmanager.h"
 #include <sstream>
 #include "rtimage.h"
+#include "soundman.h"
 #ifdef _OPENMP
 #include <omp.h>
 #endif
@@ -1389,6 +1390,9 @@ Gtk::Widget* Preferences::getSoundPanel ()
     Gtk::Label* lSndBatchQueueDone = Gtk::manage (new Gtk::Label (M("PREFERENCES_SND_BATCHQUEUEDONE") + Glib::ustring(":")));
     pBatchQueueDone->pack_start (*lSndBatchQueueDone, Gtk::PACK_SHRINK, 4);
 
+    Gtk::Button* btnSndBatchQueueDone =  Gtk::manage (new Gtk::Button(M("PREFERENCES_SND_TEST_BATCHQUEUEDONE")));
+    pBatchQueueDone->pack_end (*btnSndBatchQueueDone, Gtk::PACK_SHRINK, 4);
+
     txtSndBatchQueueDone =  Gtk::manage (new Gtk::Entry());
     pBatchQueueDone->pack_end (*txtSndBatchQueueDone, Gtk::PACK_EXPAND_WIDGET, 4);
 
@@ -1403,6 +1407,9 @@ Gtk::Widget* Preferences::getSoundPanel ()
     txtSndLngEditProcDone =  Gtk::manage (new Gtk::Entry());
     pSndLngEditProcDone->pack_start (*txtSndLngEditProcDone, Gtk::PACK_EXPAND_WIDGET, 4);
 
+    Gtk::Button* btnSndLngEditProcDone =  Gtk::manage (new Gtk::Button(M("PREFERENCES_SND_TEST_LNGEDITPROCDONE")));
+    pSndLngEditProcDone->pack_start (*btnSndLngEditProcDone, Gtk::PACK_SHRINK, 4);
+
     Gtk::Label* lSndLngEditProcDoneSecs = Gtk::manage (new Gtk::Label (M("PREFERENCES_SND_TRESHOLDSECS") + Glib::ustring(":")));
     pSndLngEditProcDone->pack_start (*lSndLngEditProcDoneSecs, Gtk::PACK_SHRINK, 12);
 
@@ -1416,10 +1423,26 @@ Gtk::Widget* Preferences::getSoundPanel ()
 
     pSnd->set_border_width (4);
 
+    btnSndBatchQueueDone->signal_button_release_event().connect_notify( sigc::mem_fun(*this, &Preferences::test_batchqueuedone_clicked) );
+    btnSndLngEditProcDone->signal_button_release_event().connect_notify( sigc::mem_fun(*this, &Preferences::test_lngedit_clicked) );
+
+
+
     sndEnableToggled();
 
     return pSnd;
 }
+
+void  Preferences::test_batchqueuedone_clicked (GdkEventButton* event)
+{
+  SoundManager::playSoundAsync(txtSndBatchQueueDone->get_text ());
+}
+
+void  Preferences::test_lngedit_clicked (GdkEventButton* event)
+{
+  SoundManager::playSoundAsync(txtSndLngEditProcDone->get_text ());
+}
+
 Gtk::Widget* Preferences::getTTPanel ()
 {
   Gtk::VBox* pTTP = new Gtk::VBox ();
