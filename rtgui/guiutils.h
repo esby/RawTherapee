@@ -25,6 +25,7 @@
 #include <sstream>
 #include <iostream>
 
+// not sure it should be here...
 #define  PANEL_NAME_FAVORITE  "favoritePanel"
 #define  PANEL_NAME_EXPOSURE  "exposurePanel"
 #define  PANEL_NAME_DETAILS   "detailsPanel"
