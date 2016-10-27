@@ -519,6 +519,8 @@ MyExpander::MyExpander(bool useEnabled, Gtk::Widget* titleWidget, ToolPanelAnces
     titleEvBox->set_above_child(false);  // this is the key! By making it below the child, they will get the events first.
     titleEvBox->set_can_focus(false);
 
+   // we create a titleContainer that will split the title into two horizontal part
+   // this allows to not have bugs linked to set_state(Gtk::STATE_PRELIGHT) which affects buttons locking state.
     titleContainer = Gtk::manage(new Gtk::HBox());
     pack_start(*titleContainer, Gtk::PACK_EXPAND_WIDGET, 0);
 
@@ -612,8 +614,6 @@ bool MyExpander::on_enter_leave_title (GdkEventCrossing* event)
 {
     if (is_sensitive()) {
         if (event->type == GDK_ENTER_NOTIFY) {
-            //todo find why this is causing problems with items sensitivity when they are in headerHBox...
-            // maybe only the tool name should be set to prelight state.
             titleEvBox->set_state(Gtk::STATE_PRELIGHT);
             queue_draw();
         } else if (event->type == GDK_LEAVE_NOTIFY) {
@@ -665,7 +665,6 @@ void MyExpander::setLabel (Gtk::Widget *newWidget)
         removeIfThere(headerHBox, headerWidget, false);
         headerHBox->pack_start(*newWidget, Gtk::PACK_EXPAND_WIDGET, 0);
         headerWidget = newWidget;
-        printf("SetLabel call \n");
     }
 }
 
