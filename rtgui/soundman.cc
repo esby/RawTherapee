@@ -50,7 +50,7 @@ void SoundManager::init()
 void SoundManager::playSoundAsync(const Glib::ustring &sound)
 {
     if (sound.empty() || !options.sndEnable) {     
-        if (options.verbose)
+        if (options.rtSettings.verbose)
           printf("Sound is disabled -  sound.empty()=%i !options.sndEnable=%i \n", sound.empty()?1:0,!options.sndEnable?1:0);
         return;
     }
