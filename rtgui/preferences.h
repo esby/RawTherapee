@@ -295,8 +295,8 @@ public:
     void behAddAllPressed ();
     void behSetAllPressed ();
 
-    void test_batchqueuedone_clicked (GdkEventButton* event) ;
-    void test_lngedit_clicked (GdkEventButton* event);
+    void btn_test_batchqueuedone_clicked (GdkEventButton* event) ;
+    void btn_test_lngedit_clicked (GdkEventButton* event);
 
     virtual void storeCurrentValue();
     virtual void updateProfileList();

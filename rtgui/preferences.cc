@@ -26,7 +26,8 @@
 #include "../rtengine/ffmanager.h"
 #include <sstream>
 #include "rtimage.h"
-#include "soundman.h"
+//needed for testing sound.
+#include "soundman.h" 
 #ifdef _OPENMP
 #include <omp.h>
 #endif
@@ -1423,8 +1424,8 @@ Gtk::Widget* Preferences::getSoundPanel ()
 
     pSnd->set_border_width (4);
 
-    btnSndBatchQueueDone->signal_button_release_event().connect_notify( sigc::mem_fun(*this, &Preferences::test_batchqueuedone_clicked) );
-    btnSndLngEditProcDone->signal_button_release_event().connect_notify( sigc::mem_fun(*this, &Preferences::test_lngedit_clicked) );
+    btnSndBatchQueueDone->signal_button_release_event().connect_notify( sigc::mem_fun(*this, &Preferences::btn_test_batchqueuedone_clicked) );
+    btnSndLngEditProcDone->signal_button_release_event().connect_notify( sigc::mem_fun(*this, &Preferences::btn_test_lngedit_clicked) );
 
 
 
@@ -1433,12 +1434,12 @@ Gtk::Widget* Preferences::getSoundPanel ()
     return pSnd;
 }
 
-void  Preferences::test_batchqueuedone_clicked (GdkEventButton* event)
+void  Preferences::btn_test_batchqueuedone_clicked (GdkEventButton* event)
 {
   SoundManager::playSoundAsync(txtSndBatchQueueDone->get_text ());
 }
 
-void  Preferences::test_lngedit_clicked (GdkEventButton* event)
+void  Preferences::btn_test_lngedit_clicked (GdkEventButton* event)
 {
   SoundManager::playSoundAsync(txtSndLngEditProcDone->get_text ());
 }
