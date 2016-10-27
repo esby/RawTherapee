@@ -30,11 +30,11 @@ ToolPanel* Environment::getPanel(Glib::ustring name)
   for (size_t i=0; i<toolPanels.size(); i++)
    {
       FoldableToolPanel* p = static_cast<FoldableToolPanel*> (toolPanels[i]);
-      if (p != NULL)
+      if (p != nullptr)
         if (p->getToolName() == name)
           return (ToolPanel*)p;
    }
-  return NULL;
+  return nullptr;
 }
 
 ToolPanel* Environment::getPanel(int pos)
@@ -45,7 +45,7 @@ ToolPanel* Environment::getPanel(int pos)
     FoldableToolPanel* p = static_cast<FoldableToolPanel*> (toolPanels[pos]);
     return p;
   }
-  return NULL;
+  return nullptr;
 }
 
 std::vector<ToolPanel*>::iterator   Environment::panelBegin()
@@ -130,8 +130,8 @@ ToolCounter::ToolCounter()
 {
 
    box = static_cast<ToolVBox*> (this);
-   prevBox = NULL;
-   nextBox = NULL;
+   prevBox = nullptr;
+   nextBox = nullptr;
    boxName = "undefined";
 }
 
@@ -246,7 +246,7 @@ void ToolParamBlock::on_style_changed (const Glib::RefPtr<Gtk::Style>& style)
 }
 
 void ToolPanel::updateLabelInfo() {
- if ((this->getExpander() != NULL)
+ if ((this->getExpander() != nullptr)
   && ((!this->canBeIgnored()))) {
 
 //    printf("toolName=%s \n",this->getToolName().c_str());
@@ -263,7 +263,7 @@ void ToolPanel::updateLabelInfo() {
 
 /*
     int buttonChecked = 2;
-    if (enabledButtonRef!=NULL){
+    if (enabledButtonRef!=nullptr){
       buttonChecked = 0;
       if (enabledButtonRef->get_active()) 
          buttonChecked = 1;
@@ -475,7 +475,7 @@ void ToolPanel::moveToTrash(int posFav, int posOri)
 
 int  ToolPanel::getPosOri()
 {
-  if (originalBox == NULL)
+  if (originalBox == nullptr)
     return -1;
   int posOri = originalBox->getPos(this);
   if (posOri == -1) posOri = originalBox->getPos(originalDummy);
@@ -485,7 +485,7 @@ int  ToolPanel::getPosOri()
 
 int  ToolPanel::getPosFav()
 {
-  if (favoriteBox == NULL)
+  if (favoriteBox == nullptr)
     return -1;
   int posFav = favoriteBox->getPos(this);
   if (posFav == -1) posFav = favoriteBox->getPos(favoriteDummy);
@@ -494,7 +494,7 @@ int  ToolPanel::getPosFav()
 
 int  ToolPanel::getPosTra()
 {
-  if (trashBox == NULL) 
+  if (trashBox == nullptr) 
     return -1;
   int posTra = trashBox->getPos(this);
   return posTra;
@@ -504,7 +504,7 @@ int  ToolPanel::getPosTra()
 void ToolPanel::favorite_others_tabs_switch(int dc) 
 {
 
-  if ((this->getExpander() != NULL)
+  if ((this->getExpander() != nullptr)
     && ((!this->canBeIgnored())))
   {
 
@@ -688,73 +688,6 @@ void ToolPanel::initVBox(ToolVBox* _originalBox, ToolVBox* _favoriteBox, ToolVBo
      favoriteBox = _favoriteBox;
      trashBox = _trashBox;
 
-//     ToolParamBlock* t =  dynamic_cast<ToolParamBlock*> (this);
-//     std::vector<Gtk::Widget*> panelList;
-//     panelList = t->get_children ();
-
- //    Gtk::Box* b = getFUDLRBox(); //// adynamic_cast<Gtk::Box*> (panelList.at(0)); // hldr Box.
-
-     //enabledButtonRef = exp->
- //    return;
-/*
-     if (b!=NULL)
-     {
-       if (canBeEnabled())
-  //       enabledButtonRef = Gtk::manage (new Gtk::CheckButton(M("GENERAL_ENABLED"))); 
-       else
-       { 
-         //trying to find enabledButton (first CheckBoxbutton after the element added generically.
-         int psize = panelList.size();
-         if (psize>0)
-         {
-           printf("size=%i \n", psize);
-           Gtk::Widget* w = panelList.at(0); // there used to be the fdlr box then a separator
-           enabledButtonRef = dynamic_cast<Gtk::CheckButton*> (w);
-           if (enabledButtonRef != NULL)
-           {
-             t->remove(*enabledButtonRef);              
-             printf("  %s has an enabledButton... retrieving it...\n",this->getToolName().c_str());
-           }
-           else // case when a Gtk::HBox is present
-           {    // this is a bit ugly, oce could just rewrite the filter concerned...
-             Gtk::HBox* h = dynamic_cast<Gtk::HBox*> (w);
-             if (h != NULL)
-             { 
-               std::vector<Gtk::Widget*> panelList2;
-               panelList2 =  h->get_children ();
-               int psize2 = panelList2.size();
-               if (psize2>1)
-               {
-                 Gtk::Widget* w = panelList2.at(0);
-                 Gtk::Widget* w2 = panelList2.at(1);
-                 enabledButtonRef = dynamic_cast<Gtk::CheckButton*> (w);
-                 if (enabledButtonRef != NULL)
-                 {
-                   h->remove(*w);
-                   h->remove(*w2);
-                   b->pack_end(*w2, Gtk::PACK_SHRINK, true,  0);
-                 }
-               }
-             }
-           }
-         }
-       }
-       if (enabledButtonRef==NULL) // adding a button that cannot be checked
-       {
-         enabledButtonRef = Gtk::manage (new Gtk::CheckButton(M("GENERAL_ENABLED")));
-         enabledButtonRef->set_sensitive(false);
-         b->pack_start(*enabledButtonRef, Gtk::PACK_SHRINK,  0);
-         b->reorder_child(*enabledButtonRef, 1);
-       }
-       else
-       {
-         Gtk::Box* b = getFUDLRBox(); //dynamic_cast<Gtk::Box*> (panelList.at(0)); // hldr Box.
-         b->pack_start(*enabledButtonRef, Gtk::PACK_SHRINK, true, 0);
-         b->reorder_child(*enabledButtonRef, 0);
-         enabledButtonRef->signal_clicked().connect( sigc::mem_fun(*this, &FoldableToolPanel::updateLabelInfo));
-       }
-     }
- */
 
 //     printf("name=%s  ", getToolName().c_str());
 //     printf("positionOriginal=%i\n", originalBox->getPos(this));
@@ -762,7 +695,8 @@ void ToolPanel::initVBox(ToolVBox* _originalBox, ToolVBox* _favoriteBox, ToolVBo
 
 }
 
-FoldableToolPanel::FoldableToolPanel(Gtk::Box* content, Glib::ustring toolName, Glib::ustring UILabel, bool need11, bool useEnabled) : ToolPanel(toolName, need11), parentContainer(NULL), exp(NULL), lastEnabled(true)
+FoldableToolPanel::FoldableToolPanel(Gtk::Box* content, Glib::ustring toolName, Glib::ustring UILabel, bool need11, bool useEnabled) : ToolPanel(toolName, need11), parentContainer(nullptr), exp(nullptr), lastEnabled(true)
+
 {
     if (!content) {
         return;
