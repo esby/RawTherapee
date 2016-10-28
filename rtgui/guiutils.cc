@@ -472,11 +472,11 @@ void MyExpander::init()
     closedPBuf = Gdk::Pixbuf::create_from_file(RTImage::findIconAbsolutePath("expanderClosed.png"));
 }
 
-ToolPanelAncestor*  MyExpander::getPanel() {
+ToolPanel*  MyExpander::getPanel() {
   return panel;
 };
 
-MyExpander::MyExpander(bool useEnabled, Gtk::Widget* titleWidget, ToolPanelAncestor* _panel) :
+MyExpander::MyExpander(bool useEnabled, Gtk::Widget* titleWidget, ToolPanel* _panel) :
     enabled(false), inconsistent(false), flushEvent(false), expBox(nullptr),
     child(nullptr), headerWidget(nullptr), statusImage(nullptr),
     label(nullptr), useEnabled(useEnabled)
@@ -541,7 +541,7 @@ MyExpander::MyExpander(bool useEnabled, Gtk::Widget* titleWidget, ToolPanelAnces
 }
 
 
-MyExpander::MyExpander(bool useEnabled, Glib::ustring titleLabel, ToolPanelAncestor* _panel) :
+MyExpander::MyExpander(bool useEnabled, Glib::ustring titleLabel, ToolPanel* _panel) :
     enabled(false), inconsistent(false), flushEvent(false), expBox(nullptr),
     child(nullptr), headerWidget(nullptr), statusImage(nullptr),
     label(nullptr), useEnabled(useEnabled)
