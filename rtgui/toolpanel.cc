@@ -49,7 +49,7 @@ int ToolCounter::getPos(ToolPanel* panel) {
 
 ToolPanel* ToolCounter::getPanel(int pos) {
  panelList = box->get_children ();
- ToolPanel* p = (ToolPanel*) ((MyExpander*)panelList[pos])->getPanel();
+ ToolPanel* p = static_cast<MyExpander*>(panelList[pos])->getPanel();
    return p;
 }
 
