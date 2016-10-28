@@ -48,7 +48,7 @@ public:
     virtual void panelChanged   (rtengine::ProcEvent event, const Glib::ustring& descr) {}
 };
 
-class ToolCounter 
+class ToolVBoxDef 
 {
    protected:
      Environment* envTC;
@@ -65,8 +65,8 @@ class ToolCounter
      Gtk::VBox* nextBox;
 
    public:
-      ToolCounter();
-      virtual ~ToolCounter() {} ;
+      ToolVBoxDef();
+      virtual ~ToolVBoxDef() {} ;
   
       virtual void setEnvironment(Environment* _env) { envTC = _env; }
       
@@ -100,7 +100,7 @@ class ToolCounter
 };
 
 /// @brief This class control the space around the group of tools inside a tab, as well as the space separating each tool. */
-class ToolVBox : public Gtk::VBox, public ToolCounter 
+class ToolVBox : public Gtk::VBox, public ToolVBoxDef 
 {
 private:
     void updateStyle();
@@ -111,7 +111,7 @@ public:
 };
 
 /// @brief This class control the space around a tool's block of parameter. */
-class ToolParamBlock : public Gtk::VBox, public ToolCounter 
+class ToolParamBlock : public Gtk::VBox, public ToolVBoxDef 
 {
 private:
     void updateStyle();
@@ -225,7 +225,7 @@ public:
     Gtk::Button*         getMoveLButton() { return moveLButton; }
     Gtk::Button*         getMoveRButton() { return moveRButton; }
     void                 setOriginalBox(ToolVBox* tc) {originalBox = tc; }
-    ToolCounter*         getOriginalBox() { return originalBox; }
+    ToolVBoxDef*         getOriginalBox() { return originalBox; }
     DummyToolPanel*      getFavoriteDummy() { return originalDummy;}
     ToolVBox*            getFavoriteBox() { return favoriteBox;}
 
