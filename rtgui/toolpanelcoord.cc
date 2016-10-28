@@ -603,9 +603,10 @@ void ToolPanelCoordinator::profileChange  (const PartialProfile *nparams, rtengi
     // updating the GUI with updated values
     for (unsigned int i=0; i<env->countPanel(); i++) {
         env->getPanel(i)->read (params);
-        if (event==rtengine::EvPhotoLoaded || event==rtengine::EvProfileChanged)
+        if (event==rtengine::EvPhotoLoaded || event==rtengine::EvProfileChanged) {
             env->getPanel(i)->autoOpenCurve();
         }
+    }
 
     if (event == rtengine::EvPhotoLoaded || event == rtengine::EvProfileChanged || event == rtengine::EvHistoryBrowsed || event == rtengine::EvCTRotate) {
         // updating the "on preview" geometry
