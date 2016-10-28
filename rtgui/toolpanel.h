@@ -23,21 +23,18 @@
 #include <glibmm.h>
 #include "../rtengine/rtengine.h"
 #include "../rtengine/procparams.h"
-#include "guiutils.h"
 #include "multilangmgr.h"
 #include "paramsedited.h"
 #include "edit.h"
+#include "toolvboxdef.h"
 #include "rtdef.h"
+#include "guiutils.h"
 #include "environment.h"
 
 #define ENV_STATE_IN_FAV    1
 #define ENV_STATE_IN_NORM   2
 #define ENV_STATE_IN_TRASH  3
 
-
-// Nomenclature note:
-// a "box" is either a tab containing toolpanels or a tool(panel) containing other tool(panel)s.
-// a panel is a tool(panel).
 
 class ToolPanelListener
 {
@@ -48,56 +45,6 @@ public:
     virtual void panelChanged   (rtengine::ProcEvent event, const Glib::ustring& descr) {}
 };
 
-class ToolVBoxDef 
-{
-   protected:
-     Environment* envTC;
-     // this is a reference to the object itself, because i am lazy -- esby
-     Gtk::VBox* box; 
-     std::vector<Gtk::Widget*> panelList;
-
-     Glib::ustring boxName;
-     Gtk::Container* parentContainer;
-     Gtk::Container* parentSWContainer;
- 
-     // references to other boxes
-     Gtk::VBox* prevBox;
-     Gtk::VBox* nextBox;
-
-   public:
-      ToolVBoxDef();
-      virtual ~ToolVBoxDef() {} ;
-  
-      virtual void setEnvironment(Environment* _env) { envTC = _env; }
-      
-      virtual void setPrevBox(Gtk::VBox* _box);
-      virtual void setNextBox(Gtk::VBox* _box);
-
-      virtual void setParent (Gtk::Container* parent) { parentContainer = parent; }
-      virtual Gtk::Container* getParent () { return parentContainer; }
-
-      virtual void setParentSW (Gtk::Container* parent) { parentSWContainer = parent; }
-      virtual Gtk::Container* getParentSW () { return parentSWContainer; }
-
-
-      virtual void setBoxName(Glib::ustring _name) { boxName = _name; }
-      virtual Glib::ustring getBoxName() { return boxName; }
-
-      // return the number of element the box contains.
-      virtual int size();
-
-      virtual int getPos(ToolPanel* panel);
-      virtual ToolPanel* getPanel(int pos);
-
-      // return the box a panel should be moved to when using left arrow.
-      virtual Gtk::VBox* getPrevBox();
-      // return the box a panel should be moved to when using right arrow.
-      virtual Gtk::VBox* getNextBox();
-
-      virtual void remPanel(ToolPanel* t);
-      virtual void addPanel(ToolPanel* t, int pos);
-
-};
 
 /// @brief This class control the space around the group of tools inside a tab, as well as the space separating each tool. */
 class ToolVBox : public Gtk::VBox, public ToolVBoxDef 
@@ -225,8 +172,9 @@ public:
     Gtk::Button*         getMoveLButton() { return moveLButton; }
     Gtk::Button*         getMoveRButton() { return moveRButton; }
     void                 setOriginalBox(ToolVBox* tc) {originalBox = tc; }
-    ToolVBoxDef*         getOriginalBox() { return originalBox; }
     DummyToolPanel*      getFavoriteDummy() { return originalDummy;}
+//    ToolVBoxDef*         getOriginalBox() { return originalBox; }
+    ToolVBox*         getOriginalBox() { return originalBox; }
     ToolVBox*            getFavoriteBox() { return favoriteBox;}
 
     virtual void cleanBox();

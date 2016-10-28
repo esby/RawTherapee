@@ -18,86 +18,9 @@
  */
 #include "toolpanel.h"
 #include "toolpanelcoord.h"
-#include "guiutils.h"
 
 using namespace rtengine::procparams;
 
-ToolVBoxDef::ToolVBoxDef()
-{
-
-   box = static_cast<ToolVBox*> (this);
-   prevBox = nullptr;
-   nextBox = nullptr;
-   boxName = "undefined";
-}
-
-int ToolVBoxDef::size() {
-             panelList = box->get_children ();
-             return panelList.size ();
-}
-
-int ToolVBoxDef::getPos(ToolPanel* panel) {
-
-  panelList = box->get_children ();
-  Gtk::Widget *w = panel->getExpander();
-  auto it = std::find(panelList.begin(), panelList.end(), w);
-  if (it == panelList.end())
-    return -1;
-  else
-    return  std::distance(panelList.begin(), it);
-}
-
-ToolPanel* ToolVBoxDef::getPanel(int pos) {
- panelList = box->get_children ();
- ToolPanel* p = static_cast<MyExpander*>(panelList[pos])->getPanel();
-   return p;
-}
-
-// we initiate the nextBox too sinec it's circular
-void ToolVBoxDef::setPrevBox(Gtk::VBox* _box) {
-  prevBox = _box;
-}
-
-
-void ToolVBoxDef::setNextBox(Gtk::VBox* _box) {
-  nextBox = _box;
-}
-
-Gtk::VBox* ToolVBoxDef::getPrevBox() {
-  return prevBox;
-}
-
-Gtk::VBox* ToolVBoxDef::getNextBox() {
-  return nextBox;
-}
-
-
-void ToolVBoxDef::remPanel(ToolPanel* t)
-{
-  ToolVBox* v = (ToolVBox*) this;
-  MyExpander* exp = t->getExpander();
-  int i = getPos(t);
-  if (i>-1)
-  {
-//    printf("Removing panel: %s from: %s \n", t->getToolName().c_str(), this->getBoxName().c_str());
-    v->remove(*exp);
-  }
-}
-
-
-void ToolVBoxDef::addPanel(ToolPanel* t, int pos)
-{
-  ToolVBox* v = (ToolVBox*) this;
-  MyExpander* exp = t->getExpander();
-  int i = getPos(t);
-  if (i==-1)
-  {
-//    printf("adding Panel: %s to %s \n", t->getToolName().c_str(), this->getBoxName().c_str());
-    v->pack_start(*exp, false,false);
-    if (pos !=-1)
-      v->reorder_child(*exp, pos);
-  }
-}
 
 ToolVBox::ToolVBox()
 {
