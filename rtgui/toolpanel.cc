@@ -22,7 +22,7 @@
 
 using namespace rtengine::procparams;
 
-ToolCounter::ToolCounter()
+ToolVBoxDef::ToolVBoxDef()
 {
 
    box = static_cast<ToolVBox*> (this);
@@ -31,12 +31,12 @@ ToolCounter::ToolCounter()
    boxName = "undefined";
 }
 
-int ToolCounter::size() {
+int ToolVBoxDef::size() {
              panelList = box->get_children ();
              return panelList.size ();
 }
 
-int ToolCounter::getPos(ToolPanel* panel) {
+int ToolVBoxDef::getPos(ToolPanel* panel) {
 
   panelList = box->get_children ();
   Gtk::Widget *w = panel->getExpander();
@@ -47,32 +47,32 @@ int ToolCounter::getPos(ToolPanel* panel) {
     return  std::distance(panelList.begin(), it);
 }
 
-ToolPanel* ToolCounter::getPanel(int pos) {
+ToolPanel* ToolVBoxDef::getPanel(int pos) {
  panelList = box->get_children ();
  ToolPanel* p = static_cast<MyExpander*>(panelList[pos])->getPanel();
    return p;
 }
 
 // we initiate the nextBox too sinec it's circular
-void ToolCounter::setPrevBox(Gtk::VBox* _box) {
+void ToolVBoxDef::setPrevBox(Gtk::VBox* _box) {
   prevBox = _box;
 }
 
 
-void ToolCounter::setNextBox(Gtk::VBox* _box) {
+void ToolVBoxDef::setNextBox(Gtk::VBox* _box) {
   nextBox = _box;
 }
 
-Gtk::VBox* ToolCounter::getPrevBox() {
+Gtk::VBox* ToolVBoxDef::getPrevBox() {
   return prevBox;
 }
 
-Gtk::VBox* ToolCounter::getNextBox() {
+Gtk::VBox* ToolVBoxDef::getNextBox() {
   return nextBox;
 }
 
 
-void ToolCounter::remPanel(ToolPanel* t)
+void ToolVBoxDef::remPanel(ToolPanel* t)
 {
   ToolVBox* v = (ToolVBox*) this;
   MyExpander* exp = t->getExpander();
@@ -85,7 +85,7 @@ void ToolCounter::remPanel(ToolPanel* t)
 }
 
 
-void ToolCounter::addPanel(ToolPanel* t, int pos)
+void ToolVBoxDef::addPanel(ToolPanel* t, int pos)
 {
   ToolVBox* v = (ToolVBox*) this;
   MyExpander* exp = t->getExpander();
