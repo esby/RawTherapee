@@ -45,7 +45,6 @@ public:
     virtual void panelChanged   (rtengine::ProcEvent event, const Glib::ustring& descr) {}
 };
 
-
 /// @brief This class control the space around the group of tools inside a tab, as well as the space separating each tool. */
 class ToolVBox : public Gtk::VBox, public ToolVBoxDef 
 {
