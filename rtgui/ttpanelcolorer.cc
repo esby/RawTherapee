@@ -62,24 +62,6 @@ TTPanelColorChooser::TTPanelColorChooser () : FoldableToolPanel(this, "ttpanelco
   color.set("yellow");
   cbPanel2->set_color(color);
 
-  // testing some stuff
-  Gtk::Frame*    f = Gtk::manage( new Gtk::Frame());
-  e = Gtk::manage( new CExpander());
-  Gtk::HBox* hb = Gtk::manage( new Gtk::HBox());
-  Gtk::CheckButton* cb = Gtk::manage( new Gtk::CheckButton());
-  Gtk::ToggleButton* tb = Gtk::manage( new Gtk::ToggleButton());
-  Gtk::Label* l = Gtk::manage( new Gtk::Label("Sample label"));
-
-  f->add(*e);
-  hb->set_spacing(8);
-  hb->pack_start(*tb);
-  hb->pack_start(*cb);
-  f->set_label_widget(*hb);
-  pack_start(*f);
-  e->add(*l);
-  tb->signal_toggled().connect( sigc::mem_fun(this, &TTPanelColorChooser::test));
-  e->hide();
-
 }
 
 void TTPanelColorChooser::test()
