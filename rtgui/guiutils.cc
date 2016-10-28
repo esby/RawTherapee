@@ -477,7 +477,7 @@ ToolPanelAncestor*  MyExpander::getPanel() {
 };
 
 MyExpander::MyExpander(bool useEnabled, Gtk::Widget* titleWidget, ToolPanelAncestor* _panel) :
-    enabled(false), inconsistent(false), flushEvent(false), expBox(NULL),
+    enabled(false), inconsistent(false), flushEvent(false), expBox(nullptr),
     child(nullptr), headerWidget(nullptr), statusImage(nullptr),
     label(nullptr), useEnabled(useEnabled)
 {
@@ -540,8 +540,9 @@ MyExpander::MyExpander(bool useEnabled, Gtk::Widget* titleWidget, ToolPanelAnces
     titleEvBox->signal_leave_notify_event().connect( sigc::mem_fun(this, & MyExpander::on_enter_leave_title), false);
 }
 
+
 MyExpander::MyExpander(bool useEnabled, Glib::ustring titleLabel, ToolPanelAncestor* _panel) :
-    enabled(false), inconsistent(false), flushEvent(false), expBox(NULL),
+    enabled(false), inconsistent(false), flushEvent(false), expBox(nullptr),
     child(nullptr), headerWidget(nullptr), statusImage(nullptr),
     label(nullptr), useEnabled(useEnabled)
 {
