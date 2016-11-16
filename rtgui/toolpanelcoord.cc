@@ -938,8 +938,10 @@ void ToolPanelCoordinator::foldAllButOne (Gtk::Box* parent, FoldableToolPanel* o
    for (size_t i=0; i<env->countPanel(); i++) {
         if (env->getPanel(i)->getParent() != NULL) {
             ToolPanel* currentTP = env->getPanel(i);
-            if ((currentTP->getParent() == parent) 
-            && (!currentTP->canBeIgnored())) {
+
+            if ((env->state == ENV_STATE_IN_FAV)
+            || ((currentTP->getParent() == parent) 
+            && (!currentTP->canBeIgnored()))) {
                 // Section in the same tab, we unfold it if it's not the one that has been clicked
                 if (currentTP != openedSection) {
                     currentTP->setExpanded(false);
