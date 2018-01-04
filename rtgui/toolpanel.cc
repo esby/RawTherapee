@@ -668,7 +668,7 @@ void FoldableToolPanel::deployLate()
 // same remark as deploy()
 }
 
-void FoldableToolPanel::react(rtengine::ProcEvent ev)
+void FoldableToolPanel::react(FakeProcEvent ev)
 {
 // same remark as deploy()
 }

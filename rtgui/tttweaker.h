@@ -45,7 +45,7 @@ public:
     TTTweaker();
     void deploy();
     void deployLate();
-    void react(rtengine::ProcEvent ev);
+    void react(FakeProcEvent ev);
     void enabledChanged  ();
 
     bool canBeEnabled() {return true;}

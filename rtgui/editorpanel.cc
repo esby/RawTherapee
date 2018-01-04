@@ -32,7 +32,8 @@
 #include "progressconnector.h"
 #include "procparamchangers.h"
 #include "placesbrowser.h"
-
+#include "environment.h"
+#include "rtdef.h"
 using namespace rtengine::procparams;
 
 class EditorPanel::ColorManagementToolbar
@@ -966,9 +967,11 @@ void EditorPanel::procParamsChanged (rtengine::procparams::ProcParams* params, r
 //  printf("ev=%i %s\n",ev, descr.c_str());
 // we avoid transmitting all events to the structure.
 // ideally we should maintain a list of event monitored and check against it.
-  if ((ev == rtengine::EvPhotoLoaded)
-    || (ev == rtengine::EvProfileChanged))  
-    tpc->doReact(ev);
+//todo
+  if (ev == rtengine::EvPhotoLoaded)
+    tpc->doReact(FakeEvPhotoLoaded);
+  if (ev == rtengine::EvProfileChanged)  
+    tpc->doReact(FakeEvProfileChanged);
 }
 
 struct spsparams {
@@ -1184,6 +1187,20 @@ void EditorPanel::info_toggled ()
         infoString1 = Glib::ustring::compose ("%1 + %2",
                                               Glib::ustring(idata->getMake() + " " + idata->getModel()),
                                               Glib::ustring(idata->getLens()));
+       //todo add idata to rtvar
+        Environment* env = tpc->getEnv();
+        env->setVar("Iso", idata->getISOSpeed());
+        env->setVar("Fnum", Glib::ustring(idata->apertureToString(idata->getFNumber())));
+        env->setVar("Speed",Glib::ustring(idata->shutterToString(idata->getShutterSpeed())));
+        env->setVar("FLen",idata->getFocalLen());
+        env->setVar("Ecomp",Glib::ustring(idata->expcompToString(idata->getExpComp(),true)));
+        env->setVar("Fname",openThm->getFileName());
+        env->setVar("Width",ipc->getFullWidth());
+        env->setVar("Height", ipc->getFullHeight());
+ 
+        printf("exif transmitted for variable \n");
+        tpc->doReact(FakeEvExifTransmitted);
+
 
         infoString2 = Glib::ustring::compose ("<span size=\"small\">f/</span><span size=\"large\">%1</span>  <span size=\"large\">%2</span><span size=\"small\">s</span>  <span size=\"small\">%3</span><span size=\"large\">%4</span>  <span size=\"large\">%5</span><span size=\"small\">mm</span>",
                                               Glib::ustring(idata->apertureToString(idata->getFNumber())),
@@ -1646,7 +1663,7 @@ bool EditorPanel::idle_imageSaved(ProgressConnector<int> *pc, rtengine::IImage16
     delete pc;
     SoundManager::playSoundAsync(options.sndBatchQueueDone);
 
-    tpc->doReact(rtengine::EvFileSaved);
+    tpc->doReact(FakeEvFileSaved);
 
     isProcessing = false;
     return false;

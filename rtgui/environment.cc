@@ -22,6 +22,20 @@
 
 using namespace rtengine::procparams;
 
+Environment::Environment()
+{
+  state = ENV_STATE_IN_FAV;
+  prevState = ENV_STATE_IN_FAV;
+  moveLeftToBottom = false; // moving left adds to top.
+  moveRightToTop = true; // moving right adds to top.
+  disableSwitchPageReaction = true;
+  metadataState = true; // true if metadata tab is here
+  customVariableCount = 0;
+}
+
+Environment::~Environment()
+{
+}
 
 // Environment implementation
 ToolPanel* Environment::getPanel(Glib::ustring name)
@@ -124,5 +138,169 @@ void Environment::setFavoritePos(ToolPanel *panel, int pos)
   if (pos > -1)
     panel->getFavoriteBox()->addPanel(panel, pos);
 }
+
+RtVariable* Environment::getVariable(int pos)
+{
+  if ((pos > -1) && pos<countVar())
+    return varList[pos] ;
+  return nullptr;
+}
+
+Glib::ustring Environment::getVariableName(int pos)
+{
+  if ((pos > -1) && pos<countVar())
+    return  varList[pos]->getName();
+  return "";
+}
+
+Glib::ustring Environment::invokeCustomVariable()
+{
+  Glib::ustring name = "var" + std::to_string(customVariableCount);
+  customVariableCount++;
+  setVar(name,name);
+  return name;
+}
+
+
+void Environment::setVar(Glib::ustring name, Glib::ustring value)
+{ 
+  RtVariable* d = nullptr;
+  RtVariable* e = nullptr;
+  for (size_t i=0; i<varList.size(); i++)
+   {
+      e = static_cast<RtVariable*> (varList[i]);
+      if (e != nullptr)
+        if (e->getName() == name)
+          d = e;
+   }
+
+   if (d == nullptr)
+   {
+     d = new RtVariable(name, this);
+     varList.push_back(d);
+   }
+   d->setAsString(value);
+}
+
+void Environment::setVar(Glib::ustring name, int value)
+{
+  RtVariable* d = nullptr;
+  RtVariable* e = nullptr;
+  for (size_t i=0; i<varList.size(); i++)
+   {
+      e = static_cast<RtVariable*> (varList[i]);
+      if (e != nullptr)
+        if (e->getName() == name)
+          d = e;
+   }
+
+   if (d == nullptr)
+   {
+     d = new RtVariable(name, this);
+     varList.push_back(d);
+   }
+   d->setAsInt(value);
+}
+
+void Environment::setVar(Glib::ustring name, double value)
+{
+  RtVariable* d = nullptr;
+  RtVariable* e = nullptr;
+  for (size_t i=0; i<varList.size(); i++)
+   {
+      e = static_cast<RtVariable*> (varList[i]);
+      if (e != nullptr)
+        if (e->getName() == name)
+          d = e;
+   }
+
+   if (d == nullptr)
+   {
+     d = new RtVariable(name, this);
+     varList.push_back(d);
+   }
+   d->setAsDouble(value);
+}
+
+void Environment::setVar(Glib::ustring name, bool value)
+{
+  RtVariable* d = nullptr;
+  RtVariable* e = nullptr;
+  for (size_t i=0; i<varList.size(); i++)
+   {
+      e = static_cast<RtVariable*> (varList[i]);
+      if (e != nullptr)
+        if (e->getName() == name)
+          d = e;
+   }
+
+   if (d == nullptr)
+   {
+     d = new RtVariable(name, this);
+     varList.push_back(d);
+   }
+   d->setAsBool(value);
+}
+
+RtVariable* Environment::getVariableByName(Glib::ustring name)
+{
+  for (size_t i=0; i<varList.size(); i++)
+   {
+      RtVariable* d = static_cast<RtVariable*> (varList[i]);
+      if (d != nullptr)
+        if (d->getName() == name)
+          return d;
+   }
+  return nullptr;
+}
+
+int Environment::getVarAsInt(Glib::ustring name)
+{
+  for (size_t i=0; i<varList.size(); i++)
+   {
+      RtVariable* d = static_cast<RtVariable*> (varList[i]);
+      if (d != nullptr)
+        if (d->getName() == name)
+          return d->getAsInt();
+   }
+  return -1;
+}
+
+double Environment::getVarAsDouble(Glib::ustring name)
+{
+  for (size_t i=0; i<varList.size(); i++)
+   {
+      RtVariable* d = static_cast<RtVariable*> (varList[i]);
+      if (d != nullptr)
+        if (d->getName() == name)
+          return d->getAsDouble();
+   }
+  return -1;
+}
+
+bool Environment::getVarAsBool(Glib::ustring name)
+{
+  for (size_t i=0; i<varList.size(); i++)
+   {
+      RtVariable* d = static_cast<RtVariable*> (varList[i]);
+      if (d != nullptr)
+        if (d->getName() == name)
+          return d->getAsBool();
+   }
+  return false;
+}
+
+Glib::ustring Environment::getVarAsString(Glib::ustring name)
+{
+  for (size_t i=0; i<varList.size(); i++)
+   {
+      RtVariable* d = static_cast<RtVariable*> (varList[i]);
+      if (d != nullptr)
+        if (d->getName() == name)
+          return d->getAsString();
+   }
+  return "";
+}
+
 
 

@@ -26,6 +26,7 @@
 #include "rtdef.h"
 #include "guiutils.h"
 #include "toolpanel.h"
+#include "variable.h"
 
 #define ENV_STATE_IN_FAV    1
 #define ENV_STATE_IN_NORM   2
@@ -54,6 +55,8 @@ class Environment {
      ToolVBox* favoritePanel;
      ToolVBox* trashPanel;
      Gtk::Notebook* toolPanelNotebook;
+     std::vector<RtVariable*> varList;
+     int customVariableCount; // for creating unique custom variable
 
   public:
      int state;
@@ -64,16 +67,9 @@ class Environment {
      bool disableSwitchPageReaction;
      bool metadataState;
 
-     Environment(){ 
-       state = ENV_STATE_IN_FAV;
-       prevState = ENV_STATE_IN_FAV;
-       moveLeftToBottom = false; // moving left adds to top.
-       moveRightToTop = true; // moving right adds to top.
-       disableSwitchPageReaction = true;
-       metadataState = true; // true if metadata tab is here
-     }
+     Environment(); 
 
-     virtual ~Environment() {} ;
+     virtual ~Environment() ;
 
      ToolPanel*  getPanel(Glib::ustring name);
      ToolPanel*  getPanel(int pos);     
@@ -105,6 +101,26 @@ class Environment {
      ToolVBox* getFavoritePanel() { return favoritePanel; }
      ToolVBox* getTrashPanel() { return trashPanel; }
 
+     //variables related code follow
+
+     int countVar(){return varList.size();}
+     RtVariable* getVariable(int pos);
+     RtVariable* getVariableByName(Glib::ustring name);
+
+     Glib::ustring getVariableName(int pos);
+ 
+     // create a custom variable and return its name
+     Glib::ustring invokeCustomVariable();
+
+     void setVar(Glib::ustring name, Glib::ustring value);
+     void setVar(Glib::ustring name, int value);
+     void setVar(Glib::ustring name, double value);
+     void setVar(Glib::ustring name, bool value);
+
+     Glib::ustring getVarAsString(Glib::ustring name);
+     int getVarAsInt(Glib::ustring name);
+     double getVarAsDouble(Glib::ustring name);
+     bool getVarAsBool(Glib::ustring name);
 };
 
 #endif

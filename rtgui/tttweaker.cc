@@ -64,12 +64,12 @@ void TTTweaker::deploy()
 
 }
 
-void TTTweaker::react(rtengine::ProcEvent ev)
+void TTTweaker::react(FakeProcEvent ev)
 {
   if (cbAutoDistortionCorrect->get_active())
   {
-    if ((ev == rtengine::EvPhotoLoaded)
-    || (ev == rtengine::EvProfileChanged))
+    if ((ev == FakeEvPhotoLoaded)
+    || (ev == FakeEvProfileChanged))
     for (size_t i=0; i< env->countPanel() ; i++)
     {
       FoldableToolPanel* p = static_cast<FoldableToolPanel*> (env->getPanel(i));
@@ -86,7 +86,7 @@ void TTTweaker::react(rtengine::ProcEvent ev)
     }
 
   }
-  if ((ev == rtengine::EvFileSaved)) 
+  if ((ev == FakeEvFileSaved)) 
   {
     if (cbCloseAfterSave->get_active() && simpleEditor)
     {
