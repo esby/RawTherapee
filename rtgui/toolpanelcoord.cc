@@ -262,8 +262,7 @@ ToolPanelCoordinator::ToolPanelCoordinator () : ipc(nullptr)
     env->registerPanel (usefulPanel, Gtk::manage (new TTPanelColorChooser()));
     env->registerPanel (usefulPanel, Gtk::manage (new TTUDLRHider()));
     env->registerPanel (usefulPanel, Gtk::manage (new TTTweaker()));
-
-
+    env->registerPanel (usefulPanel, Gtk::manage (new TTVarDisplayer()));
 
     env->panelPushBack (coarse);
     env->panelPushBack (exifpanel);
@@ -430,7 +429,7 @@ void ToolPanelCoordinator::doDeployLate()
 
 }
 
-void ToolPanelCoordinator::doReact(rtengine::ProcEvent ev)
+void ToolPanelCoordinator::doReact(FakeProcEvent ev)
 {
     if( options.rtSettings.verbose ) 
       printf("enabling panel react\n");

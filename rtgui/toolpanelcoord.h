@@ -85,6 +85,7 @@
 #include "ttudlrhider.h"
 #include "tttabhider.h"
 #include "tttweaker.h"
+#include "ttvardisplayer.h"
 
 //defining the number of panels for once.
 #define NB_PANEL 9
@@ -248,6 +249,7 @@ public:
     {
         return hasChanged;
     }
+    Environment* getEnv(){ return env;}
     void updateCurveBackgroundHistogram (LUTu & histToneCurve, LUTu & histLCurve, LUTu & histCCurve, /*LUTu & histCLurve, LUTu & histLLCurve,*/ LUTu & histLCAM,  LUTu & histCCAM, LUTu & histRed, LUTu & histGreen, LUTu & histBlue, LUTu & histLuma, LUTu & histLRETI);
     void foldAllButOne (Gtk::Box* parent, FoldableToolPanel* openedSection);
 
@@ -259,7 +261,7 @@ public:
 
     void doDeploy();
     void doDeployLate();
-    void doReact(rtengine::ProcEvent ev);
+    void doReact(FakeProcEvent ev);
 
     // toolpanellistener interface
     void panelChanged   (rtengine::ProcEvent event, const Glib::ustring& descr);

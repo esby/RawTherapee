@@ -31,12 +31,22 @@
 #define  PANEL_NAME_USEFUL    "usefulPanel"
 #define  PANEL_NAME_TRASH     "trashPanel"
 
+enum FakeProcEvent {
+    FakeEvExifTransmitted = 1,
+    FakeEvPhotoLoaded= 2,
+    FakeEvProfileChanged=3,
+    FakeEvFileSaved=4,
+    nbFakeEvents
+    }; 
 
 class Environment;
 class ToolPanel;
 class FoldableToolPanel;
 class DummyToolPanel;
 class ToolVBox;
+class RtVariable;
+class RtVariableOperator;
+class RtVariableManipulator;
 
 
 #endif
