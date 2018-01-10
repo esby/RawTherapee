@@ -46,8 +46,6 @@ ImageMetaData* ImageMetaData::fromFile (const Glib::ustring& fname, RawMetaDataL
 
 ImageData::ImageData (Glib::ustring fname, RawMetaDataLocation* ri) : iso_speed(0), aperture(0.), shutter(0.)
 {
-
-    size_t dotpos = fname.find_last_of ('.');
     root = nullptr;
     iptc = nullptr;
 
@@ -72,7 +70,7 @@ ImageData::ImageData (Glib::ustring fname, RawMetaDataLocation* ri) : iso_speed(
             fclose (f);
             extractInfo ();
         }
-    } else if ((dotpos < fname.size() - 3 && !fname.casefold().compare (dotpos, 4, ".jpg")) || (dotpos < fname.size() - 4 && !fname.casefold().compare (dotpos, 5, ".jpeg"))) {
+    } else if (hasJpegExtension(fname)) {
         FILE* f = g_fopen (fname.c_str (), "rb");
 
         if (f) {
@@ -83,7 +81,7 @@ ImageData::ImageData (Glib::ustring fname, RawMetaDataLocation* ri) : iso_speed(
             iptc = iptc_data_new_from_jpeg_file (ff);
             fclose (ff);
         }
-    } else if ((dotpos < fname.size() - 3 && !fname.casefold().compare (dotpos, 4, ".tif")) || (dotpos < fname.size() - 4 && !fname.casefold().compare (dotpos, 5, ".tiff"))) {
+    } else if (hasTiffExtension(fname)) {
         FILE* f = g_fopen (fname.c_str (), "rb");
 
         if (f) {
@@ -440,6 +438,16 @@ void ImageData::extractInfo ()
                         }
                     }
                 } else if (mnote && (!make.compare (0, 6, "PENTAX") || (!make.compare (0, 5, "RICOH") && !model.compare (0, 6, "PENTAX")))) {
+                    // ISO at max value supported, check manufacturer specific
+                    if (iso_speed == 65535 || iso_speed == 0) {
+                        rtexif::Tag* baseIsoTag = mnote->getTag("ISO");
+                        if (baseIsoTag) {
+                            std::string isoData = baseIsoTag->valueToString();
+                            if (isoData.size() > 1) {
+                                iso_speed = stoi(isoData);
+                            }
+                        }
+                    }
                     if (mnote->getTag ("LensType")) {
                         lens = mnote->getTag ("LensType")->valueToString ();
                     }

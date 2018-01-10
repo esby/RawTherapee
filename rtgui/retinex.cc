@@ -105,7 +105,7 @@ Retinex::Retinex () : FoldableToolPanel(this, "retinex", M("TP_RETINEX_LABEL"), 
 
     std::vector<double> defaultCurve;
     rtengine::RetinexParams::getDefaulttransmissionCurve(defaultCurve);
-    transmissionShape = static_cast<FlatCurveEditor*>(transmissionCurveEditorG->addCurve(CT_Flat, "", nullptr, false));
+    transmissionShape = static_cast<FlatCurveEditor*>(transmissionCurveEditorG->addCurve(CT_Flat, "", nullptr, false, false));
     transmissionShape->setIdentityValue(0.);
     transmissionShape->setResetCurve(FlatCurveType(defaultCurve.at(0)), defaultCurve);
     transmissionShape->setBottomBarBgGradient(milestones);
@@ -184,7 +184,7 @@ Retinex::Retinex () : FoldableToolPanel(this, "retinex", M("TP_RETINEX_LABEL"), 
 
 //    std::vector<double> defaultCurve;
     rtengine::RetinexParams::getDefaultgaintransmissionCurve(defaultCurve);
-    gaintransmissionShape = static_cast<FlatCurveEditor*>(gaintransmissionCurve->addCurve(CT_Flat, "", nullptr, false));
+    gaintransmissionShape = static_cast<FlatCurveEditor*>(gaintransmissionCurve->addCurve(CT_Flat, "", nullptr, false, false));
     gaintransmissionShape->setIdentityValue(0.);
     gaintransmissionShape->setResetCurve(FlatCurveType(defaultCurve.at(0)), defaultCurve);
     gaintransmissionShape->setBottomBarBgGradient(milestones);
@@ -761,14 +761,16 @@ void Retinex::read (const ProcParams* pp, const ParamsEdited* pedited)
 
     skal->setValue  (pp->retinex.skal);
 
-    if(pp->retinex.iter == 1)   {
-        grad->set_sensitive(false);
-        scal->set_sensitive(false);
-        grads->set_sensitive(false);
-    } else {
-        grad->set_sensitive(true);
-        scal->set_sensitive(true);
-        grads->set_sensitive(true);
+    if (!batchMode) {
+        if(pp->retinex.iter == 1)   {
+            grad->set_sensitive(false);
+            scal->set_sensitive(false);
+            grads->set_sensitive(false);
+        } else {
+            grad->set_sensitive(true);
+            scal->set_sensitive(true);
+            grads->set_sensitive(true);
+        }
     }
 
     setEnabled (pp->retinex.enabled);
@@ -996,10 +998,12 @@ void Retinex::write (ProcParams* pp, ParamsEdited* pedited)
 void Retinex::retinexMethodChanged()
 {
 
-    if(retinexMethod->get_active_row_number() == 3) {
-        highl->show();
-    } else {
-        highl->hide();
+    if (!batchMode) {
+        if(retinexMethod->get_active_row_number() == 3) {
+            highl->show();
+        } else {
+            highl->hide();
+        }
     }
 
     if (listener) {
@@ -1012,28 +1016,29 @@ void Retinex::retinexMethodChanged()
 void Retinex::mapMethodChanged()
 {
 
-    if(mapMethod->get_active_row_number() == 1  /*|| mapMethod->get_active_row_number() == 2*/) {
-        curveEditormap->show();
-        highlights->show();
-        h_tonalwidth->show();
-        shadows->show();
-        s_tonalwidth->show();
-        radius->show();
-    } else if(mapMethod->get_active_row_number() == 2  || mapMethod->get_active_row_number() == 3) {
-        curveEditormap->show();
-        highlights->show();
-        h_tonalwidth->show();
-        shadows->show();
-        s_tonalwidth->show();
-        radius->hide();
-    } else {
-        curveEditormap->hide();
-        highlights->hide();
-        h_tonalwidth->hide();
-        shadows->hide();
-        s_tonalwidth->hide();
-        radius->hide();
-
+    if (!batchMode) {
+        if(mapMethod->get_active_row_number() == 1  /*|| mapMethod->get_active_row_number() == 2*/) {
+            curveEditormap->show();
+            highlights->show();
+            h_tonalwidth->show();
+            shadows->show();
+            s_tonalwidth->show();
+            radius->show();
+        } else if(mapMethod->get_active_row_number() == 2  || mapMethod->get_active_row_number() == 3) {
+            curveEditormap->show();
+            highlights->show();
+            h_tonalwidth->show();
+            shadows->show();
+            s_tonalwidth->show();
+            radius->hide();
+        } else {
+            curveEditormap->hide();
+            highlights->hide();
+            h_tonalwidth->hide();
+            shadows->hide();
+            s_tonalwidth->hide();
+            radius->hide();
+        }
     }
 
     if (listener) {
@@ -1043,38 +1048,39 @@ void Retinex::mapMethodChanged()
 
 void Retinex::viewMethodChanged()
 {
-    if(viewMethod->get_active_row_number() == 1 || viewMethod->get_active_row_number() == 2) {
-        //    vart->hide();
-        gain->hide();
-        offs->hide();
-        limd->hide();
-        transmissionCurveEditorG->hide();
-        medianmap->hide();
-        iter->hide();
-        scal->hide();
-        grad->hide();
-        grads->hide();
-        curveEditorGH->hide();
-    } else if(viewMethod->get_active_row_number() == 3 || viewMethod->get_active_row_number() == 4) {
-        gain->hide();
-        offs->hide();
-        transmissionCurveEditorG->show();
-
-        //    vart->hide();
-        curveEditorGH->hide();
-    } else {
-        vart->show();
-        neigh->show();
-        gain->show();
-        offs->show();
-        limd->show();
-        transmissionCurveEditorG->show();
-        medianmap->show();
-        iter->show();
-        scal->show();
-        grad->show();
-        grads->show();
-        curveEditorGH->show();
+    if (!batchMode) {
+        if(viewMethod->get_active_row_number() == 1 || viewMethod->get_active_row_number() == 2) {
+            //vart->hide();
+            gain->hide();
+            offs->hide();
+            limd->hide();
+            transmissionCurveEditorG->hide();
+            medianmap->hide();
+            iter->hide();
+            scal->hide();
+            grad->hide();
+            grads->hide();
+            curveEditorGH->hide();
+        } else if(viewMethod->get_active_row_number() == 3 || viewMethod->get_active_row_number() == 4) {
+            gain->hide();
+            offs->hide();
+            transmissionCurveEditorG->show();
+            //vart->hide();
+            curveEditorGH->hide();
+        } else {
+            vart->show();
+            neigh->show();
+            gain->show();
+            offs->show();
+            limd->show();
+            transmissionCurveEditorG->show();
+            medianmap->show();
+            iter->show();
+            scal->show();
+            grad->show();
+            grads->show();
+            curveEditorGH->show();
+        }
     }
 
     if (listener) {
@@ -1254,20 +1260,21 @@ void Retinex::setAdjusterBehavior (bool strAdd, bool neighAdd, bool limdAdd, boo
 void Retinex::adjusterChanged (Adjuster* a, double newval)
 {
 
+    if (a==iter && !batchMode) {
+        if(iter->getIntValue() > 1) {
+            scal->set_sensitive(true);
+            grad->set_sensitive(true);
+            grads->set_sensitive(true);
+        } else {
+            scal->set_sensitive(false);
+            grad->set_sensitive(false);
+            grads->set_sensitive(false);
+        }
+    }
+
     if (!listener || !getEnabled()) {
         return;
     }
-
-    if(iter->getTextValue() > "1") {
-        scal->set_sensitive(true);
-        grad->set_sensitive(true);
-        grads->set_sensitive(true);
-    } else {
-        scal->set_sensitive(false);
-        grad->set_sensitive(false);
-        grads->set_sensitive(false);
-    }
-
 
     if (a == neigh) {
         listener->panelChanged (EvLneigh, neigh->getTextValue());

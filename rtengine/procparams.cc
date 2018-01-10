@@ -26,7 +26,7 @@
 #include "../rtgui/paramsedited.h"
 #include "../rtgui/options.h"
 #include <locale.h>
-#define APPVERSION VERSION
+#define APPVERSION RTVERSION
 
 using namespace std;
 extern Options options;
@@ -1476,6 +1476,10 @@ int ProcParams::save (const Glib::ustring &fname, const Glib::ustring &fname2, b
 
         //save retinex
 
+        if (!pedited || pedited->retinex.enabled) {
+            keyFile.set_boolean ("Retinex", "Enabled", retinex.enabled);
+        }
+
         if (!pedited || pedited->retinex.str) {
             keyFile.set_integer ("Retinex", "Str",               retinex.str);
         }
@@ -1502,10 +1506,6 @@ int ProcParams::save (const Glib::ustring &fname, const Glib::ustring &fname2, b
 
         if (!pedited || pedited->retinex.slope) {
             keyFile.set_double ("Retinex", "Slope",               retinex.slope);
-        }
-
-        if (!pedited || pedited->retinex.enabled) {
-            keyFile.set_boolean ("Retinex", "Enabled", retinex.enabled);
         }
 
         if (!pedited || pedited->retinex.medianmap) {
@@ -5332,7 +5332,7 @@ int ProcParams::load (const Glib::ustring &fname, ParamsEdited* pedited)
             }
 
             if (keyFile.has_key ("Crop", "W"))          {
-                crop.w          = keyFile.get_integer ("Crop", "W");
+                crop.w          = std::max(keyFile.get_integer("Crop", "W"), 1);
 
                 if (pedited) {
                     pedited->crop.w = true;
@@ -5340,7 +5340,7 @@ int ProcParams::load (const Glib::ustring &fname, ParamsEdited* pedited)
             }
 
             if (keyFile.has_key ("Crop", "H"))          {
-                crop.h          = keyFile.get_integer ("Crop", "H");
+                crop.h          = std::max(keyFile.get_integer("Crop", "H"), 1);
 
                 if (pedited) {
                     pedited->crop.h = true;

@@ -3048,4 +3048,3 @@ void Wavelet::updateToolState(std::vector<int> &tpOpen)
     }
 }
 
-

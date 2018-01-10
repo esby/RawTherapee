@@ -144,7 +144,6 @@ Image8* ImProcFunctions::lab2rgb (LabImage* lab, int cx, int cy, int cw, int ch,
 
     Image8* image = new Image8 (cw, ch);
     Glib::ustring profile;
-    cmsHPROFILE oprof = iccStore->getProfile (profile);
 
     bool standard_gamma;
 
@@ -159,6 +158,8 @@ Image8* ImProcFunctions::lab2rgb (LabImage* lab, int cx, int cy, int cw, int ch,
         standard_gamma = false;
     }
 
+    cmsHPROFILE oprof = iccStore->getProfile (profile);
+
     if (oprof) {
         cmsHPROFILE oprofG = oprof;
 
@@ -169,9 +170,7 @@ Image8* ImProcFunctions::lab2rgb (LabImage* lab, int cx, int cy, int cw, int ch,
         cmsUInt32Number flags = cmsFLAGS_NOOPTIMIZE | cmsFLAGS_NOCACHE;
         if (icm.outputBPC) {
             flags |= cmsFLAGS_BLACKPOINTCOMPENSATION;
-            printf("lab2rgb / bpc=true\n");
         }
-        else printf("lab2rgb / bpc=false\n");
         lcmsMutex->lock ();
         cmsHPROFILE LabIProf  = cmsCreateLab4Profile(nullptr);
         cmsHTRANSFORM hTransform = cmsCreateTransform (LabIProf, TYPE_Lab_DBL, oprofG, TYPE_RGB_8, icm.outputIntent, flags);  // NOCACHE is important for thread safety
@@ -290,19 +289,15 @@ Image16* ImProcFunctions::lab2rgb16 (LabImage* lab, int cx, int cy, int cw, int 
         iccStore->getGammaArray(icm, *ga);
         oprof = iccStore->createGammaProfile(icm, *ga);
         lcmsMutex->unlock ();
-        printf("iccStore->createGammaProfile(icm, *ga);\n");
     } else {
         oprof = iccStore->getProfile (icm.output);
-//        printf("iccStore->getProfile (%s);\n", icm.output.c_str());
     }
 
     if (oprof) {
         cmsUInt32Number flags = cmsFLAGS_NOOPTIMIZE | cmsFLAGS_NOCACHE;
         if (icm.outputBPC) {
             flags |= cmsFLAGS_BLACKPOINTCOMPENSATION;
-//            printf("lab2rgb16 / icm.outputBPC=true / outputIntent=%d\n", icm.outputIntent);
         }
-//        else printf("lab2rgb16 / icm.outputBPC=false / outputIntent=%d\n", icm.outputIntent);
         lcmsMutex->lock ();
         cmsHPROFILE iprof = cmsCreateLab4Profile(nullptr);
         cmsHTRANSFORM hTransform = cmsCreateTransform (iprof, TYPE_Lab_FLT, oprof, TYPE_RGB_16, icm.outputIntent, flags);

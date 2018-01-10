@@ -2011,7 +2011,7 @@ void CLASS hasselblad_correct()
                                             {bhu-1,0},{bhu-1,bwu/2},{bhu-1,bwu-1}};
             for (col = 0; col < bw; col++) {
                 for (i = 0; i < 9; i++) {
-                    ushort dist = (ushort)sqrt(abs(corners[i][0] - row) * abs(corners[i][0] - row) + abs(corners[i][1] - col) * abs(corners[i][1] - col));
+                    ushort dist = (ushort)sqrt(abs((int)(corners[i][0] - row)) * abs((int)(corners[i][0] - row)) + abs((int)(corners[i][1] - col)) * abs((int)(corners[i][1] - col)));
                     ushort weight = dist > maxdist ? 0 : maxdist - dist;
                     corners_weight[9*(row*bw+col)+i] = weight;
                 }
@@ -8743,6 +8743,10 @@ void CLASS identify()
   if (width == 7424 && !strcmp(model,"645D"))
     { height  = 5502;   width  = 7328; filters = 0x61616161; top_margin = 29;
       left_margin = 48; }
+  if (width == 7392 && !strncmp(model,"K-1",3))
+    { left_margin = 6; width  = 7376; if(!dng_version) {top_margin = 18; height -= top_margin; }}
+  if (width == 4832 && !strncmp(model,"K-1",3)) // K-1 APS-C format
+     if(!dng_version) {top_margin = 18; height -= top_margin; }
   if (height == 3014 && width == 4096)	/* Ricoh GX200 */
 			width  = 4014;
   if (dng_version) {
@@ -9482,12 +9486,14 @@ dng_skip:
 	adobe_coeff (make, model);
   if(!strncmp(make, "Samsung", 7) && !strncmp(model, "NX1",3))
 	adobe_coeff (make, model);
-  if(!strncmp(make, "Pentax", 6) && !strncmp(model, "K10D",4))
+  if(!strncmp(make, "Pentax", 6) && (!strncmp(model, "K10D",4) || !strncmp(model, "K-70",4)))
 	adobe_coeff (make, model);
   if(!strncmp(make, "Leica", 5) && !strncmp(model, "Q",1))
     adobe_coeff (make, model);
   if(!strncmp(make, "Leica", 5) && !strncmp(model, "SL",2))
     adobe_coeff (make, model);
+  if(!strncmp(make, "XIAOYI", 6) && !strncmp(model, "M1",2))
+	adobe_coeff (make, model);
   if (raw_color) adobe_coeff (make, model);
   if (load_raw == &CLASS kodak_radc_load_raw)
     if (raw_color) adobe_coeff ("Apple","Quicktake");
@@ -9725,10 +9731,28 @@ static void copyFloatDataToInt(float * src, ushort * dst, size_t size, float max
 }
 
 void CLASS deflate_dng_load_raw() {
+    float_raw_image = new float[raw_width * raw_height];
+
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+    for (size_t i = 0; i < raw_width * raw_height; ++i)
+      float_raw_image[i] = 0.0f;
+
+  if(tiff_samples != 1) {
+    fprintf(stderr, "deflate_dng_load_raw %s: demosaiced float dng files are not supported\n",ifname);
+    return;
+  }
+
   struct tiff_ifd * ifd = &tiff_ifd[0];
   while (ifd < &tiff_ifd[tiff_nifds] && ifd->offset != data_offset) ++ifd;
   if (ifd == &tiff_ifd[tiff_nifds]) {
-    fprintf(stderr, "DNG Deflate: Raw image not found???\n");
+    fprintf(stderr, "deflate_dng_load_raw %s: Raw image not found???\n",ifname);
+    return;
+  }
+
+  if (ifd->sample_format != 3) {  // no floating point data
+    fprintf(stderr, "deflate_dng_load_raw %s: Only float format is supported for deflate compressed dng files\n",ifname);
     return;
   }
 
@@ -9738,16 +9762,6 @@ void CLASS deflate_dng_load_raw() {
     case 34894: predFactor = 2; break;
     case 34895: predFactor = 4; break;
 	default: predFactor = 0; break;
-  }
-
-  if (ifd->sample_format == 3) {  // Floating point data
-    float_raw_image = new float[raw_width * raw_height];
-
-#ifdef _OPENMP
-#pragma omp parallel for
-#endif
-    for (size_t i = 0; i < raw_width * raw_height; ++i)
-      float_raw_image[i] = 0.0f;
   }
 
   // NOTE: This reader is based on the official DNG SDK from Adobe.

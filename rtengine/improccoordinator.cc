@@ -372,12 +372,12 @@ void ImProcCoordinator::updatePreviewImage (int todo, Crop* cropCall)
     // Remove transformation if unneeded
     bool needstransform = ipf.needsTransform();
 
-    if (!needstransform && !((todo & (M_TRANSFORM))  && params.dirpyrequalizer.cbdlMethod == "bef" && params.dirpyrequalizer.enabled && !params.colorappearance.enabled) && orig_prev != oprevi) {
+    if (!needstransform && !((todo & (M_TRANSFORM | M_RGBCURVE))  && params.dirpyrequalizer.cbdlMethod == "bef" && params.dirpyrequalizer.enabled && !params.colorappearance.enabled) && orig_prev != oprevi) {
         delete oprevi;
         oprevi = orig_prev;
     }
 
-    if ((needstransform || ((todo & (M_TRANSFORM))  && params.dirpyrequalizer.cbdlMethod == "bef" && params.dirpyrequalizer.enabled && !params.colorappearance.enabled)) ) {
+    if ((needstransform || ((todo & (M_TRANSFORM | M_RGBCURVE))  && params.dirpyrequalizer.cbdlMethod == "bef" && params.dirpyrequalizer.enabled && !params.colorappearance.enabled)) ) {
         if(!oprevi || oprevi == orig_prev)
             oprevi = new Imagefloat (pW, pH);
         if (needstransform)
@@ -387,7 +387,7 @@ void ImProcCoordinator::updatePreviewImage (int todo, Crop* cropCall)
             orig_prev->copyData(oprevi);
     }
 
-    if ((todo & (M_TRANSFORM))  && params.dirpyrequalizer.cbdlMethod == "bef" && params.dirpyrequalizer.enabled && !params.colorappearance.enabled) {
+    if ((todo & (M_TRANSFORM | M_RGBCURVE))  && params.dirpyrequalizer.cbdlMethod == "bef" && params.dirpyrequalizer.enabled && !params.colorappearance.enabled) {
         const int W = oprevi->getWidth();
         const int H = oprevi->getHeight();
         LabImage labcbdl(W, H);
@@ -539,7 +539,7 @@ void ImProcCoordinator::updatePreviewImage (int todo, Crop* cropCall)
             DCPProfile *dcpProf = imgsrc->getDCP(params.icm, currWB, as);
 
             ipf.rgbProc (oprevi, oprevl, nullptr, hltonecurve, shtonecurve, tonecurve, shmap, params.toneCurve.saturation,
-                         rCurve, gCurve, bCurve, colourToningSatLimit , colourToningSatLimitOpacity, ctColorCurve, ctOpacityCurve, opautili, clToningcurve, cl2Toningcurve, customToneCurve1, customToneCurve2, beforeToneCurveBW, afterToneCurveBW, rrm, ggm, bbm, bwAutoR, bwAutoG, bwAutoB, params.toneCurve.expcomp, params.toneCurve.hlcompr, params.toneCurve.hlcomprthresh, dcpProf, as);
+                         rCurve, gCurve, bCurve, colourToningSatLimit , colourToningSatLimitOpacity, ctColorCurve, ctOpacityCurve, opautili, clToningcurve, cl2Toningcurve, customToneCurve1, customToneCurve2, beforeToneCurveBW, afterToneCurveBW, rrm, ggm, bbm, bwAutoR, bwAutoG, bwAutoB, params.toneCurve.expcomp, params.toneCurve.hlcompr, params.toneCurve.hlcomprthresh, dcpProf, as, histToneCurve);
 
             if(params.blackwhite.enabled && params.blackwhite.autoc && abwListener) {
                 if (settings->verbose) {
@@ -781,7 +781,7 @@ void ImProcCoordinator::updatePreviewImage (int todo, Crop* cropCall)
         lastOutputProfile = params.icm.output;
         lastOutputIntent = params.icm.outputIntent;
         lastOutputBPC = params.icm.outputBPC;
-        ipf.updateColorProfiles(params.icm, monitorProfile, monitorIntent, softProof, gamutCheck);
+        ipf.updateColorProfiles(monitorProfile, monitorIntent, softProof, gamutCheck);
     }
 
     // process crop, if needed

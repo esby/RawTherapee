@@ -119,10 +119,6 @@ RTWindow::RTWindow ()
 #endif
     versionStr = "RawTherapee " + versionString;
 
-    if (!versionSuffixString.empty()) {
-        versionStr += " " + versionSuffixString;
-    }
-
     set_title_decorated("");
     property_allow_shrink() = true;
     set_default_size(options.windowWidth, options.windowHeight);
@@ -313,30 +309,6 @@ RTWindow::~RTWindow()
     }
 }
 
-void RTWindow::findVerNumbers(int* numbers, Glib::ustring versionStr)
-{
-    numbers[0] = numbers[1] = numbers[2] = numbers[3] = 0;
-    int n = 0;
-
-    for (unsigned int i = 0; i < versionStr.length(); i++) {
-        char chr = (char)versionStr.at(i);
-
-        if (chr >= '0' && chr <= '9') {
-            numbers[n] *= 10;
-            numbers[n] += (int)(chr - '0');
-        } else {
-            n++;
-
-            if (n > 4) {
-                printf("Error: malformed version string; \"%s\" must follow this format: xx.xx.xx.xx. Admitting it's a developer version...\n", versionStr.c_str());
-                // Reseting the already found numbers
-                numbers[0] = numbers[1] = numbers[2] = numbers[3] = 100;
-                return;
-            }
-        }
-    }
-}
-
 void RTWindow::on_realize ()
 {
     Gtk::Window::on_realize ();
@@ -353,38 +325,20 @@ void RTWindow::on_realize ()
 
     // Check if first run of this version, then display the Release Notes text
     if (options.version != versionString) {
-        int prevVerNbr[4];
-        int currVerNbr[4];
-        findVerNumbers(prevVerNbr, options.version);
-        findVerNumbers(currVerNbr, versionString);
 
-        // Now we can update the version parameter with the right value
+        // Update the version parameter with the right value
         options.version = versionString;
 
-        bool showReleaseNotes = false;
+        splash = new Splash (*this);
+        splash->set_transient_for (*this);
+        splash->signal_delete_event().connect( sigc::mem_fun(*this, &RTWindow::splashClosed) );
 
-        // Check if the current version is newer
-        if      (currVerNbr[0] > prevVerNbr[0]) {
-            showReleaseNotes = true;
-        } else if (currVerNbr[1] > prevVerNbr[1]) {
-            showReleaseNotes = true;
-        } else if (currVerNbr[2] > prevVerNbr[2]) {
-            showReleaseNotes = true;
-        }
-
-        if (showReleaseNotes) {
-            // this is a first run!
-            splash = new Splash (*this);
-            splash->set_transient_for (*this);
-            splash->signal_delete_event().connect( sigc::mem_fun(*this, &RTWindow::splashClosed) );
-
-            if (splash->hasReleaseNotes()) {
-                splash->showReleaseNotes();
-                splash->show ();
-            } else {
-                delete splash;
-                splash = nullptr;
-            }
+        if (splash->hasReleaseNotes()) {
+            splash->showReleaseNotes();
+            splash->show ();
+        } else {
+            delete splash;
+            splash = nullptr;
         }
     }
 }
@@ -694,8 +648,7 @@ bool RTWindow::on_delete_event(GdkEventAny* event)
     ProfilePanel::cleanup();
 
     if (!options.windowMaximized) {
-        options.windowWidth = get_width();
-        options.windowHeight = get_height();
+        get_size(options.windowWidth, options.windowHeight);
         get_position (options.windowX, options.windowY);
     }
 
@@ -800,15 +753,22 @@ void RTWindow::MoveFileBrowserToEditor()
     }
 }
 
+void RTWindow::updateProfiles(const Glib::ustring &printerProfile, rtengine::RenderingIntent printerIntent, bool printerBPC)
+{
+    epanel->updateProfiles(printerProfile, printerIntent, printerBPC);
+
+    for(auto panel : epanels) {
+        panel.second->updateProfiles(printerProfile, printerIntent, printerBPC);
+    }
+}
+
 void RTWindow::updateTPVScrollbar (bool hide)
 {
     fpanel->updateTPVScrollbar (hide);
     epanel->updateTPVScrollbar (hide);
 
-    std::map<Glib::ustring, EditorPanel*>::const_iterator itr;
-
-    for(itr = epanels.begin(); itr != epanels.end(); ++itr) {
-        ((*itr).second)->updateTPVScrollbar (hide);
+    for(auto panel : epanels) {
+        panel.second->updateTPVScrollbar (hide);
     }
 }
 
@@ -817,10 +777,8 @@ void RTWindow::updateTabsUsesIcons (bool useIcons)
     fpanel->updateTabsUsesIcons (useIcons);
     epanel->updateTabsUsesIcons (useIcons);
 
-    std::map<Glib::ustring, EditorPanel*>::const_iterator itr;
-
-    for(itr = epanels.begin(); itr != epanels.end(); ++itr) {
-        ((*itr).second)->updateTabsUsesIcons (useIcons);
+    for(auto panel : epanels) {
+        panel.second->updateTabsUsesIcons (useIcons);
     }
 }
 
@@ -838,10 +796,8 @@ void RTWindow::updateHistogramPosition (int oldPosition, int newPosition)
 {
     epanel->updateHistogramPosition (oldPosition, newPosition);
 
-    std::map<Glib::ustring, EditorPanel*>::const_iterator itr;
-
-    for(itr = epanels.begin(); itr != epanels.end(); ++itr) {
-        ((*itr).second)->updateHistogramPosition (oldPosition, newPosition);
+    for(auto panel : epanels) {
+        panel.second->updateHistogramPosition (oldPosition, newPosition);
     }
 }
 

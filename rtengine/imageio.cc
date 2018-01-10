@@ -556,10 +556,12 @@ int ImageIO::loadJPEG (Glib::ustring fname)
         jpeg_read_header(&cinfo, TRUE);
 
         //if JPEG is CMYK, then abort reading
-        if (cinfo.jpeg_color_space == JCS_CMYK || cinfo.jpeg_color_space == JCS_YCCK || cinfo.jpeg_color_space == JCS_GRAYSCALE) {
+        if (cinfo.jpeg_color_space == JCS_CMYK || cinfo.jpeg_color_space == JCS_YCCK) {
             jpeg_destroy_decompress(&cinfo);
             return IMIO_READERROR;
         }
+
+        cinfo.out_color_space = JCS_RGB;
 
         deleteLoadedProfileData();
         loadedProfileDataJpg = true;
@@ -677,8 +679,8 @@ int ImageIO::getTIFFSampleFormat (Glib::ustring fname, IIOSampleFormat &sFormat,
 
     TIFFClose(in);
 
-    if (photometric == PHOTOMETRIC_RGB) {
-        if ((samplesperpixel == 3 || samplesperpixel == 4) && sampleformat == SAMPLEFORMAT_UINT) {
+    if (photometric == PHOTOMETRIC_RGB || photometric == PHOTOMETRIC_MINISBLACK) {
+        if ((samplesperpixel == 1 || samplesperpixel == 3 || samplesperpixel == 4) && sampleformat == SAMPLEFORMAT_UINT) {
             if (bitspersample == 8) {
                 sFormat = IIOSF_UNSIGNED_CHAR;
                 return IMIO_SUCCESS;
@@ -820,7 +822,7 @@ int ImageIO::loadTIFF (Glib::ustring fname)
     allocate (width, height);
 
     float minValue[3] = {0.f, 0.f, 0.f}, maxValue[3] = {0.f, 0.f, 0.f};
-    unsigned char* linebuffer = new unsigned char[TIFFScanlineSize(in)];
+    unsigned char* linebuffer = new unsigned char[TIFFScanlineSize(in) * (samplesperpixel == 1 ? 3 : 1)];
 
     for (int row = 0; row < height; row++) {
         if (TIFFReadScanline(in, linebuffer, row, 0) < 0) {
@@ -829,10 +831,21 @@ int ImageIO::loadTIFF (Glib::ustring fname)
             return IMIO_READERROR;
         }
 
-        if (samplesperpixel > 3)
+        if (samplesperpixel > 3) {
             for (int i = 0; i < width; i++) {
                 memcpy (linebuffer + i * 3 * bitspersample / 8, linebuffer + i * samplesperpixel * bitspersample / 8, 3 * bitspersample / 8);
             }
+        }
+        else if (samplesperpixel == 1) {
+            const size_t bytes = bitspersample / 8;
+            for (int i = width - 1; i >= 0; --i) {
+                const unsigned char* const src = linebuffer + i * bytes;
+                unsigned char* const dest = linebuffer + i * 3 * bytes;
+                memcpy(dest + 2 * bytes, src, bytes);
+                memcpy(dest + 1 * bytes, src, bytes);
+                memcpy(dest + 0 * bytes, src, bytes);
+            }
+        }
 
         if (sampleFormat & (IIOSF_LOGLUV24 | IIOSF_LOGLUV32 | IIOSF_FLOAT)) {
             setScanline (row, linebuffer, bitspersample, minValue, maxValue);
@@ -896,8 +909,11 @@ int ImageIO::loadPPMFromMemory(const char* buffer, int width, int height, bool s
 
 int ImageIO::savePNG  (Glib::ustring fname, int compression, volatile int bps)
 {
+    if (getW() < 1 || getH() < 1) {
+        return IMIO_HEADERERROR;
+    }
 
-    FILE *file = g_fopen_withBinaryAndLock (fname);
+    FILE* const file = g_fopen_withBinaryAndLock (fname);
 
     if (!file) {
         return IMIO_CANNOTWRITEFILE;
@@ -990,8 +1006,11 @@ int ImageIO::savePNG  (Glib::ustring fname, int compression, volatile int bps)
 // Quality 0..100, subsampling: 1=low quality, 2=medium, 3=high
 int ImageIO::saveJPEG (Glib::ustring fname, int quality, int subSamp)
 {
+    if (getW() < 1 || getH() < 1) {
+        return IMIO_HEADERERROR;
+    }
 
-    FILE *file = g_fopen_withBinaryAndLock (fname);
+    FILE* const file = g_fopen_withBinaryAndLock (fname);
 
     if (!file) {
         return IMIO_CANNOTWRITEFILE;
@@ -1177,6 +1196,9 @@ int ImageIO::saveJPEG (Glib::ustring fname, int quality, int subSamp)
 
 int ImageIO::saveTIFF (Glib::ustring fname, int bps, bool uncompressed)
 {
+    if (getW() < 1 || getH() < 1) {
+        return IMIO_HEADERERROR;
+    }
 
     //TODO: Handling 32 bits floating point output images!
     bool writeOk = true;
@@ -1329,7 +1351,7 @@ int ImageIO::saveTIFF (Glib::ustring fname, int bps, bool uncompressed)
 
         }
 
-        TIFFSetField (out, TIFFTAG_SOFTWARE, "RawTherapee " VERSION);
+        TIFFSetField (out, TIFFTAG_SOFTWARE, "RawTherapee " RTVERSION);
         TIFFSetField (out, TIFFTAG_IMAGEWIDTH, width);
         TIFFSetField (out, TIFFTAG_IMAGELENGTH, height);
         TIFFSetField (out, TIFFTAG_ORIENTATION, ORIENTATION_TOPLEFT);
@@ -1428,19 +1450,11 @@ void png_flush(png_structp png_ptr)
 int ImageIO::load (Glib::ustring fname)
 {
 
-    size_t lastdot = fname.find_last_of ('.');
-
-    if( Glib::ustring::npos == lastdot ) {
-        return IMIO_FILETYPENOTSUPPORTED;
-    }
-
-    if (!fname.casefold().compare (lastdot, 4, ".png")) {
+    if (hasPngExtension(fname)) {
         return loadPNG (fname);
-    } else if (!fname.casefold().compare (lastdot, 4, ".jpg") ||
-               !fname.casefold().compare (lastdot, 5, ".jpeg")) {
+    } else if (hasJpegExtension(fname)) {
         return loadJPEG (fname);
-    } else if (!fname.casefold().compare (lastdot, 4, ".tif") ||
-               !fname.casefold().compare (lastdot, 5, ".tiff")) {
+    } else if (hasTiffExtension(fname)) {
         return loadTIFF (fname);
     } else {
         return IMIO_FILETYPENOTSUPPORTED;
@@ -1449,20 +1463,11 @@ int ImageIO::load (Glib::ustring fname)
 
 int ImageIO::save (Glib::ustring fname)
 {
-
-    size_t lastdot = fname.find_last_of ('.');
-
-    if( Glib::ustring::npos == lastdot ) {
-        return IMIO_FILETYPENOTSUPPORTED;
-    }
-
-    if (!fname.casefold().compare (lastdot, 4, ".png")) {
+    if (hasPngExtension(fname)) {
         return savePNG (fname);
-    } else if (!fname.casefold().compare (lastdot, 4, ".jpg") ||
-               !fname.casefold().compare (lastdot, 5, ".jpeg")) {
+    } else if (hasJpegExtension(fname)) {
         return saveJPEG (fname);
-    } else if (!fname.casefold().compare (lastdot, 4, ".tif") ||
-               !fname.casefold().compare (lastdot, 5, ".tiff")) {
+    } else if (hasTiffExtension(fname)) {
         return saveTIFF (fname);
     } else {
         return IMIO_FILETYPENOTSUPPORTED;

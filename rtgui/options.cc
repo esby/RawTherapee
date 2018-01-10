@@ -46,8 +46,7 @@ Glib::ustring Options::rtdir;
 Glib::ustring Options::cacheBaseDir;
 
 Options options;
-Glib::ustring versionString       = VERSION;
-Glib::ustring versionSuffixString = VERSION_SUFFIX;
+Glib::ustring versionString       = RTVERSION;
 Glib::ustring paramFileExtension = ".pp3";
 Glib::ustring paramFileGuiExtension = ".ttp";
 
@@ -357,10 +356,10 @@ void Options::setDefaults ()
     profilePath = "profiles";
     loadSaveProfilePath = "";           // will be corrected in load as otherwise construction fails
     version = "0.0.0.0";                // temporary value; will be correctly set in RTWindow::on_realize
-    thumbSize = 240;
-    thumbSizeTab = 180;
+    thumbSize = 160;
+    thumbSizeTab = 160;
     thumbSizeQueue = 160;
-    sameThumbSize = true;               // preferring speed of switch between file browser and single editor tab
+    sameThumbSize = false;               // preferring speed of switch between file browser and single editor tab
     showHistory = true;
     showFilePanelState = 0;             // Not used anymore ; was the thumb strip state
     showInfo = true;
@@ -633,6 +632,9 @@ void Options::setDefaults ()
     rtSettings.leveldnliss = 0;
     rtSettings.leveldnautsimpl = 0;
 
+    rtSettings.printerProfile = Glib::ustring();
+    rtSettings.printerIntent = rtengine::RI_RELATIVE;
+    rtSettings.printerBPC = true;
     rtSettings.monitorProfile = Glib::ustring();
     rtSettings.monitorIntent = rtengine::RI_RELATIVE;
     rtSettings.monitorBPC = true;
@@ -1502,6 +1504,18 @@ int Options::readFromFile (Glib::ustring fname)
                     rtSettings.iccDirectory         = keyFile.get_string ("Color Management", "ICCDirectory");
                 }
 
+                if (keyFile.has_key ("Color Management", "PrinterIntent")) {
+                    rtSettings.printerIntent   = static_cast<rtengine::RenderingIntent>(keyFile.get_integer("Color Management", "PrinterIntent"));
+                }
+
+                if (keyFile.has_key ("Color Management", "PrinterBPC")) {
+                    rtSettings.printerBPC           = keyFile.get_boolean("Color Management", "PrinterBPC");
+                }
+
+                if (keyFile.has_key ("Color Management", "PrinterProfile")) {
+                    rtSettings.printerProfile       = keyFile.get_string ("Color Management", "PrinterProfile");
+                }
+
                 if (keyFile.has_key ("Color Management", "MonitorProfile")) {
                     rtSettings.monitorProfile       = keyFile.get_string ("Color Management", "MonitorProfile");
                 }
@@ -1901,7 +1915,7 @@ int Options::saveToFile (Glib::ustring fname)
         keyFile.set_string  ("General", "Theme", theme);
         keyFile.set_boolean ("General", "SlimUI", slimUI);
         keyFile.set_boolean ("General", "UseSystemTheme", useSystemTheme);
-        keyFile.set_string  ("General", "Version", VERSION);
+        keyFile.set_string  ("General", "Version", RTVERSION);
         keyFile.set_string  ("General", "DarkFramesPath", rtSettings.darkFramesPath);
         keyFile.set_string  ("General", "FlatFieldsPath", rtSettings.flatFieldsPath);
         keyFile.set_boolean ("General", "Verbose", rtSettings.verbose);
@@ -2095,6 +2109,10 @@ int Options::saveToFile (Glib::ustring fname)
         //keyFile.set_integer_list ("GUI", "CurvePanelsExpanded", crvopen);
 
         keyFile.set_integer ("Crop Settings", "PPI", cropPPI);
+
+        keyFile.set_string  ("Color Management", "PrinterProfile", rtSettings.printerProfile);
+        keyFile.set_integer ("Color Management", "PrinterIntent", rtSettings.printerIntent);
+        keyFile.set_boolean ("Color Management", "PrinterBPC", rtSettings.printerBPC);
 
         keyFile.set_string  ("Color Management", "ICCDirectory", rtSettings.iccDirectory);
         keyFile.set_string  ("Color Management", "MonitorProfile", rtSettings.monitorProfile);

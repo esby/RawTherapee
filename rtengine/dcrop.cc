@@ -678,7 +678,7 @@ void Crop::update (int todo)
     createBuffer(cropw, croph);
 
     // transform
-    if (needstransform || ((todo & (M_TRANSFORM))  && params.dirpyrequalizer.cbdlMethod == "bef" && params.dirpyrequalizer.enabled && !params.colorappearance.enabled)) {
+    if (needstransform || ((todo & (M_TRANSFORM | M_RGBCURVE))  && params.dirpyrequalizer.cbdlMethod == "bef" && params.dirpyrequalizer.enabled && !params.colorappearance.enabled)) {
         if (!transCrop) {
             transCrop = new Imagefloat (cropw, croph);
         }
@@ -701,7 +701,7 @@ void Crop::update (int todo)
         transCrop = nullptr;
     }
 
-    if ((todo & (M_TRANSFORM))  && params.dirpyrequalizer.cbdlMethod == "bef" && params.dirpyrequalizer.enabled && !params.colorappearance.enabled) {
+    if ((todo & (M_TRANSFORM | M_RGBCURVE))  && params.dirpyrequalizer.cbdlMethod == "bef" && params.dirpyrequalizer.enabled && !params.colorappearance.enabled) {
 
         const int W = baseCrop->getWidth();
         const int H = baseCrop->getHeight();
@@ -751,10 +751,11 @@ void Crop::update (int todo)
         DCPProfile::ApplyState as;
         DCPProfile *dcpProf = parent->imgsrc->getDCP(params.icm, parent->currWB, as);
 
+        LUTu histToneCurve;
         parent->ipf.rgbProc (baseCrop, laboCrop, this, parent->hltonecurve, parent->shtonecurve, parent->tonecurve, cshmap,
                              params.toneCurve.saturation, parent->rCurve, parent->gCurve, parent->bCurve, parent->colourToningSatLimit , parent->colourToningSatLimitOpacity, parent->ctColorCurve, parent->ctOpacityCurve, parent->opautili, parent->clToningcurve, parent->cl2Toningcurve,
                              parent->customToneCurve1, parent->customToneCurve2, parent->beforeToneCurveBW, parent->afterToneCurveBW, rrm, ggm, bbm,
-                             parent->bwAutoR, parent->bwAutoG, parent->bwAutoB, dcpProf, as);
+                             parent->bwAutoR, parent->bwAutoG, parent->bwAutoB, dcpProf, as, histToneCurve);
     }
 
     /*xref=000;yref=000;
