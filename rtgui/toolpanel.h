@@ -35,6 +35,7 @@
 #define ENV_STATE_IN_NORM   2
 #define ENV_STATE_IN_TRASH  3
 
+//todo: are forward declaration needed anymore ?
 class ToolPanel;
 class FoldableToolPanel;
 
@@ -186,7 +187,7 @@ public:
     bool                getNeed100Percent() { return need100Percent; }
 
     virtual int getLocation() {return location;}
-    int setLocation(int _location) { location = _location;}
+    void setLocation(int _location) { location = _location;}
 
     /** @brief Disable the event broadcasting mechanism
      *
