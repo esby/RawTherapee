@@ -207,6 +207,7 @@ public:
 
     bool            openDefaultViewer(int destination);
     bool            imageLoad(bool loading);
+    int             getpp3version();
 };
 
 

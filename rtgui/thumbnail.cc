@@ -345,6 +345,12 @@ void Thumbnail::loadProcParams ()
     }
 }
 
+int Thumbnail::getpp3version()
+{
+  return pparams.ppVersion;
+}
+
+
 void Thumbnail::clearProcParams (int whoClearedIt)
 {
 
