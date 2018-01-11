@@ -1518,8 +1518,6 @@ Gtk::Widget* Preferences::getSoundPanel ()
     txtSndBatchQueueDone =  Gtk::manage (new Gtk::Entry());
     pBatchQueueDone->pack_end (*txtSndBatchQueueDone, Gtk::PACK_EXPAND_WIDGET, 4);
 
-    Gtk::Button* btnSndBatchQueueDone =  Gtk::manage (new Gtk::Button(M("PREFERENCES_SND_TEST_BATCHQUEUEDONE")));
-    pBatchQueueDone->pack_end (*btnSndBatchQueueDone, Gtk::PACK_SHRINK, 4);
 
     pSnd->pack_start (*pBatchQueueDone, Gtk::PACK_SHRINK, 4);
 
@@ -1537,9 +1535,6 @@ Gtk::Widget* Preferences::getSoundPanel ()
 
     Gtk::Button* btnSndLngEditProcDone =  Gtk::manage (new Gtk::Button(M("PREFERENCES_SND_TEST_LNGEDITPROCDONE")));
     pSndLngEditProcDone->pack_start (*btnSndLngEditProcDone, Gtk::PACK_SHRINK, 4);
-
-    Gtk::Label* lSndLngEditProcDoneSecs = Gtk::manage (new Gtk::Label (M("PREFERENCES_SND_TRESHOLDSECS") + Glib::ustring(":")));
-    pSndLngEditProcDone->pack_start (*lSndLngEditProcDoneSecs, Gtk::PACK_SHRINK, 12);
 
     spbSndLngEditProcDoneSecs = Gtk::manage ( new Gtk::SpinButton () );
     spbSndLngEditProcDoneSecs->set_digits (1);
