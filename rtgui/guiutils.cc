@@ -571,7 +571,7 @@ void MyExpander::init()
     closedPBuf = Gdk::Pixbuf::create_from_file(rtengine::findIconAbsolutePath("expanderClosed.png"));
 }
 
-ToolPanelAncestor*  MyExpander::getPanel() {
+ToolPanel*  MyExpander::getPanel() {
   return panel;
 };
 //todo: check if ToolPanelAncestor should exist or not
