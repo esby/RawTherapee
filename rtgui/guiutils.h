@@ -286,13 +286,9 @@ public:
 
     /// Add a Gtk::Container for the content of the expander
     /// Warning: do not manually Show/Hide the widget, because this parameter is handled by the click on the Expander's title
-    void add  (Gtk::Container& widget, bool setChild = true);
-
-   Gtk::HBox* getTitleContainer() {return titleContainer; }
-   Gtk::HBox* getHeaderHBox() {return headerHBox; }
-   Gtk::HBox* getButtonHBox() {return buttonHBox; }
-
-   void updateVScrollbars(bool hide);
+==== BASE ====
+    void add  (Gtk::Container& widget);
+==== BASE ====
 };
 
 

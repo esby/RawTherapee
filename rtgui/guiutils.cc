@@ -572,13 +572,15 @@ MyExpander::MyExpander(bool useEnabled, Gtk::Widget* titleWidget, ToolPanelAnces
     set_spacing(0);
     set_name("MyExpander");
     set_can_focus(false);
-    setExpandAlignProperties(this, true, false, Gtk::ALIGN_FILL, Gtk::ALIGN_FILL);
 
     panel = _panel;
 
     headerHBox = Gtk::manage( new Gtk::HBox());
     headerHBox->set_can_focus(false);
     setExpandAlignProperties(headerHBox, true, false, Gtk::ALIGN_FILL, Gtk::ALIGN_FILL);
+
+    buttonHBox = Gtk::manage( new Gtk::HBox());
+    buttonHBox->set_can_focus(false);
 
     buttonHBox = Gtk::manage( new Gtk::HBox());
     buttonHBox->set_can_focus(false);
@@ -643,8 +645,10 @@ MyExpander::MyExpander(bool useEnabled, Glib::ustring titleLabel, ToolPanelAnces
     set_spacing(0);
     set_name("MyExpander");
     set_can_focus(false);
-    setExpandAlignProperties(this, true, false, Gtk::ALIGN_FILL, Gtk::ALIGN_FILL);
 
+    panel = _panel;
+
+    setExpandAlignProperties(this, true, false, Gtk::ALIGN_FILL, Gtk::ALIGN_FILL);
 
     headerHBox = Gtk::manage( new Gtk::HBox());
     headerHBox->set_can_focus(false);

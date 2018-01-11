@@ -302,6 +302,7 @@ Wavelet::Wavelet() :
 
 ==== BASE ====
     Gtk::VBox* const contrastSHVBox = Gtk::manage(new Gtk::VBox);
+==== BASE ====
     contrastSHVBox->set_border_width(4);
 ==== BASE ====
     contrastSHVBox->set_spacing(2);

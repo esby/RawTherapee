@@ -235,10 +235,10 @@ GENERAL_OK;OK
 GENERAL_OPEN;Open
 GENERAL_PORTRAIT;Portrait
 GENERAL_SAVE;Save
-GENERAL_SLIDER;Slider
 GENERAL_STATE_FAVORITE;★ F
 GENERAL_STATE_NORMAL; Normal
 GENERAL_STATE_TRASH;☢ T
+GENERAL_SLIDER;Slider
 GENERAL_UNCHANGED;(Unchanged)
 GENERAL_WARNING;Warning
 GIMP_PLUGIN_INFO;Welcome to the RawTherapee GIMP plugin!\nOnce you are done editing, simply close the main RawTherapee window and the image will be automatically imported in GIMP.

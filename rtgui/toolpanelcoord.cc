@@ -104,7 +104,7 @@ void ToolPanelCoordinator::on_notebook_switch_page(GtkNotebookPage* page, guint 
 }
 
 
-ToolPanelCoordinator::ToolPanelCoordinator () : ipc(NULL)
+ToolPanelCoordinator::ToolPanelCoordinator () : ipc(nullptr)
 {
     env =  new Environment();
 
@@ -206,55 +206,55 @@ ToolPanelCoordinator::ToolPanelCoordinator () : ipc(NULL)
     //     Best -> low ISO
     //     Medium -> High ISO
 
-    addPanel (colorPanel, whitebalance);
-    addPanel (exposurePanel, toneCurve);
-    addPanel (colorPanel, vibrance);
-    addPanel (colorPanel, chmixer);
-    addPanel (colorPanel, blackwhite);
-    addPanel (exposurePanel, localContrast);
-    addPanel (exposurePanel, shadowshighlights);
-    addPanel (detailsPanel, sharpening);
-    addPanel (detailsPanel, sharpenEdge);
-    addPanel (detailsPanel, sharpenMicro);
-    addPanel (colorPanel, hsvequalizer);
-    addPanel (colorPanel, filmSimulation);
-    addPanel (colorPanel, rgbcurves);
-    addPanel (colorPanel, colortoning);
-    addPanel (exposurePanel, epd);
-    addPanel (exposurePanel, fattal);
-    addPanel (exposurePanel, retinex);
-    addPanel (exposurePanel, pcvignette);
-    addPanel (exposurePanel, gradient);
-    addPanel (exposurePanel, lcurve);
-    addPanel (exposurePanel, colorappearance);
-    addPanel (detailsPanel, impulsedenoise);
-    addPanel (detailsPanel, dirpyrdenoise);
-    addPanel (detailsPanel, defringe);
-    addPanel (detailsPanel, dirpyrequalizer);
-    addPanel (waveletPanel, wavelet);
-    addPanel (transformPanel, crop);
-    addPanel (transformPanel, resize);
-    addPanel (resize->getPackBox(), prsharpening, 2);
-    addPanel (transformPanel, lensgeom);
-    addPanel (lensgeom->getPackBox(), rotate, 2);
-    addPanel (lensgeom->getPackBox(), perspective, 2);
-    addPanel (lensgeom->getPackBox(), lensProf, 2);
-    addPanel (lensgeom->getPackBox(), distortion, 2);
-    addPanel (lensgeom->getPackBox(), cacorrection, 2);
-    addPanel (lensgeom->getPackBox(), vignetting, 2);
-    addPanel (colorPanel, icm);
-    addPanel (rawPanel, sensorbayer);
-    addPanel (sensorbayer->getPackBox(), bayerprocess, 2);
-    addPanel (sensorbayer->getPackBox(), bayerrawexposure, 2);
-    addPanel (sensorbayer->getPackBox(), bayerpreprocess, 2);
-    addPanel (sensorbayer->getPackBox(), rawcacorrection, 2);
-    addPanel (rawPanel, sensorxtrans);
-    addPanel (sensorxtrans->getPackBox(), xtransprocess, 2);
-    addPanel (sensorxtrans->getPackBox(), xtransrawexposure, 2);
-    addPanel (rawPanel, rawexposure);
-    addPanel (rawPanel, preprocess);
-    addPanel (rawPanel, darkframe);
-    addPanel (rawPanel, flatfield);
+    env->registerPanel (colorPanel, whitebalance);
+    env->registerPanel (exposurePanel, toneCurve);
+    env->registerPanel (colorPanel, vibrance);
+    env->registerPanel (colorPanel, chmixer); 
+    env->registerPanel (colorPanel, blackwhite);
+    env->registerPanel (exposurePanel, localContrast);
+    env->registerPanel (exposurePanel, shadowshighlights);
+    env->registerPanel (detailsPanel, sharpening);
+    env->registerPanel (detailsPanel, sharpenEdge);
+    env->registerPanel (detailsPanel, sharpenMicro);
+    env->registerPanel (colorPanel, hsvequalizer);
+    env->registerPanel (colorPanel, filmSimulation);
+    env->registerPanel (colorPanel, rgbcurves); // 
+    env->registerPanel (colorPanel, colortoning);
+    env->registerPanel (exposurePanel, epd);
+    env->registerPanel (exposurePanel, fattal);
+    env->registerPanel (exposurePanel, retinex);
+    env->registerPanel (exposurePanel, pcvignette);
+    env->registerPanel (exposurePanel, gradient);
+    env->registerPanel (exposurePanel, lcurve); // 
+    env->registerPanel (exposurePanel, colorappearance);
+    env->registerPanel (detailsPanel, impulsedenoise);
+    env->registerPanel (detailsPanel, dirpyrdenoise);
+    env->registerPanel (detailsPanel, defringe);
+    env->registerPanel (detailsPanel, dirpyrequalizer);
+    env->registerPanel (waveletPanel, wavelet);
+    env->registerPanel (transformPanel, crop);
+    env->registerPanel (transformPanel, resize);
+    env->registerPanel (resize->getPackBox(), prsharpening);
+    env->registerPanel (transformPanel, lensgeom);
+    env->registerPanel (lensgeom->getPackBox(), rotate);
+    env->registerPanel (lensgeom->getPackBox(), perspective);
+    env->registerPanel (lensgeom->getPackBox(), lensProf);
+    env->registerPanel (lensgeom->getPackBox(), distortion);
+    env->registerPanel (lensgeom->getPackBox(), cacorrection);
+    env->registerPanel (lensgeom->getPackBox(), vignetting);
+    env->registerPanel (colorPanel, icm);
+    env->registerPanel (rawPanel, sensorbayer);
+    env->registerPanel (sensorbayer->getPackBox(), bayerprocess);
+    env->registerPanel (sensorbayer->getPackBox(), bayerrawexposure);
+    env->registerPanel (sensorbayer->getPackBox(), bayerpreprocess);
+    env->registerPanel (sensorbayer->getPackBox(), rawcacorrection);
+    env->registerPanel (rawPanel, sensorxtrans);
+    env->registerPanel (sensorxtrans->getPackBox(), xtransprocess);
+    env->registerPanel (sensorxtrans->getPackBox(), xtransrawexposure);
+    env->registerPanel (rawPanel, rawexposure);
+    env->registerPanel (rawPanel, preprocess);
+    env->registerPanel (rawPanel, darkframe);
+    env->registerPanel (rawPanel, flatfield);
 
     toolPanels.push_back (coarse);
     toolPanels.push_back(metadata);
@@ -746,22 +746,6 @@ void ToolPanelCoordinator::writeOptions ()
 
     crop->writeOptions ();
 
-    if (options.autoSaveTpOpen) {
-        writeToolExpandedStatus (options.tpOpen);
-    }
-}
-
-
-void ToolPanelCoordinator::writeToolExpandedStatus (std::vector<int> &tpOpen)
-{
-    tpOpen.clear ();
-
-==== BASE ====
-    for (size_t i = 0; i < expList.size(); i++) {
-        options.tpOpen.push_back (expList.at(i)->get_expanded ());
-    }
-==== BASE ====
-
     wavelet->writeOptions (tpOpen);
     retinex->writeOptions (tpOpen);
 }
@@ -951,7 +935,7 @@ void ToolPanelCoordinator::foldAllButOne (Gtk::Box* parent, FoldableToolPanel* o
 {
 
    for (size_t i=0; i<env->countPanel(); i++) {
-        if (env->getPanel(i)->getParent() != NULL) {
+        if (env->getPanel(i)->getParent() != nullptr) {
             ToolPanel* currentTP = env->getPanel(i);
 
             if ((env->state == ENV_STATE_IN_FAV)
@@ -978,8 +962,10 @@ bool ToolPanelCoordinator::handleShortcutKey (GdkEventKey* event)
     bool alt = event->state & GDK_MOD1_MASK;
 
     if (alt) {
-==== BASE ====
         switch(event->keyval) {
+        case GDK_f:
+            toolPanelNotebook->set_current_page (toolPanelNotebook->page_num(*favoritePanelSW));
+            return true;
         case GDK_e:
             toolPanelNotebook->set_current_page (toolPanelNotebook->page_num(*exposurePanelSW));
             return true;
@@ -1004,10 +990,17 @@ bool ToolPanelCoordinator::handleShortcutKey (GdkEventKey* event)
             toolPanelNotebook->set_current_page (toolPanelNotebook->page_num(*waveletPanelSW));
             return true;
 
+        case GDK_p:
+            toolPanelNotebook->set_current_page (toolPanelNotebook->page_num(*trashPanelSW));
+            return true;
+
+        case GDK_u:
+            toolPanelNotebook->set_current_page (toolPanelNotebook->page_num(*usefulPanelSW));
+            return true;
+
         case GDK_m:
             if (metadataPanel) {
                 toolPanelNotebook->set_current_page (toolPanelNotebook->page_num(*metadataPanel));
-==== BASE ====
                 return true;
         }
     }
@@ -1026,8 +1019,8 @@ void ToolPanelCoordinator::updateVScrollbars (bool hide)
     transformPanelSW->set_policy    (Gtk::POLICY_AUTOMATIC, policy);
     rawPanelSW->set_policy          (Gtk::POLICY_AUTOMATIC, policy);
     waveletPanelSW->set_policy      (Gtk::POLICY_AUTOMATIC, policy);
-==== BASE ====
-==== BASE ====
+    trashPanelSW->set_policy        (Gtk::POLICY_AUTOMATIC, policy);
+    usefulPanelSW->set_policy       (Gtk::POLICY_AUTOMATIC, policy);
 }
 
 void ToolPanelCoordinator::updateTabsHeader (bool useIcons)
@@ -1035,13 +1028,14 @@ void ToolPanelCoordinator::updateTabsHeader (bool useIcons)
     GThreadLock lock; // All GUI acces from idle_add callbacks or separate thread HAVE to be protected
     TOITypes type = useIcons ? TOI_ICON : TOI_TEXT;
 
-==== BASE ====
     toiE->switchTo(type);
     toiD->switchTo(type);
     toiC->switchTo(type);
     toiT->switchTo(type);
     toiR->switchTo(type);
-==== BASE ====
+    toiF->switchTo(type);
+    toiP->switchTo(type);
+    toiU->switchTo(type);
 
     if (toiM) {
         toiM->switchTo (type);
@@ -1101,9 +1095,6 @@ void ToolPanelCoordinator::setEditProvider (EditDataProvider *provider)
 {
     editDataProvider = provider;
 
-==== BASE ====
-    for (size_t i = 0; i < toolPanels.size(); i++) {
-        toolPanels.at(i)->setEditProvider(provider);
-    }
-==== BASE ====
+    for (size_t i=0; i<env->countPanel(); i++)
+		env->getPanel(i)->setEditProvider(provider);    
 }

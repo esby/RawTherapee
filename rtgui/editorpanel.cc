@@ -1179,15 +1179,27 @@ void EditorPanel::procParamsChanged (rtengine::procparams::ProcParams* params, r
   if (ev == rtengine::EvProfileChanged)  
     tpc->doReact(FakeEvProfileChanged);
 
-    rtengine::eSensorType sensorType = isrc->getImageSource()->getSensorType();
+struct spsparams {
+    bool inProcessing;
+    EditorPanelIdleHelper* epih;
+};
 
-    selectedFrame = 0;
-    if (sensorType == rtengine::ST_BAYER) {
-        selectedFrame = params->raw.bayersensor.imageNum;
-    //} else if (sensorType == rtengine::ST_FUJI_XTRANS) {
-    //    selectedFrame = params->raw.xtranssensor.imageNum;
+int setProgressStateUIThread (void* data)
+{
+
+    spsparams* p = static_cast<spsparams*>(data);
+
+    if (p->epih->destroyed) {
+        if (p->epih->pending == 1) {
+            delete p->epih;
+        } else {
+            p->epih->pending--;
+        }
+
+        delete p;
+
+        return 0;
     }
-    selectedFrame = rtengine::LIM<int>(selectedFrame, 0, isrc->getImageSource()->getMetaData()->getFrameCount() - 1);
 
     info_toggled();
 }
@@ -1389,8 +1401,13 @@ void EditorPanel::info_toggled ()
         printf("exif transmitted for variable \n");
         tpc->doReact(FakeEvExifTransmitted);
 
+        infoString2 = Glib::ustring::compose ("<span size=\"small\">f/</span><span size=\"large\">%1</span>  <span size=\"large\">%2</span><span size=\"small\">s</span>  <span size=\"small\">%3</span><span size=\"large\">%4</span>  <span size=\"large\">%5</span><span size=\"small\">mm</span>",
+                                              Glib::ustring(idata->apertureToString(idata->getFNumber())),
+                                              Glib::ustring(idata->shutterToString(idata->getShutterSpeed())),
+                                              M("QINFO_ISO"), idata->getISOSpeed(),
+                                              Glib::ustring::format(std::setw(3), std::fixed, std::setprecision(2), idata->getFocalLen()));
 
-        expcomp = Glib::ustring (idata->expcompToString (idata->getExpComp(selectedFrame), true)); // maskZeroexpcomp
+        expcomp = Glib::ustring(idata->expcompToString(idata->getExpComp(), true)); // maskZeroexpcomp
 
         if (!expcomp.empty ()) {
             infoString = Glib::ustring::compose ("%1  <span size=\"large\">%2</span><span size=\"small\">EV</span>",

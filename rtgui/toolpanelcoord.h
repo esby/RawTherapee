@@ -233,8 +233,6 @@ protected:
     bool hasChanged;
 
     void handlePanel(Gtk::VBox* vbox, Gtk::ScrolledWindow* panelSW, int panelIterator, int spacing);
-
-    void addPanel (Gtk::Box* where, FoldableToolPanel* panel, int level = 1);
     void foldThemAll (GdkEventButton* event);
     void updateVScrollbars (bool hide);
     void updateTabsHeader (bool useIcons);
@@ -354,9 +352,9 @@ public:
     void toolSelected (ToolMode tool);
     void editModeSwitchedOff ();
 
-==== BASE ====
     void setEditProvider(EditDataProvider *provider);
-==== BASE ====
+
+    void on_notebook_switch_page(GtkNotebookPage* page, guint page_num);
 };
 
 #endif

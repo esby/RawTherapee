@@ -282,7 +282,6 @@ class Preferences : public Gtk::Dialog, public ProfileStoreListener
     Gtk::Widget* getSoundPanel ();
     Gtk::Widget* getDynProfilePanel ();
 
-
     Gtk::Widget* getTTPanel ();
 
 public:

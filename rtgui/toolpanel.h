@@ -109,10 +109,9 @@ public:
 
     virtual void moveToOriginal(int posFav, int posOri);
 
-    ToolPanel (Glib::ustring toolName = "", bool need11 = false) : toolName(toolName), listener(NULL), tmp(NULL), batchMode(false), multiImage(false), need100Percent(need11) 
-    { 
-          labelBox = NULL;
-          buttonBox = NULL;
+    ToolPanel (Glib::ustring toolName = "", bool need11 = false) : toolName(toolName), listener(nullptr), tmp(nullptr), batchMode(false), multiImage(false), need100Percent(need11)     { 
+          labelBox = nullptr;
+          buttonBox = nullptr;
           location = 1; // normal panel location
     }
     virtual ~ToolPanel() {}
