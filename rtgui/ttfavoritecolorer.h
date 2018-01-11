@@ -38,18 +38,19 @@ protected:
     Gtk::Label* lbTrash;
     Gtk::ColorButton* cbTrash;
 
+    Glib::RefPtr<Gdk::Screen> screen;
+    Glib::RefPtr<Gtk::CssProvider> css;
+
 public:
 
     TTFavoriteColorChooser();
 
-    void read           (const rtengine::procparams::ProcParams* pp, const ParamsEdited* pedited=NULL);
-    void write          (rtengine::procparams::ProcParams* pp, ParamsEdited* pedited=NULL);
     void deploy();
    
    // void on_toggle_button();
    void enabledChanged  ();
 
-    void colorButton(Gtk::ToggleButton* button, Gdk::Color color, bool deactivate=false);
+    void colorButton(Gtk::ToggleButton* button, Gdk::RGBA rgba, bool deactivate=false, int bType=0);
     void colorFavorite(ToolPanel* panel, bool deactivate=false);
     void colorTrash(ToolPanel* panel, bool deactivate=false);
 

@@ -69,7 +69,7 @@ TTSaver::TTSaver () : FoldableToolPanel(this,"ttsaver",M("TP_THEMETOOL_LABEL"),f
        cbAutoloadSettings->set_active(options.TTPAutoload);
        buttonSave->signal_button_release_event().connect_notify( sigc::mem_fun(*this, &TTSaver::save_clicked) );
        cbAutoloadSettings->signal_button_release_event().connect_notify( sigc::mem_fun(*this, &TTSaver::autoload_clicked) );
-       profilbox->signal_changed ().connect (sigc::mem_fun (this, &TTSaver::profileBoxChanged));
+       profilbox->signal_changed ().connect (sigc::mem_fun (*this, &TTSaver::profileBoxChanged));
 
 }
 
@@ -123,8 +123,8 @@ void TTSaver::parseProfileFolder()
    Glib::ustring p1 = options.getUserProfilePath();
    Glib::ustring p2 = options.getGlobalProfilePath();
 
-//   printf("p1=%s \n",p1.c_str());
-//   printf("p2=%s \n",p2.c_str());
+   printf("p1= %s \n",p1.c_str());
+   printf("p2= %s \n",p2.c_str());
     
    Glib::ustring realPath;
    Glib::ustring currDir;
@@ -138,7 +138,7 @@ void TTSaver::parseProfileFolder()
         // from profilestore.cc
 
         // walking through the directory
-        Glib::Dir* dir = NULL;
+        Glib::Dir* dir = nullptr;
         if (nbpass == 0) 
           realPath = p1;
         else 
@@ -162,12 +162,12 @@ void TTSaver::parseProfileFolder()
                 if (lastdot != Glib::ustring::npos && lastdot <= currDir.size() - 4 && !currDir.casefold().compare (lastdot, 4, paramFileGuiExtension)) {
                     // file found
                     if( options.rtSettings.verbose ) {
-                        printf ("ttp profile detected %s...", fname.c_str());
+                        printf ("ttp profile detected %s... \n", fname.c_str());
                     }
 
                     Glib::ustring name = currDir.substr(0, lastdot);
 //                    printf("name=%s\n",name.c_str());
-                    profilbox->append_text(name);
+                    profilbox->append(name);
                     entries.push_back(fname);
 
                 }
@@ -230,7 +230,7 @@ void TTSaver::themeSplitter(std::ifstream& myfile)
       for (size_t i=0; i< env->countPanel() ; i++)
       {
         FoldableToolPanel* p = static_cast<FoldableToolPanel*> (env->getPanel(i));
-        if ( (p != NULL)
+        if ( (p != nullptr)
         && (!(p->canBeIgnored())))
         {
           if (p->getToolName() == currentToken )
@@ -252,7 +252,7 @@ void TTSaver::themeSplitter(std::ifstream& myfile)
  for (size_t i=0; i< env->countPanel() ; i++)
       {
         FoldableToolPanel* p = static_cast<FoldableToolPanel*> (env->getPanel(i));
-        if ( (p != NULL)
+        if ( (p != nullptr)
         && (!(p->canBeIgnored()))
         && (p->getOriginalBox()->getBoxName() == "usefulPanel"))
         {        
@@ -284,7 +284,7 @@ void TTSaver::save_profile(Glib::ustring filename)
   for (size_t i=0; i<panels.size(); i++)
   {
     FoldableToolPanel* p = static_cast<FoldableToolPanel*> (panels.at(i));
-    if ((p != NULL)
+    if ((p != nullptr)
     && (!p->canBeIgnored()))
     { 
        lines += p->themeExport();
@@ -346,14 +346,14 @@ void TTSaver::save_clicked (GdkEventButton* event)
 
     //Add filters, so that only certain file types can be selected:
 
-    Gtk::FileFilter filter_pp;
-    filter_pp.set_name(M("FILECHOOSER_FILTER_TTP"));
-    filter_pp.add_pattern("*" + paramFileGuiExtension);
+    Glib::RefPtr<Gtk::FileFilter> filter_pp = Gtk::FileFilter::create();
+    filter_pp->set_name(M("FILECHOOSER_FILTER_TTP"));
+    filter_pp->add_pattern("*" + paramFileGuiExtension);
     dialog.add_filter(filter_pp);
 
-    Gtk::FileFilter filter_any;
-    filter_any.set_name(M("FILECHOOSER_FILTER_ANY"));
-    filter_any.add_pattern("*");
+    Glib::RefPtr<Gtk::FileFilter> filter_any = Gtk::FileFilter::create();
+    filter_any->set_name(M("FILECHOOSER_FILTER_ANY"));
+    filter_any->add_pattern("*");
     dialog.add_filter(filter_any);
 
 //    dialog.set_do_overwrite_confirmation (true);
@@ -385,7 +385,7 @@ void TTSaver::save_clicked (GdkEventButton* event)
         
         if ( std::find(entries.begin(),entries.end(),fname) == entries.end() )
         {
-          profilbox->append_text(name);
+          profilbox->append(name);
           entries.push_back(fname);
         }
 
@@ -410,7 +410,7 @@ Glib::ustring TTSaver::themeExport()
   for (size_t i=0; i<panels.size(); i++)
   {
     FoldableToolPanel* p = static_cast<FoldableToolPanel*> (panels.at(i));
-    if ((p != NULL)
+    if ((p != nullptr)
     && (!p->canBeIgnored()))
     {
       int posFav = p->getPosOri();
@@ -424,7 +424,7 @@ Glib::ustring TTSaver::themeExport()
   for (size_t i=0; i<panels.size(); i++)
   {
     FoldableToolPanel* p = static_cast<FoldableToolPanel*> (panels.at(i));
-    if ((p != NULL)
+    if ((p != nullptr)
     && (!p->canBeIgnored()))
     {
       int posOri = p->getPosOri();
@@ -582,7 +582,7 @@ if (map[favoriteItems.at(i)]->getOriginalBox()->getBoxName() != "favoritePanel" 
   for (size_t i=0; i< env->countPanel() ; i++)
    {
       FoldableToolPanel* p = static_cast<FoldableToolPanel*> (env->getPanel(i));
-      if ( (p != NULL)
+      if ( (p != nullptr)
       && (!(p->canBeIgnored()))
       && (p->getLocation() ==-1))
       {

@@ -43,14 +43,12 @@ public:
 
     TTPanelColorChooser();
 
-    void read           (const rtengine::procparams::ProcParams* pp, const ParamsEdited* pedited=NULL);
-    void write          (rtengine::procparams::ProcParams* pp, ParamsEdited* pedited=NULL);
     void deploy();
  
     void on_toggle_button();
 
     int getState(ToolPanel* panel);
-    Gdk::Color getColor(ToolPanel* panel, int state);
+    Gdk::RGBA getColor(ToolPanel* panel, int state);
 
     void colorPanel(ToolPanel* panel, bool deactivate=false);
     void pangoPanel(ToolPanel* panel, bool deactivate=false);

@@ -49,28 +49,63 @@ TTFavoriteColorChooser::TTFavoriteColorChooser () : FoldableToolPanel(this,"ttfa
   pack_start(*themeBox1, Gtk::PACK_SHRINK, 0);
   pack_start(*themeBox2, Gtk::PACK_SHRINK, 0);
 
-  Gdk::Color color;
+/*
+//  Gdk::Color color;
   color.set("blue");
-  cbFavorite->set_color(color);
-  color.set("red");
-  cbTrash->set_color(color);
+  printf("gdkcolor for blue: %s", color.to_string().c_str());
+
+  Gdk::RGBA rgba1;
+  rgba1.set("blue");
+  printf("rgba color for blue: %s", rgba1.to_string().c_str());
+
+  Gdk::RGBA rgba2;
+  rgba2.set_rgba(0.5, 0.25,1.0);
+  printf("rgba color rgba(0.5, 0.25,1.0): %s", rgba2.to_string().c_str());
+*/
+
+
+  Gdk::RGBA rgba;
+  rgba.set("blue");
+  cbFavorite->set_rgba(rgba);
+  rgba.set("red");
+  cbTrash->set_rgba(rgba);
+
+
+//css
+  Glib::ustring data = "#FavoriteButtonChecked {background-color: blue; background: blue; } \
+                        #TrashButtonChecked {background-color: red; background: red; } \
+";
+  css = Gtk::CssProvider::create();
+  if(not css->load_from_data(data)) {
+           printf("failed to load css for Favorite and Trash Button\n");
+  }
+
+ // css will be handled in deploy
+
+
 
 }
 
 void TTFavoriteColorChooser::deploy()
 {
    FoldableToolPanel::deploy();
+   screen = Gdk::Screen::get_default();
    for (size_t i=0; i< env->countPanel() ; i++)
    { 
       FoldableToolPanel* p = static_cast<FoldableToolPanel*> (env->getPanel(i));
-      if ( (p != NULL)
+      if ( (p != nullptr)
       && (!(p->canBeIgnored())))
       {
- //       printf("connecting to %s \n", p->getToolName().c_str());
-        p->getFavoriteButton()->signal_clicked().connect( sigc::bind<ToolPanel*>( sigc::mem_fun(this, &TTFavoriteColorChooser::colorFavorite), p, false  ));
-        p->getTrashButton()->signal_clicked().connect( sigc::bind<ToolPanel*>( sigc::mem_fun(this, &TTFavoriteColorChooser::colorTrash), p, false  ));
-        colorFavorite(p, true);
-        colorTrash(p, true);
+        //css
+        auto ctx = p->getFavoriteButton()->get_style_context();
+        ctx->add_provider_for_screen(screen, css, GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+
+//        printf("connecting to %s \n", p->getToolName().c_str());
+        p->getFavoriteButton()->signal_clicked().connect( sigc::bind<ToolPanel*>( sigc::mem_fun(this, &TTFavoriteColorChooser::colorFavorite), p, false ));
+        p->getTrashButton()->signal_clicked().connect( sigc::bind<ToolPanel*>( sigc::mem_fun(this, &TTFavoriteColorChooser::colorTrash), p, false ));
+        colorFavorite(p);
+        colorTrash(p);
+
       }
    }
 
@@ -78,25 +113,25 @@ void TTFavoriteColorChooser::deploy()
   getExpander()->signal_enabled_toggled().connect( sigc::mem_fun(this, &TTFavoriteColorChooser::enabledChanged));
 }
 
-void TTFavoriteColorChooser::read(const rtengine::procparams::ProcParams* pp, const ParamsEdited* pedited)
-{
-
-}
-
-void TTFavoriteColorChooser::write( rtengine::procparams::ProcParams* pp, ParamsEdited* pedited)
-{
-
-}
-
 //void TTFavoriteColorChooser::on_toggle_button()
 void TTFavoriteColorChooser::enabledChanged()
 {  
+   Glib::ustring colFav = cbFavorite->get_rgba().to_string() ;
+   Glib::ustring colTra = cbTrash->get_rgba().to_string() ;
+   Glib::ustring data = "#FavoriteButtonChecked { background: "  + colFav + "; } \n" \
+                      + "#TrashButtonChecked { background: " + colTra +"; } \n";
+
+//   printf ("%s",data.c_str());
+   if(not css->load_from_data(data)) {
+      printf("failed to load css for Favorite and Trash Button\n");
+    }
+
    //  if (getEnabledButton()->get_active()) 
    if (getExpander()->getEnabled())
    for (size_t i=0; i< env->countPanel() ; i++)
    {
       FoldableToolPanel* p = static_cast<FoldableToolPanel*> (env->getPanel(i));
-      if ( (p != NULL)
+      if ( (p != nullptr)
       && (!(p->canBeIgnored())))
       {
         colorFavorite(p);
@@ -107,7 +142,7 @@ void TTFavoriteColorChooser::enabledChanged()
   for (size_t i=0; i< env->countPanel() ; i++)
   {
      FoldableToolPanel* p = static_cast<FoldableToolPanel*> (env->getPanel(i));
-      if ( (p != NULL)
+      if ( (p != nullptr)
       && (!(p->canBeIgnored())))
       {
         colorFavorite(p, true);
@@ -116,64 +151,60 @@ void TTFavoriteColorChooser::enabledChanged()
   }
 }
 
-void  TTFavoriteColorChooser::colorButton(Gtk::ToggleButton* button, Gdk::Color color, bool deactivate)
+void  TTFavoriteColorChooser::colorButton(Gtk::ToggleButton* button, Gdk::RGBA rgba, bool deactivate, int bType)
 {  
   bool state;
-  Gtk::Widget* w;
+//  Gtk::Widget* w;
 
-  w  = (Gtk::Widget*) button;
+//  w  = (Gtk::Widget*) button;
   state = button->get_active();
   
  // if((!deactivate) && (getEnabledButton()->get_active()))
   if((!deactivate) && (getExpander()->getEnabled()))
   {
 
-
     if ((!deactivate) && (state))
     {
-      w->modify_bg(Gtk::STATE_NORMAL , color);
-      w->modify_bg(Gtk::STATE_ACTIVE , color);
-      w->modify_bg(Gtk::STATE_PRELIGHT, color);
+      if (bType == 1)
+        button->set_name("FavoriteButtonChecked");
+      else
+        button->set_name("TrashButtonChecked");
     }
     else
     {
-      w->unset_bg(Gtk::STATE_NORMAL);
-      w->unset_bg(Gtk::STATE_ACTIVE);
-      w->unset_bg(Gtk::STATE_PRELIGHT);
+      button->set_name("none");
     }
   }
   else
   {
-      w->unset_bg(Gtk::STATE_NORMAL);
-      w->unset_bg(Gtk::STATE_ACTIVE);
-      w->unset_bg(Gtk::STATE_PRELIGHT);
+     button->set_name("none");
   }
    
 }
 
 void TTFavoriteColorChooser::colorFavorite(ToolPanel* panel, bool deactivate)
 {
-  if (panel!=NULL)
+  if (panel!=nullptr)
   {
     Gtk::ToggleButton* b = panel->getFavoriteButton();
-    colorButton(b, cbFavorite->get_color(), deactivate);
+    colorButton(b, cbFavorite->get_rgba(), deactivate, 1);
   }
 }
 
 void TTFavoriteColorChooser::colorTrash(ToolPanel* panel, bool deactivate)
 {
-  if (panel!=NULL)
+  if (panel!=nullptr)
   {
     Gtk::ToggleButton* b = panel->getTrashButton();
-    colorButton(b, cbTrash->get_color(), deactivate);
+    colorButton(b, cbTrash->get_rgba(), deactivate, 0);
   }
 }
 
 Glib::ustring TTFavoriteColorChooser::themeExport()
 {
   Glib::ustring s_active = getToolName() + ":" + "active " + std::string(  getExpander()->getEnabled() ? "1" : "0") ;
-  Glib::ustring s_fav_color = getToolName() + ":"  + "favorite_color " +  cbFavorite->get_color().to_string();
-  Glib::ustring s_trash_color = getToolName() + ":"  + "trash_color " +  cbTrash->get_color().to_string();
+  Glib::ustring s_fav_color = getToolName() + ":"  + "favorite_color " +  cbFavorite->get_rgba().to_string();
+  Glib::ustring s_trash_color = getToolName() + ":"  + "trash_color " +  cbTrash->get_rgba().to_string();
   return s_active + "\n" +  s_fav_color + "\n" + s_trash_color + "\n";
 }
 
@@ -209,10 +240,11 @@ void TTFavoriteColorChooser::themeImport(std::ifstream& myfile)
           {
             if(getline(tokensplitter, token, ' '))
             {
-              Gdk::Color color;
+              Gdk::RGBA rgba;
               //todo: verify that this method is safe against buffer overlow
-              color.set(token);
-              cbFavorite->set_color(color);
+                
+              rgba.set(token); // this seems bugger, using homemade function
+              cbFavorite->set_rgba(rgba);
             }
           }
 
@@ -220,10 +252,10 @@ void TTFavoriteColorChooser::themeImport(std::ifstream& myfile)
          {
             if(getline(tokensplitter, token, ' '))
             {
-              Gdk::Color color;
-              //todo: verify that this method is safe against buffer overlow
-              color.set(token); 
-              cbTrash->set_color(color);
+              Gdk::RGBA rgba;
+
+              rgba.set(token); // this seems bugger, using homemade function
+              cbTrash->set_rgba(rgba);
             }
          }
        }
@@ -237,5 +269,3 @@ void TTFavoriteColorChooser::themeImport(std::ifstream& myfile)
     }
   }
 }
-
-

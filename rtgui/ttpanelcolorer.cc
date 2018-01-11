@@ -55,12 +55,11 @@ TTPanelColorChooser::TTPanelColorChooser () : FoldableToolPanel(this, "ttpanelco
   pack_start(*themeBox1, Gtk::PACK_SHRINK, 0);
   pack_start(*themeBox2, Gtk::PACK_SHRINK, 0);
 
-  //setting up colors
-  Gdk::Color color;
-  color.set("yellow");
-  cbPanel1->set_color(color);
-  color.set("yellow");
-  cbPanel2->set_color(color);
+  Gdk::RGBA rgba;
+  rgba.set("green");
+  cbPanel1->set_rgba(rgba);
+  rgba.set("orange");
+  cbPanel2->set_rgba(rgba);
 
 }
 
@@ -80,7 +79,7 @@ void TTPanelColorChooser::deploy()
    for (size_t i=0; i< env->countPanel() ; i++)
    { 
       FoldableToolPanel* p = static_cast<FoldableToolPanel*> (env->getPanel(i));
-      if ( (p != NULL)
+      if ( (p != nullptr)
       && (!(p->canBeIgnored())))
       {
 //        printf("connecting to %s \n", p->getToolName().c_str());
@@ -91,11 +90,12 @@ void TTPanelColorChooser::deploy()
           p->getExpander()->signal_enabled_toggled().connect( sigc::bind<ToolPanel*>( sigc::mem_fun(this, &TTPanelColorChooser::colorer) , p )); 
         }
 
-        // we also react on update on the info box. (this means the label in the top part of the expander
-        p->getLabelInfoNotifier()->signal_activate()  .connect( sigc::bind<ToolPanel*>( sigc::mem_fun(this, &TTPanelColorChooser::pangorer), p ));
-
         colorPanel(p, true);
         pangoPanel(p, true);
+
+         // we also react on update on the info box. (this means the label in the top part of the expander
+        p->getLabelInfoNotifier()->signal_activate()  .connect( sigc::bind<ToolPanel*>( sigc::mem_fun(this, &TTPanelColorChooser::pangorer), p ));
+
       }
    }
    // button enable / disable
@@ -109,7 +109,7 @@ void TTPanelColorChooser::on_toggle_button()
    for (size_t i=0; i< env->countPanel() ; i++)
    {
       FoldableToolPanel* p = static_cast<FoldableToolPanel*> (env->getPanel(i));
-      if ( (p != NULL)
+      if ( (p != nullptr)
       && (!(p->canBeIgnored())))
       {
         colorPanel(p);
@@ -120,23 +120,13 @@ void TTPanelColorChooser::on_toggle_button()
   for (size_t i=0; i< env->countPanel() ; i++)
   {
      FoldableToolPanel* p = static_cast<FoldableToolPanel*> (env->getPanel(i));
-      if ( (p != NULL)
+      if ( (p != nullptr)
       && (!(p->canBeIgnored())))
       {
         colorPanel(p, true); 
         pangoPanel(p, true);
       }
   }
-
-}
-
-void TTPanelColorChooser::read(const rtengine::procparams::ProcParams* pp, const ParamsEdited* pedited)
-{
-
-}
-
-void TTPanelColorChooser::write( rtengine::procparams::ProcParams* pp, ParamsEdited* pedited)
-{
 
 }
 
@@ -149,10 +139,10 @@ int TTPanelColorChooser::getState(ToolPanel* panel)
   {
     state = 0;
     if (!panel->getExpander()->getUseEnabled())
-      state = 2;
+      state = 1;
     else
     if (panel->getExpander()->getEnabled())
-      state = 1;
+      state = 2;
     }
   return state;  
 
@@ -160,7 +150,7 @@ int TTPanelColorChooser::getState(ToolPanel* panel)
 //getEnabledButton()->get_active())
   {
     state = 0;
-    if (panel->getEnabledButton() == NULL)
+    if (panel->getEnabledButton() == nullptr)
       state = 2;
     else
     if (panel->getEnabledButton()->get_active())
@@ -170,13 +160,13 @@ int TTPanelColorChooser::getState(ToolPanel* panel)
 */
 }
 
-Gdk::Color TTPanelColorChooser::getColor(ToolPanel* panel, int state)
+Gdk::RGBA TTPanelColorChooser::getColor(ToolPanel* panel, int state)
 {
-  Gdk::Color color;
-   color =cbPanel1->get_color();
+  Gdk::RGBA rgba;
+   rgba = cbPanel1->get_rgba();
    if (state>1)
-     color = cbPanel2->get_color();
-  return color;
+     rgba = cbPanel2->get_rgba();
+  return rgba;
 }
 
 void TTPanelColorChooser::pangoPanel(ToolPanel* panel, bool deactivate)
@@ -195,7 +185,7 @@ void TTPanelColorChooser::pangoPanel(ToolPanel* panel, bool deactivate)
   if (l0)
   { 
     Glib::ustring s0 = l0->get_text();
-//  Glib::ustring s1 = l1->get_text();
+    Glib::ustring s1 = panel->getFavoriteButton()->get_label();
  
     s0 = escapeHtmlChars(s0);
 //    s1 = escapeHtmlChars(s1);
@@ -206,35 +196,32 @@ void TTPanelColorChooser::pangoPanel(ToolPanel* panel, bool deactivate)
     { 
        if (!deactivate &&  (state>0))
       { 
-        Gdk::Color color;
-        color = getColor(panel, state);
-        Glib::ustring colorName = color.to_string();
+        Gdk::RGBA rgba;
+        rgba = getColor(panel, state);
+        Glib::ustring colorName = getHtmlColor(rgba);
         l0->set_markup("<tt><span color=\"" + colorName + "\">" +  s0 + "</span></tt>");
-//        l1->set_markup("<b><span color=\"" + colorName + "\">" +  s1 + "</span></b>");
+
       }
       else
       {
 //       printf("s0=%s\n",s0.c_str());
         l0->set_markup("<tt><span>" + s0 + "</span></tt>");
-//      l1->set_markup("<b><span>" + s1 + "</span></b>");
+
       }
     }
   }
   }
 }
 
-void  TTPanelColorChooser::colorPanel(ToolPanel* panel, bool deactivate) 
+void TTPanelColorChooser::colorPanel(ToolPanel* panel, bool deactivate) 
 {
-  Gdk::Color color;  
+  Gdk::RGBA rgba;  
   int state;
-  Gtk::Widget* w;
-  Gtk::Label* l0;
-  Gtk::Label* l1;
-
+//  Gtk::Widget* w;
 
 //todo: fix colorer whic does not work anymore
    
-  w = (Gtk::Widget*) panel->getExpander();
+//  w = (Gtk::Widget*) panel->getExpander();
 
 //  Gtk::Widget* w2;
 //  w2->hide();
@@ -251,22 +238,12 @@ void  TTPanelColorChooser::colorPanel(ToolPanel* panel, bool deactivate)
   {
     if (state>0)
     { 
-      color = getColor(panel, state);
-      w->modify_fg(Gtk::STATE_NORMAL , color);
-      w->modify_fg(Gtk::STATE_ACTIVE , color);
-      w->modify_fg(Gtk::STATE_PRELIGHT, color);
-      w->modify_base(Gtk::STATE_NORMAL , color);
-      w->modify_base(Gtk::STATE_ACTIVE , color);
-      w->modify_base(Gtk::STATE_PRELIGHT, color);
+      rgba = getColor(panel, state);
+//      panel->getTrashButton()->set_sensitive(false);
     }
     else
     {
-      w->unset_fg(Gtk::STATE_NORMAL);
-      w->unset_fg(Gtk::STATE_ACTIVE);
-      w->unset_fg(Gtk::STATE_PRELIGHT);
-      w->unset_base(Gtk::STATE_NORMAL);
-      w->unset_base(Gtk::STATE_ACTIVE);
-      w->unset_base(Gtk::STATE_PRELIGHT);
+
     }
   }
    
@@ -274,7 +251,7 @@ void  TTPanelColorChooser::colorPanel(ToolPanel* panel, bool deactivate)
 
 void TTPanelColorChooser::colorer(ToolPanel* panel)
 {
-  if (panel!=NULL)
+  if (panel!=nullptr)
   {
     colorPanel(panel);
     pangoPanel(panel);
@@ -285,7 +262,7 @@ void TTPanelColorChooser::colorer(ToolPanel* panel)
 
 void TTPanelColorChooser::pangorer(ToolPanel* panel)
 {
-  if (panel!=NULL)
+  if (panel!=nullptr)
   {
     pangoPanel(panel);
   }
@@ -294,8 +271,8 @@ void TTPanelColorChooser::pangorer(ToolPanel* panel)
 Glib::ustring TTPanelColorChooser::themeExport()
 {
   Glib::ustring s_active = getToolName() + ":" + "active " + std::string(  getExpander()->getEnabled() ? "1" : "0") ;
-  Glib::ustring s_fav_color = getToolName() + ":"  + "always_color " +  cbPanel1->get_color().to_string();
-  Glib::ustring s_trash_color = getToolName() + ":"  + "clicked_color " +  cbPanel2->get_color().to_string();
+  Glib::ustring s_fav_color = getToolName() + ":"  + "always_color " +  cbPanel1->get_rgba().to_string();
+  Glib::ustring s_trash_color = getToolName() + ":"  + "clicked_color " +  cbPanel2->get_rgba().to_string();
   return s_active + "\n" +  s_fav_color + "\n" + s_trash_color + "\n";
 }
 
@@ -330,10 +307,10 @@ void TTPanelColorChooser::themeImport(std::ifstream& myfile)
           {
             if(getline(tokensplitter, token, ' '))
             {
-              Gdk::Color color;
+              Gdk::RGBA rgba;
               //todo: verify that this method is safe against buffer overlow
-              color.set(token);
-              cbPanel1->set_color(color);
+              rgba.set(token);
+              cbPanel1->set_rgba(rgba);
             }
           }
 
@@ -341,10 +318,10 @@ void TTPanelColorChooser::themeImport(std::ifstream& myfile)
          {
             if(getline(tokensplitter, token, ' '))
             {
-              Gdk::Color color;
+              Gdk::RGBA rgba;
               //todo: verify that this method is safe against buffer overlow
-              color.set(token); 
-              cbPanel2->set_color(color);
+              rgba.set(token); 
+              cbPanel2->set_rgba(rgba);
             }
          }
        }
