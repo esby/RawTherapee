@@ -24,12 +24,12 @@
 #include "../rtengine/rtengine.h"
 #include "pparamschangelistener.h"
 #include "profilechangelistener.h"
-#include "profilestore.h"
 #include "partialpastedlg.h"
 #include "guiutils.h"
+#include "profilestorecombobox.h"
 #include "rtimage.h"
 
-class ProfilePanel : public Gtk::VBox, public PParamsChangeListener, public ProfileStoreListener
+class ProfilePanel : public Gtk::Grid, public PParamsChangeListener, public ProfileStoreListener
 {
 
 private:
@@ -42,6 +42,8 @@ private:
     RTImage *profileFillModeOffImage;
     Gtk::ToggleButton* fillMode;
     Gtk::TreeIter currRow;
+    ProfileStoreEntry *lastSavedPSE;
+    ProfileStoreEntry *customPSE;
 
     void          profileFillModeToggled ();
     bool          isCustomSelected ();
@@ -64,12 +66,12 @@ protected:
     ProfileChangeListener* tpc;
     bool dontupdate;
     sigc::connection changeconn;
-
+    static Gtk::Window* parent;
     void changeTo (const rtengine::procparams::PartialProfile* newpp, Glib::ustring profname);
 
 public:
 
-    explicit ProfilePanel (bool readOnly = false);
+    explicit ProfilePanel ();
     virtual ~ProfilePanel ();
 
     void setProfileChangeListener (ProfileChangeListener* ppl)
@@ -77,7 +79,7 @@ public:
         tpc = ppl;
     }
 
-    static void init ();
+    static void init (Gtk::Window* parentWindow);
     static void cleanup ();
     void storeCurrentValue();
     void updateProfileList ();

@@ -20,9 +20,11 @@
 #define __RAWIMAGE_H
 
 #include <ctime>
+#include <cmath>
+#include <iostream>
 
 #include "dcraw.h"
-#include "imageio.h"
+#include "imageformat.h"
 #include "noncopyable.h"
 
 namespace rtengine
@@ -106,7 +108,7 @@ public:
     explicit RawImage( const Glib::ustring &name );
     ~RawImage();
 
-    int loadRaw (bool loadData = true, bool closeFile = true, ProgressListener *plistener = nullptr, double progressRange = 1.0);
+    int loadRaw (bool loadData, unsigned int imageNum = 0, bool closeFile = true, ProgressListener *plistener = nullptr, double progressRange = 1.0);
     void get_colorsCoeff( float* pre_mul_, float* scale_mul_, float* cblack_, bool forceAutoWB );
     void set_prefilters()
     {
@@ -119,23 +121,16 @@ public:
     {
         return image;
     }
-    float** compress_image(); // revert to compressed pixels format and release image data
+    float** compress_image(int frameNum, bool freeImage = true); // revert to compressed pixels format and release image data
     float** data;             // holds pixel values, data[i][j] corresponds to the ith row and jth column
     unsigned prefilters;               // original filters saved ( used for 4 color processing )
+    unsigned int getFrameCount() const { return is_raw; }
 protected:
     Glib::ustring filename; // complete filename
     int rotate_deg; // 0,90,180,270 degree of rotation: info taken by dcraw from exif
     char* profile_data; // Embedded ICC color profile
     float* allocation; // pointer to allocated memory
     int maximum_c4[4];
-    bool isBayer() const
-    {
-        return (filters != 0 && filters != 9);
-    }
-    bool isXtrans() const
-    {
-        return filters == 9;
-    }
     bool isFoveon() const
     {
         return is_foveon;
@@ -179,13 +174,7 @@ public:
     eSensorType getSensorType();
 
     void getRgbCam (float rgbcam[3][4]);
-    void getXtransMatrix ( char xtransMatrix[6][6]);
-    void clearXtransCblack( )
-    {
-        for(int c = 0; c < 4; c++) {
-            cblack[c] = 0;
-        }
-    }
+    void getXtransMatrix ( int xtransMatrix[6][6]);
     unsigned get_filters() const
     {
         return filters;
@@ -246,7 +235,13 @@ public:
     }
     float get_pre_mul(int c )const
     {
-        return pre_mul[c];
+        if(std::isfinite(pre_mul[c])) {
+            return pre_mul[c];
+        } else {
+            std::cout << "Failure decoding '" << filename << "', please file a bug report including the raw file and the line below:" << std::endl;
+            std::cout << "rawimage.h get_pre_mul() : pre_mul[" << c << "] value " << pre_mul[c] << " automatically replaced by value 1.0" << std::endl;
+            return 1.f;
+        }
     }
     float get_rgb_cam( int r, int c) const
     {
@@ -307,16 +302,18 @@ public:
         return zero_is_bad == 1;
     }
 
+    bool isBayer() const
+    {
+        return (filters != 0 && filters != 9);
+    }
+
+    bool isXtrans() const
+    {
+        return filters == 9;
+    }
+
 public:
     // dcraw functions
-    void scale_colors()
-    {
-        if(isXtrans()) {
-            clearXtransCblack( );
-        }
-
-        DCraw::scale_colors();
-    }
     void pre_interpolate()
     {
         DCraw::pre_interpolate();

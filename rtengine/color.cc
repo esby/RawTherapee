@@ -25,8 +25,6 @@
 #include "opthelper.h"
 #include "iccstore.h"
 
-#define pow_F(a,b) (xexpf(b*xlogf(a)))
-
 using namespace std;
 
 namespace rtengine
@@ -773,37 +771,38 @@ void Color::hsl2rgb01 (float h, float s, float l, float &r, float &g, float &b)
 
 void Color::rgb2hsv(float r, float g, float b, float &h, float &s, float &v)
 {
-    double var_R = r / 65535.0;
-    double var_G = g / 65535.0;
-    double var_B = b / 65535.0;
+    const double var_R = r / 65535.0;
+    const double var_G = g / 65535.0;
+    const double var_B = b / 65535.0;
 
-    double var_Min = min(var_R, var_G, var_B);
-    double var_Max = max(var_R, var_G, var_B);
-    double del_Max = var_Max - var_Min;
+    const double var_Min = min(var_R, var_G, var_B);
+    const double var_Max = max(var_R, var_G, var_B);
+    const double del_Max = var_Max - var_Min;
+
+    h = 0.f;
     v = var_Max;
 
     if (del_Max < 0.00001 && del_Max > -0.00001) { // no fabs, slow!
-        h = 0;
-        s = 0;
+        s = 0.f;
     } else {
         s = del_Max / var_Max;
 
-        if      ( var_R == var_Max ) {
+        if (var_R == var_Max) {
             h = (var_G - var_B) / del_Max;
-        } else if ( var_G == var_Max ) {
+        } else if (var_G == var_Max) {
             h = 2.0 + (var_B - var_R) / del_Max;
-        } else if ( var_B == var_Max ) {
+        } else if (var_B == var_Max) {
             h = 4.0 + (var_R - var_G) / del_Max;
         }
 
-        h /= 6.0;
+        h /= 6.f;
 
-        if ( h < 0 ) {
-            h += 1;
+        if (h < 0.f) {
+            h += 1.f;
         }
 
-        if ( h > 1 ) {
-            h -= 1;
+        if (h > 1.f) {
+            h -= 1.f;
         }
     }
 }
@@ -1525,23 +1524,13 @@ void Color::interpolateRGBColor (const float balance, const float r1, const floa
 
 
 void Color::interpolateRGBColor (float realL, float iplow, float iphigh, int algm, const float balance, int twoc, int metchrom,
-                                 bool chr, bool lum, float chromat, float luma, const float r1, const float g1, const float b1,
+                                 float chromat, float luma, const float r1, const float g1, const float b1,
                                  const float xl, const float yl, const float zl, const float x2, const float y2, const float z2,
-                                 int toDo, const double xyz_rgb[3][3], const double rgb_xyz[3][3], float &ro, float &go, float &bo)
+                                 const double xyz_rgb[3][3], const double rgb_xyz[3][3], float &ro, float &go, float &bo)
 {
     float X1, Y1, Z1, X2, Y2, Z2, X, Y, Z, XL, YL, ZL;
-    float L1, L2, LL, a_1, b_1, a_2, b_2, a, b, a_L, b_L;
-    float c1, c2, h1, h2, cL, hL;
-    float RR, GG, BB;
-    float Lr;
-    float slc = 0.f;
-    float hh = 0.f;
-    float ll = 0.f;
-    float sh = 0.f;
-    bool LCH = false;
+    float L1 = 0.f, L2, LL, a_1 = 0.f, b_1 = 0.f, a_2 = 0.f, b_2 = 0.f, a_L, b_L;
 
-    float ha, hb, hc, ba;
-    float c_1, h_1;
     // converting color 1 to Lab  (image)
     Color::rgbxyz(r1, g1, b1, X1, Y1, Z1, xyz_rgb);
 
@@ -1566,19 +1555,16 @@ void Color::interpolateRGBColor (float realL, float iplow, float iphigh, int alg
     X2 = x2;
     Y2 = y2;
     Z2 = z2;
-    float c_2, h_2;
 
     if(algm == 1 ) {
         Color::XYZ2Lab(X2, Y2, Z2, L2, a_2, b_2);
         //Color::Lab2Lch(a_2, b_2, c_2, h_2) ;
     }
 
-    float bal, balH, cal, calH, calm;
-    bal = balH = balance;
+    float cal, calH, calm;
     cal = calH = calm = 1.f - chromat;
     float med = 1.f;
     float medH = 0.f;
-    float medL = (iphigh + iplow) / 2.f;
 
     float calan;
     calan = chromat;
@@ -1588,19 +1574,6 @@ void Color::interpolateRGBColor (float realL, float iplow, float iphigh, int alg
 
     if(twoc == 0) { // 2 colours
         calan = chromat;
-
-        //calculate new balance in function of (arbitrary) "med".. I hope no error !!
-        if      (realL > iplow && realL <= med) {
-            bal = realL * balance / (iplow - med) - med * balance / (iplow - med);
-        } else if (realL <= iplow) {
-            bal = realL * balance / iplow;
-        }
-
-        if      (realL > medH && realL <= iphigh) {
-            balH = realL * balance / (iphigh - medH) - medH * balance / (iphigh - medH);
-        } else if (realL > iphigh) {
-            balH = realL * balance * (iphigh - 1.f) - balance * (iphigh - 1.f);
-        }
 
         //calculate new balance chroma
         if      (realL > iplow && realL <= med) {
@@ -1616,8 +1589,7 @@ void Color::interpolateRGBColor (float realL, float iplow, float iphigh, int alg
         }
     }
 
-    float hX = 0.f;
-    float hLL, hH, ccL, ccH, llH, aaH, bbH;
+    float aaH, bbH;
 
     if(algm <= 1) {
         if(twoc == 0  && metchrom == 3) { // 2 colours  only with special "ab"
@@ -1639,8 +1611,6 @@ void Color::interpolateRGBColor (float realL, float iplow, float iphigh, int alg
                 b_1 = b_1 + (b_2 - b_1) * calby * balance;
             }
         }
-    } else {
-        h1 = hX;
     }
 
     Color::Lab2XYZ(L1, a_1, b_1, X, Y, Z);
@@ -1648,7 +1618,7 @@ void Color::interpolateRGBColor (float realL, float iplow, float iphigh, int alg
     Color::xyz2rgb(X, Y, Z, ro, go, bo, rgb_xyz);// ro go bo in gamut
 }
 
-void Color::calcGamma (double pwr, double ts, int mode, int imax, GammaValues &gamma)
+void Color::calcGamma (double pwr, double ts, int mode, GammaValues &gamma)
 {
     //from Dcraw (D.Coffin)
     int i;
@@ -1813,6 +1783,71 @@ void Color::Lab2XYZ(vfloat L, vfloat a, vfloat b, vfloat &x, vfloat &y, vfloat &
 }
 #endif // __SSE2__
 
+void Color::RGB2Lab(float *R, float *G, float *B, float *L, float *a, float *b, const float wp[3][3], int width)
+{
+
+#if defined( __SSE2__ ) && defined( __x86_64__ )
+    vfloat maxvalfv = F2V(MAXVALF);
+    vfloat c116v = F2V(116.f);
+    vfloat c5242d88v = F2V(5242.88f);
+    vfloat c500v = F2V(500.f);
+    vfloat c200v = F2V(200.f);
+#endif
+    int i = 0;
+#if defined( __SSE2__ ) && defined( __x86_64__ )
+    for(;i < width - 3; i+=4) {
+        const vfloat rv = LVFU(R[i]);
+        const vfloat gv = LVFU(G[i]);
+        const vfloat bv = LVFU(B[i]);
+        const vfloat xv = F2V(wp[0][0]) * rv + F2V(wp[0][1]) * gv + F2V(wp[0][2]) * bv;
+        const vfloat yv = F2V(wp[1][0]) * rv + F2V(wp[1][1]) * gv + F2V(wp[1][2]) * bv;
+        const vfloat zv = F2V(wp[2][0]) * rv + F2V(wp[2][1]) * gv + F2V(wp[2][2]) * bv;
+
+        vmask maxMask = vmaskf_gt(vmaxf(xv, vmaxf(yv, zv)), maxvalfv);
+        if (_mm_movemask_ps((vfloat)maxMask)) {
+            // take slower code path for all 4 pixels if one of the values is > MAXVALF. Still faster than non SSE2 version
+            for(int k = 0; k < 4; ++k) {
+                float x = xv[k];
+                float y = yv[k];
+                float z = zv[k];
+                float fx = (x <= 65535.f ? cachef[x] : (327.68f * xcbrtf(x / MAXVALF)));
+                float fy = (y <= 65535.f ? cachef[y] : (327.68f * xcbrtf(y / MAXVALF)));
+                float fz = (z <= 65535.f ? cachef[z] : (327.68f * xcbrtf(z / MAXVALF)));
+
+                L[i + k] = (116.f *  fy - 5242.88f); //5242.88=16.0*327.68;
+                a[i + k] = (500.f * (fx - fy) );
+                b[i + k] = (200.f * (fy - fz) );
+            }
+        } else {
+            const vfloat fx = cachef[xv];
+            const vfloat fy = cachef[yv];
+            const vfloat fz = cachef[zv];
+
+            STVFU(L[i], c116v *  fy - c5242d88v); //5242.88=16.0*327.68;
+            STVFU(a[i], c500v * (fx - fy));
+            STVFU(b[i], c200v * (fy - fz));
+        }
+    }
+#endif
+    for(;i < width; ++i) {
+        const float rv = R[i];
+        const float gv = G[i];
+        const float bv = B[i];
+        float x = wp[0][0] * rv + wp[0][1] * gv + wp[0][2] * bv;
+        float y = wp[1][0] * rv + wp[1][1] * gv + wp[1][2] * bv;
+        float z = wp[2][0] * rv + wp[2][1] * gv + wp[2][2] * bv;
+        float fx, fy, fz;
+
+        fx = (x <= 65535.0f ? cachef[x] : (327.68f * xcbrtf(x / MAXVALF)));
+        fy = (y <= 65535.0f ? cachef[y] : (327.68f * xcbrtf(y / MAXVALF)));
+        fz = (z <= 65535.0f ? cachef[z] : (327.68f * xcbrtf(z / MAXVALF)));
+
+        L[i] = 116.0f *  fy - 5242.88f; //5242.88=16.0*327.68;
+        a[i] = 500.0f * (fx - fy);
+        b[i] = 200.0f * (fy - fz);
+    }
+}
+
 void Color::XYZ2Lab(float X, float Y, float Z, float &L, float &a, float &b)
 {
 
@@ -1846,7 +1881,7 @@ void Color::Lab2Yuv(float L, float a, float b, float &Y, float &u, float &v)
     v = 9.0 * Y / (X + 15 * Y + 3 * Z) - v0;
 }
 
-void Color::Yuv2Lab(float Yin, float u, float v, float &L, float &a, float &b, double wp[3][3])
+void Color::Yuv2Lab(float Yin, float u, float v, float &L, float &a, float &b, const double wp[3][3])
 {
     float u1 = u + u0;
     float v1 = v + v0;
@@ -2632,7 +2667,7 @@ void Color::gamutLchonly (float2 sincosval, float &Lprov1, float &Chprov1, const
  *    const double wip[3][3]: matrix for working profile
  *    bool multiThread      : parallelize the loop
  */
-SSEFUNCTION  void Color::LabGamutMunsell(float *labL, float *laba, float *labb, const int N, bool corMunsell, bool lumaMuns, bool isHLEnabled, bool gamut, const double wip[3][3], bool multiThread )
+SSEFUNCTION  void Color::LabGamutMunsell(float *labL, float *laba, float *labb, const int N, bool corMunsell, bool lumaMuns, bool isHLEnabled, bool gamut, const double wip[3][3])
 {
 #ifdef _DEBUG
     MyTime t1e, t2e;

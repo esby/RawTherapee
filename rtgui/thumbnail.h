@@ -49,7 +49,6 @@ class Thumbnail
 
     rtengine::procparams::ProcParams      pparams;
     bool            pparamsValid;
-    bool            pparamsSet;
     bool            needsReProcessing;
     bool            imageLoading;
 
@@ -71,7 +70,7 @@ class Thumbnail
     void            _loadThumbnail (bool firstTrial = true);
     void            _saveThumbnail ();
     void            _generateThumbnailImage ();
-    int             infoFromImage (const Glib::ustring& fname, rtengine::RawMetaDataLocation* rml = nullptr);
+    int             infoFromImage (const Glib::ustring& fname, std::unique_ptr<rtengine::RawMetaDataLocation> rml = nullptr);
     void            loadThumbnail (bool firstTrial = true);
     void            generateExifDateTimeStrings ();
 
@@ -87,7 +86,7 @@ public:
     const rtengine::procparams::ProcParams& getProcParamsU ();  // Unprotected version
 
     // Use this to create params on demand for update ; if flaggingMode=true, the procparams is created for a file being flagged (inTrash, rank, colorLabel)
-    rtengine::procparams::ProcParams* createProcParamsForUpdate (bool returnParams, bool forceCPB, bool flaggingMode = false);
+    rtengine::procparams::ProcParams* createProcParamsForUpdate (bool returnParams, bool force, bool flaggingMode = false);
 
     void              setProcParams (const rtengine::procparams::ProcParams& pp, ParamsEdited* pe = nullptr, int whoChangedIt = -1, bool updateCacheNow = true);
     void              clearProcParams (int whoClearedIt = -1);
@@ -108,6 +107,8 @@ public:
     void              imageEnqueued ();
     void              imageRemovedFromQueue ();
     bool              isEnqueued ();
+    bool              isPixelShift ();
+    bool              isHDR ();
 
 //        unsigned char*  getThumbnailImage (int &w, int &h, int fixwh=1); // fixwh = 0: fix w and calculate h, =1: fix h and calculate w
     rtengine::IImage8* processThumbImage    (const rtengine::procparams::ProcParams& pparams, int h, double& scale);
@@ -125,7 +126,7 @@ public:
             temp = green = -1.0;
         }
     }
-    void                  getAutoWB (double& temp, double& green, double equal);
+    void                  getAutoWB (double& temp, double& green, double equal, double tempBias);
     void                  getSpotWB (int x, int y, int rect, double& temp, double& green)
     {
         if (tpp) {

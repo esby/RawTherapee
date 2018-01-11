@@ -21,11 +21,14 @@
 
 #include <gtkmm.h>
 #include "../rtengine/rtengine.h"
+#include <exception>
 
 #define STARTUPDIR_CURRENT 0
 #define STARTUPDIR_HOME    1
 #define STARTUPDIR_CUSTOM  2
 #define STARTUPDIR_LAST    3
+
+#define THEMEREGEXSTR      "^(.+)-GTK3-(\\d{1,2})?_(\\d{1,2})?\\.css$"
 
 // Default bundled profile name to use for Raw images
 #ifdef WIN32
@@ -37,20 +40,28 @@
 #define DEFPROFILE_IMG      "Neutral"
 // Profile name to use for internal values' profile
 #define DEFPROFILE_INTERNAL "Neutral"
+// Special name for the Dynamic profile
+#define DEFPROFILE_DYNAMIC  "Dynamic"
 
-class SaveFormat
-{
+struct SaveFormat {
+    SaveFormat() :
+        format ("jpg"),
+        pngBits (8),
+        jpegQuality (90),
+        jpegSubSamp (2),
+        tiffBits (8),
+        tiffUncompressed (true),
+        saveParams (true)
+    {
+    }
 
-public:
     Glib::ustring format;
     int pngBits;
-    int pngCompression;
     int jpegQuality;
     int jpegSubSamp;  // 1=best compression, 3=best quality
     int tiffBits;
     bool tiffUncompressed;
     bool saveParams;
-    SaveFormat () : format("jpg"), pngBits(8), pngCompression(6), jpegQuality(90), jpegSubSamp(2), tiffBits(8), tiffUncompressed(true), saveParams(true) {};
 };
 
 enum ThFileType {FT_Invalid = -1, FT_None = 0, FT_Raw = 1, FT_Jpeg = 2, FT_Tiff = 3, FT_Png = 4, FT_Custom = 5, FT_Tiff16 = 6, FT_Png16 = 7, FT_Custom16 = 8};
@@ -60,14 +71,31 @@ enum prevdemo_t {PD_Sidecar = 1, PD_Fast = 0};
 
 class Options
 {
+public:
+    class Error: public std::exception
+    {
+    public:
+        Error (const Glib::ustring &msg): msg_ (msg) {}
+        const char *what() const throw()
+        {
+            return msg_.c_str();
+        }
+        const Glib::ustring &get_msg() const throw()
+        {
+            return msg_;
+        }
+
+    private:
+        Glib::ustring msg_;
+    };
 
 private:
     bool defProfRawMissing;
     bool defProfImgMissing;
     Glib::ustring userProfilePath;
     Glib::ustring globalProfilePath;
-    bool checkProfilePath(Glib::ustring &path);
-    bool checkDirPath(Glib::ustring &path, Glib::ustring errString);
+    bool checkProfilePath (Glib::ustring &path);
+    bool checkDirPath (Glib::ustring &path, Glib::ustring errString);
     void updatePaths();
     int getString (const char* src, char* dst);
     void error (int line);
@@ -82,8 +110,8 @@ private:
      * @param destination destination variable to store to
      * @return @c true if @p destination was changed
      */
-    bool safeDirGet(const Glib::KeyFile& keyFile, const Glib::ustring& section,
-                    const Glib::ustring& entryName, Glib::ustring& destination);
+    bool safeDirGet (const Glib::KeyFile& keyFile, const Glib::ustring& section,
+                     const Glib::ustring& entryName, Glib::ustring& destination);
 
 public:
 
@@ -119,22 +147,33 @@ public:
     bool browserDirPanelOpened;
     bool editorFilmStripOpened;
     int historyPanelWidth;
-    Glib::ustring font;
-    Glib::ustring colorPickerFont;
-    int windowWidth;
-    int windowHeight;
     int windowX;
     int windowY;
+    int windowWidth;
+    int windowHeight;
     bool windowMaximized;
+    int windowMonitor;
+    int meowMonitor;
+    bool meowFullScreen;
+    bool meowMaximized;
+    int meowWidth;
+    int meowHeight;
+    int meowX;
+    int meowY;
     int detailWindowWidth;
     int detailWindowHeight;
     int dirBrowserWidth;
     int dirBrowserHeight;
     int preferencesWidth;
     int preferencesHeight;
+    bool lastShowAllExif;
     int lastScale;
     int panAccelFactor;
     int lastCropSize;
+    Glib::ustring fontFamily;    // RT's main font family
+    int fontSize;                // RT's main font size (units: pt)
+    Glib::ustring CPFontFamily;  // ColorPicker font family
+    int CPFontSize;              // ColorPicker font size (units: pt)
     bool fbOnlyRaw;
     bool fbShowDateTime;
     bool fbShowBasicExif;
@@ -152,7 +191,6 @@ public:
     int showFilePanelState; // 0: normal, 1: maximized, 2: normal, 3: hidden
     bool showInfo;
     bool mainNBVertical;  // main notebook vertical tabs?
-    int cropPPI;
     bool showClippedHighlights;
     bool showClippedShadows;
     int highlightThreshold;
@@ -162,8 +200,6 @@ public:
     Glib::ustring language;
     bool languageAutoDetect;
     Glib::ustring theme;
-    bool slimUI;
-    bool useSystemTheme;
     static Glib::ustring cacheBaseDir;
     bool autoSuffix;
     bool forceFormatOpts;
@@ -202,6 +238,7 @@ public:
     std::vector<int> parseExtensionsEnabled;      // List of bool to retain extension or not
     std::vector<Glib::ustring> parsedExtensions;  // List containing all retained extensions (lowercase)
     std::vector<int> tpOpen;
+    bool autoSaveTpOpen;
     //std::vector<int> crvOpen;
     std::vector<int> baBehav;
     rtengine::Settings rtSettings;
@@ -228,7 +265,6 @@ public:
     double sndLngEditProcDoneSecs;  // Minimum processing time seconds till the sound is played
     bool sndEnable;
 
-    bool tunnelMetaData;    // Pass through IPTC and XMP unchanged
     int histogramPosition;  // 0=disabled, 1=left pane, 2=right pane
     //int histogramWorking;  // 0=disabled, 1=left pane, 2=right pane
     bool histogramBar;
@@ -240,6 +276,12 @@ public:
     int curvebboxpos; // 0=above, 1=right, 2=below, 3=left
 
     bool showFilmStripToolBar;
+
+    // cropping options
+    int cropPPI;
+    enum CropGuidesMode { CROP_GUIDE_NONE, CROP_GUIDE_FRAME, CROP_GUIDE_FULL };
+    CropGuidesMode cropGuides;
+    bool cropAutoFit;    
 
     // Performance options
     Glib::ustring clutsDir;
@@ -292,6 +334,7 @@ public:
     int           fastexport_resize_dataspec;
     int           fastexport_resize_width;
     int           fastexport_resize_height;
+    bool fastexport_use_fast_pipeline;
 
     // Dialog settings
     Glib::ustring lastIccDir;
@@ -309,6 +352,8 @@ public:
     Glib::ustring lastVibranceCurvesDir;
     Glib::ustring lastProfilingReferenceDir;
     Glib::ustring lastBWCurvesDir;
+    Glib::ustring lastLensProfileDir;
+    bool gimpPluginShowInfoDialog;
 
     size_t maxRecentFolders;                   // max. number of recent folders stored in options file
     std::vector<Glib::ustring> recentFolders;  // List containing all recent folders
@@ -319,10 +364,10 @@ public:
     Options*    copyFrom        (Options* other);
     void        filterOutParsedExtensions ();
     void        setDefaults     ();
-    int         readFromFile    (Glib::ustring fname);
-    int         saveToFile      (Glib::ustring fname);
-    static bool load            ();
-    static void save            ();
+    void readFromFile (Glib::ustring fname);
+    void saveToFile (Glib::ustring fname);
+    static void load (bool lightweight = false);
+    static void save();
 
     // if multiUser=false, send back the global profile path
     Glib::ustring getPreferredProfilePath();
@@ -334,9 +379,10 @@ public:
     {
         return globalProfilePath;
     }
-    Glib::ustring findProfilePath(Glib::ustring &profName);
+    Glib::ustring findProfilePath (Glib::ustring &profName);
+    bool        is_parse_extention (Glib::ustring fname);
     bool        has_retained_extention (Glib::ustring fname);
-    bool        is_extention_enabled(Glib::ustring ext);
+    bool        is_extention_enabled (Glib::ustring ext);
     bool        is_defProfRawMissing()
     {
         return defProfRawMissing;
@@ -345,11 +391,11 @@ public:
     {
         return defProfImgMissing;
     }
-    void        setDefProfRawMissing(bool value)
+    void        setDefProfRawMissing (bool value)
     {
         defProfRawMissing = value;
     }
-    void        setDefProfImgMissing(bool value)
+    void        setDefProfImgMissing (bool value)
     {
         defProfImgMissing = value;
     }
@@ -359,6 +405,8 @@ extern Options options;
 extern Glib::ustring argv0;
 extern Glib::ustring argv1;
 extern bool simpleEditor;
+extern bool gimpPlugin;
+extern bool remote;
 extern Glib::ustring versionString;
 extern Glib::ustring paramFileExtension;
 extern Glib::ustring paramFileGuiExtension;

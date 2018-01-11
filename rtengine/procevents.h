@@ -26,7 +26,7 @@ namespace rtengine
 
 
 // Aligned so the first entry starts on line 30
-enum ProcEvent {
+enum ProcEventCode {
     EvPhotoLoaded = 0,
     EvProfileLoaded = 1, // seems superseded by EvProfileChanged
     EvProfileChanged = 2,
@@ -73,7 +73,7 @@ enum ProcEvent {
     EvLDNRadius = 43, // obsolete
     EvLDNEdgeTolerance = 44, // obsolete
     EvCDNEnabled = 45, // obsolete
-    EvBlendCMSMatrix = 46,
+    EvBlendCMSMatrix = 46, // obsolete
     EvDCPToneCurve = 47,
     EvDCPIlluminant = 48,
     EvSHEnabled = 49,
@@ -451,7 +451,7 @@ enum ProcEvent {
     EvLgam = 421,
     EvLslope = 422,
     EvLhighl = 423,
-    EvLbaselog = 424,
+//    EvLbaselog = 424,   -- can be reused --
     EvRetinexlhcurve = 425,
     EvOIntent = 426,
     EvMonitorTransform = 427,
@@ -470,10 +470,82 @@ enum ProcEvent {
     EvRetinexgaintransmission = 440,
     EvLskal = 441,
     EvOBPCompens = 442,
-    EvFileSaved = 443,
+    EvWBtempBias = 443,
+    EvRawImageNum = 444,
+    EvPixelShiftMotion = 445,
+    EvPixelShiftMotionCorrection = 446,
+    EvPixelShiftStddevFactorGreen = 447,
+    EvPixelShiftEperIso = 448,
+    EvPixelShiftNreadIso = 449,
+    EvPixelShiftPrnu = 450,
+    EvPixelshiftShowMotion = 451,
+    EvPixelshiftShowMotionMaskOnly = 452,
+    EvPixelShiftAutomatic = 453,
+    EvPixelShiftNonGreenHorizontal = 454,
+    EvPixelShiftNonGreenVertical = 455,
+    EvPixelShiftNonGreenCross = 456,
+    EvPixelShiftStddevFactorRed = 457,
+    EvPixelShiftStddevFactorBlue = 458,
+    EvPixelShiftGreenAmaze = 459,
+    EvPixelShiftNonGreenAmaze = 460,
+    EvPixelShiftGreen = 461,
+    EvPixelShiftRedBlueWeight = 462,
+    EvPixelShiftBlur = 463,
+    EvPixelShiftSigma = 464,
+    EvPixelShiftSum = 465,
+    EvPixelShiftExp0 = 466,
+    EvPixelShiftHoleFill = 467,
+    EvPixelShiftMedian = 468,
+    EvPixelShiftMedian3 = 469,
+    EvPixelShiftMotionMethod = 470,
+    EvPixelShiftSmooth = 471,
+    EvPixelShiftLmmse = 472,
+    EvPixelShiftEqualBright = 473,
+    EvPixelShiftEqualBrightChannel = 474,
+    EvCATtempout = 475,
+    EvCATgreenout = 476,
+    EvCATybout = 477,
+    EvCATDegreeout = 478,
+    EvCATAutoDegreeout = 479,
+    EvCATtempsc = 480,
+    EvCATgreensc = 481,
+    EvCATybscen = 482,
+    EvCATAutoyb = 483,
+    EvLensCorrMode = 484,
+    EvLensCorrLensfunCamera = 485,
+    EvLensCorrLensfunLens = 486,
+    EvTMFattalEnabled = 487,
+    EvTMFattalThreshold = 488,
+    EvTMFattalAmount = 489,
+    EvWBEnabled = 490,
+    EvRGBEnabled = 491,
+    EvLEnabled = 492,
+    EvPixelShiftOneGreen = 493,
+
     NUMOFEVENTS
 
 };
+
+
+class ProcEvent {
+public:
+    ProcEvent(): code_(0) {}
+    ProcEvent(ProcEventCode code): code_(code) {}
+    explicit ProcEvent(int code): code_(code) {}
+    operator int() { return code_; }
+
+private:
+    int code_;
+};
+
+
+inline bool operator==(ProcEvent a, ProcEvent b) { return int(a) == int(b); }
+inline bool operator==(ProcEvent a, ProcEventCode b) { return int(a) == int(b); }
+inline bool operator==(ProcEventCode a, ProcEvent b) { return int(a) == int(b); }
+inline bool operator!=(ProcEvent a, ProcEvent b) { return int(a) != int(b); }
+inline bool operator!=(ProcEvent a, ProcEventCode b) { return int(a) != int(b); }
+inline bool operator!=(ProcEventCode a, ProcEvent b) { return int(a) != int(b); }
+
 }
 #endif
 

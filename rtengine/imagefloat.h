@@ -79,9 +79,9 @@ public:
     {
         return save (fname);
     }
-    virtual int          saveAsPNG  (Glib::ustring fname, int compression = -1, int bps = -1)
+    virtual int          saveAsPNG  (Glib::ustring fname, int bps = -1)
     {
-        return savePNG (fname, compression, bps);
+        return savePNG (fname, bps);
     }
     virtual int          saveAsJPEG (Glib::ustring fname, int quality = 100, int subSamp = 3)
     {
@@ -106,6 +106,7 @@ public:
     void                 calcCroppedHistogram(const ProcParams &params, float scale, LUTu & hist);
 
     void                 ExecCMSTransform(cmsHTRANSFORM hTransform);
+    void                 ExecCMSTransform(cmsHTRANSFORM hTransform, const LabImage &labImage, int cx, int cy);
 };
 
 }

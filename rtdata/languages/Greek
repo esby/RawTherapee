@@ -58,10 +58,6 @@ FILEBROWSER_SHOWRANK4HINT;Show images ranked as 4 star
 FILEBROWSER_SHOWRANK5HINT;Show images ranked as 5 star
 FILEBROWSER_SHOWTRASHHINT;Show content of the trash
 FILEBROWSER_SHOWUNRANKHINT;Show unranked images
-FILEBROWSER_STARTPROCESSING;Start Processing
-FILEBROWSER_STARTPROCESSINGHINT;Start processing/saving of images in the queue
-FILEBROWSER_STOPPROCESSING;Stop processing
-FILEBROWSER_STOPPROCESSINGHINT;Stop processing of images
 FILEBROWSER_THUMBSIZE;Thumb. size
 FILEBROWSER_ZOOMINHINT;Increase thumbnail size
 FILEBROWSER_ZOOMOUTHINT;Decrease thumbnail size
@@ -83,7 +79,6 @@ HISTOGRAM_TOOLTIP_L;Προβολή/απόκρυψη CIELAB ιστογράμμα�
 HISTOGRAM_TOOLTIP_R;Προβολή/απόκρυψη KOKKINOY ιστογράμματος
 HISTORY_CHANGED;Αλλαγή
 HISTORY_CUSTOMCURVE;Προσαρμοσμένη καμπύλη
-HISTORY_DELSNAPSHOT;Αφαίρεση στιγμιοτύπου
 HISTORY_FROMCLIPBOARD;From clipboard
 HISTORY_LABEL;Ιστορικό
 HISTORY_MSG_1;Φορτώθηκε εικόνα
@@ -245,14 +240,11 @@ PREFERENCES_CACHETHUMBHEIGHT;Maximal Thumbnail Height
 PREFERENCES_CLIPPINGIND;Ένδειξη ψαλιδίσματος
 PREFERENCES_DATEFORMAT;Διάταξη ημερομηνίας
 PREFERENCES_DATEFORMATHINT;<i>YΜπορείτε να χρησιμοποιήσετε τις εξής εντολές μορφοποίησης:</i>\n<b>%y</b><i> : χρονολογία</i>\n<b>%m</b><i> : μήνας</i>\n<b>%d</b><i> : ημέρα</i>\n<i>\nΓια παράδειγμα, η μορφοποίηση ημερομηνίας στην Ελλάδα είναι:</i>\n<b>%y/%m/%d</b>
-PREFERENCES_DEFAULTLANG;Προεπιλεγμένη γλώσσα
-PREFERENCES_DEFAULTTHEME;Προεπιλεγμένο θέμα
 PREFERENCES_DIRHOME;Τοποθεσία "Home"
 PREFERENCES_DIRLAST;Τελευταία τοποθεσία που χρησιμοποιήθηκε
 PREFERENCES_DIROTHER;Άλλο
 PREFERENCES_DIRSELECTDLG;Επιλέξτε τοποθεσία εικόνων κατά την έναρξη...
 PREFERENCES_DIRSOFTWARE;Τοποθεσία εγκατάστασης
-PREFERENCES_EDITORCMDLINE;Other command line
 PREFERENCES_EXTERNALEDITOR;External editor
 PREFERENCES_FBROWSEROPTS;Επιλογές περιήγησης αρχείων
 PREFERENCES_FILEFORMAT;Είδος αρχείου
@@ -429,7 +421,9 @@ TP_WBALANCE_TEMPERATURE;Θερμοκρασία
 !ABOUT_TAB_RELEASENOTES;Release Notes
 !ABOUT_TAB_SPLASH;Splash
 !BATCHQUEUE_AUTOSTART;Auto-start
+!BATCHQUEUE_AUTOSTARTHINT;Start processing automatically when a new job arrives.
 !BATCHQUEUE_DESTFILENAME;Path and file name
+!BATCHQUEUE_STARTSTOPHINT;Start or stop processing the images in the queue.\n\nShortcut: <b>Ctrl</b>+<b>s</b>
 !BATCH_PROCESSING;Batch Processing
 !CURVEEDITOR_AXIS_IN;I:
 !CURVEEDITOR_AXIS_LEFT_TAN;LT:
@@ -449,12 +443,24 @@ TP_WBALANCE_TEMPERATURE;Θερμοκρασία
 !CURVEEDITOR_TOOLTIPCOPY;Copy current curve to clipboard.
 !CURVEEDITOR_TOOLTIPPASTE;Paste curve from clipboard.
 !CURVEEDITOR_TYPE;Type:
+!DONT_SHOW_AGAIN;Don't show this message again.
+!DYNPROFILEEDITOR_DELETE;Delete
+!DYNPROFILEEDITOR_EDIT;Edit
+!DYNPROFILEEDITOR_EDIT_RULE;Edit Dynamic Profile Rule
+!DYNPROFILEEDITOR_ENTRY_TOOLTIP;The matching is case insensitive.\nUse the "re:" prefix to enter\na regular expression.
+!DYNPROFILEEDITOR_MOVE_DOWN;Move Down
+!DYNPROFILEEDITOR_MOVE_UP;Move Up
+!DYNPROFILEEDITOR_NEW;New
+!DYNPROFILEEDITOR_NEW_RULE;New Dynamic Profile Rule
+!DYNPROFILEEDITOR_PROFILE;Processing Profile
 !EDITWINDOW_TITLE;Image Edit
 !EDIT_OBJECT_TOOLTIP;Displays a widget on the preview window which lets you adjust this tool.
 !EDIT_PIPETTE_TOOLTIP;To add an adjustment point to the curve, hold the Ctrl key while left-clicking the desired spot in the image preview.\nTo adjust the point, hold the Ctrl key while left-clicking the corresponding area in the preview, then let go of Ctrl (unless you desire fine control) and while still holding the left mouse button move the mouse up or down to move that point up or down in the curve.
 !EXIFFILTER_EXPOSURECOMPENSATION;Exposure compensation (EV)
 !EXIFFILTER_FILETYPE;File type
 !EXIFFILTER_METADATAFILTER;Enable metadata filters
+!EXIFPANEL_SHOWALL;Show all
+!EXPORT_BYPASS;Processing steps to bypass
 !EXPORT_BYPASS_ALL;Select / Unselect All
 !EXPORT_BYPASS_DEFRINGE;Bypass Defringe
 !EXPORT_BYPASS_DIRPYRDENOISE;Bypass Noise Reduction
@@ -477,8 +483,12 @@ TP_WBALANCE_TEMPERATURE;Θερμοκρασία
 !EXPORT_INSTRUCTIONS;Fast Export options provide overrides to bypass time and resource consuming development settings and to run queue processing using the fast export settings instead. This method is recommended for quicker generation of lower resolution images when speed is a priority or when resized output is desired for one or many images without making modifications to their saved development parameters.
 !EXPORT_MAXHEIGHT;Maximum height:
 !EXPORT_MAXWIDTH;Maximum width:
+!EXPORT_PIPELINE;Processing pipeline
 !EXPORT_PUTTOQUEUEFAST;  Put to queue for fast export
 !EXPORT_RAW_DMETHOD;Demosaic method
+!EXPORT_USE_FAST_PIPELINE;Dedicated (full processing on resized image)
+!EXPORT_USE_FAST_PIPELINE_TIP;Use a dedicated processing pipeline for images in Fast Export mode, that trades speed for quality. Resizing of the image is done as early as possible, instead of doing it at the end like in the normal pipeline. The speedup can be significant, but be prepared to see artifacts and a general degradation of output quality.
+!EXPORT_USE_NORMAL_PIPELINE;Standard (bypass some steps, resize at the end)
 !EXTPROGTARGET_1;raw
 !EXTPROGTARGET_2;queue-processed
 !FILEBROWSER_ADDDELTEMPLATE;Add/Del templates...
@@ -494,7 +504,6 @@ TP_WBALANCE_TEMPERATURE;Θερμοκρασία
 !FILEBROWSER_CURRENT_NAME;Current name:
 !FILEBROWSER_DARKFRAME;Dark-frame
 !FILEBROWSER_DELETEDLGMSGINCLPROC;Are you sure you want to delete the selected <b>%1</b> files <b>including</b> a queue-processed version?
-!FILEBROWSER_EXEC_CPB;Custom Profile Builder
 !FILEBROWSER_EXTPROGMENU;Open with
 !FILEBROWSER_FLATFIELD;Flat-Field
 !FILEBROWSER_MOVETODARKFDIR;Move to dark-frames directory
@@ -529,6 +538,7 @@ TP_WBALANCE_TEMPERATURE;Θερμοκρασία
 !FILEBROWSER_RANK3_TOOLTIP;Rank 3 *\nShortcut: <b>Shift-3</b>
 !FILEBROWSER_RANK4_TOOLTIP;Rank 4 *\nShortcut: <b>Shift-4</b>
 !FILEBROWSER_RANK5_TOOLTIP;Rank 5 *\nShortcut: <b>Shift-5</b>
+!FILEBROWSER_RESETDEFAULTPROFILE;Reset to default
 !FILEBROWSER_SELECTDARKFRAME;Select dark-frame...
 !FILEBROWSER_SELECTFLATFIELD;Select flat-field...
 !FILEBROWSER_SHOWCOLORLABEL1HINT;Show images labeled Red.\nShortcut: <b>Alt-1</b>
@@ -544,7 +554,6 @@ TP_WBALANCE_TEMPERATURE;Θερμοκρασία
 !FILEBROWSER_SHOWRECENTLYSAVEDHINT;Show saved images.\nShortcut: <b>Alt-7</b>
 !FILEBROWSER_SHOWRECENTLYSAVEDNOTHINT;Show unsaved images.\nShortcut: <b>Alt-6</b>
 !FILEBROWSER_SHOWUNCOLORHINT;Show images without a color label.\nShortcut: <b>Alt-0</b>
-!FILEBROWSER_TOOLTIP_STOPPROCESSING;Start processing automatically when a new job arrives.
 !FILEBROWSER_UNRANK_TOOLTIP;Unrank.\nShortcut: <b>Shift-0</b>
 !FILECHOOSER_FILTER_ANY;All files
 !FILECHOOSER_FILTER_COLPROF;Color profiles
@@ -562,8 +571,10 @@ TP_WBALANCE_TEMPERATURE;Θερμοκρασία
 !GENERAL_FILE;File
 !GENERAL_NONE;None
 !GENERAL_OPEN;Open
+!GENERAL_SLIDER;Slider
 !GENERAL_UNCHANGED;(Unchanged)
 !GENERAL_WARNING;Warning
+!GIMP_PLUGIN_INFO;Welcome to the RawTherapee GIMP plugin!\nOnce you are done editing, simply close the main RawTherapee window and the image will be automatically imported in GIMP.
 !HISTOGRAM_TOOLTIP_BAR;Show/Hide RGB indicator bar.\nRight-click on image preview to freeze/unfreeze.
 !HISTOGRAM_TOOLTIP_CHRO;Show/Hide chromaticity histogram.
 !HISTOGRAM_TOOLTIP_FULL;Toggle full (off) or scaled (on) histogram.
@@ -571,7 +582,7 @@ TP_WBALANCE_TEMPERATURE;Θερμοκρασία
 !HISTORY_MSG_82;Profile changed
 !HISTORY_MSG_83;S/H - Sharp mask
 !HISTORY_MSG_84;Perspective correction
-!HISTORY_MSG_85;LCP
+!HISTORY_MSG_85;Lens Correction - LCP file
 !HISTORY_MSG_86;RGB Curves - Luminosity mode
 !HISTORY_MSG_87;Impulse Noise Reduction
 !HISTORY_MSG_88;Impulse NR threshold
@@ -659,7 +670,7 @@ TP_WBALANCE_TEMPERATURE;Θερμοκρασία
 !HISTORY_MSG_170;Vibrance - HH curve
 !HISTORY_MSG_171;L*a*b* - LC curve
 !HISTORY_MSG_172;L*a*b* - Restrict LC
-!HISTORY_MSG_173;NR - Luminance detail
+!HISTORY_MSG_173;NR - Detail recovery
 !HISTORY_MSG_174;CIECAM02
 !HISTORY_MSG_175;CAM02 - CAT02 adaptation
 !HISTORY_MSG_176;CAM02 - Viewing surround
@@ -689,7 +700,7 @@ TP_WBALANCE_TEMPERATURE;Θερμοκρασία
 !HISTORY_MSG_200;CAM02 - Tone mapping
 !HISTORY_MSG_201;NR - Chrominance - R&amp;G
 !HISTORY_MSG_202;NR - Chrominance - B&amp;Y
-!HISTORY_MSG_203;NR - Method
+!HISTORY_MSG_203;NR - Color space
 !HISTORY_MSG_204;LMMSE enhancement steps
 !HISTORY_MSG_205;CAM02 - Hot/bad pixel filter
 !HISTORY_MSG_206;CAT02 - Auto scene luminosity
@@ -741,7 +752,7 @@ TP_WBALANCE_TEMPERATURE;Θερμοκρασία
 !HISTORY_MSG_253;CbDL - Reduce artifacts
 !HISTORY_MSG_254;CbDL - Skin hue
 !HISTORY_MSG_255;NR - Median filter
-!HISTORY_MSG_256;NR - Median type
+!HISTORY_MSG_256;NR - Median - Type
 !HISTORY_MSG_257;Color Toning
 !HISTORY_MSG_258;CT - Color curve
 !HISTORY_MSG_259;CT - Opacity curve
@@ -782,7 +793,7 @@ TP_WBALANCE_TEMPERATURE;Θερμοκρασία
 !HISTORY_MSG_294;Film Simulation - Strength
 !HISTORY_MSG_295;Film Simulation - Film
 !HISTORY_MSG_296;NR - Luminance curve
-!HISTORY_MSG_297;NR - Quality
+!HISTORY_MSG_297;NR - Mode
 !HISTORY_MSG_298;Dead pixel filter
 !HISTORY_MSG_299;NR - Chrominance curve
 !HISTORY_MSG_300;-
@@ -845,7 +856,7 @@ TP_WBALANCE_TEMPERATURE;Θερμοκρασία
 !HISTORY_MSG_357;W - Denoise - Link with ES
 !HISTORY_MSG_358;W - Gamut - CH
 !HISTORY_MSG_359;Hot/Dead - Threshold
-!HISTORY_MSG_360;TM Gamma
+!HISTORY_MSG_360;TM - Gamma
 !HISTORY_MSG_361;W - Final - Chroma balance
 !HISTORY_MSG_362;W - Residual - Compression method
 !HISTORY_MSG_363;W - Residual - Compression strength
@@ -897,12 +908,12 @@ TP_WBALANCE_TEMPERATURE;Θερμοκρασία
 !HISTORY_MSG_409;Retinex - Contrast
 !HISTORY_MSG_410;Retinex - Offset
 !HISTORY_MSG_411;Retinex - Strength
-!HISTORY_MSG_412;Retinex - Gaussian Gradient
+!HISTORY_MSG_412;Retinex - Gaussian gradient
 !HISTORY_MSG_413;Retinex - Contrast
 !HISTORY_MSG_414;Retinex - Histogram - Lab
 !HISTORY_MSG_415;Retinex - Transmission
 !HISTORY_MSG_416;Retinex
-!HISTORY_MSG_417;Retinex - Transmission Median
+!HISTORY_MSG_417;Retinex - Transmission median
 !HISTORY_MSG_418;Retinex - Threshold
 !HISTORY_MSG_419;Retinex - Color space
 !HISTORY_MSG_420;Retinex - Histogram - HSL
@@ -915,8 +926,8 @@ TP_WBALANCE_TEMPERATURE;Θερμοκρασία
 !HISTORY_MSG_427;Output rendering intent
 !HISTORY_MSG_428;Monitor rendering intent
 !HISTORY_MSG_429;Retinex - Iterations
-!HISTORY_MSG_430;Retinex - Transmission Gradient
-!HISTORY_MSG_431;Retinex - Strength Gradient
+!HISTORY_MSG_430;Retinex - Transmission gradient
+!HISTORY_MSG_431;Retinex - Strength gradient
 !HISTORY_MSG_432;Retinex - M - Highlights
 !HISTORY_MSG_433;Retinex - M - Highlights TW
 !HISTORY_MSG_434;Retinex - M - Shadows
@@ -928,7 +939,47 @@ TP_WBALANCE_TEMPERATURE;Θερμοκρασία
 !HISTORY_MSG_440;CbDL - Method
 !HISTORY_MSG_441;Retinex - Gain transmission
 !HISTORY_MSG_442;Retinex - Scale
-!HISTORY_MSG_443;Output Black Point Compensation
+!HISTORY_MSG_443;Output black point compensation
+!HISTORY_MSG_444;WB - Temp bias
+!HISTORY_MSG_445;Raw sub-image
+!HISTORY_MSG_449;PS - ISO adaption
+!HISTORY_MSG_452;PS - Show motion
+!HISTORY_MSG_453;PS - Show mask only
+!HISTORY_MSG_457;PS - Check red/blue
+!HISTORY_MSG_462;PS - Check green
+!HISTORY_MSG_464;PS - Blur motion mask
+!HISTORY_MSG_465;PS - Blur radius
+!HISTORY_MSG_468;PS - Fill holes
+!HISTORY_MSG_469;PS - Median
+!HISTORY_MSG_471;PS - Motion correction
+!HISTORY_MSG_472;PS - Smooth transitions
+!HISTORY_MSG_473;PS - Use LMMSE
+!HISTORY_MSG_474;PS - Equalize
+!HISTORY_MSG_475;PS - Equalize channel
+!HISTORY_MSG_476;CAM02 - Temp out
+!HISTORY_MSG_477;CAM02 - Green out
+!HISTORY_MSG_478;CAM02 - Yb out
+!HISTORY_MSG_479;CAM02 - CAT02 adaptation out
+!HISTORY_MSG_480;CAM02 - Automatic CAT02 out
+!HISTORY_MSG_481;CAM02 - Temp scene
+!HISTORY_MSG_482;CAM02 - Green scene
+!HISTORY_MSG_483;CAM02 - Yb scene
+!HISTORY_MSG_484;CAM02 - Auto Yb scene
+!HISTORY_MSG_485;Lens Correction
+!HISTORY_MSG_486;Lens Correction - Camera
+!HISTORY_MSG_487;Lens Correction - Lens
+!HISTORY_MSG_488;HDR Tone Mapping
+!HISTORY_MSG_489;HDR TM - Threshold
+!HISTORY_MSG_490;HDR TM - Amount
+!HISTORY_MSG_491;White Balance
+!HISTORY_MSG_492;RGB Curves
+!HISTORY_MSG_493;L*a*b* Adjustments
+!HISTORY_MSG_LOCALCONTRAST_AMOUNT;Local Contrast - Amount
+!HISTORY_MSG_LOCALCONTRAST_DARKNESS;Local Contrast - Darkness
+!HISTORY_MSG_LOCALCONTRAST_ENABLED;Local Contrast
+!HISTORY_MSG_LOCALCONTRAST_LIGHTNESS;Local Contrast - Lightness
+!HISTORY_MSG_LOCALCONTRAST_RADIUS;Local Contrast - Radius
+!HISTORY_MSG_METADATA_MODE;Metadata copy mode
 !HISTORY_NEWSNAPSHOT_TOOLTIP;Shortcut: <b>Alt-s</b>
 !IPTCPANEL_CATEGORYHINT;Identifies the subject of the image in the opinion of the provider.
 !IPTCPANEL_CITYHINT;Enter the name of the city pictured in this image.
@@ -955,6 +1006,10 @@ TP_WBALANCE_TEMPERATURE;Θερμοκρασία
 !IPTCPANEL_TITLEHINT;Enter a short verbal and human readable name for the image, this may be the file name.
 !IPTCPANEL_TRANSREFERENCE;Job ID
 !IPTCPANEL_TRANSREFERENCEHINT;Enter a number or identifier needed for workflow control or tracking.
+!LENSPROFILE_CORRECTION_AUTOMATCH;Auto-matched correction parameters
+!LENSPROFILE_CORRECTION_LCPFILE;LCP File
+!LENSPROFILE_CORRECTION_MANUAL;Manual correction parameters
+!LENSPROFILE_LENS_WARNING;Warning: the crop factor used for lens profiling is larger than the crop factor of the camera, the results might be wrong.
 !MAIN_BUTTON_FULLSCREEN;Fullscreen
 !MAIN_BUTTON_NAVNEXT_TOOLTIP;Navigate to the next image relative to image opened in the Editor.\nShortcut: <b>Shift-F4</b>\n\nTo navigate to the next image relative to the currently selected thumbnail in the File Browser or Filmstrip:\nShortcut: <b>F4</b>
 !MAIN_BUTTON_NAVPREV_TOOLTIP;Navigate to the previous image relative to image opened in the Editor.\nShortcut: <b>Shift-F3</b>\n\nTo navigate to the previous image relative to the currently selected thumbnail in the File Browser or Filmstrip:\nShortcut: <b>F3</b>
@@ -974,6 +1029,7 @@ TP_WBALANCE_TEMPERATURE;Θερμοκρασία
 !MAIN_MSG_OPERATIONCANCELLED;Operation cancelled
 !MAIN_MSG_PATHDOESNTEXIST;The path\n\n<b>%1</b>\n\ndoes not exist. Please set a correct path in Preferences.
 !MAIN_MSG_SETPATHFIRST;You first have to set a target path in Preferences in order to use this function!
+!MAIN_MSG_TOOMANYOPENEDITORS;Too many open editors.\nPlease close an editor to continue.
 !MAIN_MSG_WRITEFAILED;Failed to write\n<b>"%1"</b>\n\nMake sure that the folder exists and that you have write permission to it.
 !MAIN_TAB_COLOR_TOOLTIP;Shortcut: <b>Alt-c</b>
 !MAIN_TAB_DETAIL_TOOLTIP;Shortcut: <b>Alt-d</b>
@@ -989,6 +1045,7 @@ TP_WBALANCE_TEMPERATURE;Θερμοκρασία
 !MAIN_TOOLTIP_BACKCOLOR0;Background color of the preview: <b>Theme-based</b>\nShortcut: <b>9</b>
 !MAIN_TOOLTIP_BACKCOLOR1;Background color of the preview: <b>Black</b>\nShortcut: <b>9</b>
 !MAIN_TOOLTIP_BACKCOLOR2;Background color of the preview: <b>White</b>\nShortcut: <b>9</b>
+!MAIN_TOOLTIP_BACKCOLOR3;Background color of the preview: <b>Middle grey</b>\nShortcut: <b>9</b>
 !MAIN_TOOLTIP_BEFOREAFTERLOCK;<b>Lock</b> / <b>Unlock</b> the <b>Before</b> view\n\n<b>Lock</b>: keep the <b>Before</b> view unchanged.\nUseful to evaluate the cumulative effect of multiple tools.\nAdditionally, comparisons can be made to any state in the History.\n\n<b>Unlock</b>: the <b>Before</b> view will follow the <b>After</b> view one step behind, showing the image before the effect of the currently used tool.
 !MAIN_TOOLTIP_PREVIEWB;Preview the <b>Blue channel</b>.\nShortcut: <b>b</b>
 !MAIN_TOOLTIP_PREVIEWFOCUSMASK;Preview the <b>Focus Mask</b>.\nShortcut: <b>Shift-f</b>\n\nMore accurate on images with shallow depth of field, low noise and at higher zoom levels.\n\nTo improve detection accuracy for noisy images evaluate at smaller zoom, about 10-30%.
@@ -1039,7 +1096,8 @@ TP_WBALANCE_TEMPERATURE;Θερμοκρασία
 !PARTIALPASTE_HSVEQUALIZER;HSV equalizer
 !PARTIALPASTE_IMPULSEDENOISE;Impulse noise reduction
 !PARTIALPASTE_LABCURVE;L*a*b* adjustments
-!PARTIALPASTE_LENSPROFILE;Lens correction profile
+!PARTIALPASTE_LENSPROFILE;Profiled lens correction
+!PARTIALPASTE_LOCALCONTRAST;Local contrast
 !PARTIALPASTE_PCVIGNETTE;Vignette filter
 !PARTIALPASTE_PERSPECTIVE;Perspective
 !PARTIALPASTE_PREPROCESS_DEADPIXFILT;Dead pixel filter
@@ -1048,8 +1106,7 @@ TP_WBALANCE_TEMPERATURE;Θερμοκρασία
 !PARTIALPASTE_PREPROCESS_LINEDENOISE;Line noise filter
 !PARTIALPASTE_PRSHARPENING;Post-resize sharpening
 !PARTIALPASTE_RAWCACORR_AUTO;CA auto-correction
-!PARTIALPASTE_RAWCACORR_CABLUE;CA blue
-!PARTIALPASTE_RAWCACORR_CARED;CA red
+!PARTIALPASTE_RAWCACORR_CAREDBLUE;CA red & blue
 !PARTIALPASTE_RAWEXPOS_BLACK;Black levels
 !PARTIALPASTE_RAWEXPOS_LINEAR;White point correction
 !PARTIALPASTE_RAWEXPOS_PRESER;Highlight preservation
@@ -1058,11 +1115,14 @@ TP_WBALANCE_TEMPERATURE;Θερμοκρασία
 !PARTIALPASTE_RAW_DCBITERATIONS;DCB iterations
 !PARTIALPASTE_RAW_DMETHOD;Demosaic method
 !PARTIALPASTE_RAW_FALSECOLOR;False color suppression
+!PARTIALPASTE_RAW_IMAGENUM;Sub-image
 !PARTIALPASTE_RAW_LMMSEITERATIONS;LMMSE enhancement steps
+!PARTIALPASTE_RAW_PIXELSHIFT;Pixel Shift
 !PARTIALPASTE_RETINEX;Retinex
 !PARTIALPASTE_RGBCURVES;RGB curves
 !PARTIALPASTE_SHARPENEDGE;Edges
 !PARTIALPASTE_SHARPENMICRO;Microcontrast
+!PARTIALPASTE_TM_FATTAL;HDR Tone mapping
 !PARTIALPASTE_VIBRANCE;Vibrance
 !PARTIALPASTE_WAVELETGROUP;Wavelet Levels
 !PREFERENCES_ADD;Add
@@ -1072,6 +1132,7 @@ TP_WBALANCE_TEMPERATURE;Θερμοκρασία
 !PREFERENCES_AUTLISVLOW;None
 !PREFERENCES_AUTLOW;Low
 !PREFERENCES_AUTOMONPROFILE;Use operating system's main monitor color profile
+!PREFERENCES_AUTOSAVE_TP_OPEN;Automatically save tools collapsed/expanded\nstate before exiting
 !PREFERENCES_AUTSTD;Standard
 !PREFERENCES_BATCH_PROCESSING;Batch Processing
 !PREFERENCES_BEHADDALL;All to 'Add'
@@ -1088,7 +1149,13 @@ TP_WBALANCE_TEMPERATURE;Θερμοκρασία
 !PREFERENCES_CLUTSCACHE_LABEL;Maximum number of cached CLUTs
 !PREFERENCES_CLUTSDIR;HaldCLUT directory
 !PREFERENCES_CMMBPC;Black point compensation
-!PREFERENCES_CURVEBBOXPOS;Position of curve copypasta buttons
+!PREFERENCES_CROP;Crop editing
+!PREFERENCES_CROP_AUTO_FIT;Automatically zoom to fit the crop area
+!PREFERENCES_CROP_GUIDES;Guides shown when not editing the crop
+!PREFERENCES_CROP_GUIDES_FRAME;Frame
+!PREFERENCES_CROP_GUIDES_FULL;Original
+!PREFERENCES_CROP_GUIDES_NONE;None
+!PREFERENCES_CURVEBBOXPOS;Position of curve copy & paste buttons
 !PREFERENCES_CURVEBBOXPOS_ABOVE;Above
 !PREFERENCES_CURVEBBOXPOS_BELOW;Below
 !PREFERENCES_CURVEBBOXPOS_LEFT;Left
@@ -1100,22 +1167,22 @@ TP_WBALANCE_TEMPERATURE;Θερμοκρασία
 !PREFERENCES_CUSTPROFBUILDKEYFORMAT_TID;TagID
 !PREFERENCES_CUSTPROFBUILDPATH;Executable path
 !PREFERENCES_CUTOVERLAYBRUSH;Crop mask color/transparency
-!PREFERENCES_D50;5000K
+!PREFERENCES_D50;Settings in main menu
+!PREFERENCES_D50_OLD;5000K
 !PREFERENCES_D55;5500K
 !PREFERENCES_D60;6000K
 !PREFERENCES_D65;6500K
-!PREFERENCES_DARKFRAME;Dark-Frame
 !PREFERENCES_DARKFRAMEFOUND;Found
 !PREFERENCES_DARKFRAMESHOTS;shots
 !PREFERENCES_DARKFRAMETEMPLATES;templates
 !PREFERENCES_DAUB_LABEL;Use Daubechies D6 wavelets instead of D4
 !PREFERENCES_DAUB_TOOLTIP;The Noise Reduction and Wavelet Levels tools use a Debauchies mother wavelet. If you choose D6 instead of D4 you increase the number of orthogonal Daubechies coefficients and probably increase quality of small-scale levels. There is no memory or processing time difference between the two.
 !PREFERENCES_DIRDARKFRAMES;Dark-frames directory
+!PREFERENCES_DIRECTORIES;Directories
+!PREFERENCES_EDITORCMDLINE;Custom command line
 !PREFERENCES_EDITORLAYOUT;Editor Layout
 !PREFERENCES_EXPAUT;Expert
-!PREFERENCES_FILEBROWSERTOOLBARSINGLEROW;Single row file browser toolbar (de-select for low resolution display)
-!PREFERENCES_FILMSIMULATION;Film Simulation
-!PREFERENCES_FLATFIELD;Flat-Field
+!PREFERENCES_FILEBROWSERTOOLBARSINGLEROW;Single row file browser toolbar\n(de-select for low resolution display)
 !PREFERENCES_FLATFIELDFOUND;Found
 !PREFERENCES_FLATFIELDSDIR;Flat-fields directory
 !PREFERENCES_FLATFIELDSHOTS;shots
@@ -1129,7 +1196,8 @@ TP_WBALANCE_TEMPERATURE;Θερμοκρασία
 !PREFERENCES_GREY05;Yb=05 CIE L#30
 !PREFERENCES_GREY10;Yb=10 CIE L#40
 !PREFERENCES_GREY15;Yb=15 CIE L#45
-!PREFERENCES_GREY18;Yb=18 CIE L#50
+!PREFERENCES_GREY18;Settings in main menu
+!PREFERENCES_GREY18_OLD;Yb=18 CIE L#50
 !PREFERENCES_GREY23;Yb=23 CIE L#55
 !PREFERENCES_GREY30;Yb=30 CIE L#60
 !PREFERENCES_GREY40;Yb=40 CIE L#70
@@ -1144,6 +1212,7 @@ TP_WBALANCE_TEMPERATURE;Θερμοκρασία
 !PREFERENCES_INSPECT_MAXBUFFERS_LABEL;Maximum number of cached images
 !PREFERENCES_INSPECT_MAXBUFFERS_TOOLTIP;Set the maximum number of images stored in cache when hovering over them in the File Browser; systems with little RAM (2GB) should keep this value set to 1 or 2.
 !PREFERENCES_INTERNALTHUMBIFUNTOUCHED;Show embedded JPEG thumbnail if raw is unedited
+!PREFERENCES_LANG;Language
 !PREFERENCES_LANGAUTODETECT;Use system language
 !PREFERENCES_LEVAUTDN;Denoising level
 !PREFERENCES_LEVDN;Cell size
@@ -1179,6 +1248,8 @@ TP_WBALANCE_TEMPERATURE;Θερμοκρασία
 !PREFERENCES_PREVDEMO_LABEL;Demosaicing method used for the preview at <100% zoom:
 !PREFERENCES_PREVDEMO_SIDECAR;As in PP3
 !PREFERENCES_PRINTER;Printer (Soft-Proofing)
+!PREFERENCES_PROFILESAVEBOTH;Save processing profile both to the cache and next to the input file
+!PREFERENCES_PROFILESAVELOCATION;Processing profile saving location
 !PREFERENCES_PROFILE_NONE;None
 !PREFERENCES_PROPERTY;Property
 !PREFERENCES_PRTINTENT;Rendering intent
@@ -1187,7 +1258,8 @@ TP_WBALANCE_TEMPERATURE;Θερμοκρασία
 !PREFERENCES_REMEMBERZOOMPAN_TOOLTIP;Remember the zoom % and pan offset of the current image when opening a new image.\n\nThis option only works in "Single Editor Tab Mode" and when "Demosaicing method used for the preview at <100% zoom" is set to "As in PP3".
 !PREFERENCES_RGBDTL_LABEL;Max number of threads for Noise Reduction and Wavelet Levels
 !PREFERENCES_RGBDTL_TOOLTIP;Leave the setting at "0" to automatically use as many threads as possible. The more threads run in parallel, the faster the computation. Refer to RawPedia for memory requirements.
-!PREFERENCES_SELECTFONT;Select global font
+!PREFERENCES_SAVE_TP_OPEN_NOW;Save tools collapsed/expanded state now
+!PREFERENCES_SELECTFONT;Select main font
 !PREFERENCES_SELECTFONT_COLPICKER;Select Color Picker's font
 !PREFERENCES_SERIALIZE_TIFF_READ;Tiff Read Settings
 !PREFERENCES_SERIALIZE_TIFF_READ_LABEL;Serialize read of tiff files
@@ -1198,15 +1270,16 @@ TP_WBALANCE_TEMPERATURE;Θερμοκρασία
 !PREFERENCES_SIMPLAUT;Tool mode
 !PREFERENCES_SINGLETAB;Single Editor Tab Mode
 !PREFERENCES_SINGLETABVERTAB;Single Editor Tab Mode, Vertical Tabs
-!PREFERENCES_SLIMUI;Slim interface
 !PREFERENCES_SMA;Small (250x287)
 !PREFERENCES_SND_BATCHQUEUEDONE;Queue processing done
 !PREFERENCES_SND_HELP;Enter a full file path to set a sound, or leave blank for no sound.\nFor system sounds on Windows use "SystemDefault", "SystemAsterisk" etc., and on Linux use "complete", "window-attention" etc.
 !PREFERENCES_SND_LNGEDITPROCDONE;Editor processing done
 !PREFERENCES_SND_TRESHOLDSECS;After seconds
 !PREFERENCES_STDAUT;Standard
+!PREFERENCES_TAB_DYNAMICPROFILE;Dynamic Profile Rules
 !PREFERENCES_TAB_PERFORMANCE;Performance & Quality
 !PREFERENCES_TAB_SOUND;Sounds
+!PREFERENCES_THEME;Theme
 !PREFERENCES_TIMAX;High
 !PREFERENCES_TINB;Number of tiles
 !PREFERENCES_TISTD;Standard
@@ -1215,7 +1288,6 @@ TP_WBALANCE_TEMPERATURE;Θερμοκρασία
 !PREFERENCES_TP_VSCROLLBAR;Hide vertical scrollbar
 !PREFERENCES_TUNNELMETADATA;Copy Exif/IPTC/XMP unchanged to output file
 !PREFERENCES_USEBUNDLEDPROFILES;Use bundled profiles
-!PREFERENCES_USESYSTEMTHEME;Use system theme
 !PREFERENCES_VIEW;Output device's white balance (monitor, TV, projector, viewing, etc.)
 !PREFERENCES_WAVLEV;Increase wavelet level in quality 'high'
 !PREFERENCES_WLONE;One level
@@ -1228,6 +1300,7 @@ TP_WBALANCE_TEMPERATURE;Θερμοκρασία
 !PROFILEPANEL_MODE_TIP;Processing profile fill mode.\n\nButton pressed: partial profiles will be converted to full profiles; the missing values will be replaced with hard-coded defaults.\n\nButton released: profiles will be applied as they are, altering only those values which they contain.
 !PROFILEPANEL_MYPROFILES;My profiles
 !PROFILEPANEL_PASTEPPASTE;Parameters to paste
+!PROFILEPANEL_PDYNAMIC;Dynamic
 !PROFILEPANEL_PINTERNAL;Neutral
 !PROFILEPANEL_SAVEPPASTE;Parameters to save
 !PROGRESSBAR_LOADINGTHUMBS;Loading thumbnails...
@@ -1235,6 +1308,15 @@ TP_WBALANCE_TEMPERATURE;Θερμοκρασία
 !PROGRESSBAR_PROCESSING_PROFILESAVED;Processing profile saved
 !PROGRESSBAR_SNAPSHOT_ADDED;Snapshot added
 !PROGRESSDLG_PROFILECHANGEDINBROWSER;Processing profile changed in browser
+!QINFO_FRAMECOUNT;%2 frames
+!QINFO_HDR;HDR / %2 frame(s)
+!QINFO_PIXELSHIFT;Pixel Shift / %2 frame(s)
+!SAMPLEFORMAT_0;Unknown data format
+!SAMPLEFORMAT_1;Unsigned 8 bits
+!SAMPLEFORMAT_2;Unsigned 16 bits
+!SAMPLEFORMAT_4;LogLuv 24 bits
+!SAMPLEFORMAT_8;LogLuv 32 bits
+!SAMPLEFORMAT_16;32 bits floating point
 !SAVEDLG_AUTOSUFFIX;Automatically add a suffix if the file already exists
 !SAVEDLG_FORCEFORMATOPTS;Force saving options
 !SAVEDLG_SUBSAMP;Subsampling
@@ -1245,8 +1327,8 @@ TP_WBALANCE_TEMPERATURE;Θερμοκρασία
 !SAVEDLG_TIFFUNCOMPRESSED;Uncompressed TIFF
 !SAVEDLG_WARNFILENAME;File will be named
 !SHCSELECTOR_TOOLTIP;Click right mouse button to reset the position of those 3 sliders.
-!SOFTPROOF_GAMUTCHECK_TOOLTIP;If active, indicates in grey the pixels which have out of gamut colors from the output profile.
-!SOFTPROOF_TOOLTIP;Soft-proofing\nIf active, let you simulate de rendering generated by the output profile of the ICM tool. Most useful for simulating printing outputs.
+!SOFTPROOF_GAMUTCHECK_TOOLTIP;If active, indicates in grey the pixels which have out of gamut colors from the Printer profile.
+!SOFTPROOF_TOOLTIP;Soft-proofing\nIf active, let you simulate the printer's output by using the Printer profile set in Preferences > Color Management.
 !THRESHOLDSELECTOR_B;Bottom
 !THRESHOLDSELECTOR_BL;Bottom-left
 !THRESHOLDSELECTOR_BR;Bottom-right
@@ -1320,11 +1402,11 @@ TP_WBALANCE_TEMPERATURE;Θερμοκρασία
 !TP_CBDL_METHOD;Process located
 !TP_CBDL_METHOD_TOOLTIP;Choose whether the Contrast by Detail Levels tool is to be positioned after the Black-and-White tool, which makes it work in L*a*b* space, or before it, which makes it work in RGB space.
 !TP_CHROMATABERR_LABEL;Chromatic Aberration
-!TP_COLORAPP_ADAPTSCENE;Scene luminosity
-!TP_COLORAPP_ADAPTSCENE_TOOLTIP;Absolute luminance of the scene environement (cd/m²).\n1) Calculated from the Exif data:\nShutter speed - ISO speed - F number - camera exposure correction.\n2) Calculated from the raw white point and RT's Exposure Compensation slider.
-!TP_COLORAPP_ADAPTVIEWING;Viewing luminosity (cd/m²)
-!TP_COLORAPP_ADAPTVIEWING_TOOLTIP;Absolute luminance of the viewing environnement\n(usually 16cd/m²).
-!TP_COLORAPP_ADAP_AUTO_TOOLTIP;If the checkbox is checked (recommended) RawTherapee calculates an optimum value from Exif data.\nTo set the value manually, uncheck the checkbox first.
+!TP_COLORAPP_ADAPTSCENE;Scene absolute luminance
+!TP_COLORAPP_ADAPTSCENE_TOOLTIP;Absolute luminance of the scene environment (cd/m²).\n1) Calculated from the Exif data:\nShutter speed - ISO speed - F number - camera exposure correction.\n2) Calculated from the raw white point and RT's Exposure Compensation slider.
+!TP_COLORAPP_ADAPTVIEWING;Viewing absolute luminance (cd/m²)
+!TP_COLORAPP_ADAPTVIEWING_TOOLTIP;Absolute luminance of the viewing environment\n(usually 16cd/m²).
+!TP_COLORAPP_ADAP_AUTO_TOOLTIP;If the checkbox is checked (recommended) RawTherapee calculates an optimum value from the Exif data.\nTo set the value manually, uncheck the checkbox first.
 !TP_COLORAPP_ALGO;Algorithm
 !TP_COLORAPP_ALGO_ALL;All
 !TP_COLORAPP_ALGO_JC;Lightness + Chroma (JC)
@@ -1344,8 +1426,8 @@ TP_WBALANCE_TEMPERATURE;Θερμοκρασία
 !TP_COLORAPP_CIECAT_DEGREE;CAT02 adaptation
 !TP_COLORAPP_CONTRAST;Contrast (J)
 !TP_COLORAPP_CONTRAST_Q;Contrast (Q)
-!TP_COLORAPP_CONTRAST_Q_TOOLTIP;Contrast in CIECAM02 for the Q slider; it differs from L*a*b* and RGB contrast.
-!TP_COLORAPP_CONTRAST_TOOLTIP;Contrast in CIECAM02 for the J slider; it differs from L*a*b* and RGB contrast.
+!TP_COLORAPP_CONTRAST_Q_TOOLTIP;Differs from L*a*b* and RGB contrast.
+!TP_COLORAPP_CONTRAST_TOOLTIP;Differs from L*a*b* and RGB contrast.
 !TP_COLORAPP_CURVEEDITOR1;Tone curve 1
 !TP_COLORAPP_CURVEEDITOR1_TOOLTIP;Shows the histogram of L* (L*a*b*) before CIECAM02.\nIf the "Show CIECAM02 output histograms in curves" checkbox is enabled, shows the histogram of J or Q after CIECAM02.\n\nJ and Q are not shown in the main histogram panel.\n\nFor final output refer to the main histogram panel.
 !TP_COLORAPP_CURVEEDITOR2;Tone curve 2
@@ -1356,6 +1438,7 @@ TP_WBALANCE_TEMPERATURE;Θερμοκρασία
 !TP_COLORAPP_DATACIE_TOOLTIP;When enabled, histograms in CIECAM02 curves show approximate values/ranges for J or Q, and C, s or M after the CIECAM02 adjustments.\nThis selection does not impact the main histogram panel.\n\nWhen disabled, histograms in CIECAM02 curves show L*a*b* values before CIECAM02 adjustments.
 !TP_COLORAPP_DEGREE_AUTO_TOOLTIP;If the check-box is checked (recommended), RawTherapee calculates an optimum value, which is then used by CAT02, and also for the entire CIECAM02.\nTo set the value manually, uncheck the check-box first (values above 65 are recommended).
 !TP_COLORAPP_DEGREE_TOOLTIP;Amount of CIE Chromatic Adaptation Transform 2002.
+!TP_COLORAPP_FREE;Free temp+green + CAT02 + [output]
 !TP_COLORAPP_GAMUT;Gamut control (L*a*b*)
 !TP_COLORAPP_GAMUT_TOOLTIP;Allow gamut control in L*a*b* mode.
 !TP_COLORAPP_HUE;Hue (h)
@@ -1367,9 +1450,11 @@ TP_WBALANCE_TEMPERATURE;Θερμοκρασία
 !TP_COLORAPP_LIGHT;Lightness (J)
 !TP_COLORAPP_LIGHT_TOOLTIP;Lightness in CIECAM02 differs from L*a*b* and RGB lightness.
 !TP_COLORAPP_MODEL;WP Model
-!TP_COLORAPP_MODEL_TOOLTIP;White-Point Model.\n\n<b>WB [RT] + [output]</b>: RT's white balance is used for the scene, CIECAM02 is set to D50, and the output device's white balance is set in <i>Preferences > Color Management</i>.\n\n<b>WB [RT+CAT02] + [output]</b>: RT's white balance settings are used by CAT02 and the output device's white balance is set in <i>Preferences - Color Management</i>.
+!TP_COLORAPP_MODEL_TOOLTIP;White-Point Model.\n\n<b>WB [RT] + [output]</b>: RT's white balance is used for the scene, CIECAM02 is set to D50, and the output device's white balance is set in Viewing Conditions.\n\n<b>WB [RT+CAT02] + [output]</b>: RT's white balance settings are used by CAT02 and the output device's white balance is set in Viewing Conditions.\n\n<b>Free temp+green + CAT02 + [output]:</b> temp and green are selected bu user, output device's white balance is set in Viewing Conditions.
+!TP_COLORAPP_NEUTRAL;Reset
+!TP_COLORAPP_NEUTRAL_TIP;Reset all sliders checkbox and curves to their default values
 !TP_COLORAPP_RSTPRO;Red & skin-tones protection
-!TP_COLORAPP_RSTPRO_TOOLTIP;Red and skin-tones protection affects both sliders and curves.
+!TP_COLORAPP_RSTPRO_TOOLTIP;Red &amp; skin-tones protection affects both sliders and curves.
 !TP_COLORAPP_SHARPCIE;--unused--
 !TP_COLORAPP_SHARPCIE_TOOLTIP;--unused--
 !TP_COLORAPP_SURROUND;Surround
@@ -1388,10 +1473,14 @@ TP_WBALANCE_TEMPERATURE;Θερμοκρασία
 !TP_COLORAPP_TCMODE_LABEL3;Curve chroma mode
 !TP_COLORAPP_TCMODE_LIGHTNESS;Lightness
 !TP_COLORAPP_TCMODE_SATUR;Saturation
+!TP_COLORAPP_TEMP_TOOLTIP;To select an illuminant, always set Tint=1.\n\nA temp=2856\nD50 temp=5003\nD55 temp=5503\nD65 temp=6504\nD75 temp=7504
 !TP_COLORAPP_TONECIE;Tone mapping using CIECAM02
 !TP_COLORAPP_TONECIE_TOOLTIP;If this option is disabled, tone mapping is done in L*a*b* space.\nIf this option is enabled, tone mapping is done using CIECAM02.\nThe Tone Mapping tool must be enabled for this setting to take effect.
 !TP_COLORAPP_WBCAM;WB [RT+CAT02] + [output]
 !TP_COLORAPP_WBRT;WB [RT] + [output]
+!TP_COLORAPP_YB;Yb% (mean luminance)
+!TP_COLORAPP_YBSCENE;Yb% (mean luminance)
+!TP_COLORAPP_YBSCENE_TOOLTIP;if auto is enabled, Yb is calculated from the mean value of the actual image's luminance
 !TP_COLORTONING_AB;o C/L
 !TP_COLORTONING_AUTOSAT;Automatic
 !TP_COLORTONING_BALANCE;Balance
@@ -1440,68 +1529,63 @@ TP_WBALANCE_TEMPERATURE;Θερμοκρασία
 !TP_DEFRINGE_LABEL;Defringe
 !TP_DEFRINGE_RADIUS;Radius
 !TP_DEFRINGE_THRESHOLD;Threshold
-!TP_DIRPYRDENOISE_3X3;3×3
-!TP_DIRPYRDENOISE_3X3_SOFT;3×3 soft
-!TP_DIRPYRDENOISE_5X5;5×5
-!TP_DIRPYRDENOISE_5X5_SOFT;5×5 soft
-!TP_DIRPYRDENOISE_7X7;7×7
-!TP_DIRPYRDENOISE_9X9;9×9
-!TP_DIRPYRDENOISE_ABM;Chroma only
-!TP_DIRPYRDENOISE_AUT;Automatic global
-!TP_DIRPYRDENOISE_AUTO;Automatic global
-!TP_DIRPYRDENOISE_AUTO_TOOLTIP;Try to evaluate chroma noise\nBe careful, this calculation is average, and is quite subjective !
-!TP_DIRPYRDENOISE_BLUE;Chrominance - Blue-Yellow
-!TP_DIRPYRDENOISE_C2TYPE_TOOLTIP;Manual\nActs on the full image.\nYou control the noise reduction settings manually.\n\nAutomatic global\nActs on the full image.\n9 zones are used to calculate a global chrominance noise reduction setting.\n\nPreview\nActs on the whole image.\nThe part of the image visible in the preview is used to calculate global chrominance noise reduction settings.
-!TP_DIRPYRDENOISE_CCCURVE;Chrominance curve
-!TP_DIRPYRDENOISE_CHROMA;Chrominance - Master
-!TP_DIRPYRDENOISE_CHROMAFR;Chrominance
-!TP_DIRPYRDENOISE_CTYPE;Method
-!TP_DIRPYRDENOISE_CTYPE_TOOLTIP;Manual\nActs on the full image.\nYou control the noise reduction settings manually.\n\nAutomatic global\nActs on the full image.\n9 zones are used to calculate a global chrominance noise reduction setting.\n\nAutomatic multi-zones\nNo preview - works only during saving, but using the "Preview" method by matching the tile size and center to the preview size and center you can get an idea of the expected results.\nThe image is divided into tiles (about 10 to 70 depending on image size) and each tile receives its own chrominance noise reduction settings.\n\nPreview\nActs on the whole image.\nThe part of the image visible in the preview is used to calculate global chrominance noise reduction settings.
-!TP_DIRPYRDENOISE_CUR;Curve
-!TP_DIRPYRDENOISE_CURVEEDITOR_CC;Chroma
-!TP_DIRPYRDENOISE_CURVEEDITOR_CC_TOOLTIP;Increase (multiply) the value of all chrominance sliders.\nThis curve lets you adjust the strength of chromatic noise reduction as a function of chromaticity, for instance to increase the action in areas of low saturation and to decrease it in those of high saturation.
-!TP_DIRPYRDENOISE_CURVEEDITOR_L_TOOLTIP;Modulates action of 'Luminance' denoise
+!TP_DIRPYRDENOISE_CHROMINANCE_AMZ;Auto multi-zones
+!TP_DIRPYRDENOISE_CHROMINANCE_AUTOGLOBAL;Automatic global
+!TP_DIRPYRDENOISE_CHROMINANCE_AUTOGLOBAL_TOOLTIP;Try to evaluate chroma noise\nBe careful, this calculation is average, and is quite subjective !
+!TP_DIRPYRDENOISE_CHROMINANCE_BLUEYELLOW;Chrominance - Blue-Yellow
+!TP_DIRPYRDENOISE_CHROMINANCE_CURVE;Chrominance curve
+!TP_DIRPYRDENOISE_CHROMINANCE_CURVE_TOOLTIP;Increase (multiply) the value of all chrominance sliders.\nThis curve lets you adjust the strength of chromatic noise reduction as a function of chromaticity, for instance to increase the action in areas of low saturation and to decrease it in those of high saturation.
+!TP_DIRPYRDENOISE_CHROMINANCE_FRAME;Chrominance
+!TP_DIRPYRDENOISE_CHROMINANCE_MANUAL;Manual
+!TP_DIRPYRDENOISE_CHROMINANCE_MASTER;Chrominance - Master
+!TP_DIRPYRDENOISE_CHROMINANCE_METHOD;Method
+!TP_DIRPYRDENOISE_CHROMINANCE_METHODADVANCED_TOOLTIP;Manual\nActs on the full image.\nYou control the noise reduction settings manually.\n\nAutomatic global\nActs on the full image.\n9 zones are used to calculate a global chrominance noise reduction setting.\n\nPreview\nActs on the whole image.\nThe part of the image visible in the preview is used to calculate global chrominance noise reduction settings.
+!TP_DIRPYRDENOISE_CHROMINANCE_METHOD_TOOLTIP;Manual\nActs on the full image.\nYou control the noise reduction settings manually.\n\nAutomatic global\nActs on the full image.\n9 zones are used to calculate a global chrominance noise reduction setting.\n\nAutomatic multi-zones\nNo preview - works only during saving, but using the "Preview" method by matching the tile size and center to the preview size and center you can get an idea of the expected results.\nThe image is divided into tiles (about 10 to 70 depending on image size) and each tile receives its own chrominance noise reduction settings.\n\nPreview\nActs on the whole image.\nThe part of the image visible in the preview is used to calculate global chrominance noise reduction settings.
+!TP_DIRPYRDENOISE_CHROMINANCE_PMZ;Preview multi-zones
+!TP_DIRPYRDENOISE_CHROMINANCE_PREVIEW;Preview
+!TP_DIRPYRDENOISE_CHROMINANCE_PREVIEWRESIDUAL_INFO_TOOLTIP;Displays the remaining noise levels of the part of the image visible in the preview after wavelet.\n\n>300 Very noisy\n100-300 Noisy\n50-100 A little noisy\n<50 Very low noise\n\nBeware, the values will differ between RGB and L*a*b* mode. The RGB values are less accurate because the RGB mode does not completely separate luminance and chrominance.
+!TP_DIRPYRDENOISE_CHROMINANCE_PREVIEW_INFO;Preview size=%1, Center: Px=%2  Py=%3
+!TP_DIRPYRDENOISE_CHROMINANCE_PREVIEW_NOISEINFO;Preview noise: Mean=%1  High=%2
+!TP_DIRPYRDENOISE_CHROMINANCE_PREVIEW_NOISEINFO_EMPTY;Preview noise: Mean= -   High= -
+!TP_DIRPYRDENOISE_CHROMINANCE_PREVIEW_TILEINFO;Tile size=%1, Center: Tx=%2  Ty=%3
+!TP_DIRPYRDENOISE_CHROMINANCE_REDGREEN;Chrominance - Red-Green
 !TP_DIRPYRDENOISE_ENH;Enhanced mode
 !TP_DIRPYRDENOISE_ENH_TOOLTIP;Increases noise reduction quality at the expense of a 20% processing time increase.
-!TP_DIRPYRDENOISE_GAMMA;Gamma
-!TP_DIRPYRDENOISE_GAMMA_TOOLTIP;Gamma varies noise reduction strength across the range of tones. Smaller values will target shadows, while larger values will stretch the effect to the brighter tones.
-!TP_DIRPYRDENOISE_LAB;L*a*b*
 !TP_DIRPYRDENOISE_LABEL;Noise Reduction
-!TP_DIRPYRDENOISE_LABM;L*a*b*
-!TP_DIRPYRDENOISE_LCURVE;Luminance curve
-!TP_DIRPYRDENOISE_LDETAIL;Luminance - Detail
-!TP_DIRPYRDENOISE_LM;Luminance only
-!TP_DIRPYRDENOISE_LPLABM;Weighted L* (little) + a*b* (normal)
-!TP_DIRPYRDENOISE_LTYPE;Luminance control
-!TP_DIRPYRDENOISE_LUMA;Luminance
-!TP_DIRPYRDENOISE_LUMAFR;Luminance
-!TP_DIRPYRDENOISE_MAN;Manual
-!TP_DIRPYRDENOISE_MANU;Manual
-!TP_DIRPYRDENOISE_MED;Median Filter
-!TP_DIRPYRDENOISE_MEDMETHOD;Median method
-!TP_DIRPYRDENOISE_MEDTYPE;Median type
-!TP_DIRPYRDENOISE_METHOD;Method
-!TP_DIRPYRDENOISE_METHOD11;Quality
-!TP_DIRPYRDENOISE_METHOD11_TOOLTIP;Quality can be adapted to the noise pattern. A setting of "high" increases the noise reduction effect at a cost of extended processing time.
-!TP_DIRPYRDENOISE_METHOD_TOOLTIP;For raw images either RGB or L*a*b* methods can be used.\n\nFor non-raw images the L*a*b* method will be used, regardless of the selection.
-!TP_DIRPYRDENOISE_METM_TOOLTIP;When using the "Luminance only" and "L*a*b*" methods, median filtering will be performed just after the wavelet step in the noise reduction pipeline.\nWhen using the "RGB" mode, it will be performed at the very end of the noise reduction pipeline.
-!TP_DIRPYRDENOISE_MET_TOOLTIP;Apply a median filter of the desired window size. The larger the window's size, the longer it takes.\n\n3×3 soft: treats 5 pixels in a 3×3 pixel window.\n3×3: treats 9 pixels in a 3×3 pixel window.\n5×5 soft: treats 13 pixels in a 5×5 pixel window.\n5×5: treats 25 pixels in a 5×5 pixel window.\n7×7: treats 49 pixels in a 7×7 pixel window.\n9×9: treats 81 pixels in a 9×9 pixel window.\n\nSometimes it is possible to achieve higher quality running several iterations with a smaller window size than one iteration with a larger one.
-!TP_DIRPYRDENOISE_NOISELABEL;Preview noise: Mean=%1  High=%2
-!TP_DIRPYRDENOISE_NOISELABELEMPTY;Preview noise: Mean= -   High= -
-!TP_DIRPYRDENOISE_NRESID_TOOLTIP;Displays the remaining noise levels of the part of the image visible in the <b>preview</b> after wavelet.\n\n>300 Very noisy\n100-300 Noisy\n50-100 A little noisy\n<50 Very low noise\n\nBeware, the values will differ between RGB and L*a*b* mode. The RGB values are less accurate because the RGB mode does not completely separate luminance and chrominance.
-!TP_DIRPYRDENOISE_PASSES;Median iterations
-!TP_DIRPYRDENOISE_PASSES_TOOLTIP;Applying three median filter iterations with a 3×3 window size often leads to better results than using one median filter iteration with a 7×7 window size.
-!TP_DIRPYRDENOISE_PON;Auto multi-zones
-!TP_DIRPYRDENOISE_PRE;Preview multi-zones
-!TP_DIRPYRDENOISE_PREV;Preview
-!TP_DIRPYRDENOISE_PREVLABEL;Preview size=%1, Center: Px=%2  Py=%3
-!TP_DIRPYRDENOISE_RED;Chrominance - Red-Green
-!TP_DIRPYRDENOISE_RGB;RGB
-!TP_DIRPYRDENOISE_RGBM;RGB
-!TP_DIRPYRDENOISE_SHAL;Standard
-!TP_DIRPYRDENOISE_SHALBI;High
+!TP_DIRPYRDENOISE_LUMINANCE_CONTROL;Luminance control
+!TP_DIRPYRDENOISE_LUMINANCE_CURVE;Luminance curve
+!TP_DIRPYRDENOISE_LUMINANCE_DETAIL;Detail recovery
+!TP_DIRPYRDENOISE_LUMINANCE_FRAME;Luminance
+!TP_DIRPYRDENOISE_LUMINANCE_SMOOTHING;Luminance
+!TP_DIRPYRDENOISE_MAIN_COLORSPACE;Color space
+!TP_DIRPYRDENOISE_MAIN_COLORSPACE_LAB;L*a*b*
+!TP_DIRPYRDENOISE_MAIN_COLORSPACE_RGB;RGB
+!TP_DIRPYRDENOISE_MAIN_COLORSPACE_TOOLTIP;For raw images either RGB or L*a*b* methods can be used.\n\nFor non-raw images the L*a*b* method will be used, regardless of the selection.
+!TP_DIRPYRDENOISE_MAIN_GAMMA;Gamma
+!TP_DIRPYRDENOISE_MAIN_GAMMA_TOOLTIP;Gamma varies noise reduction strength across the range of tones. Smaller values will target shadows, while larger values will stretch the effect to the brighter tones.
+!TP_DIRPYRDENOISE_MAIN_MODE;Mode
+!TP_DIRPYRDENOISE_MAIN_MODE_AGGRESSIVE;Aggressive
+!TP_DIRPYRDENOISE_MAIN_MODE_CONSERVATIVE;Conservative
+!TP_DIRPYRDENOISE_MAIN_MODE_TOOLTIP;"Conservative" preserves low frequency chroma patterns, while "aggressive" obliterates them.
+!TP_DIRPYRDENOISE_MEDIAN_METHOD;Median method
+!TP_DIRPYRDENOISE_MEDIAN_METHOD_CHROMINANCE;Chroma only
+!TP_DIRPYRDENOISE_MEDIAN_METHOD_LAB;L*a*b*
+!TP_DIRPYRDENOISE_MEDIAN_METHOD_LABEL;Median Filter
+!TP_DIRPYRDENOISE_MEDIAN_METHOD_LUMINANCE;Luminance only
+!TP_DIRPYRDENOISE_MEDIAN_METHOD_RGB;RGB
+!TP_DIRPYRDENOISE_MEDIAN_METHOD_TOOLTIP;When using the "Luminance only" and "L*a*b*" methods, median filtering will be performed just after the wavelet step in the noise reduction pipeline.\nWhen using the "RGB" mode, it will be performed at the very end of the noise reduction pipeline.
+!TP_DIRPYRDENOISE_MEDIAN_METHOD_WEIGHTED;Weighted L* (little) + a*b* (normal)
+!TP_DIRPYRDENOISE_MEDIAN_PASSES;Median iterations
+!TP_DIRPYRDENOISE_MEDIAN_PASSES_TOOLTIP;Applying three median filter iterations with a 3×3 window size often leads to better results than using one median filter iteration with a 7×7 window size.
+!TP_DIRPYRDENOISE_MEDIAN_TYPE;Median type
+!TP_DIRPYRDENOISE_MEDIAN_TYPE_TOOLTIP;Apply a median filter of the desired window size. The larger the window's size, the longer it takes.\n\n3×3 soft: treats 5 pixels in a 3×3 pixel window.\n3×3: treats 9 pixels in a 3×3 pixel window.\n5×5 soft: treats 13 pixels in a 5×5 pixel window.\n5×5: treats 25 pixels in a 5×5 pixel window.\n7×7: treats 49 pixels in a 7×7 pixel window.\n9×9: treats 81 pixels in a 9×9 pixel window.\n\nSometimes it is possible to achieve higher quality running several iterations with a smaller window size than one iteration with a larger one.
 !TP_DIRPYRDENOISE_SLI;Slider
-!TP_DIRPYRDENOISE_TILELABEL;Tile size=%1, Center: Tx=%2  Ty=%3
+!TP_DIRPYRDENOISE_TYPE_3X3;3×3
+!TP_DIRPYRDENOISE_TYPE_3X3SOFT;3×3 soft
+!TP_DIRPYRDENOISE_TYPE_5X5;5×5
+!TP_DIRPYRDENOISE_TYPE_5X5SOFT;5×5 soft
+!TP_DIRPYRDENOISE_TYPE_7X7;7×7
+!TP_DIRPYRDENOISE_TYPE_9X9;9×9
 !TP_DIRPYREQUALIZER_ALGO;Skin Color Range
 !TP_DIRPYREQUALIZER_ALGO_TOOLTIP;Fine: closer to the colors of the skin, minimizing the action on other colors\nLarge: avoid more artifacts.
 !TP_DIRPYREQUALIZER_ARTIF;Reduce artifacts
@@ -1581,18 +1665,17 @@ TP_WBALANCE_TEMPERATURE;Θερμοκρασία
 !TP_HSVEQUALIZER_SAT;S
 !TP_HSVEQUALIZER_VAL;V
 !TP_ICM_APPLYBASELINEEXPOSUREOFFSET;Baseline exposure
-!TP_ICM_APPLYBASELINEEXPOSUREOFFSET_TOOLTIP;Employ the embedded DCP baseline exposure offset. The setting is only enabled if the selected DCP has any.
+!TP_ICM_APPLYBASELINEEXPOSUREOFFSET_TOOLTIP;Employ the embedded DCP baseline exposure offset. The setting is only available if the selected DCP has one.
 !TP_ICM_APPLYHUESATMAP;Base table
-!TP_ICM_APPLYHUESATMAP_TOOLTIP;Employ the embedded DCP base table (HueSatMap). The setting is only enabled if the selected DCP has one.
+!TP_ICM_APPLYHUESATMAP_TOOLTIP;Employ the embedded DCP base table (HueSatMap). The setting is only available if the selected DCP has one.
 !TP_ICM_APPLYLOOKTABLE;Look table
-!TP_ICM_APPLYLOOKTABLE_TOOLTIP;Employ the embedded DCP look table. The setting is only enabled if the selected DCP has one.
+!TP_ICM_APPLYLOOKTABLE_TOOLTIP;Employ the embedded DCP look table. The setting is only available if the selected DCP has one.
 !TP_ICM_BLENDCMSMATRIX;Blend ICC highlights with matrix
 !TP_ICM_BLENDCMSMATRIX_TOOLTIP;Enable to recover clipped highlights when using LUT-based ICC profiles.
 !TP_ICM_BPC;Black Point Compensation
-!TP_ICM_BPC_TOOLTIP;Enable this to fit the Luminosity channel to the output color space with a fix White Point
 !TP_ICM_DCPILLUMINANT;Illuminant
 !TP_ICM_DCPILLUMINANT_INTERPOLATED;Interpolated
-!TP_ICM_DCPILLUMINANT_TOOLTIP;Select which embedded DCP illuminant to employ. Default is "interpolated" which is a mix between the two based on white balance. The setting is only enabled if a Dual-Illuminant DCP with interpolation support is selected.
+!TP_ICM_DCPILLUMINANT_TOOLTIP;Select which embedded DCP illuminant to employ. Default is "interpolated" which is a mix between the two based on white balance. The setting is only available if a dual-illuminant DCP with interpolation support is selected.
 !TP_ICM_INPUTCAMERAICC;Auto-matched camera profile
 !TP_ICM_INPUTCAMERAICC_TOOLTIP;Use RawTherapee's camera-specific DCP or ICC input color profiles. These profiles are more precise than simpler matrix ones. They are not available for all cameras. These profiles are stored in the /iccprofiles/input and /dcpprofiles folders and are automatically retrieved based on a file name matching to the exact model name of the camera.
 !TP_ICM_INPUTCAMERA_TOOLTIP;Use a simple color matrix from dcraw, an enhanced RawTherapee version (whichever is available based on camera model) or one embedded in the DNG.
@@ -1606,7 +1689,7 @@ TP_WBALANCE_TEMPERATURE;Θερμοκρασία
 !TP_ICM_SAVEREFERENCE_APPLYWB_TOOLTIP;Generally, apply the white balance when saving images to create ICC profiles, and do not apply the white balance to create DCP profiles.
 !TP_ICM_SAVEREFERENCE_TOOLTIP;Save the linear TIFF image before the input profile is applied. The result can be used for calibration purposes and generation of a camera profile.
 !TP_ICM_TONECURVE;Tone curve
-!TP_ICM_TONECURVE_TOOLTIP;Employ the embedded DCP tone curve. The setting is only enabled if the selected DCP has a tone curve.
+!TP_ICM_TONECURVE_TOOLTIP;Employ the embedded DCP tone curve. The setting is only available if the selected DCP has a tone curve.
 !TP_IMPULSEDENOISE_LABEL;Impulse Noise Reduction
 !TP_IMPULSEDENOISE_THRESH;Threshold
 !TP_LABCURVE_AVOIDCOLORSHIFT;Avoid color shift
@@ -1649,10 +1732,19 @@ TP_WBALANCE_TEMPERATURE;Θερμοκρασία
 !TP_LENSGEOM_AUTOCROP;Auto-Crop
 !TP_LENSGEOM_FILL;Auto-fill
 !TP_LENSGEOM_LABEL;Lens / Geometry
-!TP_LENSPROFILE_LABEL;Lens Correction Profile
+!TP_LENSPROFILE_LABEL;Profiled Lens Correction
 !TP_LENSPROFILE_USECA;Chromatic aberration correction
 !TP_LENSPROFILE_USEDIST;Distortion correction
 !TP_LENSPROFILE_USEVIGN;Vignetting correction
+!TP_LOCALCONTRAST_AMOUNT;Amount
+!TP_LOCALCONTRAST_DARKNESS;Darkness level
+!TP_LOCALCONTRAST_LABEL;Local Contrast
+!TP_LOCALCONTRAST_LIGHTNESS;Lightness level
+!TP_LOCALCONTRAST_RADIUS;Radius
+!TP_METADATA_EDIT;Apply modifications
+!TP_METADATA_MODE;Metadata copy mode
+!TP_METADATA_STRIP;Strip all metadata
+!TP_METADATA_TUNNEL;Copy unchanged
 !TP_NEUTRAL;Reset
 !TP_NEUTRAL_TIP;Resets exposure sliders to neutral values.\nApplies to the same controls that Auto Levels applies to, regardless of whether you used Auto Levels or not.
 !TP_PCVIGNETTE_FEATHER;Feather
@@ -1693,19 +1785,83 @@ TP_WBALANCE_TEMPERATURE;Θερμοκρασία
 !TP_RAWEXPOS_PRESER;Highlight preservation
 !TP_RAWEXPOS_RGB;Red, Green, Blue
 !TP_RAWEXPOS_TWOGREEN;Link greens
+!TP_RAW_1PASSMEDIUM;1-Pass (Medium)
+!TP_RAW_3PASSBEST;3-Pass (Best)
+!TP_RAW_AHD;AHD
+!TP_RAW_AMAZE;AMaZE
+!TP_RAW_DCB;DCB
 !TP_RAW_DCBENHANCE;DCB enhancement
 !TP_RAW_DCBITERATIONS;Number of DCB iterations
 !TP_RAW_DMETHOD_PROGRESSBAR;%1 demosaicing...
 !TP_RAW_DMETHOD_PROGRESSBAR_REFINE;Demosaicing refinement...
-!TP_RAW_DMETHOD_TOOLTIP;Note: IGV and LMMSE are dedicated to high ISO images to aid in noise reduction without leading to maze patterns, posterization or a washed-out look.
+!TP_RAW_DMETHOD_TOOLTIP;Note: IGV and LMMSE are dedicated to high ISO images to aid in noise reduction without leading to maze patterns, posterization or a washed-out look.\nPixel Shift is for Pentax/Sony Pixel Shift files. It falls back to AMaZE for non-Pixel Shift files.
+!TP_RAW_EAHD;EAHD
+!TP_RAW_FAST;Fast
 !TP_RAW_HD;Threshold
 !TP_RAW_HD_TOOLTIP;Lower values make hot/dead pixel detection more aggressive, but false positives may lead to artifacts. If you notice any artifacts appearing when enabling the Hot/Dead Pixel Filters, gradually increase the threshold value until they disappear.
+!TP_RAW_HPHD;HPHD
+!TP_RAW_IGV;IGV
+!TP_RAW_IMAGENUM;Sub-image
+!TP_RAW_IMAGENUM_TOOLTIP;Some raw files consist of several sub-images (Pentax/Sony Pixel Shift, Pentax 3-in-1 HDR, Canon Dual Pixel).\n\nWhen using any demosaicing method other than Pixel Shift, this selects which sub-image is used.\n\nWhen using the Pixel Shift demosaicing method on a Pixel Shift raw, all sub-images are used, and this selects which sub-image should be used for moving parts.
 !TP_RAW_LABEL;Demosaicing
+!TP_RAW_LMMSE;LMMSE
 !TP_RAW_LMMSEITERATIONS;LMMSE enhancement steps
 !TP_RAW_LMMSE_TOOLTIP;Adds gamma (step 1), median (steps 2-4) and refinement (steps 5-6) to reduce artifacts and improve the signal-to-noise ratio.
+!TP_RAW_MONO;Mono
+!TP_RAW_NONE;None (Shows sensor pattern)
+!TP_RAW_PIXELSHIFT;Pixel Shift
+!TP_RAW_PIXELSHIFTADAPTIVE;Adaptive detection
+!TP_RAW_PIXELSHIFTBLUR;Blur motion mask
+!TP_RAW_PIXELSHIFTEPERISO;ISO adaption
+!TP_RAW_PIXELSHIFTEPERISO_TOOLTIP;The default value of 0 should work fine for base ISO.\nIncrease the value to improve motion detection for higher ISO.\nIncrease in small steps and watch the motion mask while increasing.
+!TP_RAW_PIXELSHIFTEQUALBRIGHT;Equalize brightness of frames
+!TP_RAW_PIXELSHIFTEQUALBRIGHTCHANNEL;Equalize per channel
+!TP_RAW_PIXELSHIFTEQUALBRIGHTCHANNEL_TOOLTIP;Enabled: Equalize the RGB channels individually.\nDisabled: Use same equalization factor for all channels.
+!TP_RAW_PIXELSHIFTEQUALBRIGHT_TOOLTIP;Equalize the brightness of the frames to the brightness of the selected frame.\nIf there are overexposed areas in the frames select the brightest frame to avoid magenta colour cast in overexposed areas or enable motion correction.
+!TP_RAW_PIXELSHIFTEXP0;Experimental
+!TP_RAW_PIXELSHIFTGREEN;Check green channel for motion
+!TP_RAW_PIXELSHIFTHOLEFILL;Fill holes in motion mask
+!TP_RAW_PIXELSHIFTHOLEFILL_TOOLTIP;Fill holes in motion mask
+!TP_RAW_PIXELSHIFTLMMSE;Use LMMSE for moving parts
+!TP_RAW_PIXELSHIFTLMMSE_TOOLTIP;Use LMMSE instead of AMaZE for areas of motion.\nUseful for high ISO images.
+!TP_RAW_PIXELSHIFTMASKTHRESHOLD;3x3 new threshold
+!TP_RAW_PIXELSHIFTMEDIAN;Use median for moving parts
+!TP_RAW_PIXELSHIFTMEDIAN3;Exclude selected frame from median
+!TP_RAW_PIXELSHIFTMEDIAN3_TOOLTIP;Excludes selected frame from median.\nUseful if moving objects overlap in frame 2 and 3
+!TP_RAW_PIXELSHIFTMEDIAN_TOOLTIP;Use median of all frames instead of selected frame for regions with motion.\nRemoves objects which are at different places in all frames.\nGives motion effect on slow moving (overlapping) objects.
+!TP_RAW_PIXELSHIFTMM_AUTO;Automatic
+!TP_RAW_PIXELSHIFTMM_CUSTOM;Custom
+!TP_RAW_PIXELSHIFTMM_OFF;Off
+!TP_RAW_PIXELSHIFTMOTION;Motion detection level (deprecated)
+!TP_RAW_PIXELSHIFTMOTIONCORRECTION;Green motion correction size
+!TP_RAW_PIXELSHIFTMOTIONMETHOD;Motion Correction
+!TP_RAW_PIXELSHIFTMOTION_TOOLTIP;0 means no motion detection.\n1 - 99 means motion will be detected according to this value. Increase value to increase detection rate.\n100 means the AMaZE-demosaiced frame will be used.
+!TP_RAW_PIXELSHIFTNONGREENAMAZE;Check red/blue AMaZE
+!TP_RAW_PIXELSHIFTNONGREENCROSS;Check red/blue channels for motion
+!TP_RAW_PIXELSHIFTNONGREENCROSS2;Check green AMaZE
+!TP_RAW_PIXELSHIFTNONGREENHORIZONTAL;Check red/blue horizontal
+!TP_RAW_PIXELSHIFTNONGREENVERTICAL;Check red/blue vertical
+!TP_RAW_PIXELSHIFTNREADISO;nRead
+!TP_RAW_PIXELSHIFTONEGREEN;Use one green instead of average
+!TP_RAW_PIXELSHIFTONEGREEN_TOOLTIP;Use one green instead of averaging two greens for regions without motion.
+!TP_RAW_PIXELSHIFTPRNU;PRNU (%)
+!TP_RAW_PIXELSHIFTREDBLUEWEIGHT;Red&Blue weight
+!TP_RAW_PIXELSHIFTSHOWMOTION;Show motion mask
+!TP_RAW_PIXELSHIFTSHOWMOTIONMASKONLY;Show only motion mask
+!TP_RAW_PIXELSHIFTSHOWMOTIONMASKONLY_TOOLTIP;Shows the motion mask without the image.
+!TP_RAW_PIXELSHIFTSHOWMOTION_TOOLTIP;Overlays the image with a mask showing the regions with motion.
+!TP_RAW_PIXELSHIFTSIGMA;Blur radius
+!TP_RAW_PIXELSHIFTSIGMA_TOOLTIP;The default radius of 1.0 usually fits well for base ISO.\nIncrease the value for high ISO shots, 5.0 is a good starting point.\nWatch the motion mask while changing the value.
+!TP_RAW_PIXELSHIFTSMOOTH;Smooth transitions
+!TP_RAW_PIXELSHIFTSMOOTH_TOOLTIP;Smooth transitions between areas with motion and areas without.\nSet to 0 to disable transition smoothing.\nSet to 1 to either get the AMaZE/LMMSE result of the selected frame (depending on whether "Use LMMSE" is selected), or the median of all four frames if "Use median" is selected.
+!TP_RAW_PIXELSHIFTSTDDEVFACTORBLUE;StdDev factor Blue
+!TP_RAW_PIXELSHIFTSTDDEVFACTORGREEN;StdDev factor Green
+!TP_RAW_PIXELSHIFTSTDDEVFACTORRED;StdDev factor Red
+!TP_RAW_RCD;RCD
 !TP_RAW_SENSOR_BAYER_LABEL;Sensor with Bayer Matrix
 !TP_RAW_SENSOR_XTRANS_DMETHOD_TOOLTIP;3-pass gives best results (recommended for low ISO images).\n1-pass is almost undistinguishable from 3-pass for high ISO images and is faster.
 !TP_RAW_SENSOR_XTRANS_LABEL;Sensor with X-Trans Matrix
+!TP_RAW_VNG4;VNG4
 !TP_RESIZE_APPLIESTO;Applies to:
 !TP_RESIZE_CROPPEDAREA;Cropped Area
 !TP_RESIZE_FITBOX;Bounding Box
@@ -1811,6 +1967,9 @@ TP_WBALANCE_TEMPERATURE;Θερμοκρασία
 !TP_SHARPENMICRO_LABEL;Microcontrast
 !TP_SHARPENMICRO_MATRIX;3×3 matrix instead of 5×5
 !TP_SHARPENMICRO_UNIFORMITY;Uniformity
+!TP_TM_FATTAL_AMOUNT;Amount
+!TP_TM_FATTAL_LABEL;HDR Tone Mapping
+!TP_TM_FATTAL_THRESHOLD;Threshold
 !TP_VIBRANCE_AVOIDCOLORSHIFT;Avoid color shift
 !TP_VIBRANCE_CURVEEDITOR_SKINTONES;HH
 !TP_VIBRANCE_CURVEEDITOR_SKINTONES_LABEL;Skin-tones
@@ -2028,6 +2187,8 @@ TP_WBALANCE_TEMPERATURE;Θερμοκρασία
 !TP_WBALANCE_SOLUX41;Solux 4100K
 !TP_WBALANCE_SOLUX47;Solux 4700K (vendor)
 !TP_WBALANCE_SOLUX47_NG;Solux 4700K (Nat. Gallery)
+!TP_WBALANCE_TEMPBIAS;AWB temperature bias
+!TP_WBALANCE_TEMPBIAS_TOOLTIP;Allows to alter the computation of the "auto white balance"\nby biasing it towards warmer or cooler temperatures. The bias\nis expressed as a percentage of the computed temperature,\nso that the result is given by "computedTemp + computedTemp * bias".
 !TP_WBALANCE_TUNGSTEN;Tungsten
 !TP_WBALANCE_WATER1;UnderWater 1
 !TP_WBALANCE_WATER2;UnderWater 2

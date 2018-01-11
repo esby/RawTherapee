@@ -2,10 +2,12 @@
 
 #include "clutstore.h"
 
+#include "iccstore.h"
+#include "imagefloat.h"
 #include "opthelper.h"
 #include "rt_math.h"
-#include "imagefloat.h"
 #include "stdimagesource.h"
+
 #include "../rtgui/options.h"
 
 namespace
@@ -30,7 +32,7 @@ bool loadFile(
     bool res = false;
 
     if (fw == fh) {
-        unsigned int level = 1;
+        int level = 1;
 
         while (level * level * level < fw) {
             ++level;
@@ -50,7 +52,7 @@ bool loadFile(
         rtengine::procparams::ColorManagementParams icm;
         icm.working = working_color_space;
 
-        img_src.getImage(curr_wb, TR_NONE, img_float.get(), pp, rtengine::procparams::ToneCurveParams(), icm, rtengine::procparams::RAWParams());
+        img_src.getImage(curr_wb, TR_NONE, img_float.get(), pp, rtengine::procparams::ToneCurveParams(), rtengine::procparams::RAWParams());
 
         if (!working_color_space.empty()) {
             img_src.convertColorSpace(img_float.get(), icm, curr_wb);
@@ -284,7 +286,7 @@ void rtengine::HaldCLUT::splitClutFilename(
     profile_name = "sRGB";
 
     if (!name.empty()) {
-        for (const auto& working_profile : rtengine::getWorkingProfiles()) {
+        for (const auto& working_profile : rtengine::ICCStore::getWorkingProfiles()) {
             if (
                 !working_profile.empty() // This isn't strictly needed, but an empty wp name should be skipped anyway
                 && std::search(name.rbegin(), name.rend(), working_profile.rbegin(), working_profile.rend()) == name.rbegin()
@@ -303,16 +305,21 @@ rtengine::CLUTStore& rtengine::CLUTStore::getInstance()
     return instance;
 }
 
-std::shared_ptr<rtengine::HaldCLUT> rtengine::CLUTStore::getClut(const Glib::ustring& filename)
+std::shared_ptr<rtengine::HaldCLUT> rtengine::CLUTStore::getClut(const Glib::ustring& filename) const
 {
     std::shared_ptr<rtengine::HaldCLUT> result;
 
-    if (!cache.get(filename, result)) {
+    const Glib::ustring full_filename =
+        !Glib::path_is_absolute(filename)
+            ? Glib::ustring(Glib::build_filename(options.clutsDir, filename))
+            : filename;
+
+    if (!cache.get(full_filename, result)) {
         std::unique_ptr<rtengine::HaldCLUT> clut(new rtengine::HaldCLUT);
 
-        if (clut->load(filename)) {
+        if (clut->load(full_filename)) {
             result = std::move(clut);
-            cache.insert(filename, result);
+            cache.insert(full_filename, result);
         }
     }
 

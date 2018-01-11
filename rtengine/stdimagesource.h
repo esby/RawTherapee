@@ -42,14 +42,16 @@ public:
     StdImageSource ();
     ~StdImageSource ();
 
-    int         load        (const Glib::ustring &fname, bool batch = false);
-    void        getImage    (const ColorTemp &ctemp, int tran, Imagefloat* image, const PreviewProps &pp, const ToneCurveParams &hrp, const ColorManagementParams &cmp, const RAWParams &raw);
+    int         load        (const Glib::ustring &fname);
+    void        getImage    (const ColorTemp &ctemp, int tran, Imagefloat* image, const PreviewProps &pp, const ToneCurveParams &hrp, const RAWParams &raw);
     ColorTemp   getWB       () const
     {
         return wb;
     }
     void        getAutoWBMultipliers (double &rm, double &gm, double &bm);
     ColorTemp   getSpotWB   (std::vector<Coord2D> &red, std::vector<Coord2D> &green, std::vector<Coord2D> &blue, int tran, double equal);
+
+    eSensorType getSensorType() const {return ST_NONE;}
 
     bool        isWBProviderReady ()
     {
@@ -64,11 +66,11 @@ public:
     }
 
     void        getFullSize (int& w, int& h, int tr = TR_NONE);
-    void        getSize     (PreviewProps pp, int& w, int& h);
+    void        getSize     (const PreviewProps &pp, int& w, int& h);
 
-    ImageData*  getImageData ()
+    FrameData*  getImageData (unsigned int frameNum)
     {
-        return idata;
+        return idata->getFrameData (frameNum);
     }
     ImageIO*    getImageIO   ()
     {
@@ -91,10 +93,17 @@ public:
     void        convertColorSpace(Imagefloat* image, const ColorManagementParams &cmp, const ColorTemp &wb);// RAWParams raw will not be used for non-raw files (see imagesource.h)
     static void colorSpaceConversion (Imagefloat* im, const ColorManagementParams &cmp, cmsHPROFILE embedded, IIOSampleFormat sampleFormat);
 
-    bool        IsrgbSourceModified() const
+    bool        isRGBSourceModified() const
     {
         return rgbSourceModified;
     }
+    void setCurrentFrame(unsigned int frameNum) {}
+    int getFrameCount() {return 1;}
+
+
+    void getRawValues(int x, int y, int rotate, int &R, int &G, int &B) { R = G = B = 0;}
+
+
 };
 }
 #endif

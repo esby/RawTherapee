@@ -56,6 +56,9 @@ class FileBrowserEntry : public ThumbBrowserEntryBase,
     FileBrowserEntryIdleHelper* feih;
 
     ImgEditState state;
+    float crop_custom_ratio;
+
+    IdleRegister idle_register;
 
     bool onArea (CursorArea a, int x, int y);
     void updateCursor (int x, int y);
@@ -67,10 +70,12 @@ public:
     static Glib::RefPtr<Gdk::Pixbuf> editedIcon;
     static Glib::RefPtr<Gdk::Pixbuf> recentlySavedIcon;
     static Glib::RefPtr<Gdk::Pixbuf> enqueuedIcon;
+    static Glib::RefPtr<Gdk::Pixbuf> hdr;
+    static Glib::RefPtr<Gdk::Pixbuf> ps;
 
     FileBrowserEntry (Thumbnail* thm, const Glib::ustring& fname);
     ~FileBrowserEntry ();
-    void draw ();
+    void draw (Cairo::RefPtr<Cairo::Context> cc);
 
     void setImageAreaToolListener (ImageAreaToolListener* l)
     {
@@ -84,6 +89,7 @@ public:
     void calcThumbnailSize ();
 
     virtual std::vector<Glib::RefPtr<Gdk::Pixbuf> > getIconsOnImageArea ();
+    virtual std::vector<Glib::RefPtr<Gdk::Pixbuf> > getSpecificityIconsOnImageArea ();
     virtual void getIconSize (int& w, int& h);
 
     // thumbnaillistener interface

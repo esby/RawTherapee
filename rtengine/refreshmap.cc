@@ -73,7 +73,7 @@ int refreshmap[rtengine::NUMOFEVENTS] = {
     0,                // EvLDNRadius: obsolete,
     0,                // EvLDNEdgeTolerance: obsolete,
     0,                // EvCDNEnabled:obsolete,
-    ALL,              // EvBlendCMSMatrix,
+    0,                // free entry
     RGBCURVE,         // EvDCPToneCurve,
     ALLNORAW,         // EvDCPIlluminant,
     RETINEX,          // EvSHEnabled,
@@ -451,7 +451,7 @@ int refreshmap[rtengine::NUMOFEVENTS] = {
     DEMOSAIC,         // EvLgam
     DEMOSAIC,         // EvLslope
     RETINEX,          // EvLhighl
-    DEMOSAIC,         // EvLbaselog
+    0,                // --unused--
     DEMOSAIC,         // EvRetinexlhcurve
     OUTPUTPROFILE,    // EvOIntent
     MONITORTRANSFORM, // EvMonitorTransform: no history message
@@ -469,7 +469,99 @@ int refreshmap[rtengine::NUMOFEVENTS] = {
     ALLNORAW,         // EvcbdlMethod
     RETINEX,          // EvRetinexgaintransmission
     RETINEX,          // EvLskal
-    OUTPUTPROFILE     // EvOBPCompens
-
+    OUTPUTPROFILE,    // EvOBPCompens
+    ALLNORAW,          // EvWBtempBias
+    DARKFRAME,        // EvRawImageNum
+    DEMOSAIC,         // EvPixelShiftMotion
+    DEMOSAIC,         // EvPixelShiftMotionCorrection
+    DEMOSAIC,         // EvPixelShiftStddevFactorGreen
+    DEMOSAIC,         // EvPixelShiftEperIso
+    DEMOSAIC,         // EvPixelShiftNreadIso
+    DEMOSAIC,         // EvPixelShiftPrnu
+    DEMOSAIC,         // EvPixelshiftShowMotion
+    DEMOSAIC,         // EvPixelshiftShowMotionMaskOnly
+    DEMOSAIC,         // EvPixelShiftAutomatic
+    DEMOSAIC,         // EvPixelShiftNonGreenHorizontal
+    DEMOSAIC,         // EvPixelShiftNonGreenVertical
+    DEMOSAIC,         // EvPixelShiftNonGreenCross
+    DEMOSAIC,         // EvPixelShiftStddevFactorRed
+    DEMOSAIC,         // EvPixelShiftStddevFactorBlue
+    DEMOSAIC,         // EvPixelShiftNonGreenCross2
+    DEMOSAIC,         // EvPixelShiftNonGreenAmaze
+    DEMOSAIC,         // EvPixelShiftGreen
+    DEMOSAIC,         // EvPixelShiftRedBlueWeight
+    DEMOSAIC,         // EvPixelShiftBlur
+    DEMOSAIC,         // EvPixelShiftSigma
+    DEMOSAIC,         // EvPixelShiftSum
+    DEMOSAIC,         // EvPixelShiftExp0
+    DEMOSAIC,         // EvPixelShiftHoleFill
+    DEMOSAIC,         // EvPixelShiftMedian
+    DEMOSAIC,         // EvPixelShiftMedian3
+    DEMOSAIC,         // EvPixelShiftMotionMethod
+    DEMOSAIC,         // EvPixelShiftSmooth
+    DEMOSAIC,         // EvPixelShiftLmmse
+    DEMOSAIC,         // EvPixelShiftEqualBright
+    DEMOSAIC,          // EvPixelShiftEqualBrightChannel
+    LUMINANCECURVE,   // EvCATtempout
+    LUMINANCECURVE,   // EvCATgreenout
+    LUMINANCECURVE,   // EvCATybout
+    LUMINANCECURVE,   // EvCATDegreeout
+    LUMINANCECURVE,   // EvCATAutoDegreeout
+    LUMINANCECURVE,   // EvCATtempsc
+    LUMINANCECURVE,   // EvCATgreensc
+    LUMINANCECURVE,   // EvCATybscen
+    LUMINANCECURVE,   // EvCATAutoyb
+    DARKFRAME,        // EvLensCorrMode
+    DARKFRAME,        // EvLensCorrLensfunCamera
+    DARKFRAME,        // EvLensCorrLensfunLens
+    ALLNORAW,         // EvTMFattalEnabled
+    HDR,              // EvTMFattalThreshold
+    HDR,              // EvTMFattalAmount
+    ALLNORAW,         // EvWBEnabled
+    RGBCURVE,         // EvRGBEnabled
+    LUMINANCECURVE,   // EvLEnabled
+    DEMOSAIC          // EvPixelShiftOneGreen
 };
 
+
+namespace rtengine {
+
+RefreshMapper::RefreshMapper():
+    next_event_(rtengine::NUMOFEVENTS)
+{
+    for (int event = 0; event < rtengine::NUMOFEVENTS; ++event) {
+        actions_[event] = refreshmap[event];
+    }
+}
+
+
+ProcEvent RefreshMapper::newEvent()
+{
+    return ProcEvent(++next_event_);
+}
+
+
+void RefreshMapper::mapEvent(ProcEvent event, int action)
+{
+    actions_[event] = action;
+}
+
+
+int RefreshMapper::getAction(ProcEvent event) const
+{
+    auto it = actions_.find(event);
+    if (it == actions_.end()) {
+        return 0;
+    } else {
+        return it->second;
+    }
+}
+
+
+RefreshMapper *RefreshMapper::getInstance()
+{
+    static RefreshMapper instance;
+    return &instance;
+}
+
+} // namespace rtengine

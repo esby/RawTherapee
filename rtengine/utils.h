@@ -38,7 +38,7 @@ void hflip(unsigned char* img, int w, int h);
 void vflip(unsigned char* img, int w, int h);
 
 template<typename ENUM>
-typename std::underlying_type<ENUM>::type toUnderlying(ENUM value)
+constexpr typename std::underlying_type<ENUM>::type toUnderlying(ENUM value)
 {
     return static_cast<typename std::underlying_type<ENUM>::type>(value);
 }
@@ -51,5 +51,7 @@ bool hasJpegExtension(const Glib::ustring& filename);
 bool hasTiffExtension(const Glib::ustring& filename);
 // Return true if file has .png extension (ignoring case)
 bool hasPngExtension(const Glib::ustring& filename);
+
+void swab(const void* from, void* to, ssize_t n);
 
 }

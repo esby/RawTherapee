@@ -56,11 +56,11 @@ public:
  * on the graph. E.g. the "bottomLeft" value is related to the bottom left cursor.
  *
  * It is also possible to have a threshold with 2 totally independent cursors, each one having his own range,
- * man/max/default values and precision. This let developers create their own threshold curve, that they will
- * have to provide through the
+ * min/max/default values and precision. This let developers create their own threshold curve, that they will
+ * have to provide through the ThresholdCurveProvider interface
  *
  */
-class ThresholdSelector : public Gtk::DrawingArea, public ColoredBar
+class ThresholdSelector : public Gtk::DrawingArea, public BackBuffer
 {
 
 public:
@@ -98,11 +98,10 @@ protected:
     double minValBottom, maxValBottom;
     double defPos[4];
     double positions[4];
-    unsigned short wslider;
     eUpdatePolicy updatePolicy;
 
     const static int hb = 3;  // horizontal border
-    const static int vb = 2;  // vertical border
+    const static int vb = 0;  // vertical border
 
     void initValues ();
     void findLitCursor(int posX, int posY);
@@ -110,9 +109,23 @@ protected:
     void findBoundaries(double &min, double &max);
     double to01(ThreshCursorId cursorId);
     void updateTooltip();
+    void updateBackBuffer();
+
+    Gtk::SizeRequestMode get_request_mode_vfunc () const;
+    void get_preferred_height_vfunc (int& minimum_height, int& natural_height) const;
+    void get_preferred_width_vfunc (int &minimum_width, int &natural_width) const;
+    void get_preferred_height_for_width_vfunc (int width, int &minimum_height, int &natural_height) const;
+    void get_preferred_width_for_height_vfunc (int height, int &minimum_width, int &natural_width) const;
+    void on_realize ();
+    bool on_draw(const ::Cairo::RefPtr< Cairo::Context> &cr);
+    bool on_button_press_event (GdkEventButton* event);
+    bool on_button_release_event (GdkEventButton* event);
+    bool on_motion_notify_event (GdkEventMotion* event);
+    bool on_leave_notify_event (GdkEventCrossing* event);
 
 public:
 
+    ColoredBar coloredBar;
     sigc::signal<void> signal_value_changed();
 
     ThresholdSelector(double minValueBottom, double maxValueBottom, double defBottom, Glib::ustring labelBottom, unsigned int precisionBottom,
@@ -125,12 +138,12 @@ public:
     template <typename T>
     void setDefaults (const rtengine::procparams::Threshold<T> &t)
     {
-        defPos[TS_BOTTOMLEFT] = double(t.value[0]);  // should we use shapeValue() ?
-        defPos[TS_TOPLEFT]    = double(t.value[1]);
+        defPos[TS_BOTTOMLEFT] = double(t.getBottomLeft());  // should we use shapeValue() ?
+        defPos[TS_TOPLEFT]    = double(t.getTopLeft());
 
         if (doubleThresh) {
-            defPos[TS_BOTTOMRIGHT] = double(t.value[2]);
-            defPos[TS_TOPRIGHT]    = double(t.value[3]);
+            defPos[TS_BOTTOMRIGHT] = double(t.getBottomRight());
+            defPos[TS_TOPRIGHT]    = double(t.getTopRight());
         }
     }
     void setDefaults (double bottom, double top);
@@ -138,12 +151,12 @@ public:
     template <typename T>
     void setPositions (const rtengine::procparams::Threshold<T> &tValues)
     {
-        positions[TS_BOTTOMLEFT]  = static_cast<double>(tValues.value[TS_BOTTOMLEFT]);
-        positions[TS_TOPLEFT]     = static_cast<double>(tValues.value[TS_TOPLEFT]);
+        positions[TS_BOTTOMLEFT]  = static_cast<double>(tValues.getBottomLeft());
+        positions[TS_TOPLEFT]     = static_cast<double>(tValues.getTopLeft());
 
         if (tValues.isDouble()) {
-            positions[TS_BOTTOMRIGHT] = static_cast<double>(tValues.value[TS_BOTTOMRIGHT]);
-            positions[TS_TOPRIGHT]    = static_cast<double>(tValues.value[TS_TOPRIGHT]);
+            positions[TS_BOTTOMRIGHT] = static_cast<double>(tValues.getBottomRight());
+            positions[TS_TOPRIGHT]    = static_cast<double>(tValues.getTopRight());
         }
 
         updateTooltip();
@@ -201,12 +214,6 @@ public:
     {
         return doubleThresh;
     }
-    void on_realize ();
-    bool on_expose_event(GdkEventExpose* event);
-    bool on_button_press_event (GdkEventButton* event);
-    bool on_button_release_event (GdkEventButton* event);
-    bool on_motion_notify_event (GdkEventMotion* event);
-    bool on_leave_notify_event (GdkEventCrossing* event);
     void styleChanged (const Glib::RefPtr<Gtk::Style>& style);
     unsigned int getPrecision ()
     {

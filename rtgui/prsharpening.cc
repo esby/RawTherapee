@@ -32,13 +32,12 @@ PrSharpening::PrSharpening () : FoldableToolPanel(this, "prsharpening", M("TP_PR
     //setEnabledTooltipMarkup(M("TP_PRSHARPENING_TOOLTIP"));
 
     Gtk::HBox* hb = Gtk::manage (new Gtk::HBox ());
-    hb->set_border_width (4);
     hb->show ();
     Gtk::Label* ml = Gtk::manage (new Gtk::Label (M("TP_SHARPENING_METHOD") + ":"));
     ml->show ();
     method = Gtk::manage (new MyComboBoxText ());
-    method->append_text (M("TP_SHARPENING_USM"));
-    method->append_text (M("TP_SHARPENING_RLD"));
+    method->append (M("TP_SHARPENING_USM"));
+    method->append (M("TP_SHARPENING_RLD"));
     method->show ();
     hb->pack_start(*ml, Gtk::PACK_SHRINK, 4);
     hb->pack_start(*method);
@@ -241,20 +240,20 @@ void PrSharpening::write (ProcParams* pp, ParamsEdited* pedited)
     }
 
     if (pedited) {
-        pedited->prsharpening.amount            = amount->getEditedState ();
-        pedited->prsharpening.radius            = radius->getEditedState ();
-        pedited->prsharpening.threshold         = threshold->getEditedState ();
-        pedited->prsharpening.edges_radius  = eradius->getEditedState ();
-        pedited->prsharpening.edges_tolerance = etolerance->getEditedState ();
+        pedited->prsharpening.amount             = amount->getEditedState ();
+        pedited->prsharpening.radius             = radius->getEditedState ();
+        pedited->prsharpening.threshold          = threshold->getEditedState ();
+        pedited->prsharpening.edges_radius       = eradius->getEditedState ();
+        pedited->prsharpening.edges_tolerance    = etolerance->getEditedState ();
         pedited->prsharpening.halocontrol_amount = hcamount->getEditedState ();
-        pedited->prsharpening.deconvamount  = damount->getEditedState ();
-        pedited->prsharpening.deconvradius  = dradius->getEditedState ();
-        pedited->prsharpening.deconviter        = diter->getEditedState ();
-        pedited->prsharpening.deconvdamping     = ddamping->getEditedState ();
-        pedited->prsharpening.method            =  method->get_active_row_number() != 2;
-        pedited->prsharpening.halocontrol   =  !halocontrol->get_inconsistent();
-        pedited->prsharpening.edgesonly         =  !edgesonly->get_inconsistent();
-        pedited->prsharpening.enabled       =  !get_inconsistent();
+        pedited->prsharpening.deconvamount       = damount->getEditedState ();
+        pedited->prsharpening.deconvradius       = dradius->getEditedState ();
+        pedited->prsharpening.deconviter         = diter->getEditedState ();
+        pedited->prsharpening.deconvdamping      = ddamping->getEditedState ();
+        pedited->prsharpening.method             = method->get_active_row_number() != 2;
+        pedited->prsharpening.halocontrol        = !halocontrol->get_inconsistent();
+        pedited->prsharpening.edgesonly          = !edgesonly->get_inconsistent();
+        pedited->prsharpening.enabled            = !get_inconsistent();
     }
 }
 
@@ -421,13 +420,15 @@ void PrSharpening::halocontrol_toggled ()
 void PrSharpening::method_changed ()
 {
 
-    removeIfThere (this, usm, false);
-    removeIfThere (this, rld, false);
+    if (!batchMode) {
+        removeIfThere (this, usm, false);
+        removeIfThere (this, rld, false);
 
-    if (method->get_active_row_number() == 0) {
-        pack_start (*usm);
-    } else if (method->get_active_row_number() == 1) {
-        pack_start (*rld);
+        if (method->get_active_row_number() == 0) {
+            pack_start (*usm);
+        } else if (method->get_active_row_number() == 1) {
+            pack_start (*rld);
+        }
     }
 
     if (listener && (multiImage || getEnabled()) ) {
@@ -454,6 +455,7 @@ void PrSharpening::setBatchMode (bool batchMode)
     hcbin->pack_start (*hcbox);
     removeIfThere (edgebin, edgebox, false);
     edgebin->pack_start (*edgebox);
+    pack_start (*rld);
 
     radius->showEditedCB ();
     amount->showEditedCB ();
@@ -465,19 +467,33 @@ void PrSharpening::setBatchMode (bool batchMode)
     damount->showEditedCB ();
     ddamping->showEditedCB ();
     diter->showEditedCB ();
-    method->append_text (M("GENERAL_UNCHANGED"));
+    method->append (M("GENERAL_UNCHANGED"));
 }
 
-void PrSharpening::setAdjusterBehavior (bool amountadd)
+void PrSharpening::setAdjusterBehavior (bool radiusadd, bool amountadd, bool dampingadd, bool iteradd, bool edgetoladd, bool haloctrladd)
 {
 
+    radius->setAddMode(radiusadd);
+    dradius->setAddMode(radiusadd);
     amount->setAddMode(amountadd);
     damount->setAddMode(amountadd);
+    ddamping->setAddMode(dampingadd);
+    diter->setAddMode(iteradd);
+    eradius->setAddMode(radiusadd);
+    etolerance->setAddMode(edgetoladd);
+    hcamount->setAddMode(haloctrladd);
 }
 
 void PrSharpening::trimValues (rtengine::procparams::ProcParams* pp)
 {
 
+    radius->trimValue(pp->prsharpening.radius);
+    dradius->trimValue(pp->prsharpening.deconvradius);
     amount->trimValue(pp->prsharpening.amount);
     damount->trimValue(pp->prsharpening.deconvamount);
+    ddamping->trimValue(pp->prsharpening.deconvdamping);
+    diter->trimValue(pp->prsharpening.deconviter);
+    eradius->trimValue(pp->prsharpening.edges_radius);
+    etolerance->trimValue(pp->prsharpening.edges_tolerance);
+    hcamount->trimValue(pp->prsharpening.halocontrol_amount);
 }

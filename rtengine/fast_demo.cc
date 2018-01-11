@@ -52,7 +52,7 @@ LUTf RawImageSource::initInvGrad()
 #endif
 //LUTf RawImageSource::invGrad = RawImageSource::initInvGrad();
 
-SSEFUNCTION void RawImageSource::fast_demosaic(int winx, int winy, int winw, int winh)
+SSEFUNCTION void RawImageSource::fast_demosaic()
 {
 
     double progress = 0.0;
@@ -62,7 +62,7 @@ SSEFUNCTION void RawImageSource::fast_demosaic(int winx, int winy, int winw, int
     //int winw=W, winh=H;
 
     if (plistener) {
-        plistener->setProgressStr (Glib::ustring::compose(M("TP_RAW_DMETHOD_PROGRESSBAR"), RAWParams::BayerSensor::methodstring[RAWParams::BayerSensor::fast]));
+        plistener->setProgressStr (Glib::ustring::compose(M("TP_RAW_DMETHOD_PROGRESSBAR"), RAWParams::BayerSensor::getMethodString(RAWParams::BayerSensor::Method::FAST)));
         plistener->setProgress (progress);
     }
 
@@ -277,7 +277,6 @@ SSEFUNCTION void RawImageSource::fast_demosaic(int winx, int winy, int winw, int
                 int j, cc;
                 __m128 wtuv, wtdv, wtlv, wtrv;
                 __m128 greenv, tempv, absv, abs2v;
-                __m128 onev = _mm_set1_ps( 1.0f );
                 __m128 c16v = _mm_set1_ps( 16.0f );
                 __m128 fourv = _mm_set1_ps( 4.0f );
                 vmask selmask;

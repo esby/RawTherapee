@@ -56,9 +56,7 @@ protected:
     sigc::connection hsmconn;
     bool lastobpc;
     sigc::connection obpcconn;
-    bool lastBlendCMSMatrix;
     bool isBatchMode;
-    sigc::connection blendcmsconn;
 
 private:
     Gtk::VBox       *  iVBox;
@@ -78,7 +76,6 @@ private:
     Gtk::CheckButton*  ckbApplyLookTable;
     Gtk::CheckButton*  ckbApplyBaselineExposureOffset;
     Gtk::CheckButton*  ckbApplyHueSatMap;
-    Gtk::CheckButton*  ckbBlendCMSMatrix;
     MyComboBoxText*    wnames;
     sigc::connection   wnamesconn;
     MyComboBoxText*    wgamma;
@@ -86,10 +83,8 @@ private:
 
     MyComboBoxText*    onames;
     sigc::connection   onamesconn;
-    PopUpButton*       ointent;
+    std::unique_ptr<PopUpButton>       ointent;
     sigc::connection   ointentconn;
-    Gtk::RadioButton*  ofromdir;
-    Gtk::RadioButton*  ofromfile;
     Gtk::RadioButton*  iunchanged;
     MyFileChooserButton* ipDialog;
     Gtk::RadioButton::Group opts;
@@ -99,7 +94,6 @@ private:
     ICMPanelListener*  icmplistener;
 
     double dcpTemperatures[2];
-    bool enableLastICCWorkDirChange;
     Glib::ustring lastRefFilename;
     Glib::ustring camName;
     void updateDCP(int dcpIlluminant, Glib::ustring dcp_name);
@@ -122,14 +116,13 @@ public:
     void gpChanged ();
     void GamChanged ();
     void ipSelectionChanged ();
-    void blendCMSMatrixChanged();
     void dcpIlluminantChanged();
     void toneCurveChanged();
     void applyLookTableChanged();
     void applyBaselineExposureOffsetChanged();
     void applyHueSatMapChanged();
 
-    void setRawMeta (bool raw, const rtengine::ImageData* pMeta);
+    void setRawMeta (bool raw, const rtengine::FramesData* pMeta);
     void saveReferencePressed ();
 
     void setICMPanelListener (ICMPanelListener* ipl)

@@ -172,9 +172,7 @@ Wavelet::Wavelet() :
     enableFinalConn = expfinal->signal_enabled_toggled().connect ( sigc::bind( sigc::mem_fun(this, &Wavelet::enableToggled), expfinal) );
 
 // Wavelet Settings
-    Gtk::VBox* const settingsVBox = Gtk::manage(new Gtk::VBox());
-    settingsVBox->set_border_width(4);
-    settingsVBox->set_spacing(2);
+    ToolParamBlock* const settingsBox = Gtk::manage (new ToolParamBlock());
 
     strength->setAdjusterListener (this);
 
@@ -302,8 +300,16 @@ Wavelet::Wavelet() :
     wavLabels->show();
     levBox->pack_start (*wavLabels);
 
+==== BASE ====
+    Gtk::VBox* const contrastSHVBox = Gtk::manage(new Gtk::VBox);
+    contrastSHVBox->set_border_width(4);
+==== BASE ====
     contrastSHVBox->set_spacing(2);
 
+==== BASE ====
+    HSmethod->append_text (M("TP_WAVELET_HS1"));
+    HSmethod->append_text (M("TP_WAVELET_HS2"));
+==== BASE ====
     HSmethodconn = HSmethod->signal_changed().connect ( sigc::mem_fun(*this, &Wavelet::HSmethodChanged) );
 
     const std::vector<GradientMilestone> milestones2 = {

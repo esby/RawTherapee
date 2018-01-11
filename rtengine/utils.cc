@@ -189,34 +189,38 @@ void rotate(unsigned char* img, int& w, int& h, int deg)
 
 void hflip(unsigned char* img, int w, int h)
 {
-    unsigned char* flipped = new unsigned char[3 * w * h];
-    int ix = 0;
+    if(w > 0 && h > 0) {
+        unsigned char* flipped = new unsigned char[3 * w * h];
+        int ix = 0;
 
-    for (int i = 0; i < h; i++)
-        for (int j = 0; j < w; j++) {
-            flipped[3 * (w * i + w - 1 - j) + 0] = img[ix++];
-            flipped[3 * (w * i + w - 1 - j) + 1] = img[ix++];
-            flipped[3 * (w * i + w - 1 - j) + 2] = img[ix++];
-        }
+        for (int i = 0; i < h; i++)
+            for (int j = 0; j < w; j++) {
+                flipped[3 * (w * i + w - 1 - j) + 0] = img[ix++];
+                flipped[3 * (w * i + w - 1 - j) + 1] = img[ix++];
+                flipped[3 * (w * i + w - 1 - j) + 2] = img[ix++];
+            }
 
-    memcpy(img, flipped, 3 * w * h);
-    delete[] flipped;
+        memcpy(img, flipped, 3 * w * h);
+        delete[] flipped;
+    }
 }
 
 void vflip(unsigned char* img, int w, int h)
 {
-    unsigned char* flipped = new unsigned char[3 * w * h];
-    int ix = 0;
+    if(w > 0 && h > 0) {
+        unsigned char* flipped = new unsigned char[3 * w * h];
+        int ix = 0;
 
-    for (int i = 0; i < h; i++)
-        for (int j = 0; j < w; j++) {
-            flipped[3 * (w * (h - 1 - i) + j) + 0] = img[ix++];
-            flipped[3 * (w * (h - 1 - i) + j) + 1] = img[ix++];
-            flipped[3 * (w * (h - 1 - i) + j) + 2] = img[ix++];
-        }
+        for (int i = 0; i < h; i++)
+            for (int j = 0; j < w; j++) {
+                flipped[3 * (w * (h - 1 - i) + j) + 0] = img[ix++];
+                flipped[3 * (w * (h - 1 - i) + j) + 1] = img[ix++];
+                flipped[3 * (w * (h - 1 - i) + j) + 2] = img[ix++];
+            }
 
-    memcpy(img, flipped, 3 * w * h);
-    delete[] flipped;
+        memcpy(img, flipped, 3 * w * h);
+        delete[] flipped;
+    }
 }
 
 Glib::ustring getFileExtension(const Glib::ustring& filename)
@@ -243,6 +247,21 @@ bool hasTiffExtension(const Glib::ustring& filename)
 bool hasPngExtension(const Glib::ustring& filename)
 {
    return getFileExtension(filename) == "png";
+}
+
+void swab(const void* from, void* to, ssize_t n)
+{
+    // Adapted from glibc
+    const char* char_from = static_cast<const char*>(from);
+    char* char_to = static_cast<char*>(to);
+
+    n &= ~static_cast<ssize_t>(1);
+
+    while (n > 1) {
+        const char b0 = char_from[--n], b1 = char_from[--n];
+        char_to[n] = b0;
+        char_to[n + 1] = b1;
+    }
 }
 
 }

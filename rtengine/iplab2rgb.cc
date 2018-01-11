@@ -158,7 +158,7 @@ Image8* ImProcFunctions::lab2rgb (LabImage* lab, int cx, int cy, int cw, int ch,
         standard_gamma = false;
     }
 
-    cmsHPROFILE oprof = iccStore->getProfile (profile);
+    cmsHPROFILE oprof = ICCStore::getInstance()->getProfile (profile);
 
     if (oprof) {
         cmsHPROFILE oprofG = oprof;
@@ -216,7 +216,7 @@ Image8* ImProcFunctions::lab2rgb (LabImage* lab, int cx, int cy, int cw, int ch,
         }
     } else {
 
-        const auto xyz_rgb = iccStore->workingSpaceInverseMatrix (profile);
+        const auto xyz_rgb = ICCStore::getInstance()->workingSpaceInverseMatrix (profile);
 
 #ifdef _OPENMP
         #pragma omp parallel for schedule(dynamic,16) if (multiThread)
@@ -262,7 +262,7 @@ Image8* ImProcFunctions::lab2rgb (LabImage* lab, int cx, int cy, int cw, int ch,
  * If a custom gamma profile can be created, divide by 327.68, convert to xyz and apply the custom gamma transform
  * otherwise divide by 327.68, convert to xyz and apply the sRGB transform, before converting with gamma2curve
  */
-Image16* ImProcFunctions::lab2rgb16 (LabImage* lab, int cx, int cy, int cw, int ch, const procparams::ColorManagementParams &icm, bool bw, GammaValues *ga)
+Imagefloat* ImProcFunctions::lab2rgbOut (LabImage* lab, int cx, int cy, int cw, int ch, const procparams::ColorManagementParams &icm, GammaValues *ga)
 {
 
     if (cx < 0) {
@@ -281,16 +281,16 @@ Image16* ImProcFunctions::lab2rgb16 (LabImage* lab, int cx, int cy, int cw, int 
         ch = lab->H - cy;
     }
 
-    Image16* image = new Image16 (cw, ch);
+    Imagefloat* image = new Imagefloat (cw, ch);
 
     cmsHPROFILE oprof = nullptr;
     if (ga) {
         lcmsMutex->lock ();
-        iccStore->getGammaArray(icm, *ga);
-        oprof = iccStore->createGammaProfile(icm, *ga);
+        ICCStore::getInstance()->getGammaArray(icm, *ga);
+        oprof = ICCStore::getInstance()->createGammaProfile(icm, *ga);
         lcmsMutex->unlock ();
     } else {
-        oprof = iccStore->getProfile (icm.output);
+        oprof = ICCStore::getInstance()->getProfile (icm.output);
     }
 
     if (oprof) {
@@ -300,11 +300,12 @@ Image16* ImProcFunctions::lab2rgb16 (LabImage* lab, int cx, int cy, int cw, int 
         }
         lcmsMutex->lock ();
         cmsHPROFILE iprof = cmsCreateLab4Profile(nullptr);
-        cmsHTRANSFORM hTransform = cmsCreateTransform (iprof, TYPE_Lab_FLT, oprof, TYPE_RGB_16, icm.outputIntent, flags);
+        cmsHTRANSFORM hTransform = cmsCreateTransform (iprof, TYPE_Lab_FLT, oprof, TYPE_RGB_FLT, icm.outputIntent, flags);
         lcmsMutex->unlock ();
 
         image->ExecCMSTransform(hTransform, *lab, cx, cy);
         cmsDeleteTransform(hTransform);
+        image->normalizeFloatTo65535();
     } else {
 #ifdef _OPENMP
         #pragma omp parallel for schedule(dynamic,16) if (multiThread)
@@ -329,9 +330,9 @@ Image16* ImProcFunctions::lab2rgb16 (LabImage* lab, int cx, int cy, int cw, int 
 
                 Color::xyz2srgb(x_, y_, z_, R, G, B);
 
-                image->r(i - cy, j - cx) = (int)Color::gamma2curve[CLIP(R)];
-                image->g(i - cy, j - cx) = (int)Color::gamma2curve[CLIP(G)];
-                image->b(i - cy, j - cx) = (int)Color::gamma2curve[CLIP(B)];
+                image->r(i - cy, j - cx) = Color::gamma2curve[CLIP(R)];
+                image->g(i - cy, j - cx) = Color::gamma2curve[CLIP(G)];
+                image->b(i - cy, j - cx) = Color::gamma2curve[CLIP(B)];
             }
         }
     }

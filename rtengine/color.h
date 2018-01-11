@@ -298,6 +298,30 @@ public:
         }
     }
 
+    static inline void rgb2hsvtc(float r, float g, float b, float &h, float &s, float &v)
+    {
+        const float var_Min = min(r, g, b);
+        const float var_Max = max(r, g, b);
+        const float del_Max = var_Max - var_Min;
+
+        v = var_Max / 65535.f;
+
+        if (del_Max < 0.00001f) {
+            h = 0.f;
+            s = 0.f;
+        } else {
+            s = del_Max / var_Max;
+
+            if (r == var_Max) {
+                h = (g < b ? 6.f : 0.f) + (g - b) / del_Max;
+            } else if (g == var_Max) {
+                h = 2.f + (b - r) / del_Max;
+            } else { /*if ( b == var_Max ) */
+                h = 4.f + (r - g) / del_Max;
+            }
+        }
+    }
+
     /**
     * @brief Convert hue saturation value in red green blue
     * @param h hue channel [0 ; 1]
@@ -312,14 +336,14 @@ public:
     static inline void hsv2rgbdcp (float h, float s, float v, float &r, float &g, float &b)
     {
         // special version for dcp which saves 1 division (in caller) and six multiplications (inside this function)
-        int sector = h;  // sector 0 to 5, floor() is very slow, and h is always >0
-        float f = h - sector; // fractional part of h
+        const int sector = h;  // sector 0 to 5, floor() is very slow, and h is always > 0
+        const float f = h - sector; // fractional part of h
 
         v *= 65535.f;
-        float vs = v * s;
-        float p = v - vs;
-        float q = v - f * vs;
-        float t = p + v - q;
+        const float vs = v * s;
+        const float p = v - vs;
+        const float q = v - f * vs;
+        const float t = p + v - q;
 
         switch (sector) {
             case 1:
@@ -475,7 +499,7 @@ public:
     * @param b channel [-42000 ; +42000] ; can be more than 42000 (return value)
     */
     static void XYZ2Lab(float x, float y, float z, float &L, float &a, float &b);
-
+    static void RGB2Lab(float *X, float *Y, float *Z, float *L, float *a, float *b, const float wp[3][3], int width);
 
     /**
     * @brief Convert Lab in Yuv
@@ -498,7 +522,7 @@ public:
     * @param a channel [-42000 ; +42000] ; can be more than 42000 (return value)
     * @param b channel [-42000 ; +42000] ; can be more than 42000 (return value)
     */
-    static void Yuv2Lab(float Y, float u, float v, float &L, float &a, float &b, double wp[3][3]);
+    static void Yuv2Lab(float Y, float u, float v, float &L, float &a, float &b, const double wp[3][3]);
 
 
     /**
@@ -733,7 +757,7 @@ public:
     * @param go green channel of output color [0 ; 65535] (return value)
     * @param bo blue channel of output color [0 ; 65535] (return value)
     */
-    static void interpolateRGBColor (float realL, float iplow, float iphigh, int algm,  const float balance, int twoc, int metchrom, bool chr, bool lum, float chromat, float luma, const float r1, const float g1, const float b1, const float xl, const float yl, const float zl, const float x2, const float y2, const float z2, int channels, const double xyz_rgb[3][3], const double rgb_xyz[3][3], float &ro, float &go, float &bo);
+    static void interpolateRGBColor (float realL, float iplow, float iphigh, int algm,  const float balance, int twoc, int metchrom, float chromat, float luma, const float r1, const float g1, const float b1, const float xl, const float yl, const float zl, const float x2, const float y2, const float z2, const double xyz_rgb[3][3], const double rgb_xyz[3][3], float &ro, float &go, float &bo);
 
 
     /**
@@ -780,18 +804,18 @@ public:
     static inline T interpolatePolarHue_PI (T h1, T h2, U balance) {
         if (h1==h2)
             return h1;
-        if ((h1 > h2) && (h1-h2 > T(M_PI))){
-            h1 -= T(2*M_PI);
+        if ((h1 > h2) && (h1-h2 > T(rtengine::RT_PI))){
+            h1 -= T(2*rtengine::RT_PI);
             T value = h1 + T(balance) * (h2-h1);
-            if (value < T(-M_PI))
-                value += T(2*M_PI);
+            if (value < T(-rtengine::RT_PI))
+                value += T(2*rtengine::RT_PI);
             return value;
         }
-        else if (h2-h1 > T(M_PI)) {
-            h2 -= T(2*M_PI);
+        else if (h2-h1 > T(rtengine::RT_PI)) {
+            h2 -= T(2*rtengine::RT_PI);
             T value = h1 + T(balance) * (h2-h1);
             if (value < T(0))
-                value += T(2*M_PI);
+                value += T(2*rtengine::RT_PI);
             return value;
         }
         else
@@ -821,21 +845,21 @@ public:
             f = 1.f - f;
         }
 
-        if (d < T(-M_PI) || d < T(0) || d > T(M_PI)) { //there was an inversion here !! d > T(M_PI)
-            h1 += T(2 * M_PI);
+        if (d < T(-rtengine::RT_PI) || d < T(0) || d > T(rtengine::RT_PI)) { //there was an inversion here !! d > T(rtengine::RT_PI)
+            h1 += T(2 * rtengine::RT_PI);
             h = h1 + f * (h2 - h1);
-            h = std::fmod(h, 2 * M_PI);
+            h = std::fmod(h, 2 * rtengine::RT_PI);
         } else {
             h = h1 + f * d;
         }
 
         // not strictly necessary..but in case of
-        if(h < T(-M_PI)) {
-            h = T(2 * M_PI) - h;
+        if(h < T(-rtengine::RT_PI)) {
+            h = T(2 * rtengine::RT_PI) - h;
         }
 
-        if(h > T(M_PI)) {
-            h = h - T(2 * M_PI);
+        if(h > T(rtengine::RT_PI)) {
+            h = h - T(2 * rtengine::RT_PI);
         }
 
         return h;
@@ -864,7 +888,7 @@ public:
             f = 1.f - f;
         }
 
-        if (d < T(0) || d < T(0.5) || d > T(1.)) { //there was an inversion here !! d > T(M_PI)
+        if (d < T(0) || d < T(0.5) || d > T(1.)) { //there was an inversion here !! d > T(rtengine::RT_PI)
             h1 += T(1.);
             h = h1 + f * (h2 - h1);
             h = std::fmod(h, 1.);
@@ -898,7 +922,7 @@ public:
     *        gamma4 used in ip2Lab2rgb [0 ; 1], usually near 0.03(return value)
     *        gamma5 used in ip2Lab2rgb [0 ; 1], usually near 0.5 (return value)
     */
-    static void calcGamma (double pwr, double ts, int mode, int imax, GammaValues &gamma);
+    static void calcGamma (double pwr, double ts, int mode, GammaValues &gamma);
 
 
     /**
@@ -1310,7 +1334,7 @@ public:
     * @param wip matrix for working profile
     * @param multiThread whether to parallelize the loop or not
     */
-    static void LabGamutMunsell (float *labL, float *laba, float *labb, const int N, bool corMunsell, bool lumaMuns, bool isHLEnabled, bool gamut, const double wip[3][3], bool multiThread );
+    static void LabGamutMunsell (float *labL, float *laba, float *labb, const int N, bool corMunsell, bool lumaMuns, bool isHLEnabled, bool gamut, const double wip[3][3]);
 
 
     /*

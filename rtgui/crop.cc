@@ -25,6 +25,9 @@ using namespace rtengine::procparams;
 
 extern Options options;
 
+namespace
+{
+
 class RefreshSpinHelper
 {
 
@@ -35,7 +38,60 @@ public:
         : crop(_crop), notify(_notify) {}
 };
 
-Crop::Crop (): FoldableToolPanel(this, "crop", M("TP_CROP_LABEL"), false, true)
+int refreshSpinsUI (void* data)
+{
+    RefreshSpinHelper* rsh = static_cast<RefreshSpinHelper*>(data);
+    rsh->crop->refreshSpins (rsh->notify);
+    delete rsh;
+    return 0;
+}
+
+int notifyListenerUI (void* data)
+{
+    static_cast<Crop*>(data)->notifyListener();
+    return 0;
+}
+
+}
+
+Crop::Crop():
+    FoldableToolPanel(this, "crop", M("TP_CROP_LABEL"), false, true),
+    crop_ratios{
+        {M("GENERAL_ASIMAGE"), 0.0},
+        {"3:2", 3.0 / 2.0},                 // L1.5,        P0.666...
+        {"4:3", 4.0 / 3.0},                 // L1.333...,   P0.75
+        {"16:9", 16.0 / 9.0},               // L1.777...,   P0.5625
+        {"16:10", 16.0 / 10.0},             // L1.6,        P0.625
+        {"1:1", 1.0 / 1.0},                 // L1,          P1
+        {"2:1", 2.0 / 1.0},                 // L2,          P0.5
+        {"3:1", 3.0 / 1.0},                 // L3,          P0.333...
+        {"4:1", 4.0 / 1.0},                 // L4,          P0.25
+        {"5:1", 5.0 / 1.0},                 // L5,          P0.2
+        {"6:1", 6.0 / 1.0},                 // L6,          P0.1666...
+        {"7:1", 7.0 / 1.0},                 // L7,          P0.142...
+        {"4:5", 4.0 / 5.0},                 // L1.25,       P0.8
+        {"5:7", 5.0 / 7.0},                 // L1.4,        P0.714...
+        {"6:7", 6.0 / 7.0},                 // L1.166...,   P0.857...
+        {"6:17", 6.0 / 17.0},               // L2.833...,   P0.352...
+        {"24:65 - XPAN", 24.0 / 65.0},      // L2.708...,   P0.369...
+        {"1.414 - DIN EN ISO 216", 1.414},  // L1.414,      P0.707...
+        {"3.5:5", 3.5 / 5.0},               // L1.428...,   P0.7
+        {"8.5:11 - US Letter", 8.5 / 11.0}, // L1.294...,   P0.772...
+        {"9.5:12", 9.5 / 12.0},             // L1.263...,   P0.791...
+        {"10:12", 10.0 / 12.0},             // L1.2,        P0.833...
+        {"11:14", 11.0 / 14.0},             // L1.272...,   P0.785...
+        {"11:17 - Tabloid", 11.0 / 17.0},   // L1.545...,   P0.647...
+        {"13:19", 13.0 / 19.0},             // L1.461...,   P0.684...
+        {"17:22", 17.0 / 22.0},             // L1.294...,   P0.772...
+        {"45:35 - ePassport", 45.0 / 35.0}, // L1.285,...   P0.777...
+        {"64:27", 64.0 / 27.0},             // L2.370...,   P0.421...
+    },
+    opt(0),
+    wDirty(true),
+    hDirty(true),
+    xDirty(true),
+    yDirty(true),
+    lastFixRatio(true)
 {
 
     clistener = nullptr;
@@ -126,88 +182,27 @@ Crop::Crop (): FoldableToolPanel(this, "crop", M("TP_CROP_LABEL"), false, true)
     ppi->set_value (300);
     // ppibox END
 
-    /****************
-    * Crop Ratio
-    *****************/
-    int NumberOfCropRatios = 26;    //!!! change this value when adding new crop ratios
-    cropratio.resize (NumberOfCropRatios);
-
-    cropratio[0].label  = "3:2";
-    cropratio[0].value  = 3.0 / 2.0;
-    cropratio[1].label  = "4:3";
-    cropratio[1].value  = 4.0 / 3.0;
-    cropratio[2].label  = "16:9";
-    cropratio[2].value  = 16.0 / 9.0;
-    cropratio[3].label  = "16:10";
-    cropratio[3].value  = 16.0 / 10.0;
-    cropratio[4].label  = "1:1";
-    cropratio[4].value  = 1.0 / 1.0;
-    cropratio[5].label  = "2:1";
-    cropratio[5].value  = 2.0 / 1.0;
-    cropratio[6].label  = "3:1";
-    cropratio[6].value  = 3.0 / 1.0;
-    cropratio[7].label  = "4:1";
-    cropratio[7].value  = 4.0 / 1.0;
-    cropratio[8].label  = "5:1";
-    cropratio[8].value  = 5.0 / 1.0;
-    cropratio[9].label  = "6:1";
-    cropratio[9].value  = 6.0 / 1.0;
-    cropratio[10].label = "7:1";
-    cropratio[10].value = 7.0 / 1.0;
-    cropratio[11].label = "4:5";
-    cropratio[11].value = 4.0 / 5.0;
-    cropratio[12].label = "5:7";
-    cropratio[12].value = 5.0 / 7.0;
-    cropratio[13].label = "6:7";
-    cropratio[13].value = 6.0 / 7.0;
-    cropratio[14].label = "6:17";
-    cropratio[14].value = 6.0 / 17.0;
-    cropratio[15].label = "24:65 - XPAN";
-    cropratio[15].value = 24.0 / 65.0;
-    cropratio[16].label = "1.414 - DIN EN ISO 216";
-    cropratio[16].value = 1.414;
-    cropratio[17].label = "3.5:5";
-    cropratio[17].value = 3.5 / 5.0;
-    cropratio[18].label = "8.5:11 - US Letter";
-    cropratio[18].value = 8.5 / 11.0;
-    cropratio[19].label = "9.5:12";
-    cropratio[19].value = 9.5 / 12.0;
-    cropratio[20].label = "10:12";
-    cropratio[20].value = 10.0 / 12.0;
-    cropratio[21].label = "11:14";
-    cropratio[21].value = 11.0 / 14.0;
-    cropratio[22].label = "11:17 - Tabloid";
-    cropratio[22].value = 11.0 / 17.0;
-    cropratio[23].label = "13:19";
-    cropratio[23].value = 13.0 / 19.0;
-    cropratio[24].label = "17:22";
-    cropratio[24].value = 17.0 / 22.0;
-    cropratio[25].label = "45:35 - ePassport";
-    cropratio[25].value = 45.0 / 35.0;
-
-
-
-    // populate the combobox
-    for (int i = 0; i < NumberOfCropRatios; i++) {
-        ratio->append_text (cropratio[i].label);
+    // Populate the combobox
+    for (const auto& crop_ratio : crop_ratios) {
+        ratio->append (crop_ratio.label);
     }
 
     ratio->set_active (0);
 
-    orientation->append_text (M("GENERAL_LANDSCAPE"));
-    orientation->append_text (M("GENERAL_PORTRAIT"));
-    orientation->append_text (M("GENERAL_ASIMAGE"));
+    orientation->append (M("GENERAL_LANDSCAPE"));
+    orientation->append (M("GENERAL_PORTRAIT"));
+    orientation->append (M("GENERAL_ASIMAGE"));
     orientation->set_active (2);
 
-    guide->append_text (M("TP_CROP_GTNONE"));
-    guide->append_text (M("TP_CROP_GTFRAME"));
-    guide->append_text (M("TP_CROP_GTRULETHIRDS"));
-    guide->append_text (M("TP_CROP_GTDIAGONALS"));
-    guide->append_text (M("TP_CROP_GTHARMMEANS"));
-    guide->append_text (M("TP_CROP_GTGRID"));
-    guide->append_text (M("TP_CROP_GTTRIANGLE1"));
-    guide->append_text (M("TP_CROP_GTTRIANGLE2"));
-    guide->append_text (M("TP_CROP_GTEPASSPORT"));
+    guide->append (M("TP_CROP_GTNONE"));
+    guide->append (M("TP_CROP_GTFRAME"));
+    guide->append (M("TP_CROP_GTRULETHIRDS"));
+    guide->append (M("TP_CROP_GTDIAGONALS"));
+    guide->append (M("TP_CROP_GTHARMMEANS"));
+    guide->append (M("TP_CROP_GTGRID"));
+    guide->append (M("TP_CROP_GTTRIANGLE1"));
+    guide->append (M("TP_CROP_GTTRIANGLE2"));
+    guide->append (M("TP_CROP_GTEPASSPORT"));
     guide->set_active (0);
 
     w->set_range (1, maxw);
@@ -252,6 +247,11 @@ Crop::Crop (): FoldableToolPanel(this, "crop", M("TP_CROP_LABEL"), false, true)
     show_all ();
 }
 
+Crop::~Crop()
+{
+    idle_register.destroy();
+}
+
 void Crop::writeOptions ()
 {
 
@@ -293,10 +293,14 @@ void Crop::read (const ProcParams* pp, const ParamsEdited* pedited)
         setDimensions (pp->crop.x + pp->crop.w, pp->crop.y + pp->crop.h);
     }
 
-    ratio->set_active_text (pp->crop.ratio);
+    if (pp->crop.ratio == "As Image") {
+        ratio->set_active(0);
+    } else {
+        ratio->set_active_text (pp->crop.ratio);
+    }
     fixr->set_active (pp->crop.fixratio);
 
-    const bool flip_orientation = pp->crop.fixratio && cropratio[ratio->get_active_row_number()].value < 1.0;
+    const bool flip_orientation = pp->crop.fixratio && crop_ratios[ratio->get_active_row_number()].value > 0 && crop_ratios[ratio->get_active_row_number()].value < 1.0;
 
     if (pp->crop.orientation == "Landscape") {
         orientation->set_active (flip_orientation ? 1 : 0);
@@ -391,7 +395,7 @@ void Crop::write (ProcParams* pp, ParamsEdited* pedited)
     pp->crop.ratio = ratio->get_active_text ();
 
     // for historical reasons we store orientation different if ratio is written as 2:3 instead of 3:2, but in GUI 'landscape' is always long side horizontal regardless of the ratio is written short or long side first.
-    const bool flip_orientation = fixr->get_active() && cropratio[ratio->get_active_row_number()].value < 1.0;
+    const bool flip_orientation = fixr->get_active() && crop_ratios[ratio->get_active_row_number()].value > 0 && crop_ratios[ratio->get_active_row_number()].value < 1.0;
 
     if (orientation->get_active_row_number() == 0) {
         pp->crop.orientation = flip_orientation ? "Portrait" : "Landscape";
@@ -508,34 +512,18 @@ void Crop::enabledChanged ()
     }
 }
 
-int notifyListenerUI (void* data)
-{
-    GThreadLock lock; // All GUI acces from idle_add callbacks or separate thread HAVE to be protected
-    (static_cast<Crop*>(data))->notifyListener ();
-    return 0;
-}
-
-int refreshSpinsUI (void* data)
-{
-    GThreadLock lock; // All GUI acces from idle_add callbacks or separate thread HAVE to be protected
-    RefreshSpinHelper* rsh = static_cast<RefreshSpinHelper*>(data);
-    rsh->crop->refreshSpins (rsh->notify);
-    delete rsh;
-    return 0;
-}
-
 void Crop::hFlipCrop ()
 {
 
     nx = maxw - nx - nw;
-    g_idle_add (refreshSpinsUI, new RefreshSpinHelper (this, false));
+    idle_register.add(refreshSpinsUI, new RefreshSpinHelper(this, false));
 }
 
 void Crop::vFlipCrop ()
 {
 
     ny = maxh - ny - nh;
-    g_idle_add (refreshSpinsUI, new RefreshSpinHelper (this, false));
+    idle_register.add(refreshSpinsUI, new RefreshSpinHelper(this, false));
 }
 
 void Crop::rotateCrop (int deg, bool hflip, bool vflip)
@@ -575,7 +563,7 @@ void Crop::rotateCrop (int deg, bool hflip, bool vflip)
     }
 
     lastRotationDeg = deg;
-    g_idle_add (refreshSpinsUI, new RefreshSpinHelper (this, false));
+    idle_register.add(refreshSpinsUI, new RefreshSpinHelper(this, false));
 }
 
 void Crop::positionChanged ()
@@ -589,7 +577,7 @@ void Crop::positionChanged ()
     int W = nw;
     int H = nh;
     cropMoved (X, Y, W, H);
-    g_idle_add (notifyListenerUI, this);
+    idle_register.add(notifyListenerUI, this);
 }
 
 void Crop::widthChanged ()
@@ -602,7 +590,7 @@ void Crop::widthChanged ()
     int W = (int)w->get_value ();
     int H = nh;
     cropWidth2Resized (X, Y, W, H);
-    g_idle_add (notifyListenerUI, this);
+    idle_register.add(notifyListenerUI, this);
 }
 
 void Crop::heightChanged ()
@@ -615,7 +603,7 @@ void Crop::heightChanged ()
     int W = nw;
     int H = (int)h->get_value ();
     cropHeight2Resized (X, Y, W, H);
-    g_idle_add (notifyListenerUI, this);
+    idle_register.add(notifyListenerUI, this);
 }
 
 // Fixed ratio toggle button
@@ -667,7 +655,7 @@ void Crop::adjustCropToRatio()
     }
 
     // This will save the options
-    g_idle_add (refreshSpinsUI, new RefreshSpinHelper (this, true));
+    idle_register.add(refreshSpinsUI, new RefreshSpinHelper(this, true));
 }
 
 void Crop::refreshSize ()
@@ -739,29 +727,28 @@ void Crop::setDimensions (int mw, int mh)
     refreshSize ();
 }
 
-struct setdimparams {
-    Crop* crop;
-    int x;
-    int y;
-};
-
-int sizeChangedUI (void* data)
-{
-    GThreadLock lock; // All GUI acces from idle_add callbacks or separate thread HAVE to be protected
-    setdimparams* params = static_cast<setdimparams*>(data);
-    params->crop->setDimensions (params->x, params->y);
-    delete params;
-    return 0;
-}
-
 void Crop::sizeChanged (int x, int y, int ow, int oh)
 {
+    struct Params {
+        Crop* crop;
+        int x;
+        int y;
+    };
 
-    setdimparams* params = new setdimparams;
-    params->x = x;
-    params->y = y;
-    params->crop = this;
-    g_idle_add (sizeChangedUI, params);
+    Params* const params = new Params{
+        this,
+        x,
+        y
+    };
+
+    const auto func = [](gpointer data) -> gboolean {
+        Params* const params = static_cast<Params*>(data);
+        params->crop->setDimensions(params->x, params->y);
+        delete params;
+        return FALSE;
+    };
+
+    idle_register.add(func, params);
 }
 
 bool Crop::refreshSpins (bool notify)
@@ -825,11 +812,11 @@ void Crop::cropMoved (int &X, int &Y, int &W, int &H)
     nw = W;
     nh = H;
 
-    g_idle_add (refreshSpinsUI, new RefreshSpinHelper (this, false));
+    idle_register.add(refreshSpinsUI, new RefreshSpinHelper(this, false));
 //  Glib::signal_idle().connect (sigc::mem_fun(*this, &Crop::refreshSpins));
 }
 
-void Crop::cropWidth1Resized (int &X, int &Y, int &W, int &H)
+void Crop::cropWidth1Resized (int &X, int &Y, int &W, int &H, float custom_ratio)
 {
 
     int oldXR = nx + nw;
@@ -842,8 +829,8 @@ void Crop::cropWidth1Resized (int &X, int &Y, int &W, int &H)
         W = oldXR;
     }
 
-    if (fixr->get_active()) {
-        double r = getRatio();
+    if (fixr->get_active() || custom_ratio > 0) {
+        double r = custom_ratio > 0 ? custom_ratio : getRatio();
         H = (int)round(W / r);
         int Hmax = min(ny + nh, maxh - ny);
 
@@ -869,10 +856,10 @@ void Crop::cropWidth1Resized (int &X, int &Y, int &W, int &H)
     nw = W;
     nh = H;
 
-    g_idle_add (refreshSpinsUI, new RefreshSpinHelper (this, false));
+    idle_register.add(refreshSpinsUI, new RefreshSpinHelper(this, false));
 }
 
-void Crop::cropWidth2Resized (int &X, int &Y, int &W, int &H)
+void Crop::cropWidth2Resized (int &X, int &Y, int &W, int &H, float custom_ratio)
 {
 
     if (W < 0) {
@@ -883,8 +870,8 @@ void Crop::cropWidth2Resized (int &X, int &Y, int &W, int &H)
         W = maxw - nx;
     }
 
-    if (fixr->get_active()) {
-        double r = getRatio();
+    if (fixr->get_active() || custom_ratio > 0) {
+        double r = custom_ratio > 0 ? custom_ratio : getRatio();
         H = (int)round(W / r);
         int Hmax = min(ny + nh, maxh - ny);
 
@@ -909,10 +896,10 @@ void Crop::cropWidth2Resized (int &X, int &Y, int &W, int &H)
     nw = W;
     nh = H;
 
-    g_idle_add (refreshSpinsUI, new RefreshSpinHelper (this, false));
+    idle_register.add(refreshSpinsUI, new RefreshSpinHelper(this, false));
 }
 
-void Crop::cropHeight1Resized (int &X, int &Y, int &W, int &H)
+void Crop::cropHeight1Resized (int &X, int &Y, int &W, int &H, float custom_ratio)
 {
 
     int oldYB = ny + nh;
@@ -925,8 +912,8 @@ void Crop::cropHeight1Resized (int &X, int &Y, int &W, int &H)
         H = oldYB;
     }
 
-    if (fixr->get_active()) {
-        double r = getRatio();
+    if (fixr->get_active() || custom_ratio > 0) {
+        double r = custom_ratio > 0 ? custom_ratio : getRatio();
         W = (int)round(H * r);
         int Wmax = min(nx + nw, maxw - nx);
 
@@ -952,10 +939,10 @@ void Crop::cropHeight1Resized (int &X, int &Y, int &W, int &H)
     nw = W;
     nh = H;
 
-    g_idle_add (refreshSpinsUI, new RefreshSpinHelper (this, false));
+    idle_register.add(refreshSpinsUI, new RefreshSpinHelper(this, false));
 }
 
-void Crop::cropHeight2Resized (int &X, int &Y, int &W, int &H)
+void Crop::cropHeight2Resized (int &X, int &Y, int &W, int &H, float custom_ratio)
 {
 
     if (H < 0) {
@@ -966,8 +953,8 @@ void Crop::cropHeight2Resized (int &X, int &Y, int &W, int &H)
         H = maxh - ny;
     }
 
-    if (fixr->get_active()) {
-        double r = getRatio();
+    if (fixr->get_active() || custom_ratio > 0) {
+        double r = custom_ratio > 0 ? custom_ratio : getRatio();
         W = (int)round(H * r);
         int Wmax = min(nx + nw, maxw - nx);
 
@@ -992,10 +979,10 @@ void Crop::cropHeight2Resized (int &X, int &Y, int &W, int &H)
     nw = W;
     nh = H;
 
-    g_idle_add (refreshSpinsUI, new RefreshSpinHelper (this, false));
+    idle_register.add(refreshSpinsUI, new RefreshSpinHelper(this, false));
 }
 
-void Crop::cropTopLeftResized (int &X, int &Y, int &W, int &H)
+void Crop::cropTopLeftResized (int &X, int &Y, int &W, int &H, float custom_ratio)
 {
 
     int oldXR = nx + nw; // right side
@@ -1017,8 +1004,8 @@ void Crop::cropTopLeftResized (int &X, int &Y, int &W, int &H)
         H = oldYB;
     }
 
-    if (fixr->get_active()) {
-        double r = getRatio();
+    if (fixr->get_active() || custom_ratio > 0) {
+        double r = custom_ratio > 0 ? custom_ratio : getRatio();
         W = (int)round(H * r);
 
         if (W > oldXR) {
@@ -1034,10 +1021,10 @@ void Crop::cropTopLeftResized (int &X, int &Y, int &W, int &H)
     nw = W;
     nh = H;
 
-    g_idle_add (refreshSpinsUI, new RefreshSpinHelper (this, false));
+    idle_register.add(refreshSpinsUI, new RefreshSpinHelper(this, false));
 }
 
-void Crop::cropTopRightResized (int &X, int &Y, int &W, int &H)
+void Crop::cropTopRightResized (int &X, int &Y, int &W, int &H, float custom_ratio)
 {
 
     int oldYB = ny + nh;
@@ -1058,8 +1045,8 @@ void Crop::cropTopRightResized (int &X, int &Y, int &W, int &H)
         H = oldYB;
     }
 
-    if (fixr->get_active()) {
-        double r = getRatio();
+    if (fixr->get_active() || custom_ratio > 0) {
+        double r = custom_ratio > 0 ? custom_ratio : getRatio();
         W = (int)round(H * r);
 
         if (W > maxw - nx) {
@@ -1074,10 +1061,10 @@ void Crop::cropTopRightResized (int &X, int &Y, int &W, int &H)
     nw = W;
     nh = H;
 
-    g_idle_add (refreshSpinsUI, new RefreshSpinHelper (this, false));
+    idle_register.add(refreshSpinsUI, new RefreshSpinHelper(this, false));
 }
 
-void Crop::cropBottomLeftResized (int &X, int &Y, int &W, int &H)
+void Crop::cropBottomLeftResized (int &X, int &Y, int &W, int &H, float custom_ratio)
 {
 
     int oldXR = nx + nw;
@@ -1098,8 +1085,8 @@ void Crop::cropBottomLeftResized (int &X, int &Y, int &W, int &H)
         H = maxh - ny;
     }
 
-    if (fixr->get_active()) {
-        double r = getRatio();
+    if (fixr->get_active() || custom_ratio > 0) {
+        double r = custom_ratio > 0 ? custom_ratio : getRatio();
         W = (int)round(H * r);
 
         if (W > oldXR) {
@@ -1114,10 +1101,10 @@ void Crop::cropBottomLeftResized (int &X, int &Y, int &W, int &H)
     nw = W;
     nh = H;
 
-    g_idle_add (refreshSpinsUI, new RefreshSpinHelper (this, false));
+    idle_register.add(refreshSpinsUI, new RefreshSpinHelper(this, false));
 }
 
-void Crop::cropBottomRightResized (int &X, int &Y, int &W, int &H)
+void Crop::cropBottomRightResized (int &X, int &Y, int &W, int &H, float custom_ratio)
 {
 
     if (W < 0) {
@@ -1136,8 +1123,8 @@ void Crop::cropBottomRightResized (int &X, int &Y, int &W, int &H)
         H = maxh - ny;
     }
 
-    if (fixr->get_active()) {
-        double r = getRatio();
+    if (fixr->get_active() || custom_ratio > 0) {
+        double r = custom_ratio > 0 ? custom_ratio : getRatio();
         W = (int)round(H * r);
 
         if (W > maxw - nx) {
@@ -1151,7 +1138,7 @@ void Crop::cropBottomRightResized (int &X, int &Y, int &W, int &H)
     nw = W;
     nh = H;
 
-    g_idle_add (refreshSpinsUI, new RefreshSpinHelper (this, false));
+    idle_register.add(refreshSpinsUI, new RefreshSpinHelper(this, false));
 }
 
 void Crop::cropInit (int &x, int &y, int &w, int &h)
@@ -1212,10 +1199,6 @@ void Crop::cropResized (int &x, int &y, int& x2, int& y2)
         W = maxw;
     }
 
-    if (H > maxh) {
-        H = maxh;
-    }
-
     if (fixr->get_active()) {
         double r = getRatio ();
 
@@ -1269,13 +1252,12 @@ void Crop::cropResized (int &x, int &y, int& x2, int& y2)
     nw = W;
     nh = H;
 
-    g_idle_add (refreshSpinsUI, new RefreshSpinHelper (this, false));
+    idle_register.add(refreshSpinsUI, new RefreshSpinHelper(this, false));
 }
 
 void Crop::cropManipReady ()
 {
-
-    g_idle_add (notifyListenerUI, this);
+    idle_register.add(notifyListenerUI, this);
 }
 
 double Crop::getRatio ()
@@ -1287,7 +1269,10 @@ double Crop::getRatio ()
         return r;
     }
 
-    r = cropratio[ratio->get_active_row_number()].value;
+    r = crop_ratios[ratio->get_active_row_number()].value;
+    if (!r) {
+        r = maxh <= maxw ? float(maxh)/float(maxw) : float(maxw)/float(maxh);
+    }
 
     if (r < 1.0) {
         r = 1.0 / r;    // convert to long side first (eg 4:5 becomes 5:4)
@@ -1308,8 +1293,8 @@ void Crop::setBatchMode (bool batchMode)
 
     ToolPanel::setBatchMode (batchMode);
 
-    ratio->append_text (M("GENERAL_UNCHANGED"));
-    orientation->append_text (M("GENERAL_UNCHANGED"));
-    guide->append_text (M("GENERAL_UNCHANGED"));
+    ratio->append (M("GENERAL_UNCHANGED"));
+    orientation->append (M("GENERAL_UNCHANGED"));
+    guide->append (M("GENERAL_UNCHANGED"));
     removeIfThere (this, ppibox);
 }

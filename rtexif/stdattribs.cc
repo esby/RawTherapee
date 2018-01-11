@@ -332,7 +332,7 @@ public:
         char buffer[32];
         double v = t->toDouble();
 
-        if( v < 0. || v > 1000. ) {
+        if ( v < 0. || v > 1000. ) {
             return "undef";
         }
 
@@ -349,9 +349,9 @@ public:
     virtual std::string toString (Tag* t)
     {
         char buffer[32];
-        double v = pow(2.0, t->toDouble() / 2.0);
+        double v = pow (2.0, t->toDouble() / 2.0);
 
-        if( v < 0. || v > 1000. ) {
+        if ( v < 0. || v > 1000. ) {
             return "undef";
         }
 
@@ -370,7 +370,7 @@ public:
         char buffer[32];
         double v = t->toDouble();
 
-        if( v < -1000. || v > 1000. ) {
+        if ( v < -1000. || v > 1000. ) {
             return "undef";
         }
 
@@ -389,7 +389,7 @@ public:
         char buffer[32];
         double d = pow (2.0, -t->toDouble());
 
-        if (d > 0.0 && d < 0.9) {
+        if (d > 0.0 && d <= 0.5) {
             sprintf (buffer, "1/%.0f", 1.0 / d);
         } else {
             sprintf (buffer, "%.1f", d);
@@ -409,7 +409,7 @@ public:
         char buffer[32];
         double d = t->toDouble();
 
-        if (d > 0.0 && d < 0.9) {
+        if (d > 0.0 && d <= 0.5) {
             sprintf (buffer, "1/%.0f", 1.0 / d);
         } else {
             sprintf (buffer, "%.1f", d);
@@ -429,7 +429,7 @@ public:
         char buffer[32];
         double v = t->toDouble();
 
-        if( v > 1000000. || v < 0 ) {
+        if ( v > 1000000. || v < 0 ) {
             return "undef";
         }
 
@@ -446,30 +446,126 @@ public:
     virtual std::string toString (Tag* t)
     {
         int count = t->getCount();
-        if(count <= 8) {
+
+        if (count <= 8) {
             return std::string();
         }
-        count = std::min(count, 65535); // limit to 65535 chars to avoid crashes in case of corrupted metadata
-        char *buffer = new char[count - 7];
 
-        if (!memcmp((char*)t->getValue(), "ASCII\0\0\0", 8)) {
-            strncpy (buffer, (char*)t->getValue() + 8, count - 8);
+        count = std::min (count, 65535); // limit to 65535 chars to avoid crashes in case of corrupted metadata
+        char *buffer = new char[count - 6]; // include 2 ending null chars for UCS-2 string (possibly)
+        char *value = (char*)t->getValue();
+
+        if (!memcmp(value, "ASCII\0\0\0", 8)) {
+            memcpy(buffer, value + 8, count - 8);
             buffer[count - 8] = '\0';
+        } else if (!memcmp(value, "UNICODE\0", 8)) {
+            memcpy(buffer, value + 8, count - 8);
+            buffer[count - 7] = buffer[count - 8] = '\0';
+            Glib::ustring tmp1(buffer);
+
+
+            bool hasBOM = false;
+            enum ByteOrder bo = UNKNOWN;
+            if (count % 2 || (count >= 11 && (buffer[0] == 0xEF && buffer[1] == 0xBB && buffer[2] == 0xBF))) {
+                // odd string length can only be UTF-8, don't change anything
+                std::string retVal (buffer + 3);
+                delete [] buffer;
+                return retVal;
+            } else if (count >= 10) {
+                if (buffer[0] == 0xFF && buffer[1] == 0xFE) {
+                    bo = INTEL; // little endian
+                    hasBOM = true;
+                } else if (buffer[0] == 0xFE && buffer[1] == 0xFF) {
+                    bo = MOTOROLA; // big endian
+                    hasBOM = true;
+                }
+            }
+            if (bo == UNKNOWN) {
+                // auto-detecting byte order; we still don't know if it's UCS-2 or UTF-8
+                int a = 0, b = 0, c = 0, d = 0;
+                for (int j = 8; j < count; j++) {
+                    char cc = value[j];
+                    if (!(j%2)) {
+                        // counting zeros for first byte
+                        if (!cc) {
+                            ++a;
+                        }
+                    } else {
+                        // counting zeros for second byte
+                        if (!cc) {
+                            ++b;
+                        }
+                    }
+                    if (!(cc & 0x80) || ((cc & 0xC0) == 0xC0) || ((cc & 0xC0) == 0x80)) {
+                        ++c;
+                    }
+                    if ((cc & 0xC0) == 0x80) {
+                        ++d;
+                    }
+                }
+                if (c == (count - 8) && d) {
+                    // this is an UTF-8 string
+                    std::string retVal (buffer);
+                    delete [] buffer;
+                    return retVal;
+                }
+                if ((a || b) && a != b) {
+                    bo = a > b ? MOTOROLA : INTEL;
+                }
+            }
+            if (bo == UNKNOWN) {
+                // assuming platform's byte order
+#if __BYTE_ORDER__==__ORDER_LITTLE_ENDIAN__
+                bo = INTEL;
+#else
+                bo = MOTOROLA;
+#endif
+            }
+
+            // now swapping if necessary
+            if (!hasBOM && bo != HOSTORDER) {
+                if (t->getOrder() != HOSTORDER) {
+                    Tag::swapByteOrder2(buffer, count - 8);
+                }
+            }
+
+            glong written;
+            char* utf8Str = g_utf16_to_utf8((unsigned short int*)buffer, -1, nullptr, &written, nullptr);
+            delete [] buffer;
+            buffer = new char[written + 1];
+            memcpy(buffer, utf8Str, written);
+            buffer[written] = 0;
+        } else if (!memcmp(value, "\0\0\0\0\0\0\0\0", 8)) {
+            // local charset string, whatever it is
+            memcpy(buffer, value + 8, count - 8);
+            buffer[count - 7] = buffer[count - 8] = '\0';
+
+            gsize written = 0;
+            char *utf8Str = g_locale_to_utf8(buffer, count - 8, nullptr, &written, nullptr);
+            if (utf8Str && written) {
+                delete [] buffer;
+                size_t length = strlen(utf8Str);
+                buffer = new char[length + 1];
+                strcpy(buffer, utf8Str);
+            } else {
+                buffer[0] = 0;
+            }
+            if (utf8Str) {
+                g_free(utf8Str);
+            }
         } else {
+            // JIS: unsupported
             buffer[0] = 0;
         }
 
-        std::string retVal(buffer);
+        std::string retVal (buffer);
         delete [] buffer;
         return retVal;
     }
     virtual void fromString (Tag* t, const std::string& value)
     {
-        char *buffer = new char[t->getCount()];
-        memcpy (buffer, "ASCII\0\0\0", 8);
-        strcpy (buffer + 8, value.c_str());
-        t->fromString (buffer, value.size() + 9);
-        delete [] buffer;
+        Glib::ustring tmpStr(value);
+        t->userCommentFromString (tmpStr);
     }
 };
 UserCommentInterpreter userCommentInterpreter;
@@ -483,8 +579,8 @@ public:
         char colors[] = "RGB";
         char buffer[1024];
 
-        for( int i = 0; i < t->getCount(); i++) {
-            unsigned char c = t->toInt(i, BYTE);
+        for ( int i = 0; i < t->getCount(); i++) {
+            unsigned char c = t->toInt (i, BYTE);
             buffer[i] = c < 3 ? colors[c] : ' ';
         }
 
@@ -532,11 +628,28 @@ public:
 };
 UTF8BinInterpreter utf8BinInterpreter;
 
+class RawImageSegmentationInterpreter : public Interpreter
+{
+public:
+    virtual std::string toString (Tag* t)
+    {
+        int segmentNumber = t->toInt(0, SHORT);
+        int segmentWidth = t->toInt(2, SHORT);
+        int lastSegmentWidth = t->toInt(4, SHORT);
+
+        char buffer[32];
+        sprintf (buffer, "%d %d %d", segmentNumber, segmentWidth, lastSegmentWidth);
+        return buffer;
+    }
+};
+RawImageSegmentationInterpreter rawImageSegmentationInterpreter;
+
 const TagAttrib exifAttribs[] = {
     {0, AC_SYSTEM,    0, nullptr, 0x0100, AUTO, "ImageWidth", &stdInterpreter},
     {0, AC_SYSTEM,    0, nullptr, 0x0101, AUTO, "ImageHeight", &stdInterpreter},
     {0, AC_SYSTEM,    0, nullptr, 0x0102, AUTO, "BitsPerSample", &stdInterpreter},
     {0, AC_SYSTEM,    0, nullptr, 0x0103, AUTO, "Compression", &compressionInterpreter},
+    {0, AC_SYSTEM,    0, nullptr, 0x0153, AUTO, "SampleFormat", &stdInterpreter},
     {0, AC_WRITE,     0, nullptr, 0x828d, AUTO, "CFAPatternDim", &stdInterpreter},
     {0, AC_WRITE,     0, nullptr, 0x828e, AUTO, "CFAPattern", &cfaInterpreter},
     {0, AC_WRITE,     0, nullptr, 0x829A, AUTO, "ExposureTime", &exposureTimeInterpreter},
@@ -641,9 +754,9 @@ const TagAttrib exifAttribs[] = {
     {0, AC_WRITE,     0, nullptr, 0xC68B, AUTO, "OriginalRawFileName", &stdInterpreter},
     {0, AC_WRITE,     0, nullptr, 0xC68D, AUTO, "ActiveArea", &stdInterpreter},
     {0, AC_WRITE,     0, nullptr, 0xC68E, AUTO, "MaskedAreas", &stdInterpreter},
-// {0, AC_WRITE,     0, 0, 0xC68F, AUTO, "AsShotICCProfile", & ???},
+//  {0, AC_WRITE,     0, nullptr, 0xC68F, AUTO, "AsShotICCProfile", & ???},
     {0, AC_WRITE,     0, nullptr, 0xC690, AUTO, "AsShotPreProfileMatrix", &stdInterpreter},
-// {0, AC_WRITE,     0, 0, 0xC691, AUTO, "CurrentICCProfile", & ???},
+//  {0, AC_WRITE,     0, nullptr, 0xC691, AUTO, "CurrentICCProfile", & ???},
     {0, AC_WRITE,     0, nullptr, 0xC692, AUTO, "CurrentPreProfileMatrix", &stdInterpreter},
     {0, AC_WRITE,     0, nullptr, 0xC6BF, AUTO, "ColorimetricReference", &stdInterpreter},
     {0, AC_WRITE,     0, nullptr, 0xC6F3, AUTO, "CameraCalibrationSig", &stdInterpreter},
@@ -668,13 +781,13 @@ const TagAttrib exifAttribs[] = {
     {0, AC_WRITE,     0, nullptr, 0xC71B, AUTO, "PreviewDateTime", &stdInterpreter},
     {0, AC_WRITE,     0, nullptr, 0xC71C, AUTO, "RawImageDigest", &stdInterpreter},
     {0, AC_WRITE,     0, nullptr, 0xC71D, AUTO, "OriginalRawFileDigest", &stdInterpreter},
-// {0, AC_WRITE,     0, 0, 0xC71E, AUTO, "SubTileBlockSize", & ???},
-// {0, AC_WRITE,     0, 0, 0xC71F, AUTO, "RowInterleaveFactor", & ???},
+//  {0, AC_WRITE,     0, nullptr, 0xC71E, AUTO, "SubTileBlockSize", & ???},
+//  {0, AC_WRITE,     0, nullptr, 0xC71F, AUTO, "RowInterleaveFactor", & ???},
     {0, AC_WRITE,     0, nullptr, 0xC725, AUTO, "ProfileLookTableDims", &stdInterpreter},
     {0, AC_WRITE,     0, nullptr, 0xC726, AUTO, "ProfileLookTableData", &stdInterpreter},
-// {0, AC_WRITE,     0, 0, 0xC740, AUTO, "OpcodeList1", & ???},
-// {0, AC_WRITE,     0, 0, 0xC741, AUTO, "OpcodeList2", & ???},
-// {0, AC_WRITE,     0, 0, 0xC74E, AUTO, "OpcodeList3", & ???},
+//  {0, AC_WRITE,     0, nullptr, 0xC740, AUTO, "OpcodeList1", & ???},
+//  {0, AC_WRITE,     0, nullptr, 0xC741, AUTO, "OpcodeList2", & ???},
+//  {0, AC_WRITE,     0, nullptr, 0xC74E, AUTO, "OpcodeList3", & ???},
     {0, AC_WRITE,     0, nullptr, 0xC761, AUTO, "NoiseProfile", &stdInterpreter},
     {0, AC_WRITE,     0, nullptr, 0xC763, AUTO, "TimeCodes", &stdInterpreter},
     {0, AC_WRITE,     0, nullptr, 0xC764, AUTO, "FrameRate", &stdInterpreter},
@@ -751,6 +864,7 @@ const TagAttrib iopAttribs[] = {
 
 const TagAttrib ifdAttribs[] = {
     {0, AC_SYSTEM,    0, nullptr, 0x0017, AUTO, "PanaISO", &stdInterpreter},
+    {0, AC_SYSTEM,    0, nullptr, 0x00fe, AUTO, "NewSubFileType", &stdInterpreter},
     {0, AC_SYSTEM,    0, nullptr, 0x0100, AUTO, "ImageWidth", &stdInterpreter},
     {0, AC_SYSTEM,    0, nullptr, 0x0101, AUTO, "ImageHeight", &stdInterpreter},
     {0, AC_SYSTEM,    0, nullptr, 0x0102, AUTO, "BitsPerSample", &stdInterpreter},
@@ -775,6 +889,7 @@ const TagAttrib ifdAttribs[] = {
     {0, AC_SYSTEM,    0, nullptr, 0x013E, AUTO, "WhitePoint", &stdInterpreter},
     {0, AC_SYSTEM,    0, nullptr, 0x013F, AUTO, "PriomaryChromaticities", &stdInterpreter},
     {0, AC_WRITE,     0, ifdAttribs, 0x014A, AUTO, "SubIFD", &stdInterpreter},
+    {0, AC_SYSTEM,    0, nullptr, 0x0153, AUTO, "SampleFormat", &stdInterpreter},
     {0, AC_SYSTEM,    0, nullptr, 0x0201, AUTO, "JPEGInterchangeFormat", &stdInterpreter},
     {0, AC_SYSTEM,    0, nullptr, 0x0202, AUTO, "JPEGInterchangeFormatLength", &stdInterpreter},
     {0, AC_SYSTEM,    0, nullptr, 0x0211, AUTO, "YCbCrCoefficients", &stdInterpreter},
@@ -788,10 +903,10 @@ const TagAttrib ifdAttribs[] = {
     {0, AC_WRITE,     0, nullptr, 0x828e, AUTO, "CFAPattern", &cfaInterpreter},
     {0, AC_WRITE,     0, kodakIfdAttribs, 0x8290, AUTO, "KodakIFD", &stdInterpreter},
     {0, AC_WRITE,     1, nullptr, 0x8298, AUTO, "Copyright", &stdInterpreter},
+    {0, AC_SYSTEM,    0, nullptr, 0x83BB, AUTO, "IPTCData", &stdInterpreter},
     {0, AC_DONTWRITE, 0, nullptr, 0x8606, AUTO, "LeafData", &stdInterpreter}, // is actually a subdir, but a proprietary format
     {0, AC_WRITE,     0, exifAttribs, 0x8769, AUTO, "Exif", &stdInterpreter},
     {0, AC_SYSTEM,    0, nullptr, 0x8773, AUTO, "ICCProfile", &stdInterpreter},
-    {0, AC_SYSTEM,    0, nullptr, 0x83BB, AUTO, "IPTCData", &stdInterpreter},
     {0, AC_WRITE,     0, gpsAttribs,  0x8825, AUTO, "GPSInfo", &stdInterpreter},
     {0, AC_WRITE,     0, nullptr, 0x9003, AUTO, "DateTimeOriginal", &stdInterpreter},
     {0, AC_WRITE,     0, nullptr, 0x9004, AUTO, "DateTimeDigitized", &stdInterpreter},
@@ -805,9 +920,9 @@ const TagAttrib ifdAttribs[] = {
     {0, AC_WRITE,     0, nullptr, 0xc62f, AUTO, "CameraSerialNumber", &stdInterpreter},
     {0, AC_SYSTEM,    0, nullptr, 0xc630, AUTO, "DNGLensInfo", &stdInterpreter},
     {0, AC_DONTWRITE, 0, nullptr, 0xC634, AUTO, "MakerNote", &stdInterpreter}, //DNGPrivateData
+    {0, AC_SYSTEM,    0, nullptr, 0xC640, AUTO, "RawImageSegmentation", &rawImageSegmentationInterpreter},
     {0, AC_WRITE,     0, nullptr, 0xc65d, AUTO, "RawDataUniqueID", &stdInterpreter},
     {0, AC_DONTWRITE, 0, nullptr, 0xc761, AUTO, "NoiseProfile", &stdInterpreter},
-    {0, AC_SYSTEM,    0, nullptr, 0x00fe, AUTO, "NewSubFileType", &stdInterpreter},
     { -1, AC_DONTWRITE, 0,  nullptr, 0, AUTO, "", nullptr}
 };
 }

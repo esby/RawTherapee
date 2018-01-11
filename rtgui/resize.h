@@ -25,25 +25,13 @@
 #include "toolpanel.h"
 #include "guiutils.h"
 
-class Resize : public ToolParamBlock, public AdjusterListener, public FoldableToolPanel, public rtengine::SizeListener
+class Resize final :
+    public ToolParamBlock,
+    public AdjusterListener,
+    public FoldableToolPanel,
+    public rtengine::SizeListener
 {
-
-protected:
-    Adjuster*          scale;
-    Gtk::VBox*         sizeBox;
-    MyComboBoxText*    appliesTo;
-    MyComboBoxText*    method;
-    MyComboBoxText*    spec;
-    MySpinButton*      w;
-    MySpinButton*      h;
-    int                maxw, maxh;
-    int                cropw, croph;
-    sigc::connection   sconn, aconn, wconn, hconn;
-    bool               wDirty, hDirty;
-    ToolParamBlock*    packBox;
-
 public:
-
     Resize ();
     ~Resize ();
 
@@ -69,12 +57,29 @@ public:
     void setDimensions    ();
     void enabledChanged   ();
 
+    void setAdjusterBehavior (bool scaleadd);
+    void trimValues          (rtengine::procparams::ProcParams* pp);
+
 private:
     void fitBoxScale ();
     int getComputedWidth ();
     int getComputedHeight ();
     void notifyBBox ();
     void updateGUI ();
+
+    Adjuster*          scale;
+    Gtk::VBox*         sizeBox;
+    MyComboBoxText*    appliesTo;
+    MyComboBoxText*    method;
+    MyComboBoxText*    spec;
+    MySpinButton*      w;
+    MySpinButton*      h;
+    int                maxw, maxh;
+    int                cropw, croph;
+    sigc::connection   sconn, aconn, wconn, hconn;
+    bool               wDirty, hDirty;
+    ToolParamBlock*    packBox;
+    IdleRegister       idle_register;
 };
 
 #endif

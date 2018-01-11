@@ -59,7 +59,8 @@ PreviewImage::PreviewImage (const Glib::ustring &fname, const Glib::ustring &ext
             }
         } else {
             rtengine::RawMetaDataLocation ri;
-            tpp = rtengine::Thumbnail::loadQuickFromRaw (fname, ri, width, height, 1, true, true);
+            eSensorType sensorType = rtengine::ST_NONE;
+            tpp = rtengine::Thumbnail::loadQuickFromRaw (fname, ri, sensorType, width, height, 1, true, true);
 
             if (tpp) {
                 data = tpp->getImage8Data();
@@ -71,30 +72,22 @@ PreviewImage::PreviewImage (const Glib::ustring &fname, const Glib::ustring &ext
                 int w, h;
                 double scale = 1.;
 
-                if (tpp) {
-                    tpp->getDimensions(w, h, scale);
-                }
+                tpp->getDimensions(w, h, scale);
 
                 previewImage = Cairo::ImageSurface::create(Cairo::FORMAT_RGB24, w, h);
                 previewImage->flush();
 
-                #pragma omp parallel
-                {
-                    const unsigned char *src;
-                    unsigned char *dst;
-                    #pragma omp for schedule(static,10)
+                #pragma omp parallel for
+                for (unsigned int i = 0; i < (unsigned int)(h); ++i) {
+                    const unsigned char *src = data + i * w * 3;
+                    unsigned char *dst = previewImage->get_data() + i * w * 4;
 
-                    for (unsigned int i = 0; i < (unsigned int)(h); ++i) {
-                        src = data + i * w * 3;
-                        dst = previewImage->get_data() + i * w * 4;
+                    for (unsigned int j = 0; j < (unsigned int)(w); ++j) {
+                        unsigned char r = *(src++);
+                        unsigned char g = *(src++);
+                        unsigned char b = *(src++);
 
-                        for (unsigned int j = 0; j < (unsigned int)(w); ++j) {
-                            unsigned char r = *(src++);
-                            unsigned char g = *(src++);
-                            unsigned char b = *(src++);
-
-                            poke255_uc(dst, r, g, b);
-                        }
+                        poke255_uc(dst, r, g, b);
                     }
                 }
                 previewImage->mark_dirty();
@@ -104,10 +97,9 @@ PreviewImage::PreviewImage (const Glib::ustring &fname, const Glib::ustring &ext
 
     if ((mode == PIM_EmbeddedOrRaw && !tpp) || mode == PIM_ForceRaw) {
         RawImageSource rawImage;
-        int error = rawImage.load(fname, true);
+        int error = rawImage.load(fname);
 
         if (!error) {
-            rtengine::Image8 *output = nullptr;
             const unsigned char *data = nullptr;
             int fw, fh;
 
@@ -116,59 +108,48 @@ PreviewImage::PreviewImage (const Glib::ustring &fname, const Glib::ustring &ext
             rawImage.getFullSize (fw, fh, TR_NONE);
             PreviewProps pp (0, 0, fw, fh, 1);
             params.icm.input = Glib::ustring("(embedded)");
-            params.raw.bayersensor.method = RAWParams::BayerSensor::methodstring[RAWParams::BayerSensor::fast];
+            params.raw.bayersensor.method = RAWParams::BayerSensor::getMethodString(RAWParams::BayerSensor::Method::FAST);
             params.raw.deadPixelFilter = false;
             params.raw.ca_autocorrect = false;
-            params.raw.xtranssensor.method = RAWParams::XTransSensor::methodstring[RAWParams::XTransSensor::fast];
+            params.raw.xtranssensor.method = RAWParams::XTransSensor::getMethodString(RAWParams::XTransSensor::Method::FAST);
             rawImage.preprocess(params.raw, params.lensProf, params.coarse);
             rawImage.demosaic(params.raw);
-            Imagefloat* image = new rtengine::Imagefloat (fw, fh);
-            rawImage.getImage (wb, TR_NONE, image, pp, params.toneCurve, params.icm, params.raw);
-            output = new Image8(fw, fh);
-            rawImage.convertColorSpace(image, params.icm, wb);
+            Imagefloat image(fw, fh);
+            rawImage.getImage (wb, TR_NONE, &image, pp, params.toneCurve, params.raw);
+            rtengine::Image8 output(fw, fh);
+            rawImage.convertColorSpace(&image, params.icm, wb);
             #pragma omp parallel for schedule(dynamic, 10)
             for (int i = 0; i < fh; ++i)
                 for (int j = 0; j < fw; ++j) {
-                    image->r(i, j) = Color::gamma2curve[image->r(i, j)];
-                    image->g(i, j) = Color::gamma2curve[image->g(i, j)];
-                    image->b(i, j) = Color::gamma2curve[image->b(i, j)];
+                    image.r(i, j) = Color::gamma2curve[image.r(i, j)];
+                    image.g(i, j) = Color::gamma2curve[image.g(i, j)];
+                    image.b(i, j) = Color::gamma2curve[image.b(i, j)];
                 }
 
 
-            image->resizeImgTo<Image8>(fw, fh, TI_Nearest, output);
-            data = output->getData();
+            image.resizeImgTo<Image8>(fw, fh, TI_Nearest, &output);
+            data = output.getData();
 
 
             if (data) {
                 int w, h;
-                double scale = 1.;
-                w = output->getWidth();
-                h = output->getHeight();
+                w = output.getWidth();
+                h = output.getHeight();
                 previewImage = Cairo::ImageSurface::create(Cairo::FORMAT_RGB24, w, h);
                 previewImage->flush();
 
-                #pragma omp parallel
-                {
-                    const unsigned char *src;
-                    unsigned char *dst;
-                    #pragma omp for schedule(static,10)
+                #pragma omp parallel for 
+                for (unsigned int i = 0; i < (unsigned int)(h); i++) {
+                    const unsigned char *src = data + i * w * 3;
+                    unsigned char *dst = previewImage->get_data() + i * w * 4;
 
-                    for (unsigned int i = 0; i < (unsigned int)(h); i++) {
-                        src = data + i * w * 3;
-                        dst = previewImage->get_data() + i * w * 4;
+                    for (unsigned int j = 0; j < (unsigned int)(w); j++) {
+                        unsigned char r = *(src++);
+                        unsigned char g = *(src++);
+                        unsigned char b = *(src++);
 
-                        for (unsigned int j = 0; j < (unsigned int)(w); j++) {
-                            unsigned char r = *(src++);
-                            unsigned char g = *(src++);
-                            unsigned char b = *(src++);
-
-                            poke255_uc(dst, r, g, b);
-                        }
+                        poke255_uc(dst, r, g, b);
                     }
-                }
-
-                if (output) {
-                    delete output;
                 }
 
                 previewImage->mark_dirty();

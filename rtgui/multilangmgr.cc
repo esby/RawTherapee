@@ -19,7 +19,6 @@
 #include "multilangmgr.h"
 
 #include <fstream>
-#include <regex>
 
 #ifdef WIN32
 #include <windows.h>
@@ -95,9 +94,33 @@ struct LocaleToLang : private std::map<std::pair<Glib::ustring, Glib::ustring>, 
 
         return "default";
     }
+
+    std::string getLocale(const Glib::ustring &language) const
+    {
+        for (auto &p : *this) {
+            if (p.second == language) {
+                std::string ret = p.first.first;
+                if (!p.first.second.empty()) {
+                    ret += "_" + p.first.second;
+                }
+                return ret;
+            }
+        }
+        return "C";
+    }
 };
 
 const LocaleToLang localeToLang;
+
+void setGtkLanguage(const Glib::ustring &language)
+{
+    auto l = localeToLang.getLocale(language);
+#ifdef WIN32
+    putenv(("LANG=" + l).c_str());
+#else
+    setenv("LANG", l.c_str(), true);
+#endif
+}
 
 }
 
@@ -107,55 +130,52 @@ MultiLangMgr::MultiLangMgr ()
 {
 }
 
-MultiLangMgr::MultiLangMgr (const Glib::ustring& fname, MultiLangMgr* fallbackMgr)
+void MultiLangMgr::load(const Glib::ustring &language, const std::vector<Glib::ustring> &fnames)
 {
-    load (fname, fallbackMgr);
-}
+    setGtkLanguage(language);
 
-bool MultiLangMgr::load (const Glib::ustring& fname, MultiLangMgr* fallbackMgr)
-{
-    this->fallbackMgr.reset (fallbackMgr);
+    translations.clear();
 
-    std::ifstream file (fname.c_str ());
-    if (!file.is_open ()) {
-        return false;
-    }
-
-    std::map<std::string, Glib::ustring> translations;
-    std::string entry, key, value;
-
-    while (std::getline (file, entry)) {
-
-        if (entry.empty () || entry.front () == '#') {
+    for (const auto& fname : fnames) {
+        if(fname.empty()) {
             continue;
         }
 
-        std::istringstream line (entry);
-
-        if (!std::getline (line, key, ';') || !std::getline (line, value)) {
+        std::ifstream file(fname.c_str());
+        if (!file.is_open()) {
             continue;
         }
 
-        static const std::regex newline ("\\\\n");
-        value = std::regex_replace (value, newline, "\n");
+        std::string entry;
+        auto hint = translations.begin();
+        while (std::getline(file, entry)) {
 
-        translations.emplace (key, value);
+            if (entry.empty() || entry.front() == '#' || entry.front() == '!') {
+                continue;
+            }
+
+            std::string key, value;
+
+            std::istringstream line(entry);
+
+            if(std::getline(line, key, ';') && translations.find(key) == translations.end() && std::getline(line, value)) {
+                size_t pos = 0;
+                while((pos = value.find("\\n", pos)) != std::string::npos) {
+                     value.replace(pos, 2, "\n");
+                     pos++;
+                }
+                hint = translations.emplace_hint(hint, key, value);
+            }
+        }
     }
-
-    this->translations.swap (translations);
-    return true;
 }
 
 Glib::ustring MultiLangMgr::getStr (const std::string& key) const
 {
-    const auto iterator = translations.find (key);
+    const auto iterator = translations.find(key);
 
-    if (iterator != translations.end ()) {
+    if (iterator != translations.end()) {
         return iterator->second;
-    }
-
-    if (fallbackMgr) {
-        return fallbackMgr->getStr (key);
     }
 
     return key;
@@ -196,7 +216,8 @@ Glib::ustring MultiLangMgr::getOSUserLanguage ()
 #elif defined (__linux__) || defined (__APPLE__)
 
     // Query the current locale and force decimal point to dot.
-    if (const char* locale = setlocale (LC_CTYPE, "")) {
+    const char *locale = getenv("LANG");
+    if (locale || (locale = setlocale (LC_CTYPE, ""))) {
         langName = localeToLang (locale);
     }
 

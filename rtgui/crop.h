@@ -33,44 +33,15 @@ public:
     virtual void cropSelectRequested() = 0;
 };
 
-class CropRatio
+class Crop final :
+    public ToolParamBlock,
+    public CropGUIListener,
+    public FoldableToolPanel,
+    public rtengine::SizeListener
 {
-
 public:
-    Glib::ustring label;
-    double value;
-};
-
-class Crop : public ToolParamBlock, public CropGUIListener, public FoldableToolPanel, public rtengine::SizeListener
-{
-protected:
-    Gtk::CheckButton* fixr;
-    MyComboBoxText* ratio;
-    MyComboBoxText* orientation;
-    MyComboBoxText* guide;
-    Gtk::Button* selectCrop;
-    CropPanelListener* clistener;
-    int opt;
-    MySpinButton* x;
-    MySpinButton* y;
-    MySpinButton* w;
-    MySpinButton* h;
-    MySpinButton* ppi;
-    Gtk::Label* sizecm;
-    Gtk::Label* sizein;
-    Gtk::VBox* ppibox;
-    Gtk::VBox* sizebox;
-    int maxw, maxh;
-    double nx, ny;
-    int nw, nh;
-    int lastRotationDeg;
-    sigc::connection xconn, yconn, wconn, hconn, fconn, rconn, oconn, gconn;
-    bool wDirty, hDirty, xDirty, yDirty, lastFixRatio;
-    void adjustCropToRatio();
-    std::vector<CropRatio>   cropratio;
-
-public:
-    Crop ();
+    Crop();
+    ~Crop();
 
     void read           (const rtengine::procparams::ProcParams* pp, const ParamsEdited* pedited = nullptr);
     void write          (rtengine::procparams::ProcParams* pp, ParamsEdited* pedited = nullptr);
@@ -93,14 +64,14 @@ public:
     void writeOptions   ();
 
     void cropMoved          (int &x, int &y, int &w, int &h);
-    void cropWidth1Resized  (int &x, int &y, int &w, int &h);
-    void cropWidth2Resized  (int &x, int &y, int &w, int &h);
-    void cropHeight1Resized (int &x, int &y, int &w, int &h);
-    void cropHeight2Resized (int &x, int &y, int &w, int &h);
-    void cropTopLeftResized     (int &x, int &y, int &w, int &h);
-    void cropTopRightResized    (int &x, int &y, int &w, int &h);
-    void cropBottomLeftResized  (int &x, int &y, int &w, int &h);
-    void cropBottomRightResized (int &x, int &y, int &w, int &h);
+    void cropWidth1Resized  (int &x, int &y, int &w, int &h, float custom_ratio=0.f);
+    void cropWidth2Resized  (int &x, int &y, int &w, int &h, float custom_ratio=0.f);
+    void cropHeight1Resized (int &x, int &y, int &w, int &h, float custom_ratio=0.f);
+    void cropHeight2Resized (int &x, int &y, int &w, int &h, float custom_ratio=0.f);
+    void cropTopLeftResized     (int &x, int &y, int &w, int &h, float custom_ratio=0.f);
+    void cropTopRightResized    (int &x, int &y, int &w, int &h, float custom_ratio=0.f);
+    void cropBottomLeftResized  (int &x, int &y, int &w, int &h, float custom_ratio=0.f);
+    void cropBottomRightResized (int &x, int &y, int &w, int &h, float custom_ratio=0.f);
     void cropInit           (int &x, int &y, int &w, int &h);
     void cropResized        (int &x, int &y, int& x2, int& y2);
     void cropManipReady     ();
@@ -116,6 +87,41 @@ public:
     void hFlipCrop          ();
     void vFlipCrop          ();
     void rotateCrop         (int deg, bool hflip, bool vflip);
+
+private:
+    struct CropRatio {
+        Glib::ustring label;
+        double value;
+    };
+
+    const std::vector<CropRatio> crop_ratios;
+
+    void adjustCropToRatio();
+
+    Gtk::CheckButton* fixr;
+    MyComboBoxText* ratio;
+    MyComboBoxText* orientation;
+    MyComboBoxText* guide;
+    Gtk::Button* selectCrop;
+    CropPanelListener* clistener;
+    int opt;
+    MySpinButton* x;
+    MySpinButton* y;
+    MySpinButton* w;
+    MySpinButton* h;
+    MySpinButton* ppi;
+    Gtk::Label* sizecm;
+    Gtk::Label* sizein;
+    Gtk::VBox* ppibox;
+    Gtk::VBox* sizebox;
+    int maxw, maxh;
+    double nx, ny;
+    int nw, nh;
+    int lastRotationDeg;
+    sigc::connection xconn, yconn, wconn, hconn, fconn, rconn, oconn, gconn;
+    bool wDirty, hDirty, xDirty, yDirty, lastFixRatio;
+
+    IdleRegister idle_register;
 };
 
 #endif

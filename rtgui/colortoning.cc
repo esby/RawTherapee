@@ -16,11 +16,11 @@ ColorToning::ColorToning () : FoldableToolPanel(this, "colortoning", M("TP_COLOR
     //---------------method
 
     method = Gtk::manage (new MyComboBoxText ());
-    method->append_text (M("TP_COLORTONING_LAB"));
-    method->append_text (M("TP_COLORTONING_RGBSLIDERS"));
-    method->append_text (M("TP_COLORTONING_RGBCURVES"));
-    method->append_text (M("TP_COLORTONING_SPLITCOCO"));
-    method->append_text (M("TP_COLORTONING_SPLITLR"));
+    method->append (M("TP_COLORTONING_LAB"));
+    method->append (M("TP_COLORTONING_RGBSLIDERS"));
+    method->append (M("TP_COLORTONING_RGBCURVES"));
+    method->append (M("TP_COLORTONING_SPLITCOCO"));
+    method->append (M("TP_COLORTONING_SPLITLR"));
     method->set_active (0);
     method->set_tooltip_text (M("TP_COLORTONING_METHOD_TOOLTIP"));
 
@@ -41,7 +41,7 @@ ColorToning::ColorToning () : FoldableToolPanel(this, "colortoning", M("TP_COLOR
     colorCurveEditorG->setCurveListener (this);
 
     colorShape = static_cast<FlatCurveEditor*>(colorCurveEditorG->addCurve(CT_Flat, "", nullptr, false, false));
-    colorShape->setCurveColorProvider(this, 1);
+    colorShape->setCurveColorProvider(this, 4);
     std::vector<GradientMilestone> milestones;
 
     // whole hue range
@@ -54,14 +54,14 @@ ColorToning::ColorToning () : FoldableToolPanel(this, "colortoning", M("TP_COLOR
 
     colorShape->setLeftBarBgGradient(milestones);
 
+    const ColorToningParams default_params;
+
     // luminance gradient
     milestones.clear();
     milestones.push_back( GradientMilestone(0., 0., 0., 0.) );
     milestones.push_back( GradientMilestone(1., 1., 1., 1.) );
     colorShape->setBottomBarBgGradient(milestones);
-    std::vector<double> defaultCurve;
-    rtengine::ColorToningParams::getDefaultColorCurve(defaultCurve);
-    colorShape->setResetCurve(FCT_MinMaxCPoints, defaultCurve);
+    colorShape->setResetCurve(FCT_MinMaxCPoints, default_params.colorCurve);
 
     // This will add the reset button at the end of the curveType buttons
     colorCurveEditorG->curveListComplete();
@@ -72,10 +72,10 @@ ColorToning::ColorToning () : FoldableToolPanel(this, "colortoning", M("TP_COLOR
     //----------------------red green  blue yellow colours
 
     twocolor = Gtk::manage (new MyComboBoxText ());
-    twocolor->append_text (M("TP_COLORTONING_TWOSTD"));
-    twocolor->append_text (M("TP_COLORTONING_TWOALL"));
-    twocolor->append_text (M("TP_COLORTONING_TWOBY"));
-    twocolor->append_text (M("TP_COLORTONING_TWO2"));
+    twocolor->append (M("TP_COLORTONING_TWOSTD"));
+    twocolor->append (M("TP_COLORTONING_TWOALL"));
+    twocolor->append (M("TP_COLORTONING_TWOBY"));
+    twocolor->append (M("TP_COLORTONING_TWO2"));
     twocolor->set_tooltip_text (M("TP_COLORTONING_TWOCOLOR_TOOLTIP"));
     twocolor->set_active (0);
 
@@ -88,10 +88,9 @@ ColorToning::ColorToning () : FoldableToolPanel(this, "colortoning", M("TP_COLOR
     opacityCurveEditorG = new CurveEditorGroup (options.lastColorToningCurvesDir, M("TP_COLORTONING_OPACITY"));
     opacityCurveEditorG->setCurveListener (this);
 
-    rtengine::ColorToningParams::getDefaultOpacityCurve(defaultCurve);
     opacityShape = static_cast<FlatCurveEditor*>(opacityCurveEditorG->addCurve(CT_Flat, "", nullptr, false, false));
     opacityShape->setIdentityValue(0.);
-    opacityShape->setResetCurve(FlatCurveType(defaultCurve.at(0)), defaultCurve);
+    opacityShape->setResetCurve(FlatCurveType(default_params.opacityCurve.at(0)), default_params.opacityCurve);
     opacityShape->setBottomBarBgGradient(milestones);
 
     // This will add the reset button at the end of the curveType buttons
@@ -107,9 +106,8 @@ ColorToning::ColorToning () : FoldableToolPanel(this, "colortoning", M("TP_COLOR
     clCurveEditorG = new CurveEditorGroup (options.lastColorToningCurvesDir, M("TP_COLORTONING_CHROMAC"));
     clCurveEditorG->setCurveListener (this);
 
-    rtengine::ColorToningParams::getDefaultCLCurve(defaultCurve);
     clshape = static_cast<DiagonalCurveEditor*>(clCurveEditorG->addCurve(CT_Diagonal, M("TP_COLORTONING_AB"), irg, false));
-    clshape->setResetCurve(DiagonalCurveType(defaultCurve.at(0)), defaultCurve);
+    clshape->setResetCurve(DiagonalCurveType(default_params.clcurve.at(0)), default_params.clcurve);
     clshape->setTooltip(M("TP_COLORTONING_CURVEEDITOR_CL_TOOLTIP"));
 
     clshape->setLeftBarColorProvider(this, 1);
@@ -127,9 +125,8 @@ ColorToning::ColorToning () : FoldableToolPanel(this, "colortoning", M("TP_COLOR
     cl2CurveEditorG = new CurveEditorGroup (options.lastColorToningCurvesDir, M("TP_COLORTONING_CHROMAC"));
     cl2CurveEditorG->setCurveListener (this);
 
-    rtengine::ColorToningParams::getDefaultCL2Curve(defaultCurve);
     cl2shape = static_cast<DiagonalCurveEditor*>(cl2CurveEditorG->addCurve(CT_Diagonal, M("TP_COLORTONING_BY"), iby, false));
-    cl2shape->setResetCurve(DiagonalCurveType(defaultCurve.at(0)), defaultCurve);
+    cl2shape->setResetCurve(DiagonalCurveType(default_params.cl2curve.at(0)), default_params.cl2curve);
     cl2shape->setTooltip(M("TP_COLORTONING_CURVEEDITOR_CL_TOOLTIP"));
 
     cl2shape->setLeftBarColorProvider(this, 1);
@@ -187,11 +184,9 @@ ColorToning::ColorToning () : FoldableToolPanel(this, "colortoning", M("TP_COLOR
     // Vertical box container for the content of the Process 1 frame
     Gtk::VBox *p1VBox;
     p1Frame = Gtk::manage (new Gtk::Frame(M("TP_COLORTONING_SA")) );
-    p1Frame->set_border_width(0);
     p1Frame->set_label_align(0.025, 0.5);
 
     p1VBox = Gtk::manage ( new Gtk::VBox());
-    p1VBox->set_border_width(4);
     p1VBox->set_spacing(2);
 
     autosat = Gtk::manage (new Gtk::CheckButton (M("TP_COLORTONING_AUTOSAT")));
@@ -287,11 +282,8 @@ ColorToning::ColorToning () : FoldableToolPanel(this, "colortoning", M("TP_COLOR
 
     //--------------------- Reset sliders  ---------------------------
     neutrHBox = Gtk::manage (new Gtk::HBox ());
-    neutrHBox->set_border_width (2);
 
     neutral = Gtk::manage (new Gtk::Button (M("TP_COLORTONING_NEUTRAL")));
-    RTImage *resetImg = Gtk::manage (new RTImage ("gtk-undo-ltr-small.png", "gtk-undo-rtl-small.png"));
-    neutral->set_image(*resetImg);
     neutral->set_tooltip_text (M("TP_COLORTONING_NEUTRAL_TIP"));
     neutralconn = neutral->signal_pressed().connect( sigc::mem_fun(*this, &ColorToning::neutral_pressed) );
     neutral->show();
@@ -329,6 +321,8 @@ ColorToning::ColorToning () : FoldableToolPanel(this, "colortoning", M("TP_COLOR
 
 ColorToning::~ColorToning()
 {
+    idle_register.destroy();
+
     delete colorCurveEditorG;
     delete opacityCurveEditorG;
     delete clCurveEditorG;
@@ -655,20 +649,18 @@ void ColorToning::adjusterChanged (ThresholdAdjuster* a, double newBottom, doubl
                                 Glib::ustring::compose(Glib::ustring(M("TP_COLORTONING_HUE") + ": %1" + "\n" + M("TP_COLORTONING_STRENGTH") + ": %2"), int(newTop), int(newBottom)));
 }
 
-int CTChanged_UI (void* data)
-{
-    GThreadLock lock;
-    (static_cast<ColorToning*>(data))->CTComp_ ();
-    return 0;
-}
-
-
 void ColorToning::autoColorTonChanged(int bwct, int satthres, int satprot)
 {
     nextbw = bwct;
     nextsatth = satthres;
     nextsatpr = satprot;
-    g_idle_add (CTChanged_UI, this);
+
+    const auto func = [](gpointer data) -> gboolean {
+        static_cast<ColorToning*>(data)->CTComp_();
+        return FALSE;
+    };
+
+    idle_register.add(func, this);
 }
 
 bool ColorToning::CTComp_ ()
@@ -957,42 +949,42 @@ void ColorToning::autoOpenCurve  ()
 void ColorToning::colorForValue (double valX, double valY, enum ColorCaller::ElemType elemType, int callerId, ColorCaller *caller)
 {
 
-    float R, G, B;
+    float R = 0.f, G = 0.f, B = 0.f;
 
-    if (callerId == 1) {         // ch - main curve
-        Color::hsv2rgb01(float(valY), 1.0f, 0.5f, R, G, B);
+    if (callerId == 1) {         // opacity curve left bar(s)
+        Color::hsv2rgb01(float(valY*0.8), 1.0f, 0.5f, R, G, B);
     } else if (callerId == 2) {  // Slider 1 background
-        if (valY > 0.5)
+        if (valY <= 0.5)
             // the hue range
         {
             Color::hsv2rgb01(float(valX), 1.0f, 0.5f, R, G, B);
         } else {
             // the strength applied to the current hue
             double strength, hue;
-            float r_, g_, b_;
             hlColSat->getValue(strength, hue);
-            Color::hsv2rgb01(valY * 2.f, 1.f, 1.f, r_, g_, b_);
             Color::hsv2rgb01(hue / 360.f, 1.f, 1.f, R, G, B);
-            R = r_ + (R - r_) * valX;
-            G = g_ + (G - g_) * valX;
-            B = b_ + (B - b_) * valX;
+            const double gray = 0.46;
+            R = (gray * (1.0 - valX)) + R * valX;
+            G = (gray * (1.0 - valX)) + G * valX;
+            B = (gray * (1.0 - valX)) + B * valX;
         }
     } else if (callerId == 3) {  // Slider 2 background
-        if (valY > 0.5)
+        if (valY <= 0.5)
             // the hue range
         {
             Color::hsv2rgb01(float(valX), 1.0f, 0.5f, R, G, B);
         } else {
             // the strength applied to the current hue
             double strength, hue;
-            float r_, g_, b_;
             shadowsColSat->getValue(strength, hue);
-            Color::hsv2rgb01(valY * 2.f, 1.f, 1.f, r_, g_, b_);
             Color::hsv2rgb01(hue / 360.f, 1.f, 1.f, R, G, B);
-            R = r_ + (R - r_) * valX;
-            G = g_ + (G - g_) * valX;
-            B = b_ + (B - b_) * valX;
+            const double gray = 0.46;
+            R = (gray * (1.0 - valX)) + R * valX;
+            G = (gray * (1.0 - valX)) + G * valX;
+            B = (gray * (1.0 - valX)) + B * valX;
         }
+    } else if (callerId == 4) {  // color curve vertical and horizontal crosshair
+        Color::hsv2rgb01(float(valY), 1.0f, 0.5f, R, G, B);
     }
 
     caller->ccRed = double(R);
@@ -1084,8 +1076,8 @@ void ColorToning::trimValues (rtengine::procparams::ProcParams* pp)
 void ColorToning::setBatchMode (bool batchMode)
 {
     ToolPanel::setBatchMode (batchMode);
-    method->append_text (M("GENERAL_UNCHANGED"));
-    twocolor->append_text (M("GENERAL_UNCHANGED"));
+    method->append (M("GENERAL_UNCHANGED"));
+    twocolor->append (M("GENERAL_UNCHANGED"));
     hlColSat->showEditedCB ();
     shadowsColSat->showEditedCB ();
     redlow->showEditedCB ();

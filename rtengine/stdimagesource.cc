@@ -102,7 +102,7 @@ void StdImageSource::getSampleFormat (const Glib::ustring &fname, IIOSampleForma
  * and RT's image data type (Image8, Image16 and Imagefloat), then it will
  * load the image into it
  */
-int StdImageSource::load (const Glib::ustring &fname, bool batch)
+int StdImageSource::load (const Glib::ustring &fname)
 {
 
     fileName = fname;
@@ -158,7 +158,7 @@ int StdImageSource::load (const Glib::ustring &fname, bool batch)
 
     embProfile = img->getEmbeddedProfile ();
 
-    idata = new ImageData (fname);
+    idata = new FramesData (fname);
 
     if (idata->hasExif()) {
         int deg = 0;
@@ -187,7 +187,7 @@ int StdImageSource::load (const Glib::ustring &fname, bool batch)
     return 0;
 }
 
-void StdImageSource::getImage (const ColorTemp &ctemp, int tran, Imagefloat* image, const PreviewProps &pp, const ToneCurveParams &hrp, const ColorManagementParams &cmp, const RAWParams &raw)
+void StdImageSource::getImage (const ColorTemp &ctemp, int tran, Imagefloat* image, const PreviewProps &pp, const ToneCurveParams &hrp, const RAWParams &raw)
 {
 
     // the code will use OpenMP as of now.
@@ -218,7 +218,7 @@ void StdImageSource::colorSpaceConversion (Imagefloat* im, const ColorManagement
 
     bool skipTransform = false;
     cmsHPROFILE in = nullptr;
-    cmsHPROFILE out = iccStore->workingSpace (cmp.working);
+    cmsHPROFILE out = ICCStore::getInstance()->workingSpace (cmp.working);
 
     if (cmp.input == "(embedded)" || cmp.input == "" || cmp.input == "(camera)" || cmp.input == "(cameraICC)") {
         if (embedded) {
@@ -227,12 +227,12 @@ void StdImageSource::colorSpaceConversion (Imagefloat* im, const ColorManagement
             if (sampleFormat & (IIOSF_LOGLUV24 | IIOSF_LOGLUV32 | IIOSF_FLOAT)) {
                 skipTransform = true;
             } else {
-                in = iccStore->getsRGBProfile ();
+                in = ICCStore::getInstance()->getsRGBProfile ();
             }
         }
     } else {
         if (cmp.input != "(none)") {
-            in = iccStore->getProfile (cmp.input);
+            in = ICCStore::getInstance()->getProfile (cmp.input);
 
             if (in == nullptr && embedded) {
                 in = embedded;
@@ -240,7 +240,7 @@ void StdImageSource::colorSpaceConversion (Imagefloat* im, const ColorManagement
                 if (sampleFormat & (IIOSF_LOGLUV24 | IIOSF_LOGLUV32 | IIOSF_FLOAT)) {
                     skipTransform = true;
                 } else {
-                    in = iccStore->getsRGBProfile ();
+                    in = ICCStore::getInstance()->getsRGBProfile ();
                 }
             }
         }
@@ -249,7 +249,7 @@ void StdImageSource::colorSpaceConversion (Imagefloat* im, const ColorManagement
     if (!skipTransform && in) {
         if(in == embedded && cmsGetColorSpace(in) != cmsSigRgbData) { // if embedded profile is not an RGB profile, use sRGB
             printf("embedded profile is not an RGB profile, using sRGB as input profile\n");
-            in = iccStore->getsRGBProfile ();
+            in = ICCStore::getInstance()->getsRGBProfile ();
         }
 
         lcmsMutex->lock ();
@@ -276,20 +276,19 @@ void StdImageSource::colorSpaceConversion (Imagefloat* im, const ColorManagement
 void StdImageSource::getFullSize (int& w, int& h, int tr)
 {
 
-    w = img->width;
-    h = img->height;
+    w = img->getWidth();
+    h = img->getHeight();
 
     if ((tr & TR_ROT) == TR_R90 || (tr & TR_ROT) == TR_R270) {
-        w = img->height;
-        h = img->width;
+        w = img->getHeight();
+        h = img->getWidth();
     }
 }
 
-void StdImageSource::getSize (PreviewProps pp, int& w, int& h)
+void StdImageSource::getSize (const PreviewProps &pp, int& w, int& h)
 {
-
-    w = pp.w / pp.skip + (pp.w % pp.skip > 0);
-    h = pp.h / pp.skip + (pp.h % pp.skip > 0);
+    w = pp.getWidth() / pp.getSkip() + (pp.getWidth() % pp.getSkip() > 0);
+    h = pp.getHeight() / pp.getSkip() + (pp.getHeight() % pp.getSkip() > 0);
 }
 
 void StdImageSource::getAutoExpHistogram (LUTu & histogram, int& histcompr)

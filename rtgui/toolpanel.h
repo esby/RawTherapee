@@ -35,6 +35,8 @@
 #define ENV_STATE_IN_NORM   2
 #define ENV_STATE_IN_TRASH  3
 
+class ToolPanel;
+class FoldableToolPanel;
 
 class ToolPanelListener
 {
@@ -48,23 +50,15 @@ public:
 /// @brief This class control the space around the group of tools inside a tab, as well as the space separating each tool. */
 class ToolVBox : public Gtk::VBox, public ToolVBoxDef 
 {
-private:
-    void updateStyle();
-
 public:
     ToolVBox();
-    void on_style_changed (const Glib::RefPtr<Gtk::Style>& style);
 };
 
 /// @brief This class control the space around a tool's block of parameter. */
 class ToolParamBlock : public Gtk::VBox, public ToolVBoxDef 
 {
-private:
-    void updateStyle();
-
 public:
     ToolParamBlock();
-    void on_style_changed (const Glib::RefPtr<Gtk::Style>& style);
 };
 
 class ToolPanel 
@@ -141,7 +135,7 @@ public:
     {
         multiImage = m;
     }
-    void           setListener     (ToolPanelListener* tpl)
+    virtual void           setListener     (ToolPanelListener* tpl)
     {
         listener = tpl;
     }
@@ -265,6 +259,18 @@ public:
             exp->set_expanded( expanded );
         }
     }
+
+    void hide() {
+        if (exp && !batchMode) {  // conditional hide
+            exp->hide();
+        }
+    }
+
+    void show() {
+        if (exp) {                // always show
+            exp->show();
+        }
+    }
     bool getExpanded ()
     {
         if (exp) {
@@ -303,6 +309,8 @@ public:
     void deployLate(); 
     void react(FakeProcEvent ev);
     bool canBeIgnored() {return false;}
+
+    void setLevel (int level);
 
     // Functions that want to receive an enabled/disabled event from this class
     // will have to receive it from MyExpander directly, we do not create

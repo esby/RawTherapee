@@ -22,46 +22,22 @@
 using namespace rtengine::procparams;
 
 
-ToolVBox::ToolVBox()
-{
-    updateStyle();
+ToolVBox::ToolVBox() {
+//GTK318
+#if GTK_MAJOR_VERSION == 3 && GTK_MINOR_VERSION < 20
+    set_spacing(1);       // Vertical space between tools
+    set_border_width(3);  // Space separating the tab's frame and the tools
+#endif
+//GTK318
 }
 
-void ToolVBox::updateStyle()
-{
-    if (options.slimUI) {
-        set_spacing(1);       // Vertical space between tools
-        set_border_width(1);  // Space separating the tab's frame and the tools
-    } else {
-        set_spacing(2);       // Vertical space between tools
-        set_border_width(1);  // Space separating the tab's frame and the tools  3
-    }
-}
-
-void ToolVBox::on_style_changed (const Glib::RefPtr<Gtk::Style>& style)
-{
-    updateStyle();
-}
-
-ToolParamBlock::ToolParamBlock()
-{
-    updateStyle();
-}
-
-void ToolParamBlock::updateStyle()
-{
-    if (options.slimUI) {
-        set_spacing(2);       // Vertical space between parameters in a single tool
-        set_border_width(6);  // Space separating the parameters of a tool and its surrounding frame  6
-    } else {
-        set_spacing(4);       // Vertical space between parameters in a single tool
-        set_border_width(8);  // Space separating the parameters of a tool and its surrounding frame  8
-    }
-}
-
-void ToolParamBlock::on_style_changed (const Glib::RefPtr<Gtk::Style>& style)
-{
-    updateStyle();
+ToolParamBlock::ToolParamBlock() {
+//GTK318
+#if GTK_MAJOR_VERSION == 3 && GTK_MINOR_VERSION < 20
+    set_spacing(2);       // Vertical space between parameters in a single tool
+    set_border_width(5);  // Space separating the parameters of a tool and its surrounding frame
+#endif
+//GTK318
 }
 
 void ToolPanel::updateLabelInfo() {
@@ -522,36 +498,35 @@ FoldableToolPanel::FoldableToolPanel(Gtk::Box* content, Glib::ustring toolName, 
     }
 
 
-        labelInfo = Gtk::manage (new Gtk::Label("Infos"));
-        labelInfoNotifier = Gtk::manage (new Gtk::Button());
+    labelInfo = Gtk::manage (new Gtk::Label("Infos"));
+    labelInfoNotifier = Gtk::manage (new Gtk::Button());
 
-        //defining buttons
-        favoriteButton = Gtk::manage (new Gtk::ToggleButton (M("GENERAL_STATE_FAVORITE")));
-        trashButton = Gtk::manage (new Gtk::ToggleButton (M("GENERAL_STATE_TRASH")));
+    //defining buttons
+    favoriteButton = Gtk::manage (new Gtk::ToggleButton (M("GENERAL_STATE_FAVORITE")));
+    trashButton = Gtk::manage (new Gtk::ToggleButton (M("GENERAL_STATE_TRASH")));
 
-        moveUButton = Gtk::manage (new Gtk::Button (M("GENERAL_MOVE_UP")));
-        moveDButton = Gtk::manage (new Gtk::Button (M("GENERAL_MOVE_DOWN")));
-        moveRButton = Gtk::manage (new Gtk::Button (M("GENERAL_MOVE_RIGHT")));
-        moveLButton = Gtk::manage (new Gtk::Button (M("GENERAL_MOVE_LEFT")));
-        fudlrBox = Gtk::manage (new Gtk::HBox ());
+    moveUButton = Gtk::manage (new Gtk::Button (M("GENERAL_MOVE_UP")));
+    moveDButton = Gtk::manage (new Gtk::Button (M("GENERAL_MOVE_DOWN")));
+    moveRButton = Gtk::manage (new Gtk::Button (M("GENERAL_MOVE_RIGHT")));
+    moveLButton = Gtk::manage (new Gtk::Button (M("GENERAL_MOVE_LEFT")));
+    fudlrBox = Gtk::manage (new Gtk::HBox ());
 
-        //move buttons listeners
-        favoriteButton->signal_toggled().connect( sigc::mem_fun(*this, &FoldableToolPanel::on_toggle_button_favorite) );
-        trashButton->signal_toggled().connect( sigc::mem_fun(*this, &FoldableToolPanel::on_toggle_button_trash) );
+    //move buttons listeners
+    favoriteButton->signal_toggled().connect( sigc::mem_fun(*this, &FoldableToolPanel::on_toggle_button_favorite) );
+    trashButton->signal_toggled().connect( sigc::mem_fun(*this, &FoldableToolPanel::on_toggle_button_trash) );
 
-        moveUButton->signal_clicked().connect(sigc::mem_fun(*this, &FoldableToolPanel::moveUp));
-        moveDButton->signal_clicked().connect(sigc::mem_fun(*this, &FoldableToolPanel::moveDown));
-        moveRButton->signal_clicked().connect(sigc::mem_fun(*this, &FoldableToolPanel::moveRight));
-        moveLButton->signal_clicked().connect(sigc::mem_fun(*this, &FoldableToolPanel::moveLeft));
+    moveUButton->signal_clicked().connect(sigc::mem_fun(*this, &FoldableToolPanel::moveUp));
+    moveDButton->signal_clicked().connect(sigc::mem_fun(*this, &FoldableToolPanel::moveDown));
+    moveRButton->signal_clicked().connect(sigc::mem_fun(*this, &FoldableToolPanel::moveRight));
+    moveLButton->signal_clicked().connect(sigc::mem_fun(*this, &FoldableToolPanel::moveLeft));
   
-        fudlrBox->pack_end( *trashButton,  Gtk::PACK_SHRINK, true, 0);
+    fudlrBox->pack_end( *trashButton,  Gtk::PACK_SHRINK, true, 0);
 
-        fudlrBox->pack_end( *moveRButton,       Gtk::PACK_SHRINK, true, 0);
-        fudlrBox->pack_end( *moveLButton,       Gtk::PACK_SHRINK, true, 0);
-        fudlrBox->pack_end( *moveUButton,       Gtk::PACK_SHRINK, true, 0);
-        fudlrBox->pack_end( *moveDButton,       Gtk::PACK_SHRINK, true, 0);
-        fudlrBox->pack_end( *favoriteButton,  Gtk::PACK_SHRINK, true, 0);
-
+    fudlrBox->pack_end( *moveRButton,       Gtk::PACK_SHRINK, true, 0);
+    fudlrBox->pack_end( *moveLButton,       Gtk::PACK_SHRINK, true, 0);
+    fudlrBox->pack_end( *moveUButton,       Gtk::PACK_SHRINK, true, 0);
+    fudlrBox->pack_end( *moveDButton,       Gtk::PACK_SHRINK, true, 0);
+    fudlrBox->pack_end( *favoriteButton,  Gtk::PACK_SHRINK, true, 0);
 
 //  exp->set_border_width (5);
 //  exp->set_use_markup (true);
@@ -560,7 +535,7 @@ FoldableToolPanel::FoldableToolPanel(Gtk::Box* content, Glib::ustring toolName, 
 
         Gtk::Label *label = Gtk::manage(new Gtk::Label());
         label->set_markup(Glib::ustring("<b>") + escapeHtmlChars(UILabel) + Glib::ustring("</b>"));
-        label->set_alignment(Gtk::ALIGN_LEFT, Gtk::ALIGN_CENTER);
+        label->set_alignment(Gtk::ALIGN_START, Gtk::ALIGN_CENTER);
         titleHBox->pack_start(*label, Gtk::PACK_EXPAND_WIDGET, 0);
 
         RTImage *image = Gtk::manage (new RTImage("zoom-100-identifier.png"));
@@ -627,6 +602,13 @@ bool FoldableToolPanel::get_inconsistent()
 void FoldableToolPanel::set_inconsistent(bool isInconsistent)
 {
     exp->set_inconsistent(isInconsistent);
+}
+
+void FoldableToolPanel::setLevel (int level)
+{
+    if (exp) {
+        exp->setLevel(level);
+    }
 }
 
 bool FoldableToolPanel::getEnabled()

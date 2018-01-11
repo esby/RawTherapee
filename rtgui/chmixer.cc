@@ -22,7 +22,7 @@
 using namespace rtengine;
 using namespace rtengine::procparams;
 
-ChMixer::ChMixer (): FoldableToolPanel(this, "chmixer", M("TP_CHMIXER_LABEL"))
+ChMixer::ChMixer (): FoldableToolPanel(this, "chmixer", M("TP_CHMIXER_LABEL"), false, true)
 {
 
     imgIcon[0] = Gtk::manage (new RTImage ("Chanmixer-RR.png"));
@@ -37,7 +37,7 @@ ChMixer::ChMixer (): FoldableToolPanel(this, "chmixer", M("TP_CHMIXER_LABEL"))
 
     Gtk::Label* rlabel = Gtk::manage (new Gtk::Label ());
     rlabel->set_markup (Glib::ustring("\t<span foreground=\"#b00000\"><b>") + M("TP_CHMIXER_RED") + Glib::ustring(":</b></span>"));
-    rlabel->set_alignment(Gtk::ALIGN_LEFT);
+    rlabel->set_alignment(Gtk::ALIGN_START);
 
     red[0] = Gtk::manage (new Adjuster ("",   -200, 200, 1, 100, imgIcon[0]));
     red[1] = Gtk::manage (new Adjuster ("", -200, 200, 1, 0, imgIcon[1]));
@@ -55,7 +55,7 @@ ChMixer::ChMixer (): FoldableToolPanel(this, "chmixer", M("TP_CHMIXER_LABEL"))
 
     Gtk::Label* glabel = Gtk::manage (new Gtk::Label ());
     glabel->set_markup (Glib::ustring("\t<span foreground=\"#0b8c21\"><b>") + M("TP_CHMIXER_GREEN") + Glib::ustring(":</b></span>"));
-    glabel->set_alignment(Gtk::ALIGN_LEFT);
+    glabel->set_alignment(Gtk::ALIGN_START);
 
 
     green[0] = Gtk::manage (new Adjuster ("",   -200, 200, 1, 0, imgIcon[3]));
@@ -74,7 +74,7 @@ ChMixer::ChMixer (): FoldableToolPanel(this, "chmixer", M("TP_CHMIXER_LABEL"))
 
     Gtk::Label* blabel = Gtk::manage (new Gtk::Label ());
     blabel->set_markup (Glib::ustring("\t<span foreground=\"#1377d7\"><b>") + M("TP_CHMIXER_BLUE") + Glib::ustring(":</b></span>"));
-    blabel->set_alignment(Gtk::ALIGN_LEFT);
+    blabel->set_alignment(Gtk::ALIGN_START);
     blue[0] = Gtk::manage (new Adjuster ("",   -200, 200, 1, 0, imgIcon[6]));
     blue[1] = Gtk::manage (new Adjuster ("", -200, 200, 1, 0, imgIcon[7]));
     blue[2] = Gtk::manage (new Adjuster ("",  -200, 200, 1, 100, imgIcon[8]));
@@ -99,12 +99,16 @@ void ChMixer::read (const ProcParams* pp, const ParamsEdited* pedited)
 
     disableListener ();
 
-    if (pedited)
+    setEnabled(pp->chmixer.enabled);
+    
+    if (pedited) {
         for (int i = 0; i < 3; i++) {
             red[i]->setEditedState (pedited->chmixer.red[i] ? Edited : UnEdited);
             green[i]->setEditedState (pedited->chmixer.green[i] ? Edited : UnEdited);
             blue[i]->setEditedState (pedited->chmixer.blue[i] ? Edited : UnEdited);
         }
+        set_inconsistent(multiImage && !pedited->chmixer.enabled);
+    }
 
     for (int i = 0; i < 3; i++) {
         red[i]->setValue (pp->chmixer.red[i]);
@@ -123,13 +127,16 @@ void ChMixer::write (ProcParams* pp, ParamsEdited* pedited)
         pp->chmixer.green[i] = (int) green[i]->getValue ();
         pp->chmixer.blue[i] = (int) blue[i]->getValue ();
     }
+    pp->chmixer.enabled = getEnabled();
 
-    if (pedited)
+    if (pedited) {
         for (int i = 0; i < 3; i++) {
             pedited->chmixer.red[i] = red[i]->getEditedState ();
             pedited->chmixer.green[i] = green[i]->getEditedState ();
             pedited->chmixer.blue[i] = blue[i]->getEditedState ();
         }
+        pedited->chmixer.enabled = !get_inconsistent();
+    }
 }
 
 void ChMixer::setDefaults (const ProcParams* defParams, const ParamsEdited* pedited)
@@ -158,7 +165,7 @@ void ChMixer::setDefaults (const ProcParams* defParams, const ParamsEdited* pedi
 void ChMixer::adjusterChanged (Adjuster* a, double newval)
 {
 
-    if (listener) {
+    if (listener && getEnabled()) {
         Glib::ustring descr = Glib::ustring::compose ("R=%1,%2,%3\nG=%4,%5,%6\nB=%7,%8,%9",
                               (int)red[0]->getValue(), (int)red[1]->getValue(), (int)red[2]->getValue(),
                               (int)green[0]->getValue(), (int)green[1]->getValue(), (int)green[2]->getValue(),
@@ -166,6 +173,21 @@ void ChMixer::adjusterChanged (Adjuster* a, double newval)
         listener->panelChanged (EvChMixer, descr);
     }
 }
+
+
+void ChMixer::enabledChanged()
+{
+    if (listener) {
+        if (get_inconsistent()) {
+            listener->panelChanged(EvChMixer, M("GENERAL_UNCHANGED"));
+        } else if (getEnabled()) {
+            listener->panelChanged(EvChMixer, M("GENERAL_ENABLED"));
+        } else {
+            listener->panelChanged(EvChMixer, M("GENERAL_DISABLED"));
+        }
+    }
+}
+
 
 void ChMixer::setBatchMode (bool batchMode)
 {

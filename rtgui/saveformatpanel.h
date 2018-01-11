@@ -28,26 +28,24 @@ class FormatChangeListener
 {
 
 public:
+    virtual ~FormatChangeListener () {}
     virtual void formatChanged (Glib::ustring f) {}
-
 };
 
-class SaveFormatPanel : public Gtk::VBox, public AdjusterListener
+class SaveFormatPanel : public Gtk::Grid, public AdjusterListener
 {
 
 protected:
-    Adjuster*           jpegqual;
-    Adjuster*           pngcompr;
-    Gtk::CheckButton*   tiffuncompressed;
+    Adjuster*           jpegQual;
+    Gtk::CheckButton*   tiffUncompressed;
     MyComboBoxText*     format;
     MyComboBoxText*     jpegSubSamp;
-    Gtk::VBox*          formatopts;
-    Gtk::HBox*          jpegSubSampBox;
-    Gtk::Label*         jpegSubSampHead;
-    int                 oformat;
+    Gtk::Grid*          formatOpts;
+    Gtk::Grid*          jpegOpts;
+    Gtk::Label*         jpegSubSampLabel;
     FormatChangeListener* listener;
-    Glib::ustring       fstr[5];
-    Gtk::CheckButton*   savespp;
+    Glib::ustring       fstr[6];
+    Gtk::CheckButton*   savesPP;
 
 
 public:

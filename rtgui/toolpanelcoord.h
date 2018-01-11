@@ -38,8 +38,7 @@
 #include "epd.h"
 #include "sharpening.h"
 #include "labcurve.h"
-#include "exifpanel.h"
-#include "iptcpanel.h"
+#include "metadatapanel.h"
 #include "crop.h"
 #include "icmpanel.h"
 #include "resize.h"
@@ -78,6 +77,8 @@
 #include "colortoning.h"
 #include "filmsimulation.h"
 #include "prsharpening.h"
+#include "fattaltonemap.h"
+#include "localcontrast.h"
 #include "guiutils.h"
 #include "ttsaver.h"
 #include "ttfavoritecolorer.h"
@@ -104,7 +105,8 @@ class ToolPanelCoordinator :    public ToolPanelListener,
     public SpotWBListener,
     public CropPanelListener,
     public ICMPanelListener,
-    public ImageAreaToolListener
+    public ImageAreaToolListener,
+    public rtengine::ImageTypeListener
 {
 
 protected:
@@ -132,6 +134,7 @@ protected:
     Crop* crop;
     ToneCurve* toneCurve;
     ShadowsHighlights* shadowshighlights;
+    LocalContrast *localContrast;
     Defringe* defringe;
     ImpulseDenoise* impulsedenoise;
     DirPyrDenoise* dirpyrdenoise;
@@ -158,6 +161,8 @@ protected:
     RAWExposure* rawexposure;
     BayerRAWExposure* bayerrawexposure;
     XTransRAWExposure* xtransrawexposure;
+    FattalToneMapping *fattal;
+    MetaDataPanel* metadata;
 
     std::vector<PParamsChangeListener*> paramcListeners;
 
@@ -174,8 +179,7 @@ protected:
     ToolVBox* trashPanel;
     ToolVBox* usefulPanel;
     Gtk::Notebook* metadataPanel;
-    ExifPanel* exifpanel;
-    IPTCPanel* iptcpanel;
+
     ToolBar* toolBar;
 
     TextOrIcon* toiF;
@@ -229,6 +233,8 @@ protected:
     bool hasChanged;
 
     void handlePanel(Gtk::VBox* vbox, Gtk::ScrolledWindow* panelSW, int panelIterator, int spacing);
+
+    void addPanel (Gtk::Box* where, FoldableToolPanel* panel, int level = 1);
     void foldThemAll (GdkEventButton* event);
     void updateVScrollbars (bool hide);
     void updateTabsHeader (bool useIcons);
@@ -242,7 +248,7 @@ public:
     CoarsePanel* coarse;
     Gtk::Notebook* toolPanelNotebook;
 
-    ToolPanelCoordinator ();
+    ToolPanelCoordinator (bool batch = false);
     virtual ~ToolPanelCoordinator ();
 
     bool getChangedState                ()
@@ -266,6 +272,7 @@ public:
     // toolpanellistener interface
     void panelChanged   (rtengine::ProcEvent event, const Glib::ustring& descr);
 
+    void imageTypeChanged (bool isRaw, bool isBayer, bool isXtrans);
     // profilechangelistener interface
     void profileChange  (const rtengine::procparams::PartialProfile* nparams, rtengine::ProcEvent event, const Glib::ustring& descr, const ParamsEdited* paramsEdited = nullptr);
     void setDefaults    (rtengine::procparams::ProcParams* defparams);
@@ -287,12 +294,14 @@ public:
     // read/write the "expanded" state of the expanders & read/write the crop panel settings (ratio, guide type, etc.)
     void readOptions        ();
     void writeOptions       ();
+    void writeToolExpandedStatus (std::vector<int> &tpOpen);
+
 
     // wbprovider interface
-    void getAutoWB (double& temp, double& green, double equal)
+    void getAutoWB (double& temp, double& green, double equal, double tempBias)
     {
         if (ipc) {
-            ipc->getAutoWB (temp, green, equal);
+            ipc->getAutoWB (temp, green, equal, tempBias);
         }
     }
     void getCamWB (double& temp, double& green)
@@ -345,9 +354,9 @@ public:
     void toolSelected (ToolMode tool);
     void editModeSwitchedOff ();
 
+==== BASE ====
     void setEditProvider(EditDataProvider *provider);
-
-    void on_notebook_switch_page(GtkNotebookPage* page, guint page_num);
+==== BASE ====
 };
 
 #endif

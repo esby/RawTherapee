@@ -36,12 +36,12 @@ private:
     Gtk::Entry*     captionWriter;
     Gtk::Entry*     headline;
     Gtk::Entry*     instructions;
-    Gtk::ComboBoxEntryText* keyword;
+    MyComboBoxText* keyword;
     Gtk::ListViewText*  keywords;
     Gtk::Button*    addKW;
     Gtk::Button*    delKW;
-    Gtk::ComboBoxEntryText* category;
-    Gtk::ComboBoxEntryText* suppCategory;
+    MyComboBoxText* category;
+    MyComboBoxText* suppCategory;
     Gtk::ListViewText*      suppCategories;
     Gtk::Button*    addSC;
     Gtk::Button*    delSC;
@@ -75,7 +75,7 @@ public:
     void write          (rtengine::procparams::ProcParams* pp, ParamsEdited* pedited = nullptr);
     void setDefaults    (const rtengine::procparams::ProcParams* defParams, const ParamsEdited* pedited = nullptr);
 
-    void setImageData   (const rtengine::ImageMetaData* id);
+    void setImageData   (const rtengine::FramesMetaData* id);
 
     void notifyListener ();
 

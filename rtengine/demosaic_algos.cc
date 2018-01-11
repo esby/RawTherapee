@@ -65,7 +65,7 @@ extern const Settings* settings;
 void RawImageSource::eahd_demosaic ()
 {
     if (plistener) {
-        plistener->setProgressStr (Glib::ustring::compose(M("TP_RAW_DMETHOD_PROGRESSBAR"), RAWParams::BayerSensor::methodstring[RAWParams::BayerSensor::eahd]));
+        plistener->setProgressStr (Glib::ustring::compose(M("TP_RAW_DMETHOD_PROGRESSBAR"), RAWParams::BayerSensor::getMethodString(RAWParams::BayerSensor::Method::EAHD)));
         plistener->setProgress (0.0);
     }
 
@@ -494,7 +494,7 @@ void RawImageSource::hphd_green (float** hpmap)
 void RawImageSource::hphd_demosaic ()
 {
     if (plistener) {
-        plistener->setProgressStr (Glib::ustring::compose(M("TP_RAW_DMETHOD_PROGRESSBAR"), RAWParams::BayerSensor::methodstring[RAWParams::BayerSensor::hphd]));
+        plistener->setProgressStr (Glib::ustring::compose(M("TP_RAW_DMETHOD_PROGRESSBAR"), RAWParams::BayerSensor::getMethodString(RAWParams::BayerSensor::Method::HPHD)));
         plistener->setProgress (0.0);
     }
 
@@ -595,13 +595,13 @@ void RawImageSource::vng4_demosaic ()
     const bool plistenerActive = plistener;
 
     if (plistenerActive) {
-        plistener->setProgressStr (Glib::ustring::compose(M("TP_RAW_DMETHOD_PROGRESSBAR"), RAWParams::BayerSensor::methodstring[RAWParams::BayerSensor::vng4]));
+        plistener->setProgressStr (Glib::ustring::compose(M("TP_RAW_DMETHOD_PROGRESSBAR"), RAWParams::BayerSensor::getMethodString(RAWParams::BayerSensor::Method::VNG4)));
         plistener->setProgress (progress);
     }
 
     const unsigned prefilters = ri->prefilters;
     const int width = W, height = H;
-    const int colors = 4;
+    constexpr unsigned int colors = 4;
     float (*image)[4];
 
     image = (float (*)[4]) calloc (height * width, sizeof * image);
@@ -647,7 +647,7 @@ void RawImageSource::vng4_demosaic ()
 
                 int colcount = 0;
 
-                for (int c = 0; c < colors; c++)
+                for (unsigned int c = 0; c < colors; c++)
                     if (c != fc(row, col)) {
                         *ip++ = c;
                         csum[row][col][colcount] = sum[c];
@@ -670,7 +670,7 @@ void RawImageSource::vng4_demosaic ()
                     sum[ip[1]] += pix[ip[0]] * mul[row & 15][col & 15][i];
                 }
 
-                for (int i = 0; i < colors - 1; i++, ip++) {
+                for (unsigned int i = 0; i < colors - 1; i++, ip++) {
                     pix[ip[0]] = sum[ip[0]] / csum[row & 15][col & 15][i];
                 }
             }
@@ -693,7 +693,7 @@ void RawImageSource::vng4_demosaic ()
                 int x2 = *cp++;
                 int weight = *cp++;
                 int grads = *cp++;
-                int color = fc(row + y1, col + x1);
+                unsigned int color = fc(row + y1, col + x1);
 
                 if (fc(row + y2, col + x2) != color) {
                     continue;
@@ -723,7 +723,7 @@ void RawImageSource::vng4_demosaic ()
                 int y = *cp++;
                 int x = *cp++;
                 *ip++ = (y * width + x) * 4;
-                int color = fc(row, col);
+                unsigned int color = fc(row, col);
 
                 if (fc(row + y, col + x) != color && fc(row + y * 2, col + x * 2) == color) {
                     *ip++ = (y * width + x) * 8 + color;
@@ -877,7 +877,7 @@ void RawImageSource::vng4_demosaic ()
 #define fc(row,col) \
     (ri->get_filters() >> ((((row) << 1 & 14) + ((col) & 1)) << 1) & 3)
 
-#define FORCC for (int c=0; c < colors; c++)
+#define FORCC for (unsigned int c=0; c < colors; c++)
 
 /*
    Patterned Pixel Grouping Interpolation by Alain Desbiolles
@@ -886,14 +886,14 @@ void RawImageSource::ppg_demosaic()
 {
     int width = W, height = H;
     int dir[5] = { 1, width, -1, -width, 1 };
-    int row, col, diff[2], guess[2], c, d, i;
+    int row, col, diff[2] = {}, guess[2], c, d, i;
     float (*pix)[4];
 
     float (*image)[4];
 
     if (plistener) {
         // looks like ppg isn't supported anymore
-        //plistener->setProgressStr (Glib::ustring::compose(M("TP_RAW_DMETHOD_PROGRESSBAR"), RAWParams::BayerSensor::methodstring[RAWParams::BayerSensor::ppg]));
+        //plistener->setProgressStr (Glib::ustring::compose(M("TP_RAW_DMETHOD_PROGRESSBAR"), RAWParams::BayerSensor::getMethodString(RAWParams::BayerSensor::ppg)));
         plistener->setProgressStr (Glib::ustring::compose(M("TP_RAW_DMETHOD_PROGRESSBAR"), "xxx"));
         plistener->setProgress (0.0);
     }
@@ -997,7 +997,7 @@ void RawImageSource::ppg_demosaic()
 
 void RawImageSource::border_interpolate(unsigned int border, float (*image)[4], unsigned int start, unsigned int end)
 {
-    unsigned row, col, y, x, f, c, sum[8];
+    unsigned row, col, y, x, f, sum[8];
     unsigned int width = W, height = H;
     unsigned int colors = 3;
 
@@ -1201,7 +1201,7 @@ void RawImageSource::jdl_interpolate_omp()  // from "Lassus"
 
     if (plistener) {
         // this function seems to be unused
-        //plistener->setProgressStr (Glib::ustring::compose(M("TP_RAW_DMETHOD_PROGRESSBAR"), RAWParams::BayerSensor::methodstring[RAWParams::BayerSensor::jdl]));
+        //plistener->setProgressStr (Glib::ustring::compose(M("TP_RAW_DMETHOD_PROGRESSBAR"), RAWParams::BayerSensor::getMethodString(RAWParams::BayerSensor::jdl)));
         plistener->setProgressStr (Glib::ustring::compose(M("TP_RAW_DMETHOD_PROGRESSBAR"), "xxx"));
         plistener->setProgress (0.0);
     }
@@ -1315,7 +1315,7 @@ void RawImageSource::jdl_interpolate_omp()  // from "Lassus"
 // Adapted to RawTherapee by Jacques Desmis 3/2013
 // Improved speed and reduced memory consumption by Ingo Weyrich 2/2015
 //TODO Tiles to reduce memory consumption
-SSEFUNCTION void RawImageSource::lmmse_interpolate_omp(int winw, int winh, int iterations)
+SSEFUNCTION void RawImageSource::lmmse_interpolate_omp(int winw, int winh, array2D<float> &rawData, array2D<float> &red, array2D<float> &green, array2D<float> &blue, int iterations)
 {
     const int width = winw, height = winh;
     const int ba = 10;
@@ -1337,8 +1337,8 @@ SSEFUNCTION void RawImageSource::lmmse_interpolate_omp(int winw, int winh, int i
     h2 /= hs;
     h3 /= hs;
     h4 /= hs;
-    int passref;
-    int iter;
+    int passref = 0;
+    int iter = 0;
 
     if(iterations <= 4) {
         iter = iterations - 1;
@@ -1397,7 +1397,7 @@ SSEFUNCTION void RawImageSource::lmmse_interpolate_omp(int winw, int winh, int i
     }
 
     if (plistener) {
-        plistener->setProgressStr (Glib::ustring::compose(M("TP_RAW_DMETHOD_PROGRESSBAR"), RAWParams::BayerSensor::methodstring[RAWParams::BayerSensor::lmmse]));
+        plistener->setProgressStr (Glib::ustring::compose(M("TP_RAW_DMETHOD_PROGRESSBAR"), RAWParams::BayerSensor::getMethodString(RAWParams::BayerSensor::Method::LMMSE)));
         plistener->setProgress (0.0);
     }
 
@@ -1878,9 +1878,7 @@ SSEFUNCTION void RawImageSource::lmmse_interpolate_omp(int winw, int winh, int i
     if(applyGamma) {
         gamtab = &(Color::igammatab_24_17);
     } else {
-        for(int i = 0; i < 65536; i++) {
-            (*gamtab)[i] = (float)i + 0.5f;
-        }
+        gamtab->makeIdentity();
     }
 
     array2D<float> (*rgb[3]);
@@ -1977,7 +1975,7 @@ SSEFUNCTION void RawImageSource::igv_interpolate(int winw, int winh)
     border_interpolate2(winw, winh, 7);
 
     if (plistener) {
-        plistener->setProgressStr (Glib::ustring::compose(M("TP_RAW_DMETHOD_PROGRESSBAR"), RAWParams::BayerSensor::methodstring[RAWParams::BayerSensor::igv]));
+        plistener->setProgressStr (Glib::ustring::compose(M("TP_RAW_DMETHOD_PROGRESSBAR"), RAWParams::BayerSensor::getMethodString(RAWParams::BayerSensor::Method::IGV)));
         plistener->setProgress (0.0);
     }
 
@@ -2031,7 +2029,8 @@ SSEFUNCTION void RawImageSource::igv_interpolate(int winw, int winh)
             for (; col < width; col++, indx += 2) {
                 dest1[indx >> 1] = CLIP(rawData[row][col]); //rawData = RT datas
                 col++;
-                dest2[indx >> 1] = CLIP(rawData[row][col]); //rawData = RT datas
+                if(col < width)
+                    dest2[indx >> 1] = CLIP(rawData[row][col]); //rawData = RT datas
             }
         }
 
@@ -2366,7 +2365,7 @@ void RawImageSource::igv_interpolate(int winw, int winh)
     border_interpolate2(winw, winh, 7);
 
     if (plistener) {
-        plistener->setProgressStr (Glib::ustring::compose(M("TP_RAW_DMETHOD_PROGRESSBAR"), RAWParams::BayerSensor::methodstring[RAWParams::BayerSensor::igv]));
+        plistener->setProgressStr (Glib::ustring::compose(M("TP_RAW_DMETHOD_PROGRESSBAR"), RAWParams::BayerSensor::getMethodString(RAWParams::BayerSensor::Method::IGV)));
         plistener->setProgress (0.0);
     }
 
@@ -2614,7 +2613,7 @@ void RawImageSource::igv_interpolate(int winw, int winh)
 #define FORC(cnt) for (c=0; c < cnt; c++)
 #define FORC3 FORC(3)
 
-void RawImageSource::ahd_demosaic(int winx, int winy, int winw, int winh)
+void RawImageSource::ahd_demosaic()
 {
     int i, j, k, top, left, row, col, tr, tc, c, d, val, hm[2];
     float (*pix)[4], (*rix)[3];
@@ -2630,7 +2629,7 @@ void RawImageSource::ahd_demosaic(int winx, int winy, int winw, int winh)
 
     int width = W, height = H;
     float (*image)[4];
-    int colors = 3;
+    unsigned int colors = 3;
 
     const double xyz_rgb[3][3] = {        /* XYZ from RGB */
         { 0.412453, 0.357580, 0.180423 },
@@ -2641,7 +2640,7 @@ void RawImageSource::ahd_demosaic(int winx, int winy, int winw, int winh)
     const float d65_white[3] = { 0.950456, 1, 1.088754 };
 
     if (plistener) {
-        plistener->setProgressStr (Glib::ustring::compose(M("TP_RAW_DMETHOD_PROGRESSBAR"), RAWParams::BayerSensor::methodstring[RAWParams::BayerSensor::ahd]));
+        plistener->setProgressStr (Glib::ustring::compose(M("TP_RAW_DMETHOD_PROGRESSBAR"), RAWParams::BayerSensor::getMethodString(RAWParams::BayerSensor::Method::AHD)));
         plistener->setProgress (0.0);
     }
 
@@ -2660,7 +2659,7 @@ void RawImageSource::ahd_demosaic(int winx, int winy, int winw, int winh)
     }
 
     for (i = 0; i < 3; i++)
-        for (j = 0; j < colors; j++)
+        for (unsigned int j = 0; j < colors; j++)
             for (xyz_cam[i][j] = k = 0; k < 3; k++) {
                 xyz_cam[i][j] += xyz_rgb[i][k] * imatrices.rgb_cam[k][j] / d65_white[i];
             }
@@ -3251,7 +3250,7 @@ void RawImageSource::refinement_lassus(int PassCount)
  * the code is open source (BSD licence)
 */
 
-#define TILESIZE 256
+#define TILESIZE 192
 #define TILEBORDER 10
 #define CACHESIZE (TILESIZE+2*TILEBORDER)
 
@@ -3279,7 +3278,7 @@ inline void RawImageSource::dcb_initTileLimits(int &colMin, int &rowMin, int &co
     }
 }
 
-void RawImageSource::fill_raw( float (*cache )[4], int x0, int y0, float** rawData)
+void RawImageSource::fill_raw( float (*cache )[3], int x0, int y0, float** rawData)
 {
     int rowMin, colMin, rowMax, colMax;
     dcb_initTileLimits(colMin, rowMin, colMax, rowMax, x0, y0, 0);
@@ -3290,14 +3289,14 @@ void RawImageSource::fill_raw( float (*cache )[4], int x0, int y0, float** rawDa
         }
 }
 
-void RawImageSource::fill_border( float (*cache )[4], int border, int x0, int y0)
+void RawImageSource::fill_border( float (*cache )[3], int border, int x0, int y0)
 {
-    unsigned row, col, y, x, f, c;
+    unsigned f;
     float sum[8];
-    const unsigned int colors = 3;  // used in FORCC
+    constexpr unsigned int colors = 3;  // used in FORCC
 
-    for (row = y0; row < y0 + TILESIZE + TILEBORDER && row < H; row++) {
-        for (col = x0; col < x0 + TILESIZE + TILEBORDER && col < W; col++) {
+    for (int row = y0; row < y0 + TILESIZE + TILEBORDER && row < H; row++) {
+        for (int col = x0; col < x0 + TILESIZE + TILEBORDER && col < W; col++) {
             if (col >= border && col < W - border && row >= border && row < H - border) {
                 col = W - border;
 
@@ -3308,8 +3307,8 @@ void RawImageSource::fill_border( float (*cache )[4], int border, int x0, int y0
 
             memset(sum, 0, sizeof sum);
 
-            for (y = row - 1; y != row + 2; y++)
-                for (x = col - 1; x != col + 2; x++)
+            for (int y = row - 1; y != row + 2; y++)
+                for (int x = col - 1; x != col + 2; x++)
                     if (y < H && y < y0 + TILESIZE + TILEBORDER && x < W && x < x0 + TILESIZE + TILEBORDER) {
                         f = fc(y, x);
                         sum[f] += cache[(y - y0 + TILEBORDER) * CACHESIZE + TILEBORDER + x - x0][f];
@@ -3325,93 +3324,55 @@ void RawImageSource::fill_border( float (*cache )[4], int border, int x0, int y0
         }
     }
 }
+
 // saves red and blue
-void RawImageSource::copy_to_buffer( float (*buffer)[3], float (*image)[4])
+
+// change buffer[3] -> buffer[2],  possibly to buffer[1] if split
+// into two loops, one for R and another for B, could also be smaller because
+// there is no need for green pixels pass
+// this would decrease the amount of needed memory
+// from megapixels*2 records to megapixels*0.5
+// also don't know if float is needed as data is 1-65536 integer (I believe!!)
+// comment from Ingo: float is needed because rawdata in rt is float
+void RawImageSource::copy_to_buffer( float (*buffer)[2], float (*image)[3])
 {
     for (int indx = 0; indx < CACHESIZE * CACHESIZE; indx++) {
         buffer[indx][0] = image[indx][0]; //R
-        buffer[indx][2] = image[indx][2]; //B
+        buffer[indx][1] = image[indx][2]; //B
     }
 }
 
 // restores red and blue
-void RawImageSource::restore_from_buffer(float (*image)[4], float (*buffer)[3])
+
+// other comments like in copy_to_buffer
+void RawImageSource::restore_from_buffer(float (*image)[3], float (*buffer)[2])
 {
     for (int indx = 0; indx < CACHESIZE * CACHESIZE; indx++) {
         image[indx][0] = buffer[indx][0]; //R
-        image[indx][2] = buffer[indx][2]; //B
+        image[indx][2] = buffer[indx][1]; //B
     }
 }
 
 // First pass green interpolation
-void RawImageSource::dcb_hid(float (*image)[4], float (*bufferH)[3], float (*bufferV)[3], int x0, int y0)
+
+// remove entirely: bufferH and bufferV
+void RawImageSource::dcb_hid(float (*image)[3], int x0, int y0)
 {
-    const int u = CACHESIZE, v = 2 * CACHESIZE;
+    const int u = CACHESIZE;
     int rowMin, colMin, rowMax, colMax;
     dcb_initTileLimits(colMin, rowMin, colMax, rowMax, x0, y0, 2);
 
-    // green pixels
-    for (int row = rowMin; row < rowMax; row++) {
+// simple green bilinear in R and B pixels
+    for (int row = rowMin; row < rowMax; row++)
         for (int col = colMin + (FC(y0 - TILEBORDER + row, x0 - TILEBORDER + colMin) & 1), indx = row * CACHESIZE + col; col < colMax; col += 2, indx += 2) {
-            assert(indx - u >= 0 && indx + u < u * u);
-            bufferH[indx][1] = (image[indx - 1][1] + image[indx + 1][1]) * 0.5f;
-            bufferV[indx][1] = (image[indx + u][1] + image[indx - u][1]) * 0.5f;
-        }
-    }
+            assert(indx - u - 1 >= 0 && indx + u + 1 < u * u);
 
-    // red in blue pixel, blue in red pixel
-    for (int row = rowMin; row < rowMax; row++)
-        for (int col = colMin + (FC(y0 - TILEBORDER + row, x0 - TILEBORDER + colMin) & 1), indx = row * CACHESIZE + col, c = 2 - FC(y0 - TILEBORDER + row, x0 - TILEBORDER + col); col < colMax; col += 2, indx += 2) {
-            assert(indx - u - 1 >= 0 && indx + u + 1 < u * u && c >= 0 && c < 3);
-
-            bufferH[indx][c] = ( 4.f * bufferH[indx][1]
-                                 - bufferH[indx + u + 1][1] - bufferH[indx + u - 1][1] - bufferH[indx - u + 1][1] - bufferH[indx - u - 1][1]
-                                 + image[indx + u + 1][c] + image[indx + u - 1][c] + image[indx - u + 1][c] + image[indx - u - 1][c] ) * 0.25f;
-            bufferV[indx][c] = ( 4.f * bufferV[indx][1]
-                                 - bufferV[indx + u + 1][1] - bufferV[indx + u - 1][1] - bufferV[indx - u + 1][1] - bufferV[indx - u - 1][1]
-                                 + image[indx + u + 1][c] + image[indx + u - 1][c] + image[indx - u + 1][c] + image[indx - u - 1][c] ) * 0.25f;
-        }
-
-    // red or blue in green pixels
-    for (int row = rowMin; row < rowMax; row++)
-        for (int col = colMin + (FC(y0 - TILEBORDER + row, x0 - TILEBORDER + colMin + 1) & 1), indx = row * CACHESIZE + col, c = FC(y0 - TILEBORDER + row, x0 - TILEBORDER + col + 1), d = 2 - c; col < colMax; col += 2, indx += 2) {
-            assert(indx - u >= 0 && indx + u < u * u && c >= 0 && c < 3 && d >= 0 && d < 3);
-            bufferH[indx][c] = (image[indx + 1][c] + image[indx - 1][c]) * 0.5f;
-            bufferH[indx][d] = (2.f * bufferH[indx][1] - bufferH[indx + u][1] - bufferH[indx - u][1] + image[indx + u][d] + image[indx - u][d]) * 0.5f;
-            bufferV[indx][c] = (2.f * bufferV[indx][1] - bufferV[indx + 1][1] - bufferV[indx - 1][1] + image[indx + 1][c] + image[indx - 1][c]) * 0.5f;
-            bufferV[indx][d] = (image[indx + u][d] + image[indx - u][d]) * 0.5f;
-        }
-
-    // Decide green pixels
-    for (int row = rowMin; row < rowMax; row++)
-        for (int col = colMin + (FC(y0 - TILEBORDER + row, x0 - TILEBORDER + colMin) & 1), indx = row * CACHESIZE + col, c = FC(y0 - TILEBORDER + row, x0 - TILEBORDER + col), d = 2 - c; col < colMax; col += 2, indx += 2) {
-            float current =  max(image[indx + v][c], image[indx - v][c], image[indx - 2][c], image[indx + 2][c]) -
-                             min(image[indx + v][c], image[indx - v][c], image[indx - 2][c], image[indx + 2][c]) +
-                             max(image[indx + 1 + u][d], image[indx + 1 - u][d], image[indx - 1 + u][d], image[indx - 1 - u][d]) -
-                             min(image[indx + 1 + u][d], image[indx + 1 - u][d], image[indx - 1 + u][d], image[indx - 1 - u][d]);
-
-            float currentH = max(bufferH[indx + v][d], bufferH[indx - v][d], bufferH[indx - 2][d], bufferH[indx + 2][d]) -
-                             min(bufferH[indx + v][d], bufferH[indx - v][d], bufferH[indx - 2][d], bufferH[indx + 2][d]) +
-                             max(bufferH[indx + 1 + u][c], bufferH[indx + 1 - u][c], bufferH[indx - 1 + u][c], bufferH[indx - 1 - u][c]) -
-                             min(bufferH[indx + 1 + u][c], bufferH[indx + 1 - u][c], bufferH[indx - 1 + u][c], bufferH[indx - 1 - u][c]);
-
-            float currentV = max(bufferV[indx + v][d], bufferV[indx - v][d], bufferV[indx - 2][d], bufferV[indx + 2][d]) -
-                             min(bufferV[indx + v][d], bufferV[indx - v][d], bufferV[indx - 2][d], bufferV[indx + 2][d]) +
-                             max(bufferV[indx + 1 + u][c], bufferV[indx + 1 - u][c], bufferV[indx - 1 + u][c], bufferV[indx - 1 - u][c]) -
-                             min(bufferV[indx + 1 + u][c], bufferV[indx + 1 - u][c], bufferV[indx - 1 + u][c], bufferV[indx - 1 - u][c]);
-
-            assert(indx >= 0 && indx < u * u);
-
-            if (ABS(current - currentH) < ABS(current - currentV)) {
-                image[indx][1] = bufferH[indx][1];
-            } else {
-                image[indx][1] = bufferV[indx][1];
-            }
+            image[indx][1] = 0.25*(image[indx-1][1]+image[indx+1][1]+image[indx-u][1]+image[indx+u][1]);
         }
 }
 
-// missing colors are interpolated
-void RawImageSource::dcb_color(float (*image)[4], int x0, int y0)
+// missing colours are interpolated
+void RawImageSource::dcb_color(float (*image)[3], int x0, int y0)
 {
     const int u = CACHESIZE;
     int rowMin, colMin, rowMax, colMax;
@@ -3421,32 +3382,57 @@ void RawImageSource::dcb_color(float (*image)[4], int x0, int y0)
     for (int row = rowMin; row < rowMax; row++)
         for (int col = colMin + (FC(y0 - TILEBORDER + row, x0 - TILEBORDER + colMin) & 1), indx = row * CACHESIZE + col, c = 2 - FC(y0 - TILEBORDER + row, x0 - TILEBORDER + col); col < colMax; col += 2, indx += 2) {
             assert(indx >= 0 && indx < u * u && c >= 0 && c < 4);
+
+
+//Jacek comment: one multiplication less
+            image[indx][c] = image[indx][1] +
+                               ( image[indx + u + 1][c] + image[indx + u - 1][c] + image[indx - u + 1][c] + image[indx - u - 1][c]
+                              - (image[indx + u + 1][1] + image[indx + u - 1][1] + image[indx - u + 1][1] + image[indx - u - 1][1]) ) * 0.25f;
+
+/* original
             image[indx][c] = ( 4.f * image[indx][1]
                                - image[indx + u + 1][1] - image[indx + u - 1][1] - image[indx - u + 1][1] - image[indx - u - 1][1]
                                + image[indx + u + 1][c] + image[indx + u - 1][c] + image[indx - u + 1][c] + image[indx - u - 1][c] ) * 0.25f;
-        }
+*/
+       }
 
     // red or blue in green pixels
     for (int row = rowMin; row < rowMax; row++)
         for (int col = colMin + (FC(y0 - TILEBORDER + row, x0 - TILEBORDER + colMin + 1) & 1), indx = row * CACHESIZE + col, c = FC(y0 - TILEBORDER + row, x0 - TILEBORDER + col + 1), d = 2 - c; col < colMax; col += 2, indx += 2) {
             assert(indx >= 0 && indx < u * u && c >= 0 && c < 4);
+
+//Jacek comment: two multiplications (in total) less
+            image[indx][c] = image[indx][1] + (image[indx + 1][c] + image[indx - 1][c] - (image[indx + 1][1] + image[indx - 1][1])) * 0.5f;
+            image[indx][d] = image[indx][1] + (image[indx + u][d] + image[indx - u][d] - (image[indx + u][1] + image[indx - u][1])) * 0.5f;
+
+
+/* original
             image[indx][c] = (2.f * image[indx][1] - image[indx + 1][1] - image[indx - 1][1] + image[indx + 1][c] + image[indx - 1][c]) * 0.5f;
             image[indx][d] = (2.f * image[indx][1] - image[indx + u][1] - image[indx - u][1] + image[indx + u][d] + image[indx - u][d]) * 0.5f;
+*/
         }
 }
 
 // green correction
-void RawImageSource::dcb_hid2(float (*image)[4], int x0, int y0)
+void RawImageSource::dcb_hid2(float (*image)[3], int x0, int y0)
 {
-    const int u = CACHESIZE, v = 2 * CACHESIZE;
+    const int v = 2 * CACHESIZE;
     int rowMin, colMin, rowMax, colMax;
     dcb_initTileLimits(colMin, rowMin, colMax, rowMax, x0, y0, 2);
 
     for (int row = rowMin; row < rowMax; row++) {
         for (int col = colMin + (FC(y0 - TILEBORDER + row, x0 - TILEBORDER + colMin) & 1), indx = row * CACHESIZE + col, c = FC(y0 - TILEBORDER + row, x0 - TILEBORDER + col); col < colMax; col += 2, indx += 2) {
-            assert(indx - v >= 0 && indx + v < u * u);
+            assert(indx - v >= 0 && indx + v < CACHESIZE * CACHESIZE);
+
+//Jacek comment: one multiplication less
+            image[indx][1] = image[indx][c] +
+                             (image[indx + v][1] + image[indx - v][1] + image[indx - 2][1] + image[indx + 2][1]
+                           - (image[indx + v][c] + image[indx - v][c] + image[indx - 2][c] + image[indx + 2][c])) * 0.25f;
+
+/* original
             image[indx][1] = (image[indx + v][1] + image[indx - v][1] + image[indx - 2][1] + image[indx + 2][1]) * 0.25f +
                              image[indx][c] - ( image[indx + v][c] + image[indx - v][c] + image[indx - 2][c] + image[indx + 2][c]) * 0.25f;
+*/
         }
     }
 }
@@ -3456,9 +3442,12 @@ void RawImageSource::dcb_hid2(float (*image)[4], int x0, int y0)
 // 1 = vertical
 // 0 = horizontal
 // saved in image[][3]
-void RawImageSource::dcb_map(float (*image)[4], int x0, int y0)
+
+// seems at least 2 persons implemented some code, as this one has different coding style, could be unified
+// I don't know if *pix is faster than a loop working on image[] directly
+void RawImageSource::dcb_map(float (*image)[3], uint8_t *map, int x0, int y0)
 {
-    const int u = 4 * CACHESIZE;
+    const int u = 3 * CACHESIZE;
     int rowMin, colMin, rowMax, colMax;
     dcb_initTileLimits(colMin, rowMin, colMax, rowMax, x0, y0, 2);
 
@@ -3468,36 +3457,41 @@ void RawImageSource::dcb_map(float (*image)[4], int x0, int y0)
 
             assert(indx >= 0 && indx < u * u);
 
-            if ( *pix > ( pix[-4] + pix[+4] + pix[-u] + pix[+u]) / 4 ) {
-                image[indx][3] = ((min(pix[-4], pix[+4]) + pix[-4] + pix[+4] ) < (min(pix[-u], pix[+u]) + pix[-u] + pix[+u]));
+            // comparing 4 * a to (b+c+d+e) instead of a to (b+c+d+e)/4 is faster because divisions are slow
+            if ( 4 * (*pix) > ( (pix[-3] + pix[+3]) + (pix[-u] + pix[+u])) ) {
+                map[indx] = ((min(pix[-3], pix[+3]) + (pix[-3] + pix[+3]) ) < (min(pix[-u], pix[+u]) + (pix[-u] + pix[+u])));
             } else {
-                image[indx][3] = ((max(pix[-4], pix[+4]) + pix[-4] + pix[+4] ) > (max(pix[-u], pix[+u]) + pix[-u] + pix[+u]));
+                map[indx] = ((max(pix[-3], pix[+3]) + (pix[-3] + pix[+3]) ) > (max(pix[-u], pix[+u]) + (pix[-u] + pix[+u])));
             }
         }
     }
 }
 
 // interpolated green pixels are corrected using the map
-void RawImageSource::dcb_correction(float (*image)[4], int x0, int y0)
+void RawImageSource::dcb_correction(float (*image)[3], uint8_t *map, int x0, int y0)
 {
     const int u = CACHESIZE, v = 2 * CACHESIZE;
     int rowMin, colMin, rowMax, colMax;
     dcb_initTileLimits(colMin, rowMin, colMax, rowMax, x0, y0, 2);
 
     for (int row = rowMin; row < rowMax; row++) {
-        for (int col = colMin + (FC(y0 - TILEBORDER + row, x0 - TILEBORDER + colMin) & 1), indx = row * CACHESIZE + col; col < colMax; col += 2, indx += 2) {
-            float current = 4.f * image[indx][3] +
-                            2.f * (image[indx + u][3] + image[indx - u][3] + image[indx + 1][3] + image[indx - 1][3]) +
-                            image[indx + v][3] + image[indx - v][3] + image[indx + 2][3] + image[indx - 2][3];
+        for (int indx = row * CACHESIZE + colMin + (FC(y0 - TILEBORDER + row, x0 - TILEBORDER + colMin) & 1); indx < row * CACHESIZE + colMax; indx += 2) {
+//        for (int col = colMin + (FC(y0 - TILEBORDER + row, x0 - TILEBORDER + colMin) & 1), indx = row * CACHESIZE + col; col < colMax; col += 2, indx += 2) {
+            float current = 4 * map[indx] +
+                            2 * (map[indx + u] + map[indx - u] + map[indx + 1] + map[indx - 1]) +
+                            map[indx + v] + map[indx - v] + map[indx + 2] + map[indx - 2];
 
             assert(indx >= 0 && indx < u * u);
-            image[indx][1] = ((16.f - current) * (image[indx - 1][1] + image[indx + 1][1]) * 0.5f + current * (image[indx - u][1] + image[indx + u][1]) * 0.5f ) * 0.0625f;
+            image[indx][1] = ((16.f - current) * (image[indx - 1][1] + image[indx + 1][1]) + current * (image[indx - u][1] + image[indx + u][1]) ) * 0.03125f;
+//            image[indx][1] = ((16.f - current) * (image[indx - 1][1] + image[indx + 1][1]) * 0.5f + current * (image[indx - u][1] + image[indx + u][1]) * 0.5f ) * 0.0625f;
         }
     }
 }
 
 // R and B smoothing using green contrast, all pixels except 2 pixel wide border
-void RawImageSource::dcb_pp(float (*image)[4], int x0, int y0)
+
+// again code with *pix, is this kind of calculating faster in C, than this what was commented?
+void RawImageSource::dcb_pp(float (*image)[3], int x0, int y0)
 {
     const int u = CACHESIZE;
     int rowMin, colMin, rowMax, colMax;
@@ -3505,10 +3499,10 @@ void RawImageSource::dcb_pp(float (*image)[4], int x0, int y0)
 
     for (int row = rowMin; row < rowMax; row++)
         for (int col = colMin, indx = row * CACHESIZE + col; col < colMax; col++, indx++) {
-            //int r1 = ( image[indx-1][0] + image[indx+1][0] + image[indx-u][0] + image[indx+u][0] + image[indx-u-1][0] + image[indx+u+1][0] + image[indx-u+1][0] + image[indx+u-1][0])/8;
-            //int g1 = ( image[indx-1][1] + image[indx+1][1] + image[indx-u][1] + image[indx+u][1] + image[indx-u-1][1] + image[indx+u+1][1] + image[indx-u+1][1] + image[indx+u-1][1])/8;
-            //int b1 = ( image[indx-1][2] + image[indx+1][2] + image[indx-u][2] + image[indx+u][2] + image[indx-u-1][2] + image[indx+u+1][2] + image[indx-u+1][2] + image[indx+u-1][2])/8;
-            float (*pix)[4] = image + (indx - u - 1);
+//            float r1 = image[indx-1][0] + image[indx+1][0] + image[indx-u][0] + image[indx+u][0] + image[indx-u-1][0] + image[indx+u+1][0] + image[indx-u+1][0] + image[indx+u-1][0];
+//            float g1 = image[indx-1][1] + image[indx+1][1] + image[indx-u][1] + image[indx+u][1] + image[indx-u-1][1] + image[indx+u+1][1] + image[indx-u+1][1] + image[indx+u-1][1];
+//            float b1 = image[indx-1][2] + image[indx+1][2] + image[indx-u][2] + image[indx+u][2] + image[indx-u-1][2] + image[indx+u+1][2] + image[indx-u+1][2] + image[indx+u-1][2];
+            float (*pix)[3] = image + (indx - u - 1);
             float r1 = (*pix)[0];
             float g1 = (*pix)[1];
             float b1 = (*pix)[2];
@@ -3543,8 +3537,8 @@ void RawImageSource::dcb_pp(float (*image)[4], int x0, int y0)
             r1 *= 0.125f;
             g1 *= 0.125f;
             b1 *= 0.125f;
-            r1 = r1 + ( image[indx][1] - g1 );
-            b1 = b1 + ( image[indx][1] - g1 );
+            r1 += ( image[indx][1] - g1 );
+            b1 += ( image[indx][1] - g1 );
 
             assert(indx >= 0 && indx < u * u);
             image[indx][0] = r1;
@@ -3554,70 +3548,90 @@ void RawImageSource::dcb_pp(float (*image)[4], int x0, int y0)
 
 // interpolated green pixels are corrected using the map
 // with correction
-void RawImageSource::dcb_correction2(float (*image)[4], int x0, int y0)
+void RawImageSource::dcb_correction2(float (*image)[3], uint8_t *map, int x0, int y0)
 {
     const int u = CACHESIZE, v = 2 * CACHESIZE;
     int rowMin, colMin, rowMax, colMax;
     dcb_initTileLimits(colMin, rowMin, colMax, rowMax, x0, y0, 4);
 
     for (int row = rowMin; row < rowMax; row++) {
-        for (int col = colMin + (FC(y0 - TILEBORDER + row, x0 - TILEBORDER + colMin) & 1), indx = row * CACHESIZE + col, c = FC(y0 - TILEBORDER + row, x0 - TILEBORDER + col); col < colMax; col += 2, indx += 2) {
-            float current = 4.f * image[indx][3] +
-                            2.f * (image[indx + u][3] + image[indx - u][3] + image[indx + 1][3] + image[indx - 1][3]) +
-                            image[indx + v][3] + image[indx - v][3] + image[indx + 2][3] + image[indx - 2][3];
+        for (int indx = row * CACHESIZE + colMin + (FC(y0 - TILEBORDER + row, x0 - TILEBORDER + colMin) & 1), c = FC(y0 - TILEBORDER + row, x0 - TILEBORDER + colMin + (FC(y0 - TILEBORDER + row, x0 - TILEBORDER + colMin) & 1)); indx < row * CACHESIZE + colMax; indx += 2) {
+            // map values are uint8_t either 0 or 1. Adding them using integer instructions is perfectly valid and fast. Final result is converted to float then
+            float current = 4 * map[indx] +
+                            2 * (map[indx + u] + map[indx - u] + map[indx + 1] + map[indx - 1]) +
+                            map[indx + v] + map[indx - v] + map[indx + 2] + map[indx - 2];
 
             assert(indx >= 0 && indx < u * u);
+
+// Jacek comment: works now, and has 3 float mults and 9 float adds
+            image[indx][1] =  image[indx][c] +
+                    ((16.f - current) * (image[indx - 1][1] + image[indx + 1][1] - (image[indx + 2][c] + image[indx - 2][c]))
+                            + current * (image[indx - u][1] + image[indx + u][1] - (image[indx + v][c] + image[indx - v][c]))) * 0.03125f;
+
+
+            // 4 float mults and 9 float adds
+            // Jacek comment: not mathematically identical to original
+/*            image[indx][1] = 16.f * image[indx][c] +
+                             ((16.f - current) * ((image[indx - 1][1] + image[indx + 1][1])
+                                                  - (image[indx + 2][c] + image[indx - 2][c]))
+                              + current * ((image[indx - u][1] + image[indx + u][1]) - (image[indx + v][c] + image[indx - v][c]))) * 0.03125f;
+*/
+            // 7 float mults and 10 float adds
+            // original code
+/*
             image[indx][1] = ((16.f - current) * ((image[indx - 1][1] + image[indx + 1][1]) * 0.5f
                                                   + image[indx][c] - (image[indx + 2][c] + image[indx - 2][c]) * 0.5f)
                               + current * ((image[indx - u][1] + image[indx + u][1]) * 0.5f + image[indx][c] - (image[indx + v][c] + image[indx - v][c]) * 0.5f)) * 0.0625f;
+*/
         }
     }
 }
 
 // image refinement
-void RawImageSource::dcb_refinement(float (*image)[4], int x0, int y0)
+void RawImageSource::dcb_refinement(float (*image)[3], uint8_t *map, int x0, int y0)
 {
-    const int u = CACHESIZE, v = 2 * CACHESIZE, w = 3 * CACHESIZE;
+    const int u = CACHESIZE, v = 2 * CACHESIZE;
     int rowMin, colMin, rowMax, colMax;
     dcb_initTileLimits(colMin, rowMin, colMax, rowMax, x0, y0, 4);
 
-    float f[5], g1, g2;
+    float f0, f1, f2, g1, h0, h1, h2, g2;
 
     for (int row = rowMin; row < rowMax; row++)
         for (int col = colMin + (FC(y0 - TILEBORDER + row, x0 - TILEBORDER + colMin) & 1), indx = row * CACHESIZE + col, c = FC(y0 - TILEBORDER + row, x0 - TILEBORDER + col); col < colMax; col += 2, indx += 2) {
-            float current = 4.f * image[indx][3] +
-                            2.f * (image[indx + u][3] + image[indx - u][3] + image[indx + 1][3] + image[indx - 1][3])
-                            + image[indx + v][3] + image[indx - v][3] + image[indx - 2][3] + image[indx + 2][3];
 
-            f[0] = (float)(image[indx - u][1] + image[indx + u][1]) / (2.f + 2.f * image[indx][c]);
-            f[1] = 2.f * image[indx - u][1] / (2 + image[indx - v][c] + image[indx][c]);
-            f[2] = (float)(image[indx - u][1] + image[indx - w][1]) / (2.f + 2.f * image[indx - v][c]);
-            f[3] = 2.f * image[indx + u][1] / (2 + image[indx + v][c] + image[indx][c]);
-            f[4] = (float)(image[indx + u][1] + image[indx + w][1]) / (2.f + 2.f * image[indx + v][c]);
+            float current = 4 * map[indx] +
+                            2 * (map[indx + u] + map[indx - u] + map[indx + 1] + map[indx - 1])
+                            + map[indx + v] + map[indx - v] + map[indx - 2] + map[indx + 2];
 
-            g1 = (f[0] + f[1] + f[2] + f[3] + f[4] - max(f[1], f[2], f[3], f[4]) - min(f[1], f[2], f[3], f[4])) / 3.f;
+            float currPix = image[indx][c];
 
-            f[0] = (float)(image[indx - 1][1] + image[indx + 1][1]) / (2.f + 2.f * image[indx][c]);
-            f[1] = 2.f * image[indx - 1][1] / (2 + image[indx - 2][c] + image[indx][c]);
-            f[2] = (float)(image[indx - 1][1] + image[indx - 3][1]) / (2.f + 2.f * image[indx - 2][c]);
-            f[3] = 2.f * image[indx + 1][1] / (2 + image[indx + 2][c] + image[indx][c]);
-            f[4] = (float)(image[indx + 1][1] + image[indx + 3][1]) / (2.f + 2.f * image[indx + 2][c]);
+            f0 = (float)(image[indx - u][1] + image[indx + u][1]) / (1.f + 2.f * currPix);
+            f1 = 2.f * image[indx - u][1] / (1.f + image[indx - v][c] + currPix);
+            f2 = 2.f * image[indx + u][1] / (1.f + image[indx + v][c] + currPix);
 
-            g2 = (f[0] + f[1] + f[2] + f[3] + f[4] - max(f[1], f[2], f[3], f[4]) - min(f[1], f[2], f[3], f[4])) / 3.f;
+            g1 = f0 + f1 + f2;
 
+            h0 = (float)(image[indx - 1][1] + image[indx + 1][1]) / (1.f + 2.f * currPix);
+            h1 = 2.f * image[indx - 1][1] / (1.f + image[indx - 2][c] + currPix);
+            h2 = 2.f * image[indx + 1][1] / (1.f + image[indx + 2][c] + currPix);
+
+            g2 = h0 + h1 + h2;
+
+            // new green value
             assert(indx >= 0 && indx < u * u);
-            image[indx][1] = (2.f + image[indx][c]) * (current * g1 + (16.f - current) * g2) * 0.0625f;
+            currPix *= (current * g1 + (16.f - current) * g2) / 48.f;
 
-            // get rid of the overshooted pixels
-            float min_f = min(image[indx + 1 + u][1], min(image[indx + 1 - u][1], min(image[indx - 1 + u][1], min(image[indx - 1 - u][1], min(image[indx - 1][1], min(image[indx + 1][1], min(image[indx - u][1], image[indx + u][1])))))));
-            float max_f = max(image[indx + 1 + u][1], max(image[indx + 1 - u][1], max(image[indx - 1 + u][1], max(image[indx - 1 - u][1], max(image[indx - 1][1], max(image[indx + 1][1], max(image[indx - u][1], image[indx + u][1])))))));
+            // get rid of the overshot pixels
+            float minVal = min(image[indx - 1][1], min(image[indx + 1][1], min(image[indx - u][1], image[indx + u][1])));
+            float maxVal = max(image[indx - 1][1], max(image[indx + 1][1], max(image[indx - u][1], image[indx + u][1])));
 
-            image[indx][1] =  LIM(image[indx][1], min_f, max_f);
+            image[indx][1] =  LIM(currPix, minVal, maxVal);
+
         }
 }
 
-// missing colors are interpolated using high quality algorithm by Luis Sanz Rodriguez
-void RawImageSource::dcb_color_full(float (*image)[4], int x0, int y0, float (*chroma)[2])
+// missing colours are interpolated using high quality algorithm by Luis Sanz Rodriguez
+void RawImageSource::dcb_color_full(float (*image)[3], int x0, int y0, float (*chroma)[2])
 {
     const int u = CACHESIZE, w = 3 * CACHESIZE;
     int rowMin, colMin, rowMax, colMax;
@@ -3637,10 +3651,15 @@ void RawImageSource::dcb_color_full(float (*image)[4], int x0, int y0, float (*c
             f[1] = 1.f / (float)(1.f + fabs(chroma[indx - u + 1][c] - chroma[indx + u - 1][c]) + fabs(chroma[indx - u + 1][c] - chroma[indx - w + 3][c]) + fabs(chroma[indx + u - 1][c] - chroma[indx - w + 3][c]));
             f[2] = 1.f / (float)(1.f + fabs(chroma[indx + u - 1][c] - chroma[indx - u + 1][c]) + fabs(chroma[indx + u - 1][c] - chroma[indx + w + 3][c]) + fabs(chroma[indx - u + 1][c] - chroma[indx + w - 3][c]));
             f[3] = 1.f / (float)(1.f + fabs(chroma[indx + u + 1][c] - chroma[indx - u - 1][c]) + fabs(chroma[indx + u + 1][c] - chroma[indx + w - 3][c]) + fabs(chroma[indx - u - 1][c] - chroma[indx + w + 3][c]));
-            g[0] = 1.325f * chroma[indx - u - 1][c] - 0.175f * chroma[indx - w - 3][c] - 0.075f * chroma[indx - w - 1][c] - 0.075f * chroma[indx - u - 3][c];
-            g[1] = 1.325f * chroma[indx - u + 1][c] - 0.175f * chroma[indx - w + 3][c] - 0.075f * chroma[indx - w + 1][c] - 0.075f * chroma[indx - u + 3][c];
-            g[2] = 1.325f * chroma[indx + u - 1][c] - 0.175f * chroma[indx + w - 3][c] - 0.075f * chroma[indx + w - 1][c] - 0.075f * chroma[indx + u - 3][c];
-            g[3] = 1.325f * chroma[indx + u + 1][c] - 0.175f * chroma[indx + w + 3][c] - 0.075f * chroma[indx + w + 1][c] - 0.075f * chroma[indx + u + 3][c];
+            g[0] = 1.325f * chroma[indx - u - 1][c] - 0.175f * chroma[indx - w - 3][c] - 0.075f * (chroma[indx - w - 1][c] + chroma[indx - u - 3][c]);
+            g[1] = 1.325f * chroma[indx - u + 1][c] - 0.175f * chroma[indx - w + 3][c] - 0.075f * (chroma[indx - w + 1][c] + chroma[indx - u + 3][c]);
+            g[2] = 1.325f * chroma[indx + u - 1][c] - 0.175f * chroma[indx + w - 3][c] - 0.075f * (chroma[indx + w - 1][c] + chroma[indx + u - 3][c]);
+            g[3] = 1.325f * chroma[indx + u + 1][c] - 0.175f * chroma[indx + w + 3][c] - 0.075f * (chroma[indx + w + 1][c] + chroma[indx + u + 3][c]);
+
+//            g[0] = 1.325f * chroma[indx - u - 1][c] - 0.175f * chroma[indx - w - 3][c] - 0.075f * chroma[indx - w - 1][c] - 0.075f * chroma[indx - u - 3][c];
+//            g[1] = 1.325f * chroma[indx - u + 1][c] - 0.175f * chroma[indx - w + 3][c] - 0.075f * chroma[indx - w + 1][c] - 0.075f * chroma[indx - u + 3][c];
+//            g[2] = 1.325f * chroma[indx + u - 1][c] - 0.175f * chroma[indx + w - 3][c] - 0.075f * chroma[indx + w - 1][c] - 0.075f * chroma[indx + u - 3][c];
+//            g[3] = 1.325f * chroma[indx + u + 1][c] - 0.175f * chroma[indx + w + 3][c] - 0.075f * chroma[indx + w + 1][c] - 0.075f * chroma[indx + u + 3][c];
 
             assert(indx >= 0 && indx < u * u && c >= 0 && c < 2);
             chroma[indx][c] = (f[0] * g[0] + f[1] * g[1] + f[2] * g[2] + f[3] * g[3]) / (f[0] + f[1] + f[2] + f[3]);
@@ -3649,15 +3668,20 @@ void RawImageSource::dcb_color_full(float (*image)[4], int x0, int y0, float (*c
     for (int row = rowMin; row < rowMax; row++)
         for (int col = colMin + (FC(y0 - TILEBORDER + row, x0 - TILEBORDER + colMin + 1) & 1), indx = row * CACHESIZE + col, c = FC(y0 - TILEBORDER + row, x0 - TILEBORDER + col + 1) / 2; col < colMax; col += 2, indx += 2)
             for(int d = 0; d <= 1; c = 1 - c, d++) {
-                f[0] = 1.f / (float)(1.f + fabs(chroma[indx - u][c] - chroma[indx + u][c]) + fabs(chroma[indx - u][c] - chroma[indx - w][c]) + fabs(chroma[indx + u][c] - chroma[indx - w][c]));
-                f[1] = 1.f / (float)(1.f + fabs(chroma[indx + 1][c] - chroma[indx - 1][c]) + fabs(chroma[indx + 1][c] - chroma[indx + 3][c]) + fabs(chroma[indx - 1][c] - chroma[indx + 3][c]));
-                f[2] = 1.f / (float)(1.f + fabs(chroma[indx - 1][c] - chroma[indx + 1][c]) + fabs(chroma[indx - 1][c] - chroma[indx - 3][c]) + fabs(chroma[indx + 1][c] - chroma[indx - 3][c]));
-                f[3] = 1.f / (float)(1.f + fabs(chroma[indx + u][c] - chroma[indx - u][c]) + fabs(chroma[indx + u][c] - chroma[indx + w][c]) + fabs(chroma[indx - u][c] - chroma[indx + w][c]));
+                f[0] = 1.f / (1.f + fabs(chroma[indx - u][c] - chroma[indx + u][c]) + fabs(chroma[indx - u][c] - chroma[indx - w][c]) + fabs(chroma[indx + u][c] - chroma[indx - w][c]));
+                f[1] = 1.f / (1.f + fabs(chroma[indx + 1][c] - chroma[indx - 1][c]) + fabs(chroma[indx + 1][c] - chroma[indx + 3][c]) + fabs(chroma[indx - 1][c] - chroma[indx + 3][c]));
+                f[2] = 1.f / (1.f + fabs(chroma[indx - 1][c] - chroma[indx + 1][c]) + fabs(chroma[indx - 1][c] - chroma[indx - 3][c]) + fabs(chroma[indx + 1][c] - chroma[indx - 3][c]));
+                f[3] = 1.f / (1.f + fabs(chroma[indx + u][c] - chroma[indx - u][c]) + fabs(chroma[indx + u][c] - chroma[indx + w][c]) + fabs(chroma[indx - u][c] - chroma[indx + w][c]));
 
-                g[0] = 0.875f * chroma[indx - u][c] + 0.125f * chroma[indx - w][c];
-                g[1] = 0.875f * chroma[indx + 1][c] + 0.125f * chroma[indx + 3][c];
-                g[2] = 0.875f * chroma[indx - 1][c] + 0.125f * chroma[indx - 3][c];
-                g[3] = 0.875f * chroma[indx + u][c] + 0.125f * chroma[indx + w][c];
+                g[0] = intp(0.875f, chroma[indx - u][c], chroma[indx - w][c]);
+                g[1] = intp(0.875f, chroma[indx + 1][c], chroma[indx + 3][c]);
+                g[2] = intp(0.875f, chroma[indx - 1][c], chroma[indx - 3][c]);
+                g[3] = intp(0.875f, chroma[indx + u][c], chroma[indx + w][c]);
+
+//                g[0] = 0.875f * chroma[indx - u][c] + 0.125f * chroma[indx - w][c];
+//                g[1] = 0.875f * chroma[indx + 1][c] + 0.125f * chroma[indx + 3][c];
+//                g[2] = 0.875f * chroma[indx - 1][c] + 0.125f * chroma[indx - 3][c];
+//                g[3] = 0.875f * chroma[indx + u][c] + 0.125f * chroma[indx + w][c];
 
                 assert(indx >= 0 && indx < u * u && c >= 0 && c < 2);
                 chroma[indx][c] = (f[0] * g[0] + f[1] * g[1] + f[2] * g[2] + f[3] * g[3]) / (f[0] + f[1] + f[2] + f[3]);
@@ -3672,13 +3696,14 @@ void RawImageSource::dcb_color_full(float (*image)[4], int x0, int y0, float (*c
         }
 }
 
-// DCB demosaicing main routine (sharp version)
+// DCB demosaicing main routine
 void RawImageSource::dcb_demosaic(int iterations, bool dcb_enhance)
 {
+BENCHFUN
     double currentProgress = 0.0;
 
     if(plistener) {
-        plistener->setProgressStr (Glib::ustring::compose(M("TP_RAW_DMETHOD_PROGRESSBAR"), RAWParams::BayerSensor::methodstring[RAWParams::BayerSensor::dcb]));
+        plistener->setProgressStr (Glib::ustring::compose(M("TP_RAW_DMETHOD_PROGRESSBAR"), RAWParams::BayerSensor::getMethodString(RAWParams::BayerSensor::Method::DCB)));
         plistener->setProgress (currentProgress);
     }
 
@@ -3686,29 +3711,24 @@ void RawImageSource::dcb_demosaic(int iterations, bool dcb_enhance)
     int hTiles = H / TILESIZE + (H % TILESIZE ? 1 : 0);
     int numTiles = wTiles * hTiles;
     int tilesDone = 0;
+    constexpr int cldf = 2; // factor to multiply cache line distance. 1 = 64 bytes, 2 = 128 bytes ...
+
 #ifdef _OPENMP
-    int nthreads = omp_get_max_threads();
-    float (**image)[4]  =  (float(**)[4]) calloc( nthreads, sizeof( void*) );
-    float (**image2)[3] =   (float(**)[3]) calloc( nthreads, sizeof( void*) );
-    float (**image3)[3] =   (float(**)[3]) calloc( nthreads, sizeof( void*) );
-    float  (**chroma)[2] =  (float (**)[2]) calloc( nthreads, sizeof( void*) );
-
-    for(int i = 0; i < nthreads; i++) {
-        image[i] = (float(*)[4]) calloc( CACHESIZE * CACHESIZE, sizeof **image);
-        image2[i] = (float(*)[3]) calloc( CACHESIZE * CACHESIZE, sizeof **image2);
-        image3[i] = (float(*)[3]) calloc( CACHESIZE * CACHESIZE, sizeof **image3);
-        chroma[i] = (float (*)[2]) calloc( CACHESIZE * CACHESIZE, sizeof **chroma);
-    }
-
-#else
-    float (*image)[4]  = (float(*)[4]) calloc( CACHESIZE * CACHESIZE, sizeof * image);
-    float (*image2)[3] = (float(*)[3]) calloc( CACHESIZE * CACHESIZE, sizeof * image2);
-    float (*image3)[3] = (float(*)[3]) calloc( CACHESIZE * CACHESIZE, sizeof * image3);
-    float  (*chroma)[2] = (float (*)[2]) calloc( CACHESIZE * CACHESIZE, sizeof * chroma);
+    #pragma omp parallel
 #endif
+{
+    // assign working space
+    char *buffer0 = (char *) malloc(5 * sizeof(float) * CACHESIZE * CACHESIZE + sizeof(uint8_t) * CACHESIZE * CACHESIZE + 3 * cldf * 64 + 63);
+    // aligned to 64 byte boundary
+    char *data = (char*)( ( uintptr_t(buffer0) + uintptr_t(63)) / 64 * 64);
+
+    float (*tile)[3]   = (float(*)[3]) data;
+    float (*buffer)[2] = (float(*)[2]) ((char*)tile + sizeof(float) * CACHESIZE * CACHESIZE * 3 + cldf * 64);
+    float (*chrm)[2]   = (float(*)[2]) (buffer); // No overlap in usage of buffer and chrm means we can reuse buffer
+    uint8_t *map       = (uint8_t*) ((char*)buffer + sizeof(float) * CACHESIZE * CACHESIZE * 2 + cldf * 64);
 
 #ifdef _OPENMP
-    #pragma omp parallel for
+    #pragma omp for schedule(dynamic) nowait
 #endif
 
     for( int iTile = 0; iTile < numTiles; iTile++) {
@@ -3717,19 +3737,8 @@ void RawImageSource::dcb_demosaic(int iterations, bool dcb_enhance)
         int x0 = xTile * TILESIZE;
         int y0 = yTile * TILESIZE;
 
-#ifdef _OPENMP
-        int tid = omp_get_thread_num();
-        assert(tid < nthreads);
-        float (*tile)[4]   = image[tid];
-        float (*buffer)[3] = image2[tid];
-        float (*buffer2)[3] = image3[tid];
-        float  (*chrm)[2]   = chroma[tid];
-#else
-        float (*tile)[4]   = image;
-        float (*buffer)[3] = image2;
-        float (*buffer2)[3] = image3;
-        float  (*chrm)[2]   = chroma;
-#endif
+        memset(tile, 0, CACHESIZE * CACHESIZE * sizeof * tile);
+        memset(map, 0, CACHESIZE * CACHESIZE * sizeof * map);
 
         fill_raw( tile, x0, y0, rawData );
 
@@ -3737,7 +3746,44 @@ void RawImageSource::dcb_demosaic(int iterations, bool dcb_enhance)
             fill_border(tile, 6, x0, y0);
         }
 
+        copy_to_buffer(buffer, tile);
+        dcb_hid(tile, x0, y0);
+
+        for (int i = iterations; i > 0; i--) {
+            dcb_hid2(tile, x0, y0);
+            dcb_hid2(tile, x0, y0);
+            dcb_hid2(tile, x0, y0);
+            dcb_map(tile, map, x0, y0);
+            dcb_correction(tile, map, x0, y0);
+        }
+
+        dcb_color(tile, x0, y0);
+        dcb_pp(tile, x0, y0);
+        dcb_map(tile, map, x0, y0);
+        dcb_correction2(tile, map, x0, y0);
+        dcb_map(tile, map, x0, y0);
+        dcb_correction(tile, map, x0, y0);
+        dcb_color(tile, x0, y0);
+        dcb_map(tile, map, x0, y0);
+        dcb_correction(tile, map, x0, y0);
+        dcb_map(tile, map, x0, y0);
+        dcb_correction(tile, map, x0, y0);
+        dcb_map(tile, map, x0, y0);
+        restore_from_buffer(tile, buffer);
+
+        if (!dcb_enhance)
+            dcb_color(tile, x0, y0);
+        else
+        {
+            memset(chrm, 0, CACHESIZE * CACHESIZE * sizeof * chrm);
+            dcb_refinement(tile, map, x0, y0);
+            dcb_color_full(tile, x0, y0, chrm);
+        }
+
+ /*
         dcb_hid(tile, buffer, buffer2, x0, y0);
+        dcb_color(tile, x0, y0);
+
         copy_to_buffer(buffer, tile);
 
         for (int i = iterations; i > 0; i--) {
@@ -3761,13 +3807,13 @@ void RawImageSource::dcb_demosaic(int iterations, bool dcb_enhance)
         dcb_correction(tile, x0, y0);
         dcb_map(tile, x0, y0);
         restore_from_buffer(tile, buffer);
-        dcb_color(tile, x0, y0);
+        dcb_color_full(tile, x0, y0, chrm);
 
         if (dcb_enhance) {
             dcb_refinement(tile, x0, y0);
             dcb_color_full(tile, x0, y0, chrm);
-        }
-
+         }
+*/
         for(int y = 0; y < TILESIZE && y0 + y < H; y++) {
             for (int j = 0; j < TILESIZE && x0 + j < W; j++) {
                 red[y0 + y][x0 + j]   = tile[(y + TILEBORDER) * CACHESIZE + TILEBORDER + j][0];
@@ -3792,21 +3838,8 @@ void RawImageSource::dcb_demosaic(int iterations, bool dcb_enhance)
 #endif
         tilesDone++;
     }
-
-#ifdef _OPENMP
-
-    for(int i = 0; i < nthreads; i++) {
-        free(image[i]);
-        free(image2[i]);
-        free(image3[i]);
-        free(chroma[i]);
-    }
-
-#endif
-    free(image);
-    free(image2);
-    free(image3);
-    free(chroma);
+    free(buffer0);
+}
 
     if(plistener) {
         plistener->setProgress (1.0);
@@ -3895,6 +3928,299 @@ void RawImageSource::cielab (const float (*rgb)[3], float* l, float* a, float *b
     }
 }
 
+
+/**
+* RATIO CORRECTED DEMOSAICING
+* Luis Sanz Rodriguez (luis.sanz.rodriguez(at)gmail(dot)com)
+*
+* Release 2.3 @ 171125
+*
+* Original code from https://github.com/LuisSR/RCD-Demosaicing
+* Licensed under the GNU GPL version 3
+*/
+void RawImageSource::rcd_demosaic()
+{
+    // RT ---------------------------------------------------------------------
+    if (plistener) {
+        plistener->setProgressStr(Glib::ustring::compose(M("TP_RAW_DMETHOD_PROGRESSBAR"), "rcd"));
+        plistener->setProgress(0);
+    }
+    
+    int width = W, height = H;
+
+    std::vector<float> cfa(width * height);
+    std::vector<std::array<float, 3>> rgb(width * height);
+
+#ifdef _OPENMP
+    #pragma omp parallel for
+#endif
+    for (int row = 0; row < height; row++) {
+        for (int col = 0, indx = row * width + col; col < width; col++, indx++) {
+            int c = FC(row, col);
+            cfa[indx] = rgb[indx][c] = LIM01(rawData[row][col] / 65535.f);
+        }
+    }
+
+    if (plistener) {
+        plistener->setProgress(0.05);
+    }
+    // ------------------------------------------------------------------------
+/* RT    
+    int row, col, indx, c;
+*/    
+    int w1 = width, w2 = 2 * width, w3 = 3 * width, w4 = 4 * width;
+
+    //Tolerance to avoid dividing by zero
+    static const float eps = 1e-5, epssq = 1e-10;
+
+/* RT    
+    //Gradients
+    float N_Grad, E_Grad, W_Grad, S_Grad, NW_Grad, NE_Grad, SW_Grad, SE_Grad;
+
+    //Pixel estimation
+    float N_Est, E_Est, W_Est, S_Est, NW_Est, NE_Est, SW_Est, SE_Est, V_Est, H_Est, P_Est, Q_Est;
+
+    //Directional discrimination
+    //float V_Stat, H_Stat, P_Stat, Q_Stat;
+    float VH_Central_Value, VH_Neighbour_Value, PQ_Central_Value, PQ_Neighbour_Value;
+*/    
+    float ( *VH_Dir ), ( *PQ_Dir );
+
+    //Low pass filter
+    float ( *lpf );
+
+
+    /**
+    * STEP 1: Find cardinal and diagonal interpolation directions
+    */
+
+    VH_Dir = ( float ( * ) ) calloc( width * height, sizeof *VH_Dir ); //merror ( VH_Dir, "rcd_demosaicing_171117()" );
+
+#ifdef _OPENMP
+    #pragma omp parallel for
+#endif
+    for (int row = 4; row < height - 4; row++ ) {
+        for (int col = 4, indx = row * width + col; col < width - 4; col++, indx++ ) {
+            //Calculate h/v local discrimination
+            float V_Stat = max(epssq, - 18.0f  *  cfa[indx] * cfa[indx - w1] - 18.0f * cfa[indx] * cfa[indx + w1] - 36.0f * cfa[indx] * cfa[indx - w2] - 36.0f * cfa[indx] * cfa[indx + w2] + 18.0f * cfa[indx] * cfa[indx - w3] + 18.0f * cfa[indx] * cfa[indx + w3] - 2.0f * cfa[indx] * cfa[indx - w4] - 2.0f * cfa[indx] * cfa[indx + w4] + 38.0f * cfa[indx] * cfa[indx] - 70.0f * cfa[indx - w1] * cfa[indx + w1] - 12.0f * cfa[indx - w1] * cfa[indx - w2] + 24.0f * cfa[indx - w1] * cfa[indx + w2] - 38.0f * cfa[indx - w1] * cfa[indx - w3] + 16.0f * cfa[indx - w1] * cfa[indx + w3] + 12.0f * cfa[indx - w1] * cfa[indx - w4] - 6.0f * cfa[indx - w1] * cfa[indx + w4] + 46.0f * cfa[indx - w1] * cfa[indx - w1] + 24.0f * cfa[indx + w1] * cfa[indx - w2] - 12.0f * cfa[indx + w1] * cfa[indx + w2] + 16.0f * cfa[indx + w1] * cfa[indx - w3] - 38.0f * cfa[indx + w1] * cfa[indx + w3] - 6.0f * cfa[indx + w1] * cfa[indx - w4] + 12.0f * cfa[indx + w1] * cfa[indx + w4] + 46.0f * cfa[indx + w1] * cfa[indx + w1] + 14.0f * cfa[indx - w2] * cfa[indx + w2] - 12.0f * cfa[indx - w2] * cfa[indx + w3] - 2.0f * cfa[indx - w2] * cfa[indx - w4] + 2.0f * cfa[indx - w2] * cfa[indx + w4] + 11.0f * cfa[indx - w2] * cfa[indx - w2] - 12.0f * cfa[indx + w2] * cfa[indx - w3] + 2.0f * cfa[indx + w2] * cfa[indx - w4] - 2.0f * cfa[indx + w2] * cfa[indx + w4] + 11.0f * cfa[indx + w2] * cfa[indx + w2] + 2.0f * cfa[indx - w3] * cfa[indx + w3] - 6.0f * cfa[indx - w3] * cfa[indx - w4] + 10.0f * cfa[indx - w3] * cfa[indx - w3] - 6.0f * cfa[indx + w3] * cfa[indx + w4] + 10.0f * cfa[indx + w3] * cfa[indx + w3] + 1.0f * cfa[indx - w4] * cfa[indx - w4] + 1.0f * cfa[indx + w4] * cfa[indx + w4]);
+            
+            float H_Stat = max(epssq, - 18.0f  *  cfa[indx] * cfa[indx -  1] - 18.0f * cfa[indx] * cfa[indx +  1] - 36.0f * cfa[indx] * cfa[indx -  2] - 36.0f * cfa[indx] * cfa[indx +  2] + 18.0f * cfa[indx] * cfa[indx -  3] + 18.0f * cfa[indx] * cfa[indx +  3] - 2.0f * cfa[indx] * cfa[indx -  4] - 2.0f * cfa[indx] * cfa[indx +  4] + 38.0f * cfa[indx] * cfa[indx] - 70.0f * cfa[indx -  1] * cfa[indx +  1] - 12.0f * cfa[indx -  1] * cfa[indx -  2] + 24.0f * cfa[indx -  1] * cfa[indx +  2] - 38.0f * cfa[indx -  1] * cfa[indx -  3] + 16.0f * cfa[indx -  1] * cfa[indx +  3] + 12.0f * cfa[indx -  1] * cfa[indx -  4] - 6.0f * cfa[indx -  1] * cfa[indx +  4] + 46.0f * cfa[indx -  1] * cfa[indx -  1] + 24.0f * cfa[indx +  1] * cfa[indx -  2] - 12.0f * cfa[indx +  1] * cfa[indx +  2] + 16.0f * cfa[indx +  1] * cfa[indx -  3] - 38.0f * cfa[indx +  1] * cfa[indx +  3] - 6.0f * cfa[indx +  1] * cfa[indx -  4] + 12.0f * cfa[indx +  1] * cfa[indx +  4] + 46.0f * cfa[indx +  1] * cfa[indx +  1] + 14.0f * cfa[indx -  2] * cfa[indx +  2] - 12.0f * cfa[indx -  2] * cfa[indx +  3] - 2.0f * cfa[indx -  2] * cfa[indx -  4] + 2.0f * cfa[indx -  2] * cfa[indx +  4] + 11.0f * cfa[indx -  2] * cfa[indx -  2] - 12.0f * cfa[indx +  2] * cfa[indx -  3] + 2.0f * cfa[indx +  2] * cfa[indx -  4] - 2.0f * cfa[indx +  2] * cfa[indx +  4] + 11.0f * cfa[indx +  2] * cfa[indx +  2] + 2.0f * cfa[indx -  3] * cfa[indx +  3] - 6.0f * cfa[indx -  3] * cfa[indx -  4] + 10.0f * cfa[indx -  3] * cfa[indx -  3] - 6.0f * cfa[indx +  3] * cfa[indx +  4] + 10.0f * cfa[indx +  3] * cfa[indx +  3] + 1.0f * cfa[indx -  4] * cfa[indx -  4] + 1.0f * cfa[indx +  4] * cfa[indx +  4]);
+
+            VH_Dir[indx] = V_Stat / (V_Stat + H_Stat);
+        }
+    }
+
+    // RT ---------------------------------------------------------------------
+    if (plistener) {
+        plistener->setProgress(0.2);
+    }
+    // -------------------------------------------------------------------------
+
+    /**
+    * STEP 2: Calculate the low pass filter
+    */
+
+    // Step 2.1: Low pass filter incorporating green, red and blue local samples from the raw data
+    lpf = ( float ( * ) ) calloc( width * height, sizeof *lpf ); //merror ( lpf, "rcd_demosaicing_171125()" );
+
+#ifdef _OPENMP
+    #pragma omp parallel for
+#endif    
+    for ( int row = 2; row < height - 2; row++ ) {
+        for ( int col = 2 + (FC( row, 0 ) & 1), indx = row * width + col; col < width - 2; col += 2, indx += 2 ) {
+
+            lpf[indx] = 0.25f * cfa[indx] + 0.125f * ( cfa[indx - w1] + cfa[indx + w1] + cfa[indx - 1] + cfa[indx + 1] ) + 0.0625f * ( cfa[indx - w1 - 1] + cfa[indx - w1 + 1] + cfa[indx + w1 - 1] + cfa[indx + w1 + 1] );
+
+        }
+    }
+
+    // RT ---------------------------------------------------------------------
+    if (plistener) {
+        plistener->setProgress(0.4);
+    }
+    // ------------------------------------------------------------------------
+
+    /**
+    * STEP 3: Populate the green channel
+    */
+
+    // Step 3.1: Populate the green channel at blue and red CFA positions
+#ifdef _OPENMP
+    #pragma omp parallel for
+#endif
+   for ( int row = 4; row < height - 4; row++ ) {
+       for ( int col = 4 + (FC( row, 0 ) & 1), indx = row * width + col; col < width - 4; col += 2, indx += 2 ) {
+
+            // Refined vertical and horizontal local discrimination
+            float VH_Central_Value   = VH_Dir[indx];
+            float VH_Neighbourhood_Value = 0.25f * ( VH_Dir[indx - w1 - 1] + VH_Dir[indx - w1 + 1] + VH_Dir[indx + w1 - 1] + VH_Dir[indx + w1 + 1] );
+
+            float VH_Disc = ( fabs( 0.5f - VH_Central_Value ) < fabs( 0.5f - VH_Neighbourhood_Value ) ) ? VH_Neighbourhood_Value : VH_Central_Value;
+
+            // Cardinal gradients
+            float N_Grad = eps + fabs( cfa[indx - w1] - cfa[indx + w1] ) + fabs( cfa[indx] - cfa[indx - w2] ) + fabs( cfa[indx - w1] - cfa[indx - w3] ) + fabs( cfa[indx - w2] - cfa[indx - w4] );
+            float S_Grad = eps + fabs( cfa[indx + w1] - cfa[indx - w1] ) + fabs( cfa[indx] - cfa[indx + w2] ) + fabs( cfa[indx + w1] - cfa[indx + w3] ) + fabs( cfa[indx + w2] - cfa[indx + w4] );
+            float W_Grad = eps + fabs( cfa[indx -  1] - cfa[indx +  1] ) + fabs( cfa[indx] - cfa[indx -  2] ) + fabs( cfa[indx -  1] - cfa[indx -  3] ) + fabs( cfa[indx -  2] - cfa[indx -  4] );
+            float E_Grad = eps + fabs( cfa[indx +  1] - cfa[indx -  1] ) + fabs( cfa[indx] - cfa[indx +  2] ) + fabs( cfa[indx +  1] - cfa[indx +  3] ) + fabs( cfa[indx +  2] - cfa[indx +  4] );
+
+            // Cardinal pixel estimations
+            float N_Est = cfa[indx - w1] * ( 1.f + ( lpf[indx] - lpf[indx - w2] ) / ( eps + lpf[indx] + lpf[indx - w2] ) );
+            float S_Est = cfa[indx + w1] * ( 1.f + ( lpf[indx] - lpf[indx + w2] ) / ( eps + lpf[indx] + lpf[indx + w2] ) );
+            float W_Est = cfa[indx -  1] * ( 1.f + ( lpf[indx] - lpf[indx -  2] ) / ( eps + lpf[indx] + lpf[indx -  2] ) );
+            float E_Est = cfa[indx +  1] * ( 1.f + ( lpf[indx] - lpf[indx +  2] ) / ( eps + lpf[indx] + lpf[indx +  2] ) );
+
+            // Vertical and horizontal estimations
+            float V_Est = ( S_Grad * N_Est + N_Grad * S_Est ) / max(eps, N_Grad + S_Grad );
+            float H_Est = ( W_Grad * E_Est + E_Grad * W_Est ) / max(eps, E_Grad + W_Grad );
+
+            // G@B and G@R interpolation
+            rgb[indx][1] = LIM( VH_Disc * H_Est + ( 1.f - VH_Disc ) * V_Est, 0.f, 1.f );
+
+        }
+    }
+
+    free( lpf );
+
+    // RT ---------------------------------------------------------------------
+    if (plistener) {
+        plistener->setProgress(0.5);
+    }
+    // ------------------------------------------------------------------------
+    
+    /**
+    * STEP 4: Populate the red and blue channels
+    */
+
+    // Step 4.1: Calculate P/Q diagonal local discrimination
+    PQ_Dir = ( float ( * ) ) calloc( width * height, sizeof *PQ_Dir ); //merror ( PQ_Dir, "rcd_demosaicing_171125()" );
+
+#ifdef _OPENMP
+    #pragma omp parallel for
+#endif
+    for ( int row = 4; row < height - 4; row++ ) {
+        for ( int col = 4 + (FC( row, 0 ) & 1), indx = row * width + col; col < width - 4; col += 2, indx += 2 ) {
+
+            float P_Stat = max( - 18.f * cfa[indx] * cfa[indx - w1 - 1] - 18.f * cfa[indx] * cfa[indx + w1 + 1] - 36.f * cfa[indx] * cfa[indx - w2 - 2] - 36.f * cfa[indx] * cfa[indx + w2 + 2] + 18.f * cfa[indx] * cfa[indx - w3 - 3] + 18.f * cfa[indx] * cfa[indx + w3 + 3] - 2.f * cfa[indx] * cfa[indx - w4 - 4] - 2.f * cfa[indx] * cfa[indx + w4 + 4] + 38.f * cfa[indx] * cfa[indx] - 70.f * cfa[indx - w1 - 1] * cfa[indx + w1 + 1] - 12.f * cfa[indx - w1 - 1] * cfa[indx - w2 - 2] + 24.f * cfa[indx - w1 - 1] * cfa[indx + w2 + 2] - 38.f * cfa[indx - w1 - 1] * cfa[indx - w3 - 3] + 16.f * cfa[indx - w1 - 1] * cfa[indx + w3 + 3] + 12.f * cfa[indx - w1 - 1] * cfa[indx - w4 - 4] - 6.f * cfa[indx - w1 - 1] * cfa[indx + w4 + 4] + 46.f * cfa[indx - w1 - 1] * cfa[indx - w1 - 1] + 24.f * cfa[indx + w1 + 1] * cfa[indx - w2 - 2] - 12.f * cfa[indx + w1 + 1] * cfa[indx + w2 + 2] + 16.f * cfa[indx + w1 + 1] * cfa[indx - w3 - 3] - 38.f * cfa[indx + w1 + 1] * cfa[indx + w3 + 3] - 6.f * cfa[indx + w1 + 1] * cfa[indx - w4 - 4] + 12.f * cfa[indx + w1 + 1] * cfa[indx + w4 + 4] + 46.f * cfa[indx + w1 + 1] * cfa[indx + w1 + 1] + 14.f * cfa[indx - w2 - 2] * cfa[indx + w2 + 2] - 12.f * cfa[indx - w2 - 2] * cfa[indx + w3 + 3] - 2.f * cfa[indx - w2 - 2] * cfa[indx - w4 - 4] + 2.f * cfa[indx - w2 - 2] * cfa[indx + w4 + 4] + 11.f * cfa[indx - w2 - 2] * cfa[indx - w2 - 2] - 12.f * cfa[indx + w2 + 2] * cfa[indx - w3 - 3] + 2 * cfa[indx + w2 + 2] * cfa[indx - w4 - 4] - 2.f * cfa[indx + w2 + 2] * cfa[indx + w4 + 4] + 11.f * cfa[indx + w2 + 2] * cfa[indx + w2 + 2] + 2.f * cfa[indx - w3 - 3] * cfa[indx + w3 + 3] - 6.f * cfa[indx - w3 - 3] * cfa[indx - w4 - 4] + 10.f * cfa[indx - w3 - 3] * cfa[indx - w3 - 3] - 6.f * cfa[indx + w3 + 3] * cfa[indx + w4 + 4] + 10.f * cfa[indx + w3 + 3] * cfa[indx + w3 + 3] + 1.f * cfa[indx - w4 - 4] * cfa[indx - w4 - 4] + 1.f * cfa[indx + w4 + 4] * cfa[indx + w4 + 4], epssq );
+            float Q_Stat = max( - 18.f * cfa[indx] * cfa[indx + w1 - 1] - 18.f * cfa[indx] * cfa[indx - w1 + 1] - 36.f * cfa[indx] * cfa[indx + w2 - 2] - 36.f * cfa[indx] * cfa[indx - w2 + 2] + 18.f * cfa[indx] * cfa[indx + w3 - 3] + 18.f * cfa[indx] * cfa[indx - w3 + 3] - 2.f * cfa[indx] * cfa[indx + w4 - 4] - 2.f * cfa[indx] * cfa[indx - w4 + 4] + 38.f * cfa[indx] * cfa[indx] - 70.f * cfa[indx + w1 - 1] * cfa[indx - w1 + 1] - 12.f * cfa[indx + w1 - 1] * cfa[indx + w2 - 2] + 24.f * cfa[indx + w1 - 1] * cfa[indx - w2 + 2] - 38.f * cfa[indx + w1 - 1] * cfa[indx + w3 - 3] + 16.f * cfa[indx + w1 - 1] * cfa[indx - w3 + 3] + 12.f * cfa[indx + w1 - 1] * cfa[indx + w4 - 4] - 6.f * cfa[indx + w1 - 1] * cfa[indx - w4 + 4] + 46.f * cfa[indx + w1 - 1] * cfa[indx + w1 - 1] + 24.f * cfa[indx - w1 + 1] * cfa[indx + w2 - 2] - 12.f * cfa[indx - w1 + 1] * cfa[indx - w2 + 2] + 16.f * cfa[indx - w1 + 1] * cfa[indx + w3 - 3] - 38.f * cfa[indx - w1 + 1] * cfa[indx - w3 + 3] - 6.f * cfa[indx - w1 + 1] * cfa[indx + w4 - 4] + 12.f * cfa[indx - w1 + 1] * cfa[indx - w4 + 4] + 46.f * cfa[indx - w1 + 1] * cfa[indx - w1 + 1] + 14.f * cfa[indx + w2 - 2] * cfa[indx - w2 + 2] - 12.f * cfa[indx + w2 - 2] * cfa[indx - w3 + 3] - 2.f * cfa[indx + w2 - 2] * cfa[indx + w4 - 4] + 2.f * cfa[indx + w2 - 2] * cfa[indx - w4 + 4] + 11.f * cfa[indx + w2 - 2] * cfa[indx + w2 - 2] - 12.f * cfa[indx - w2 + 2] * cfa[indx + w3 - 3] + 2 * cfa[indx - w2 + 2] * cfa[indx + w4 - 4] - 2.f * cfa[indx - w2 + 2] * cfa[indx - w4 + 4] + 11.f * cfa[indx - w2 + 2] * cfa[indx - w2 + 2] + 2.f * cfa[indx + w3 - 3] * cfa[indx - w3 + 3] - 6.f * cfa[indx + w3 - 3] * cfa[indx + w4 - 4] + 10.f * cfa[indx + w3 - 3] * cfa[indx + w3 - 3] - 6.f * cfa[indx - w3 + 3] * cfa[indx - w4 + 4] + 10.f * cfa[indx - w3 + 3] * cfa[indx - w3 + 3] + 1.f * cfa[indx + w4 - 4] * cfa[indx + w4 - 4] + 1.f * cfa[indx - w4 + 4] * cfa[indx - w4 + 4], epssq );
+
+            PQ_Dir[indx] = P_Stat / ( P_Stat + Q_Stat );
+
+        }
+    }
+
+    // RT ---------------------------------------------------------------------
+    if (plistener) {
+        plistener->setProgress(0.7);
+    }
+    // -------------------------------------------------------------------------
+
+    // Step 4.2: Populate the red and blue channels at blue and red CFA positions
+#ifdef _OPENMP
+    #pragma omp parallel for
+#endif
+    for ( int row = 4; row < height - 4; row++ ) {
+        for ( int col = 4 + (FC( row, 0 ) & 1), indx = row * width + col, c = 2 - FC( row, col ); col < width - 4; col += 2, indx += 2 ) {
+
+            // Refined P/Q diagonal local discrimination
+            float PQ_Central_Value   = PQ_Dir[indx];
+            float PQ_Neighbourhood_Value = 0.25f * ( PQ_Dir[indx - w1 - 1] + PQ_Dir[indx - w1 + 1] + PQ_Dir[indx + w1 - 1] + PQ_Dir[indx + w1 + 1] );
+
+            float PQ_Disc = ( fabs( 0.5f - PQ_Central_Value ) < fabs( 0.5f - PQ_Neighbourhood_Value ) ) ? PQ_Neighbourhood_Value : PQ_Central_Value;
+
+            // Diagonal gradients
+            float NW_Grad = eps + fabs( rgb[indx - w1 - 1][c] - rgb[indx + w1 + 1][c] ) + fabs( rgb[indx - w1 - 1][c] - rgb[indx - w3 - 3][c] ) + fabs( rgb[indx][1] - rgb[indx - w2 - 2][1] );
+            float NE_Grad = eps + fabs( rgb[indx - w1 + 1][c] - rgb[indx + w1 - 1][c] ) + fabs( rgb[indx - w1 + 1][c] - rgb[indx - w3 + 3][c] ) + fabs( rgb[indx][1] - rgb[indx - w2 + 2][1] );
+            float SW_Grad = eps + fabs( rgb[indx + w1 - 1][c] - rgb[indx - w1 + 1][c] ) + fabs( rgb[indx + w1 - 1][c] - rgb[indx + w3 - 3][c] ) + fabs( rgb[indx][1] - rgb[indx + w2 - 2][1] );
+            float SE_Grad = eps + fabs( rgb[indx + w1 + 1][c] - rgb[indx - w1 - 1][c] ) + fabs( rgb[indx + w1 + 1][c] - rgb[indx + w3 + 3][c] ) + fabs( rgb[indx][1] - rgb[indx + w2 + 2][1] );
+
+            // Diagonal colour differences
+            float NW_Est = rgb[indx - w1 - 1][c] - rgb[indx - w1 - 1][1];
+            float NE_Est = rgb[indx - w1 + 1][c] - rgb[indx - w1 + 1][1];
+            float SW_Est = rgb[indx + w1 - 1][c] - rgb[indx + w1 - 1][1];
+            float SE_Est = rgb[indx + w1 + 1][c] - rgb[indx + w1 + 1][1];
+
+            // P/Q estimations
+            float P_Est = ( NW_Grad * SE_Est + SE_Grad * NW_Est ) / max(eps, NW_Grad + SE_Grad );
+            float Q_Est = ( NE_Grad * SW_Est + SW_Grad * NE_Est ) / max(eps, NE_Grad + SW_Grad );
+
+            // R@B and B@R interpolation
+            rgb[indx][c] = LIM( rgb[indx][1] + ( 1.f - PQ_Disc ) * P_Est + PQ_Disc * Q_Est, 0.f, 1.f );
+
+        }
+    }
+
+    free( PQ_Dir );
+
+    // RT ---------------------------------------------------------------------
+    if (plistener) {
+        plistener->setProgress(0.825);
+    }
+    // -------------------------------------------------------------------------
+        
+    // Step 4.3: Populate the red and blue channels at green CFA positions
+#ifdef _OPENMP
+    #pragma omp parallel for
+#endif
+    for ( int row = 4; row < height - 4; row++ ) {
+        for ( int col = 4 + (FC( row, 1 ) & 1), indx = row * width + col; col < width - 4; col += 2, indx += 2 ) {
+
+            // Refined vertical and horizontal local discrimination
+            float VH_Central_Value   = VH_Dir[indx];
+            float VH_Neighbourhood_Value = 0.25f * ( VH_Dir[indx - w1 - 1] + VH_Dir[indx - w1 + 1] + VH_Dir[indx + w1 - 1] + VH_Dir[indx + w1 + 1] );
+            
+            float VH_Disc = ( fabs( 0.5f - VH_Central_Value ) < fabs( 0.5f - VH_Neighbourhood_Value ) ) ? VH_Neighbourhood_Value : VH_Central_Value;
+
+            for ( int c = 0; c <= 2; c += 2 ) {
+
+                // Cardinal gradients
+                float N_Grad = eps + fabs( rgb[indx][1] - rgb[indx - w2][1] ) + fabs( rgb[indx - w1][c] - rgb[indx + w1][c] ) + fabs( rgb[indx - w1][c] - rgb[indx - w3][c] );
+                float S_Grad = eps + fabs( rgb[indx][1] - rgb[indx + w2][1] ) + fabs( rgb[indx + w1][c] - rgb[indx - w1][c] ) + fabs( rgb[indx + w1][c] - rgb[indx + w3][c] );
+                float W_Grad = eps + fabs( rgb[indx][1] - rgb[indx -  2][1] ) + fabs( rgb[indx -  1][c] - rgb[indx +  1][c] ) + fabs( rgb[indx -  1][c] - rgb[indx -  3][c] );
+                float E_Grad = eps + fabs( rgb[indx][1] - rgb[indx +  2][1] ) + fabs( rgb[indx +  1][c] - rgb[indx -  1][c] ) + fabs( rgb[indx +  1][c] - rgb[indx +  3][c] );
+
+                // Cardinal colour differences
+                float N_Est = rgb[indx - w1][c] - rgb[indx - w1][1];
+                float S_Est = rgb[indx + w1][c] - rgb[indx + w1][1];
+                float W_Est = rgb[indx -  1][c] - rgb[indx -  1][1];
+                float E_Est = rgb[indx +  1][c] - rgb[indx +  1][1];
+
+                // Vertical and horizontal estimations
+                float V_Est = ( N_Grad * S_Est + S_Grad * N_Est ) / max(eps, N_Grad + S_Grad );
+                float H_Est = ( E_Grad * W_Est + W_Grad * E_Est ) / max(eps, E_Grad + W_Grad );
+
+                // R@G and B@G interpolation
+                rgb[indx][c] = LIM( rgb[indx][1] + ( 1.f - VH_Disc ) * V_Est + VH_Disc * H_Est, 0.f, 1.f );
+
+            }
+        }
+    }
+
+    free(VH_Dir);
+
+    // RT ---------------------------------------------------------------------
+    if (plistener) {
+        plistener->setProgress(0.95);
+    }
+
+#ifdef _OPENMP
+    #pragma omp parallel for
+#endif
+    for (int row = 0; row < height; ++row) {
+        for (int col = 0, idx = row * width + col ; col < width; ++col, ++idx) {
+            red[row][col] = CLIP(rgb[idx][0] * 65535.f);
+            green[row][col] = CLIP(rgb[idx][1] * 65535.f);
+            blue[row][col] = CLIP(rgb[idx][2] * 65535.f);
+        }
+    }
+
+    border_interpolate2(width, height, 8);
+
+    if (plistener) {
+        plistener->setProgress(1);
+    }
+    // -------------------------------------------------------------------------
+}
+
 #define fcol(row,col) xtrans[(row)%6][(col)%6]
 #define isgreen(row,col) (xtrans[(row)%3][(col)%3]&1)
 
@@ -3902,7 +4228,7 @@ void RawImageSource::xtransborder_interpolate (int border)
 {
     const int height = H, width = W;
 
-    char xtrans[6][6];
+    int xtrans[6][6];
     ri->getXtransMatrix(xtrans);
 
     for (int row = 0; row < height; row++)
@@ -3966,7 +4292,7 @@ void RawImageSource::xtrans_interpolate (const int passes, const bool useCieLab)
         plistener->setProgress (progress);
     }
 
-    char xtrans[6][6];
+    int xtrans[6][6];
     ri->getXtransMatrix(xtrans);
 
     constexpr short  orth[12] = { 1, 0, 0, 1, -1, 0, 0, -1, 1, 0, 0, 1 },
@@ -3977,7 +4303,7 @@ void RawImageSource::xtrans_interpolate (const int passes, const bool useCieLab)
 
     // sgrow/sgcol is the offset in the sensor matrix of the solitary
     // green pixels
-    ushort sgrow, sgcol;
+    ushort sgrow = 0, sgcol = 0;
 
     const int height = H, width = W;
 
@@ -4686,17 +5012,16 @@ void RawImageSource::xtrans_interpolate (const int passes, const bool useCieLab)
 
 
                 /* Average the most homogeneous pixels for the final result: */
-                uint8_t hm[8];
+                uint8_t hm[8] = {};
 
                 for (int row = MIN(top, 8); row < mrow - 8; row++)
                     for (int col = MIN(left, 8); col < mcol - 8; col++) {
-                        int d = 0;
 
-                        for (; d < 4; d++) {
+                        for (int d = 0; d < 4; d++) {
                             hm[d] = homosum[d][row][col];
                         }
 
-                        for (; d < ndir; d++) {
+                        for (int d = 4; d < ndir; d++) {
                             hm[d] = homosum[d][row][col];
 
                             if (hm[d - 4] < hm[d]) {
@@ -4710,7 +5035,7 @@ void RawImageSource::xtrans_interpolate (const int passes, const bool useCieLab)
 
                         uint8_t maxval = homosummax[row][col];
 
-                        for (d = 0; d < ndir; d++)
+                        for (int d = 0; d < ndir; d++)
                             if (hm[d] >= maxval) {
                                 FORC3 avg[c] += rgb[d][row][col][c];
                                 avg[3]++;
@@ -4757,7 +5082,7 @@ void RawImageSource::fast_xtrans_interpolate ()
     const int height = H, width = W;
 
     xtransborder_interpolate (1);
-    char xtrans[6][6];
+    int xtrans[6][6];
     ri->getXtransMatrix(xtrans);
 
     #pragma omp parallel for

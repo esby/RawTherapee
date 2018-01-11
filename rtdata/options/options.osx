@@ -12,8 +12,8 @@ MultiUser=true
 
 [File Browser]
 # Image filename extensions to be looked for, and their corresponding search state (0/1 -> skip/include)
-ParseExtensions=3fr;arw;cr2;crf;crw;dcr;dng;fff;iiq;jpg;jpeg;kdc;mef;mos;mrw;nef;nrw;orf;pef;png;raf;raw;rw2;rwl;rwz;sr2;srf;srw;tif;tiff;x3f;
-ParseExtensionsEnabled=1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;0;1;1;1;1;1;1;1;1;1;1;1;
+ParseExtensions=3fr;arw;arq;cr2;crf;crw;dcr;dng;fff;iiq;jpg;jpeg;kdc;mef;mos;mrw;nef;nrw;orf;pef;png;raf;raw;rw2;rwl;rwz;sr2;srf;srw;tif;tiff;x3f;
+ParseExtensionsEnabled=1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;0;1;1;1;1;1;1;1;1;1;1;1;
 
 [Output]
 PathTemplate=%p1/converted/%f
@@ -22,9 +22,6 @@ PathTemplate=%p1/converted/%f
 # if this is set to a path of a custom program, it will receive the EXIFs as parameters and must generate a PP3 preset file for the given raw/JPG
 # Parameters: <Path to raw/JPG> <Path to default profile> <fNumber> <expose in seconds> <focal length in mm> <ISO> <Lens> <Camera>
 CustomProfileBuilder=
-
-[GUI]
-Font=Sans 12
 
 # Set here an absolute or relative path (to the rawtherapee.exe file) to the directory containing your own profiles.
 # If MultiUser=true, each user will have their own "options" file, and can set a common or different absolu path
@@ -39,3 +36,7 @@ Font=Sans 12
 
 # Default profile name (without extension) to use for standard (8bits) images
 #ImgDefault=Neutral
+
+[GUI]
+FontFamily=Helvetica Regular
+CPFontFamily=Helvetica Regular

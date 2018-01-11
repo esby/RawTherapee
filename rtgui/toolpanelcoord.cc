@@ -148,6 +148,7 @@ ToolPanelCoordinator::ToolPanelCoordinator () : ipc(NULL)
     coarse              = Gtk::manage (new CoarsePanel ());
     toneCurve           = Gtk::manage (new ToneCurve ());
     shadowshighlights   = Gtk::manage (new ShadowsHighlights ());
+    localContrast       = Gtk::manage(new LocalContrast());
     impulsedenoise      = Gtk::manage (new ImpulseDenoise ());
     defringe            = Gtk::manage (new Defringe ());
     dirpyrdenoise       = Gtk::manage (new DirPyrDenoise ());
@@ -160,14 +161,13 @@ ToolPanelCoordinator::ToolPanelCoordinator () : ipc(NULL)
     colortoning         = Gtk::manage (new ColorToning ());
     lensgeom            = Gtk::manage (new LensGeometry ());
     lensProf            = Gtk::manage (new LensProfilePanel ());
-    lensProf->setLensGeomRef(lensgeom);
     distortion          = Gtk::manage (new Distortion ());
     rotate              = Gtk::manage (new Rotate ());
     vibrance            = Gtk::manage (new Vibrance ());
     colorappearance     = Gtk::manage (new ColorAppearance ());
     whitebalance        = Gtk::manage (new WhiteBalance ());
     vignetting          = Gtk::manage (new Vignetting ());
-    retinex               = Gtk::manage (new Retinex ());
+    retinex             = Gtk::manage (new Retinex ());
     gradient            = Gtk::manage (new Gradient ());
     pcvignette          = Gtk::manage (new PCVignette ());
     perspective         = Gtk::manage (new PerspCorrection ());
@@ -178,8 +178,7 @@ ToolPanelCoordinator::ToolPanelCoordinator () : ipc(NULL)
     prsharpening        = Gtk::manage (new PrSharpening());
     crop                = Gtk::manage (new Crop ());
     icm                 = Gtk::manage (new ICMPanel ());
-    exifpanel           = Gtk::manage (new ExifPanel ());
-    iptcpanel           = Gtk::manage (new IPTCPanel ());
+    metadata            = Gtk::manage(new MetaDataPanel());
     wavelet             = Gtk::manage (new Wavelet ());
     dirpyrequalizer     = Gtk::manage (new DirPyrEqualizer ());
     hsvequalizer        = Gtk::manage (new HSVEqualizer ());
@@ -196,6 +195,7 @@ ToolPanelCoordinator::ToolPanelCoordinator () : ipc(NULL)
     rawexposure         = Gtk::manage (new RAWExposure ());
     bayerrawexposure    = Gtk::manage (new BayerRAWExposure ());
     xtransrawexposure   = Gtk::manage (new XTransRAWExposure ());
+    fattal              = Gtk::manage (new FattalToneMapping ());
 
     // So Demosaic, Line noise filter, Green Equilibration, Ca-Correction (garder le nom de section identique!) and Black-Level will be moved in a "Bayer sensor" tool,
     // and a separate Demosaic and Black Level tool will be created in an "X-Trans sensor" tool
@@ -206,53 +206,58 @@ ToolPanelCoordinator::ToolPanelCoordinator () : ipc(NULL)
     //     Best -> low ISO
     //     Medium -> High ISO
 
-    env->registerPanel (colorPanel, whitebalance);
-    env->registerPanel (exposurePanel, toneCurve);
-    env->registerPanel (colorPanel, vibrance);
-    env->registerPanel (colorPanel, chmixer); // TODO: Add "Enabled"
-    env->registerPanel (colorPanel, blackwhite);
-    env->registerPanel (exposurePanel, shadowshighlights);
-    env->registerPanel (detailsPanel, sharpening);
-    env->registerPanel (detailsPanel, sharpenEdge);
-    env->registerPanel (detailsPanel, sharpenMicro);
-    env->registerPanel (colorPanel, hsvequalizer);
-    env->registerPanel (colorPanel, filmSimulation);
-    env->registerPanel (colorPanel, rgbcurves); // << TODO: Add "Enabled"
-    env->registerPanel (colorPanel, colortoning);
-    env->registerPanel (exposurePanel, epd);
-    env->registerPanel (exposurePanel, pcvignette);
-    env->registerPanel (exposurePanel, gradient);
-    env->registerPanel (exposurePanel, lcurve); // << TODO: Add "Enabled" ???
-    env->registerPanel (exposurePanel, colorappearance);
-    env->registerPanel (detailsPanel, impulsedenoise);
-    env->registerPanel (detailsPanel, dirpyrdenoise);
-    env->registerPanel (detailsPanel, defringe);
-    env->registerPanel (detailsPanel, dirpyrequalizer);
-    env->registerPanel (waveletPanel, wavelet);
-    env->registerPanel (transformPanel, crop);
-    env->registerPanel (transformPanel, resize);
-    env->registerPanel (resize->getPackBox(), prsharpening);
-    env->registerPanel (transformPanel, lensgeom);
-    env->registerPanel (lensgeom->getPackBox(), rotate);
-    env->registerPanel (lensgeom->getPackBox(), perspective);
-    env->registerPanel (lensgeom->getPackBox(), lensProf);
-    env->registerPanel (lensgeom->getPackBox(), distortion);
-    env->registerPanel (lensgeom->getPackBox(), cacorrection);
-    env->registerPanel (lensgeom->getPackBox(), vignetting);
-    env->registerPanel (colorPanel, icm);
-    env->registerPanel (rawPanel, sensorbayer);
-    env->registerPanel (sensorbayer->getPackBox(), bayerprocess);
-    env->registerPanel (sensorbayer->getPackBox(), bayerrawexposure);
-    env->registerPanel (sensorbayer->getPackBox(), bayerpreprocess);
-    env->registerPanel (sensorbayer->getPackBox(), rawcacorrection);
-    env->registerPanel (rawPanel, sensorxtrans);
-    env->registerPanel (sensorxtrans->getPackBox(), xtransprocess);
-    env->registerPanel (sensorxtrans->getPackBox(), xtransrawexposure);
-    env->registerPanel (rawPanel, rawexposure);
-    env->registerPanel (rawPanel, preprocess);
-    env->registerPanel (rawPanel, darkframe);
-    env->registerPanel (rawPanel, flatfield);
+    addPanel (colorPanel, whitebalance);
+    addPanel (exposurePanel, toneCurve);
+    addPanel (colorPanel, vibrance);
+    addPanel (colorPanel, chmixer);
+    addPanel (colorPanel, blackwhite);
+    addPanel (exposurePanel, localContrast);
+    addPanel (exposurePanel, shadowshighlights);
+    addPanel (detailsPanel, sharpening);
+    addPanel (detailsPanel, sharpenEdge);
+    addPanel (detailsPanel, sharpenMicro);
+    addPanel (colorPanel, hsvequalizer);
+    addPanel (colorPanel, filmSimulation);
+    addPanel (colorPanel, rgbcurves);
+    addPanel (colorPanel, colortoning);
+    addPanel (exposurePanel, epd);
+    addPanel (exposurePanel, fattal);
+    addPanel (exposurePanel, retinex);
+    addPanel (exposurePanel, pcvignette);
+    addPanel (exposurePanel, gradient);
+    addPanel (exposurePanel, lcurve);
+    addPanel (exposurePanel, colorappearance);
+    addPanel (detailsPanel, impulsedenoise);
+    addPanel (detailsPanel, dirpyrdenoise);
+    addPanel (detailsPanel, defringe);
+    addPanel (detailsPanel, dirpyrequalizer);
+    addPanel (waveletPanel, wavelet);
+    addPanel (transformPanel, crop);
+    addPanel (transformPanel, resize);
+    addPanel (resize->getPackBox(), prsharpening, 2);
+    addPanel (transformPanel, lensgeom);
+    addPanel (lensgeom->getPackBox(), rotate, 2);
+    addPanel (lensgeom->getPackBox(), perspective, 2);
+    addPanel (lensgeom->getPackBox(), lensProf, 2);
+    addPanel (lensgeom->getPackBox(), distortion, 2);
+    addPanel (lensgeom->getPackBox(), cacorrection, 2);
+    addPanel (lensgeom->getPackBox(), vignetting, 2);
+    addPanel (colorPanel, icm);
+    addPanel (rawPanel, sensorbayer);
+    addPanel (sensorbayer->getPackBox(), bayerprocess, 2);
+    addPanel (sensorbayer->getPackBox(), bayerrawexposure, 2);
+    addPanel (sensorbayer->getPackBox(), bayerpreprocess, 2);
+    addPanel (sensorbayer->getPackBox(), rawcacorrection, 2);
+    addPanel (rawPanel, sensorxtrans);
+    addPanel (sensorxtrans->getPackBox(), xtransprocess, 2);
+    addPanel (sensorxtrans->getPackBox(), xtransrawexposure, 2);
+    addPanel (rawPanel, rawexposure);
+    addPanel (rawPanel, preprocess);
+    addPanel (rawPanel, darkframe);
+    addPanel (rawPanel, flatfield);
 
+    toolPanels.push_back (coarse);
+    toolPanels.push_back(metadata);
 
 
   // new panels are registered diffently
@@ -275,10 +280,8 @@ ToolPanelCoordinator::ToolPanelCoordinator () : ipc(NULL)
 
     metadataPanel = Gtk::manage (new Gtk::Notebook ());
     toolPanelNotebook = new Gtk::Notebook ();
-    env->setToolPanelNotebook(toolPanelNotebook);
+    toolPanelNotebook->set_name ("ToolPanelNotebook");
 
-    metadataPanel->append_page (*exifpanel, M("MAIN_TAB_EXIF"));
-    metadataPanel->append_page (*iptcpanel, M("MAIN_TAB_IPTC"));
 
     favoritePanelSW    = Gtk::manage (new MyScrolledWindow ()); 
     exposurePanelSW    = Gtk::manage (new MyScrolledWindow ());
@@ -294,7 +297,7 @@ ToolPanelCoordinator::ToolPanelCoordinator () : ipc(NULL)
     // load panel endings
     for (int i=0; i< NB_PANEL; i++) {
         vbPanelEnd[i] = Gtk::manage (new Gtk::VBox ());
-        imgPanelEnd[i] = Gtk::manage (new RTImage("PanelEnding.png"));
+        imgPanelEnd[i] = Gtk::manage (new RTImage ("PanelEnding.png"));
         imgPanelEnd[i]->show ();
         vbPanelEnd[i]->pack_start (*imgPanelEnd[i], Gtk::PACK_SHRINK);
         vbPanelEnd[i]->show_all();
@@ -405,6 +408,16 @@ ToolPanelCoordinator::ToolPanelCoordinator () : ipc(NULL)
     toolPanelNotebook->signal_switch_page().connect (sigc::mem_fun(*this,  &ToolPanelCoordinator::on_notebook_switch_page) );
 }
 
+void ToolPanelCoordinator::addPanel (Gtk::Box* where, FoldableToolPanel* panel, int level)
+{
+    panel->setParent (where);
+    panel->setLevel (level);
+
+    expList.push_back (panel->getExpander());
+    where->pack_start (*panel->getExpander(), false, false);
+    toolPanels.push_back (panel);
+}
+
 void ToolPanelCoordinator::doDeploy()
 {
     if( options.rtSettings.verbose ) 
@@ -426,49 +439,6 @@ void ToolPanelCoordinator::doDeployLate()
       env->getPanel(i)->deployLate();
     }
     env->disableSwitchPageReaction = false;
-
-}
-
-void ToolPanelCoordinator::doReact(FakeProcEvent ev)
-{
-    if( options.rtSettings.verbose ) 
-      printf("enabling panel react\n");
-    for (size_t i=0; i<env->countPanel(); i++)
-    {
-//      printf("panel nb=%i \n",  i);
-      env->getPanel(i)->react(ev);
-    }
-}
-
-
-/*
-//removed from the code
-void ToolPanelCoordinator::addPanel (Gtk::Box* where, FoldableToolPanel* panel)
-{
-*/
-    // no more separator!
-    /*if (where->children().size()) {
-        Gtk::HSeparator *hsep = Gtk::manage (new  Gtk::HSeparator());
-        where->pack_start(*hsep, Gtk::PACK_SHRINK, 0);
-        hsep->show();
-    }*/
-/*
-    env->registerPanel(where,panel);
-}
-*/
-
-// this prototype replaces the following code
-//   exposurePanelSW->add  (*exposurePanel);
-//   exposurePanel->pack_start (*hsPanelEnd[panelIter]....
-//   exposurePanel->pack_start (*vbPanelEnd[panelIter++],Gtk::PACK_SHRINK,4);
-void ToolPanelCoordinator::handlePanel(Gtk::VBox* vbox, Gtk::ScrolledWindow* panelSW, int panelIterator, int spacing) {
-   panelSW->add (*vbox);
-   vbox->pack_start (*hsPanelEnd[panelIterator], Gtk::PACK_SHRINK,0);
-   vbox->pack_start (*vbPanelEnd[panelIterator], Gtk::PACK_SHRINK,spacing);
-   vbPanel[panelIterator] = vbox;
-   ToolVBox* box =  (ToolVBox*)vbox;
-   box->setParent(toolPanelNotebook);
-   box->setParentSW(panelSW);
 }
 
 ToolPanelCoordinator::~ToolPanelCoordinator ()
@@ -480,6 +450,36 @@ ToolPanelCoordinator::~ToolPanelCoordinator ()
     delete toolBar;
 }
 
+void ToolPanelCoordinator::imageTypeChanged (bool isRaw, bool isBayer, bool isXtrans)
+{
+    GThreadLock lock;
+
+    if (isRaw) {
+        rawPanelSW->set_sensitive (true);
+
+        if (isBayer) {
+            sensorxtrans->FoldableToolPanel::hide();
+            sensorbayer->FoldableToolPanel::show();
+            preprocess->FoldableToolPanel::show();
+            flatfield->FoldableToolPanel::show();
+        } else if (isXtrans) {
+            sensorxtrans->FoldableToolPanel::show();
+            sensorbayer->FoldableToolPanel::hide();
+            preprocess->FoldableToolPanel::show();
+            flatfield->FoldableToolPanel::show();
+        } else {
+            sensorbayer->FoldableToolPanel::hide();
+            sensorxtrans->FoldableToolPanel::hide();
+            preprocess->FoldableToolPanel::hide();
+            flatfield->FoldableToolPanel::hide();
+        }
+    } else {
+        rawPanelSW->set_sensitive (false);
+    }
+
+}
+
+
 void ToolPanelCoordinator::panelChanged (rtengine::ProcEvent event, const Glib::ustring& descr)
 {
 
@@ -487,7 +487,7 @@ void ToolPanelCoordinator::panelChanged (rtengine::ProcEvent event, const Glib::
         return;
     }
 
-    int changeFlags = refreshmap[(int)event];
+    int changeFlags = rtengine::RefreshMapper::getInstance()->getAction(event);
 
     ProcParams* params = ipc->beginUpdateParams ();
 
@@ -496,14 +496,15 @@ void ToolPanelCoordinator::panelChanged (rtengine::ProcEvent event, const Glib::
 
     // Compensate rotation on flip
     if (event == rtengine::EvCTHFlip || event == rtengine::EvCTVFlip) {
-        if (fabs(params->rotate.degree) > 0.001) {
+        if (fabs (params->rotate.degree) > 0.001) {
             params->rotate.degree *= -1;
-            changeFlags |= refreshmap[(int)rtengine::EvROTDegree];
+            changeFlags |= rtengine::RefreshMapper::getInstance()->getAction(rtengine::EvROTDegree);
             rotate->read (params);
         }
     }
 
     int tr = TR_NONE;
+
     if (params->coarse.rotate == 90) {
         tr = TR_R90;
     } else if (params->coarse.rotate == 180) {
@@ -568,14 +569,14 @@ void ToolPanelCoordinator::profileChange  (const PartialProfile *nparams, rtengi
     }
 
     // And apply the partial profile nparams to mergedParams
-    nparams->applyTo(mergedParams);
+    nparams->applyTo (mergedParams);
 
     // Derive the effective changes, if it's a profile change, to prevent slow RAW rerendering if not necessary
     bool filterRawRefresh = false;
 
     if (event != rtengine::EvPhotoLoaded) {
-        ParamsEdited pe(true);
-        std::vector<rtengine::procparams::ProcParams> lParams(2);
+        ParamsEdited pe (true);
+        std::vector<rtengine::procparams::ProcParams> lParams (2);
         lParams[0] = *params;
         lParams[1] = *mergedParams;
         pe.initFrom (lParams);
@@ -587,6 +588,7 @@ void ToolPanelCoordinator::profileChange  (const PartialProfile *nparams, rtengi
     delete mergedParams;
 
     tr = TR_NONE;
+
     if (params->coarse.rotate == 90) {
         tr = TR_R90;
     } else if (params->coarse.rotate == 180) {
@@ -597,7 +599,7 @@ void ToolPanelCoordinator::profileChange  (const PartialProfile *nparams, rtengi
 
     // trimming overflowing cropped area
     ipc->getInitialImage()->getImageSource()->getFullSize (fw, fh, tr);
-    crop->trim(params, fw, fh);
+    crop->trim (params, fw, fh);
 
     // updating the GUI with updated values
     for (unsigned int i=0; i<env->countPanel(); i++) {
@@ -614,7 +616,7 @@ void ToolPanelCoordinator::profileChange  (const PartialProfile *nparams, rtengi
 
     // start the IPC processing
     if (filterRawRefresh) {
-        ipc->endUpdateParams ( refreshmap[(int)event] & ALLNORAW );
+        ipc->endUpdateParams ( rtengine::RefreshMapper::getInstance()->getAction(event) & ALLNORAW );
     } else {
         ipc->endUpdateParams (event);
     }
@@ -648,27 +650,28 @@ void ToolPanelCoordinator::initImage (rtengine::StagedImageProcessor* ipc_, bool
     toneCurve->enableAll ();
     toneCurve->enableListener ();
 
-    const rtengine::ImageMetaData* pMetaData = ipc->getInitialImage()->getMetaData();
-    exifpanel->setImageData (pMetaData);
-    iptcpanel->setImageData (pMetaData);
-
     if (ipc) {
+        const rtengine::FramesMetaData* pMetaData = ipc->getInitialImage()->getMetaData();
+        metadata->setImageData(pMetaData);
+
         ipc->setAutoExpListener (toneCurve);
         ipc->setAutoCamListener (colorappearance);
         ipc->setAutoBWListener (blackwhite);
+        ipc->setFrameCountListener (bayerprocess);
+        ipc->setAutoWBListener (whitebalance);
         ipc->setAutoColorTonListener (colortoning);
         ipc->setAutoChromaListener (dirpyrdenoise);
         ipc->setWaveletListener (wavelet);
         ipc->setRetinexListener (retinex);
-
         ipc->setSizeListener (crop);
         ipc->setSizeListener (resize);
+        ipc->setImageTypeListener (this);
+        flatfield->setShortcutPath (Glib::path_get_dirname (ipc->getInitialImage()->getFileName()));
+
+        icm->setRawMeta (raw, (const rtengine::FramesData*)pMetaData);
+        lensProf->setRawMeta (raw, pMetaData);
     }
 
-    flatfield->setShortcutPath(Glib::path_get_dirname(ipc->getInitialImage()->getFileName()));
-
-    icm->setRawMeta (raw, (const rtengine::ImageData*)pMetaData);
-    lensProf->setRawMeta (raw, pMetaData);
 
     toneCurve->setRaw (raw);
     hasChanged = true;
@@ -689,7 +692,7 @@ void ToolPanelCoordinator::closeAllTools()
 
     for (size_t i = 0; i < options.tpOpen.size(); i++)
         if (i < expList.size()) {
-            expList.at(i)->set_expanded (false);
+            expList.at (i)->set_expanded (false);
         }
 }
 
@@ -698,7 +701,7 @@ void ToolPanelCoordinator::openAllTools()
 
     for (size_t i = 0; i < options.tpOpen.size(); i++)
         if (i < expList.size()) {
-            expList.at(i)->set_expanded (true);
+            expList.at (i)->set_expanded (true);
         }
 }
 
@@ -707,19 +710,20 @@ void ToolPanelCoordinator::updateToolState()
 
     for (size_t i = 0; i < options.tpOpen.size(); i++)
         if (i < expList.size()) {
-            expList.at(i)->set_expanded (options.tpOpen.at(i));
+            expList.at (i)->set_expanded (options.tpOpen.at (i));
         }
 
-    if(options.tpOpen.size() > expList.size()) {
+    if (options.tpOpen.size() > expList.size()) {
         size_t sizeWavelet = options.tpOpen.size() - expList.size();
         std::vector<int> temp;
 
         for (size_t i = 0; i < sizeWavelet; i++) {
-            temp.push_back(options.tpOpen.at(i + expList.size()));
+            temp.push_back (options.tpOpen.at (i + expList.size()));
         }
 
-        wavelet->updateToolState(temp);
-        wavelet->setExpanded(true);
+        wavelet->updateToolState (temp);
+        wavelet->setExpanded (true);
+        retinex->updateToolState (temp);
     }
 }
 
@@ -741,13 +745,25 @@ void ToolPanelCoordinator::writeOptions ()
 {
 
     crop->writeOptions ();
-    options.tpOpen.clear ();
 
-    for (size_t i=0; i<env->countExpander(); i++)
-        options.tpOpen.push_back (env->getExpander(i)->get_expanded ());
+    if (options.autoSaveTpOpen) {
+        writeToolExpandedStatus (options.tpOpen);
+    }
+}
 
-    wavelet->writeOptions(options.tpOpen);
-    retinex->writeOptions(options.tpOpen);
+
+void ToolPanelCoordinator::writeToolExpandedStatus (std::vector<int> &tpOpen)
+{
+    tpOpen.clear ();
+
+==== BASE ====
+    for (size_t i = 0; i < expList.size(); i++) {
+        options.tpOpen.push_back (expList.at(i)->get_expanded ());
+    }
+==== BASE ====
+
+    wavelet->writeOptions (tpOpen);
+    retinex->writeOptions (tpOpen);
 }
 
 
@@ -820,16 +836,16 @@ rtengine::RawImage* ToolPanelCoordinator::getDF()
         return nullptr;
     }
 
-    const rtengine::ImageMetaData *imd = ipc->getInitialImage()->getMetaData();
+    const rtengine::FramesMetaData *imd = ipc->getInitialImage()->getMetaData();
 
-    if(imd) {
+    if (imd) {
         int iso = imd->getISOSpeed();
         double shutter = imd->getShutterSpeed();
-        std::string maker( imd->getMake()  );
-        std::string model( imd->getModel() );
+        std::string maker ( imd->getMake()  );
+        std::string model ( imd->getModel() );
         time_t timestamp = imd->getDateTimeAsTS();
 
-        return rtengine::dfm.searchDarkFrame( maker, model, iso, shutter, timestamp);
+        return rtengine::dfm.searchDarkFrame ( maker, model, iso, shutter, timestamp);
     }
 
     return nullptr;
@@ -841,19 +857,19 @@ rtengine::RawImage* ToolPanelCoordinator::getFF()
         return nullptr;
     }
 
-    const rtengine::ImageMetaData *imd = ipc->getInitialImage()->getMetaData();
+    const rtengine::FramesMetaData *imd = ipc->getInitialImage()->getMetaData();
 
-    if(imd) {
+    if (imd) {
         // int iso = imd->getISOSpeed();              temporarilly removed because unused
         // double shutter = imd->getShutterSpeed();   temporarilly removed because unused
         double aperture = imd->getFNumber();
         double focallength = imd->getFocalLen();
-        std::string maker( imd->getMake()  );
-        std::string model( imd->getModel() );
-        std::string lens(  imd->getLens()  );
+        std::string maker ( imd->getMake()  );
+        std::string model ( imd->getModel() );
+        std::string lens (  imd->getLens()  );
         time_t timestamp = imd->getDateTimeAsTS();
 
-        return rtengine::ffm.searchFlatField( maker, model, lens, focallength, aperture, timestamp);
+        return rtengine::ffm.searchFlatField ( maker, model, lens, focallength, aperture, timestamp);
     }
 
     return nullptr;
@@ -926,8 +942,8 @@ void ToolPanelCoordinator::updateCurveBackgroundHistogram (LUTu & histToneCurve,
     colorappearance->updateCurveBackgroundHistogram (histToneCurve, histLCurve, histCCurve, /*histCLurve, histLLCurve,*/ histLCAM,  histCCAM, histRed, histGreen, histBlue, histLuma, histLRETI);
     toneCurve->updateCurveBackgroundHistogram (histToneCurve, histLCurve, histCCurve,/* histCLurve, histLLCurve,*/ histLCAM,  histCCAM, histRed, histGreen, histBlue, histLuma, histLRETI);
     lcurve->updateCurveBackgroundHistogram (histToneCurve, histLCurve, histCCurve, /*histCLurve, histLLCurve,*/ histLCAM, histCCAM, histRed, histGreen, histBlue, histLuma, histLRETI);
-    rgbcurves->updateCurveBackgroundHistogram(histToneCurve, histLCurve, histCCurve,/* histCLurve, histLLCurve, */histLCAM, histCCAM, histRed, histGreen, histBlue, histLuma, histLRETI);
-    retinex->updateCurveBackgroundHistogram(histToneCurve, histLCurve, histCCurve,/* histCLurve, histLLCurve, */histLCAM, histCCAM, histRed, histGreen, histBlue, histLuma, histLRETI);
+    rgbcurves->updateCurveBackgroundHistogram (histToneCurve, histLCurve, histCCurve,/* histCLurve, histLLCurve, */histLCAM, histCCAM, histRed, histGreen, histBlue, histLuma, histLRETI);
+    retinex->updateCurveBackgroundHistogram (histToneCurve, histLCurve, histCCurve,/* histCLurve, histLLCurve, */histLCAM, histCCAM, histRed, histGreen, histBlue, histLuma, histLRETI);
 
 }
 
@@ -943,10 +959,10 @@ void ToolPanelCoordinator::foldAllButOne (Gtk::Box* parent, FoldableToolPanel* o
             && (!currentTP->canBeIgnored()))) {
                 // Section in the same tab, we unfold it if it's not the one that has been clicked
                 if (currentTP != openedSection) {
-                    currentTP->setExpanded(false);
+                    currentTP->setExpanded (false);
                 } else {
                     if (!currentTP->getExpanded()) {
-                        currentTP->setExpanded(true);
+                        currentTP->setExpanded (true);
                     }
                 }
             }
@@ -962,10 +978,8 @@ bool ToolPanelCoordinator::handleShortcutKey (GdkEventKey* event)
     bool alt = event->state & GDK_MOD1_MASK;
 
     if (alt) {
+==== BASE ====
         switch(event->keyval) {
-        case GDK_f:
-            toolPanelNotebook->set_current_page (toolPanelNotebook->page_num(*favoritePanelSW));
-            return true;
         case GDK_e:
             toolPanelNotebook->set_current_page (toolPanelNotebook->page_num(*exposurePanelSW));
             return true;
@@ -990,19 +1004,11 @@ bool ToolPanelCoordinator::handleShortcutKey (GdkEventKey* event)
             toolPanelNotebook->set_current_page (toolPanelNotebook->page_num(*waveletPanelSW));
             return true;
 
-        case GDK_p:
-            toolPanelNotebook->set_current_page (toolPanelNotebook->page_num(*trashPanelSW));
-            return true;
-
-        case GDK_u:
-            toolPanelNotebook->set_current_page (toolPanelNotebook->page_num(*usefulPanelSW));
-            return true;
-
         case GDK_m:
             if (metadataPanel) {
                 toolPanelNotebook->set_current_page (toolPanelNotebook->page_num(*metadataPanel));
+==== BASE ====
                 return true;
-            }
         }
     }
 
@@ -1020,8 +1026,8 @@ void ToolPanelCoordinator::updateVScrollbars (bool hide)
     transformPanelSW->set_policy    (Gtk::POLICY_AUTOMATIC, policy);
     rawPanelSW->set_policy          (Gtk::POLICY_AUTOMATIC, policy);
     waveletPanelSW->set_policy      (Gtk::POLICY_AUTOMATIC, policy);
-    trashPanelSW->set_policy        (Gtk::POLICY_AUTOMATIC, policy);
-    usefulPanelSW->set_policy       (Gtk::POLICY_AUTOMATIC, policy);
+==== BASE ====
+==== BASE ====
 }
 
 void ToolPanelCoordinator::updateTabsHeader (bool useIcons)
@@ -1029,17 +1035,16 @@ void ToolPanelCoordinator::updateTabsHeader (bool useIcons)
     GThreadLock lock; // All GUI acces from idle_add callbacks or separate thread HAVE to be protected
     TOITypes type = useIcons ? TOI_ICON : TOI_TEXT;
 
+==== BASE ====
     toiE->switchTo(type);
     toiD->switchTo(type);
     toiC->switchTo(type);
     toiT->switchTo(type);
     toiR->switchTo(type);
-    toiF->switchTo(type);
-    toiP->switchTo(type);
-    toiU->switchTo(type);
+==== BASE ====
 
     if (toiM) {
-        toiM->switchTo(type);
+        toiM->switchTo (type);
     }
 }
 
@@ -1058,24 +1063,24 @@ void ToolPanelCoordinator::toolSelected (ToolMode tool)
     GThreadLock lock; // All GUI acces from idle_add callbacks or separate thread HAVE to be protected
 
     switch (tool) {
-    case TMCropSelect:
-        crop->setExpanded(true);
-        toolPanelNotebook->set_current_page(toolPanelNotebook->page_num(*transformPanelSW));
-        break;
+        case TMCropSelect:
+            crop->setExpanded (true);
+            toolPanelNotebook->set_current_page (toolPanelNotebook->page_num (*transformPanelSW));
+            break;
 
-    case TMSpotWB:
-        whitebalance->setExpanded(true);
-        toolPanelNotebook->set_current_page(toolPanelNotebook->page_num(*colorPanelSW));
-        break;
+        case TMSpotWB:
+            whitebalance->setExpanded (true);
+            toolPanelNotebook->set_current_page (toolPanelNotebook->page_num (*colorPanelSW));
+            break;
 
-    case TMStraighten:
-        lensgeom->setExpanded(true);
-        rotate->setExpanded(true);
-        toolPanelNotebook->set_current_page(toolPanelNotebook->page_num(*transformPanelSW));
-        break;
+        case TMStraighten:
+            lensgeom->setExpanded (true);
+            rotate->setExpanded (true);
+            toolPanelNotebook->set_current_page (toolPanelNotebook->page_num (*transformPanelSW));
+            break;
 
-    default:
-        break;
+        default:
+            break;
     }
 }
 
@@ -1089,13 +1094,16 @@ void ToolPanelCoordinator::editModeSwitchedOff ()
 void ToolPanelCoordinator::dirSelected (const Glib::ustring& dirname, const Glib::ustring& openfile)
 {
 
-    flatfield->setShortcutPath(dirname);
+    flatfield->setShortcutPath (dirname);
 }
 
-void ToolPanelCoordinator::setEditProvider(EditDataProvider *provider)
+void ToolPanelCoordinator::setEditProvider (EditDataProvider *provider)
 {
     editDataProvider = provider;
 
-    for (size_t i=0; i<env->countPanel(); i++)
-		env->getPanel(i)->setEditProvider(provider);    
+==== BASE ====
+    for (size_t i = 0; i < toolPanels.size(); i++) {
+        toolPanels.at(i)->setEditProvider(provider);
+    }
+==== BASE ====
 }

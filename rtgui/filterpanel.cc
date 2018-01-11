@@ -26,8 +26,6 @@ using namespace rtengine;
 FilterPanel::FilterPanel () : listener (nullptr)
 {
 
-    set_border_width (4);
-
     enabled = Gtk::manage (new Gtk::CheckButton (M("EXIFFILTER_METADATAFILTER")));
     pack_start (*enabled, Gtk::PACK_SHRINK, 2);
     pack_start (*Gtk::manage(new Gtk::HSeparator ()), Gtk::PACK_SHRINK, 2);
@@ -173,15 +171,15 @@ void FilterPanel::setFilter (ExifFilterSettings& defefs, bool updateLists)
     }
 
 //  enaFNumber->set_active (curefs.filterFNumber);
-    fnumberFrom->set_text (ImageMetaData::apertureToString (defefs.fnumberFrom));
+    fnumberFrom->set_text (FramesMetaData::apertureToString (defefs.fnumberFrom));
     curefs.fnumberFrom = defefs.fnumberFrom;
-    fnumberTo->set_text (ImageMetaData::apertureToString (defefs.fnumberTo));
+    fnumberTo->set_text (FramesMetaData::apertureToString (defefs.fnumberTo));
     curefs.fnumberTo = defefs.fnumberTo;
 
 //  enaShutter->set_active (curefs.filterShutter);
-    shutterFrom->set_text (ImageMetaData::shutterToString (defefs.shutterFrom));
+    shutterFrom->set_text (FramesMetaData::shutterToString (defefs.shutterFrom));
     curefs.shutterFrom = defefs.shutterFrom;
-    shutterTo->set_text (ImageMetaData::shutterToString (defefs.shutterTo));
+    shutterTo->set_text (FramesMetaData::shutterToString (defefs.shutterTo));
     curefs.shutterTo = defefs.shutterTo;
 
 //  enaISO->set_active (curefs.filterISO);
@@ -213,7 +211,7 @@ void FilterPanel::setFilter (ExifFilterSettings& defefs, bool updateLists)
         curefs.expcomp.clear();
 
         for (std::set<std::string>::iterator i = defefs.expcomp.begin(); i != defefs.expcomp.end(); ++i) {
-            expcomp->append_text (*i);
+            expcomp->append (*i);
             curefs.expcomp.insert(*i);
         }
 
@@ -223,7 +221,7 @@ void FilterPanel::setFilter (ExifFilterSettings& defefs, bool updateLists)
         curefs.lenses.clear();
 
         for (std::set<std::string>::iterator i = defefs.lenses.begin(); i != defefs.lenses.end(); ++i) {
-            lens->append_text (*i);
+            lens->append (*i);
             curefs.lenses.insert(*i);
         }
 
@@ -233,7 +231,7 @@ void FilterPanel::setFilter (ExifFilterSettings& defefs, bool updateLists)
         curefs.cameras.clear();
 
         for (std::set<std::string>::iterator i = defefs.cameras.begin(); i != defefs.cameras.end(); ++i) {
-            camera->append_text(*i);
+            camera->append(*i);
             curefs.cameras.insert(*i);
         }
 
@@ -243,7 +241,7 @@ void FilterPanel::setFilter (ExifFilterSettings& defefs, bool updateLists)
         curefs.filetypes.clear();
 
         for (std::set<std::string>::iterator i = defefs.filetypes.begin(); i != defefs.filetypes.end(); ++i) {
-            filetype->append_text(*i);
+            filetype->append(*i);
             curefs.filetypes.insert(*i);
         }
 
@@ -317,8 +315,8 @@ ExifFilterSettings FilterPanel::getFilter ()
     efs.focalTo     = atof (focalTo->get_text().c_str());
     efs.isoFrom     = atoi (isoFrom->get_text().c_str());
     efs.isoTo       = atoi (isoTo->get_text().c_str());
-    efs.shutterFrom = ImageMetaData::shutterFromString (shutterFrom->get_text());
-    efs.shutterTo   = ImageMetaData::shutterFromString (shutterTo->get_text());
+    efs.shutterFrom = FramesMetaData::shutterFromString (shutterFrom->get_text());
+    efs.shutterTo   = FramesMetaData::shutterFromString (shutterTo->get_text());
 
     efs.filterFNumber  = enaFNumber->get_active ();
     efs.filterShutter  = enaShutter->get_active ();

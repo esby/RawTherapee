@@ -1,3 +1,16 @@
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
+#pragma GCC diagnostic ignored "-Wsign-compare"
+#pragma GCC diagnostic ignored "-Wparentheses"
+#if (__GNUC__ >= 6)
+#pragma GCC diagnostic ignored "-Wmisleading-indentation"
+#if (__GNUC__ >= 7)
+#pragma GCC diagnostic ignored "-Wdangling-else"
+#endif
+#endif
+#endif
+
 /*RT*/#include <glib.h>
 /*RT*/#include <glib/gstdio.h>
 /*RT*/#undef MAX
@@ -9,8 +22,10 @@
 /*RT*/#define NO_JASPER
 /*RT*/#define LOCALTIME
 /*RT*/#define DJGPP
+/*RT*/#include "jpeg.h"
 
 #include "opthelper.h"
+
 /*
    dcraw.c -- Dave Coffin's raw photo decoder
    Copyright 1997-2016 by Dave Coffin, dcoffin a cybercom o net
@@ -53,6 +68,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
+#include <strings.h>
 #include <sys/types.h>
 
 #if defined(DJGPP) || defined(__MINGW32__)
@@ -248,7 +264,11 @@ void CLASS derror()
     if (feof(ifp))
       fprintf (stderr,_("Unexpected end of file\n"));
     else
+#ifdef WIN32
+      fprintf (stderr,_("Corrupt data near 0x%I64x\n"), (INT64) ftello(ifp));
+#else
       fprintf (stderr,_("Corrupt data near 0x%llx\n"), (INT64) ftello(ifp));
+#endif
   }
   data_error++;
 /*RT Issue 2467  longjmp (failure, 1);*/
@@ -325,7 +345,7 @@ void CLASS read_shorts (ushort *pixel, int count)
 {
   if (fread (pixel, 2, count, ifp) < count) derror();
   if ((order == 0x4949) == (ntohs(0x1234) == 0x1234))
-	  swab ((char*)pixel, (char*)pixel, count*2);
+	  rtengine::swab ((char*)pixel, (char*)pixel, count*2);
 }
 
 void CLASS cubic_spline (const int *x_, const int *y_, const int len)
@@ -1046,7 +1066,7 @@ void CLASS ljpeg_idct (struct jhead *jh)
     47,55,62,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63 };
 
   if (!cs[0])
-    FORC(106) cs[c] = cos((c & 31)*M_PI/16)/2;
+    FORC(106) cs[c] = cos((c & 31)*rtengine::RT_PI/16)/2;
   memset (work, 0, sizeof work);
   work[0][0][0] = jh->vpred[0] += ljpeg_diff (jh->huff[0]) * jh->quant[0];
   for (i=1; i < 64; i++ ) {
@@ -1058,8 +1078,8 @@ void CLASS ljpeg_idct (struct jhead *jh)
       coef -= (1 << len) - 1;
     ((float *)work)[zigzag[i]] = coef * jh->quant[i];
   }
-  FORC(8) work[0][0][c] *= M_SQRT1_2;
-  FORC(8) work[0][c][0] *= M_SQRT1_2;
+  FORC(8) work[0][0][c] *= rtengine::RT_SQRT1_2;
+  FORC(8) work[0][c][0] *= rtengine::RT_SQRT1_2;
   for (i=0; i < 8; i++)
     for (j=0; j < 8; j++)
       FORC(8) work[1][i][j] += work[0][i][c] * cs[(j*2+1)*c];
@@ -1415,253 +1435,278 @@ int CLASS raw (unsigned row, unsigned col)
 
 void CLASS phase_one_flat_field (int is_float, int nc)
 {
-  ushort head[8];
-  unsigned wide, high, y, x, c, rend, cend, row, col;
-  float *mrow, num, mult[4];
+    ushort uhead[8];
 
-  read_shorts (head, 8);
-  if (head[2] * head[3] * head[4] * head[5] == 0) return;
-  wide = head[2] / head[4] + (head[2] % head[4] != 0);
-  high = head[3] / head[5] + (head[3] % head[5] != 0);
-  mrow = (float *) calloc (nc*wide, sizeof *mrow);
-  merror (mrow, "phase_one_flat_field()");
-  for (y=0; y < high; y++) {
-    for (x=0; x < wide; x++)
-      for (c=0; c < nc; c+=2) {
-	num = is_float ? getreal(11) : get2()/32768.0;
-	if (y==0) mrow[c*wide+x] = num;
-	else mrow[(c+1)*wide+x] = (num - mrow[c*wide+x]) / head[5];
-      }
-    if (y==0) continue;
-    rend = head[1] + y*head[5];
-    for (row = rend-head[5];
-	 row < raw_height && row < rend &&
-	 row < head[1]+head[3]-head[5]; row++) {
-      for (x=1; x < wide; x++) {
-	for (c=0; c < nc; c+=2) {
-	  mult[c] = mrow[c*wide+x-1];
-	  mult[c+1] = (mrow[c*wide+x] - mult[c]) / head[4];
-	}
-	cend = head[0] + x*head[4];
-	for (col = cend-head[4];
-	     col < raw_width &&
-	     col < cend && col < head[0]+head[2]-head[4]; col++) {
-	  c = nc > 2 ? FC(row-top_margin,col-left_margin) : 0;
-	  if (!(c & 1)) {
-	    c = RAW(row,col) * mult[c];
-	    RAW(row,col) = LIM(c,0,65535);
-	  }
-	  for (c=0; c < nc; c+=2)
-	    mult[c] += mult[c+1];
-	}
-      }
-      for (x=0; x < wide; x++)
-	for (c=0; c < nc; c+=2)
-	  mrow[c*wide+x] += mrow[(c+1)*wide+x];
+    read_shorts (uhead, 8);
+    if (uhead[2] * uhead[3] * uhead[4] * uhead[5] == 0) {
+        return;
     }
-  }
-  free (mrow);
+    const unsigned wide = uhead[2] / uhead[4] + (uhead[2] % uhead[4] != 0);
+    const unsigned high = uhead[3] / uhead[5] + (uhead[3] % uhead[5] != 0);
+    const unsigned colLimit = std::min(uhead[0] + uhead[2] - uhead[4], (int)raw_width);
+
+    const float head4 = 1.0 / uhead[4];
+    const float head5 = 1.0 / uhead[5];
+
+    float* mrow = (float *) calloc(nc * wide, sizeof *mrow);
+    merror(mrow, "phase_one_flat_field()");
+    for (unsigned x=0; x < wide; x++) {
+        for (unsigned c=0; c < nc; c+=2) {
+            float num = is_float ? getreal(11) : get2() / 32768.f;
+            mrow[c * wide + x] = num;
+        }
+    }
+    for (unsigned y=1; y < high; y++) {
+        for (unsigned x=0; x < wide; x++) {
+            for (unsigned c=0; c < nc; c+=2) {
+                float num = is_float ? getreal(11) : get2() / 32768.f;
+                mrow[(c + 1) * wide + x] = (num - mrow[c * wide + x]) * head5;
+           }
+        }
+        const unsigned rend = uhead[1] + y * uhead[5];
+        for (unsigned row = rend - uhead[5]; row < raw_height && row < rend && row < uhead[1] + uhead[3] - uhead[5]; row++) {
+            unsigned cend = uhead[0] + uhead[4];
+            const unsigned c0 = FC(row - top_margin, cend - uhead[4] - left_margin);
+            const unsigned c = nc > 2 ? (c0 & 1) ? FC(row - top_margin, cend - uhead[4] - left_margin + 1) : c0 : 0;
+            for (unsigned x=1; x < wide; x++, cend += uhead[4]) {
+                float mult0 = mrow[c * wide + x - 1];
+                float mult1 = (mrow[c * wide + x] - mult0) * head4;
+                if (nc > 2) {
+                    mult0 += (c0 & 1) ? mult1 : 0;
+                    for (unsigned col = cend - uhead[4] + (c0 & 1); col < std::min(colLimit, cend); col += 2) {
+                        unsigned val = RAW(row, col) * mult0;
+                        RAW(row, col) = rtengine::min(val, 65535u);
+                        mult0 += mult1;
+                        mult0 += mult1; // <= this could be reduced to one addition inside the loop, but then the result is not exactly the same as with old code, though it should be even more accurate then
+                    }
+                } else {
+                    for (unsigned col = cend - uhead[4]; col < std::min(colLimit, cend); col++) {
+                        unsigned val = RAW(row, col) * mult0;
+                        RAW(row, col) = rtengine::min(val, 65535u);
+                        mult0 += mult1;
+                    }
+                }
+            }
+            for (unsigned x = 0; x < wide; x++) {
+                for (unsigned c = 0; c < nc; c += 2) {
+                    mrow[c * wide + x] += mrow[(c + 1) * wide + x];
+                }
+            }
+        }
+    }
+  free(mrow);
 }
 
 void CLASS phase_one_correct()
 {
-  unsigned entries, tag, data, save, col, row, type;
-  int len, i, j, k, cip, val[4], dev[4], sum, max;
-  int head[9], diff, mindiff=INT_MAX, off_412=0;
-  static const signed char dir[12][2] =
-    { {-1,-1}, {-1,1}, {1,-1}, {1,1}, {-2,0}, {0,-2}, {0,2}, {2,0},
-      {-2,-2}, {-2,2}, {2,-2}, {2,2} };
-  float poly[8], num, cfrac, frac, mult[2], *yval[2];
-  ushort *xval[2];
-  int qmult_applied = 0, qlin_applied = 0;
+    unsigned entries, tag, data, save, col, row, type;
+    int len, i, j, k, cip, val[4], dev[4], sum, max;
+    int head[9], diff, mindiff=INT_MAX, off_412=0;
+    static const signed char dir[12][2] = { {-1,-1}, {-1,1}, {1,-1}, {1,1}, {-2,0}, {0,-2}, {0,2}, {2,0}, {-2,-2}, {-2,2}, {2,-2}, {2,2} };
+    float poly[8], num, cfrac, frac, mult[2], *yval[2];
+    ushort *xval[2];
+    int qmult_applied = 0, qlin_applied = 0;
 
-  if (half_size || !meta_length) return;
-  if (verbose) fprintf (stderr,_("Phase One correction...\n"));
-  fseek (ifp, meta_offset, SEEK_SET);
-  order = get2();
-  fseek (ifp, 6, SEEK_CUR);
-  fseek (ifp, meta_offset+get4(), SEEK_SET);
-  entries = get4();  get4();
-  while (entries--) {
-    tag  = get4();
-    len  = get4();
-    data = get4();
-    save = ftell(ifp);
-    fseek (ifp, meta_offset+data, SEEK_SET);
-    if (tag == 0x419) {				/* Polynomial curve */
-      for (get4(), i=0; i < 8; i++)
-	poly[i] = getreal(11);
-      poly[3] += (ph1.tag_210 - poly[7]) * poly[6] + 1;
-      for (i=0; i < 0x10000; i++) {
-	num = (poly[5]*i + poly[3])*i + poly[1];
-	curve[i] = LIM(num,0,65535);
-      } goto apply;				/* apply to right half */
-    } else if (tag == 0x41a) {			/* Polynomial curve */
-      for (i=0; i < 4; i++)
-	poly[i] = getreal(11);
-      for (i=0; i < 0x10000; i++) {
-	for (num=0, j=4; j--; )
-	  num = num * i + poly[j];
-	curve[i] = LIM(num+i,0,65535);
-      } apply:					/* apply to whole image */
-      for (row=0; row < raw_height; row++)
-	for (col = (tag & 1)*ph1.split_col; col < raw_width; col++)
-	  RAW(row,col) = curve[RAW(row,col)];
-    } else if (tag == 0x400) {			/* Sensor defects */
-      while ((len -= 8) >= 0) {
-	col  = get2();
-	row  = get2();
-	type = get2(); get2();
-	if (col >= raw_width) continue;
-	if (type == 131 || type == 137)		/* Bad column */
-	  for (row=0; row < raw_height; row++)
-	    if (FC(row-top_margin,col-left_margin) == 1) {
-	      for (sum=i=0; i < 4; i++)
-		sum += val[i] = raw (row+dir[i][0], col+dir[i][1]);
-	      for (max=i=0; i < 4; i++) {
-		dev[i] = abs((val[i] << 2) - sum);
-		if (dev[max] < dev[i]) max = i;
-	      }
-	      RAW(row,col) = (sum - val[max])/3.0 + 0.5;
-	    } else {
-	      for (sum=0, i=8; i < 12; i++)
-		sum += raw (row+dir[i][0], col+dir[i][1]);
-	      RAW(row,col) = 0.5 + sum * 0.0732233 +
-		(raw(row,col-2) + raw(row,col+2)) * 0.3535534;
-	    }
-	else if (type == 129) {			/* Bad pixel */
-	  if (row >= raw_height) continue;
-	  j = (FC(row-top_margin,col-left_margin) != 1) * 4;
-	  for (sum=0, i=j; i < j+8; i++)
-	    sum += raw (row+dir[i][0], col+dir[i][1]);
-	  RAW(row,col) = (sum + 4) >> 3;
-	}
-      }
-    } else if (tag == 0x401) {			/* All-color flat fields */
-      phase_one_flat_field (1, 2);
-    } else if (tag == 0x416 || tag == 0x410) {
-      phase_one_flat_field (0, 2);
-    } else if (tag == 0x40b) {			/* Red+blue flat field */
-      phase_one_flat_field (0, 4);
-    } else if (tag == 0x412) {
-      fseek (ifp, 36, SEEK_CUR);
-      diff = abs (get2() - ph1.tag_21a);
-      if (mindiff > diff) {
-	mindiff = diff;
-	off_412 = ftell(ifp) - 38;
-      }
-    } else if (tag == 0x41f && !qlin_applied) { /* Quadrant linearization */
-      ushort lc[2][2][16], ref[16];
-      int qr, qc;
-      for (qr = 0; qr < 2; qr++)
-	for (qc = 0; qc < 2; qc++)
-	  for (i = 0; i < 16; i++)
-	    lc[qr][qc][i] = get4();
-      for (i = 0; i < 16; i++) {
-	int v = 0;
-	for (qr = 0; qr < 2; qr++)
-	  for (qc = 0; qc < 2; qc++)
-	    v += lc[qr][qc][i];
-	ref[i] = (v + 2) >> 2;
-      }
-      for (qr = 0; qr < 2; qr++) {
-	for (qc = 0; qc < 2; qc++) {
-	  int cx[19], cf[19];
-	  for (i = 0; i < 16; i++) {
-	    cx[1+i] = lc[qr][qc][i];
-	    cf[1+i] = ref[i];
-	  }
-	  cx[0] = cf[0] = 0;
-	  cx[17] = cf[17] = ((unsigned) ref[15] * 65535) / lc[qr][qc][15];
-	  cx[18] = cf[18] = 65535;
-	  cubic_spline(cx, cf, 19);
-	  for (row = (qr ? ph1.split_row : 0);
-	       row < (qr ? raw_height : ph1.split_row); row++)
-	    for (col = (qc ? ph1.split_col : 0);
-		 col < (qc ? raw_width : ph1.split_col); col++)
-	      RAW(row,col) = curve[RAW(row,col)];
-	}
-      }
-      qlin_applied = 1;
-    } else if (tag == 0x41e && !qmult_applied) { /* Quadrant multipliers */
-      float qmult[2][2] = { { 1, 1 }, { 1, 1 } };
-      get4(); get4(); get4(); get4();
-      qmult[0][0] = 1.0 + getreal(11);
-      get4(); get4(); get4(); get4(); get4();
-      qmult[0][1] = 1.0 + getreal(11);
-      get4(); get4(); get4();
-      qmult[1][0] = 1.0 + getreal(11);
-      get4(); get4(); get4();
-      qmult[1][1] = 1.0 + getreal(11);
-      for (row=0; row < raw_height; row++)
-	for (col=0; col < raw_width; col++) {
-	  i = qmult[row >= ph1.split_row][col >= ph1.split_col] * RAW(row,col);
-	  RAW(row,col) = LIM(i,0,65535);
-	}
-      qmult_applied = 1;
-    } else if (tag == 0x431 && !qmult_applied) { /* Quadrant combined */
-      ushort lc[2][2][7], ref[7];
-      int qr, qc;
-      for (i = 0; i < 7; i++)
-	ref[i] = get4();
-      for (qr = 0; qr < 2; qr++)
-	for (qc = 0; qc < 2; qc++)
-	  for (i = 0; i < 7; i++)
-	    lc[qr][qc][i] = get4();
-      for (qr = 0; qr < 2; qr++) {
-	for (qc = 0; qc < 2; qc++) {
-	  int cx[9], cf[9];
-	  for (i = 0; i < 7; i++) {
-	    cx[1+i] = ref[i];
-	    cf[1+i] = ((unsigned) ref[i] * lc[qr][qc][i]) / 10000;
-	  }
-	  cx[0] = cf[0] = 0;
-	  cx[8] = cf[8] = 65535;
-	  cubic_spline(cx, cf, 9);
-	  for (row = (qr ? ph1.split_row : 0);
-	       row < (qr ? raw_height : ph1.split_row); row++)
-	    for (col = (qc ? ph1.split_col : 0);
-		 col < (qc ? raw_width : ph1.split_col); col++)
-	      RAW(row,col) = curve[RAW(row,col)];
-        }
-      }
-      qmult_applied = 1;
-      qlin_applied = 1;
+    if (half_size || !meta_length) {
+        return;
     }
-    fseek (ifp, save, SEEK_SET);
-  }
-  if (off_412) {
-    fseek (ifp, off_412, SEEK_SET);
-    for (i=0; i < 9; i++) head[i] = get4() & 0x7fff;
-    yval[0] = (float *) calloc (head[1]*head[3] + head[2]*head[4], 6);
-    merror (yval[0], "phase_one_correct()");
-    yval[1] = (float  *) (yval[0] + head[1]*head[3]);
-    xval[0] = (ushort *) (yval[1] + head[2]*head[4]);
-    xval[1] = (ushort *) (xval[0] + head[1]*head[3]);
-    get2();
-    for (i=0; i < 2; i++)
-      for (j=0; j < head[i+1]*head[i+3]; j++)
-	yval[i][j] = getreal(11);
-    for (i=0; i < 2; i++)
-      for (j=0; j < head[i+1]*head[i+3]; j++)
-	xval[i][j] = get2();
-    for (row=0; row < raw_height; row++)
-      for (col=0; col < raw_width; col++) {
-	cfrac = (float) col * head[3] / raw_width;
-	cfrac -= cip = cfrac;
-	num = RAW(row,col) * 0.5;
-	for (i=cip; i < cip+2; i++) {
-	  for (k=j=0; j < head[1]; j++)
-	    if (num < xval[0][k = head[1]*i+j]) break;
-	  frac = (j == 0 || j == head[1]) ? 0 :
-		(xval[0][k] - num) / (xval[0][k] - xval[0][k-1]);
-	  mult[i-cip] = yval[0][k-1] * frac + yval[0][k] * (1-frac);
-	}
-	i = ((mult[0] * (1-cfrac) + mult[1] * cfrac) * row + num) * 2;
-	RAW(row,col) = LIM(i,0,65535);
-      }
-    free (yval[0]);
-  }
+    if (verbose) {
+        fprintf (stderr,_("Phase One correction...\n"));
+    }
+    fseek (ifp, meta_offset, SEEK_SET);
+    order = get2();
+    fseek (ifp, 6, SEEK_CUR);
+    fseek (ifp, meta_offset+get4(), SEEK_SET);
+    entries = get4();  get4();
+    while (entries--) {
+        tag  = get4();
+        len  = get4();
+        data = get4();
+        save = ftell(ifp);
+        fseek (ifp, meta_offset+data, SEEK_SET);
+        if (tag == 0x419) {				/* Polynomial curve */
+            for (get4(), i=0; i < 8; i++) {
+                poly[i] = getreal(11);
+            }
+            poly[3] += (ph1.tag_210 - poly[7]) * poly[6] + 1;
+            for (i=0; i < 0x10000; i++) {
+                num = (poly[5]*i + poly[3])*i + poly[1];
+                curve[i] = LIM(num,0,65535);
+            }
+            goto apply;				/* apply to right half */
+        } else if (tag == 0x41a) {			/* Polynomial curve */
+            for (i=0; i < 4; i++) {
+                poly[i] = getreal(11);
+            }
+            for (i=0; i < 0x10000; i++) {
+                for (num=0, j=4; j--;) {
+                    num = num * i + poly[j];
+                }
+            curve[i] = LIM(num+i,0,65535);
+            }
+            apply:					/* apply to whole image */
+            #pragma omp parallel for schedule(dynamic,16)
+            for (int row=0; row < raw_height; row++) {
+                for (int col = (tag & 1)*ph1.split_col; col < raw_width; col++) {
+                    RAW(row,col) = curve[RAW(row,col)];
+                }
+            }
+        } else if (tag == 0x400) {			/* Sensor defects */
+            while ((len -= 8) >= 0) {
+	            col  = get2();
+	            row  = get2();
+	            type = get2();
+	            get2();
+	            if (col >= raw_width) continue;
+	            if (type == 131 || type == 137) {		/* Bad column */
+                    for (row=0; row < raw_height; row++) {
+                        if (FC(row-top_margin,col-left_margin) == 1) {
+                            for (sum=i=0; i < 4; i++)
+                                sum += val[i] = raw (row+dir[i][0], col+dir[i][1]);
+                            for (max=i=0; i < 4; i++) {
+                                dev[i] = abs((val[i] << 2) - sum);
+                                if (dev[max] < dev[i]) max = i;
+                            }
+                            RAW(row,col) = (sum - val[max])/3.0 + 0.5;
+                        } else {
+                            for (sum=0, i=8; i < 12; i++)
+                                sum += raw (row+dir[i][0], col+dir[i][1]);
+                            RAW(row,col) = 0.5 + sum * 0.0732233 + (raw(row,col-2) + raw(row,col+2)) * 0.3535534;
+                        }
+                    }
+	            } else if (type == 129) {			/* Bad pixel */
+                    if (row >= raw_height) continue;
+                    j = (FC(row-top_margin,col-left_margin) != 1) * 4;
+                    for (sum=0, i=j; i < j+8; i++)
+	                    sum += raw (row+dir[i][0], col+dir[i][1]);
+                    RAW(row,col) = (sum + 4) >> 3;
+	            }
+            }
+        } else if (tag == 0x401) {			/* All-color flat fields */
+            phase_one_flat_field (1, 2);
+        } else if (tag == 0x416 || tag == 0x410) {
+            phase_one_flat_field (0, 2);
+        } else if (tag == 0x40b) {			/* Red+blue flat field */
+            phase_one_flat_field (0, 4);
+        } else if (tag == 0x412) {
+            fseek (ifp, 36, SEEK_CUR);
+            diff = abs (get2() - ph1.tag_21a);
+            if (mindiff > diff) {
+	            mindiff = diff;
+	            off_412 = ftell(ifp) - 38;
+            }
+        } else if (tag == 0x41f && !qlin_applied) { /* Quadrant linearization */
+            ushort lc[2][2][16], ref[16];
+            int qr, qc;
+            for (qr = 0; qr < 2; qr++)
+	            for (qc = 0; qc < 2; qc++)
+	                for (i = 0; i < 16; i++)
+	                    lc[qr][qc][i] = get4();
+            for (i = 0; i < 16; i++) {
+	            int v = 0;
+	            for (qr = 0; qr < 2; qr++)
+	                for (qc = 0; qc < 2; qc++)
+	                    v += lc[qr][qc][i];
+	            ref[i] = (v + 2) >> 2;
+            }
+            for (qr = 0; qr < 2; qr++) {
+	            for (qc = 0; qc < 2; qc++) {
+	                int cx[19], cf[19];
+	                for (i = 0; i < 16; i++) {
+	                    cx[1+i] = lc[qr][qc][i];
+	                    cf[1+i] = ref[i];
+	                }
+	                cx[0] = cf[0] = 0;
+	                cx[17] = cf[17] = ((unsigned) ref[15] * 65535) / lc[qr][qc][15];
+	                cx[18] = cf[18] = 65535;
+	                cubic_spline(cx, cf, 19);
+	                #pragma omp parallel for schedule(dynamic,16)
+                    for (int row = (qr ? ph1.split_row : 0); row < (qr ? raw_height : ph1.split_row); row++)
+                        for (int col = (qc ? ph1.split_col : 0); col < (qc ? raw_width : ph1.split_col); col++)
+                            RAW(row,col) = curve[RAW(row,col)];
+	            }
+            }
+            qlin_applied = 1;
+        } else if (tag == 0x41e && !qmult_applied) { /* Quadrant multipliers */
+            float qmult[2][2] = { { 1, 1 }, { 1, 1 } };
+            get4(); get4(); get4(); get4();
+            qmult[0][0] = 1.0 + getreal(11);
+            get4(); get4(); get4(); get4(); get4();
+            qmult[0][1] = 1.0 + getreal(11);
+            get4(); get4(); get4();
+            qmult[1][0] = 1.0 + getreal(11);
+            get4(); get4(); get4();
+            qmult[1][1] = 1.0 + getreal(11);
+            #pragma omp parallel for schedule(dynamic,16)
+            for (int row=0; row < raw_height; row++) {
+                for (int col=0; col < raw_width; col++) {
+                    int i = qmult[row >= ph1.split_row][col >= ph1.split_col] * RAW(row,col);
+                    RAW(row,col) = LIM(i,0,65535);
+                }
+            }
+            qmult_applied = 1;
+        } else if (tag == 0x431 && !qmult_applied) { /* Quadrant combined */
+            ushort lc[2][2][7], ref[7];
+            int qr, qc;
+            for (i = 0; i < 7; i++)
+                ref[i] = get4();
+            for (qr = 0; qr < 2; qr++)
+                for (qc = 0; qc < 2; qc++)
+                    for (i = 0; i < 7; i++)
+                        lc[qr][qc][i] = get4();
+            for (qr = 0; qr < 2; qr++) {
+                for (qc = 0; qc < 2; qc++) {
+                    int cx[9], cf[9];
+                    for (i = 0; i < 7; i++) {
+                        cx[1+i] = ref[i];
+                        cf[1+i] = ((unsigned) ref[i] * lc[qr][qc][i]) / 10000;
+	                }
+	                cx[0] = cf[0] = 0;
+	                cx[8] = cf[8] = 65535;
+	                cubic_spline(cx, cf, 9);
+	                for (row = (qr ? ph1.split_row : 0); row < (qr ? raw_height : ph1.split_row); row++)
+	                    for (col = (qc ? ph1.split_col : 0); col < (qc ? raw_width : ph1.split_col); col++)
+	                        RAW(row,col) = curve[RAW(row,col)];
+                }
+            }
+            qmult_applied = 1;
+            qlin_applied = 1;
+        }
+        fseek (ifp, save, SEEK_SET);
+    }
+    if (off_412) {
+        fseek (ifp, off_412, SEEK_SET);
+        for (i=0; i < 9; i++)
+            head[i] = get4() & 0x7fff;
+        yval[0] = (float *) calloc (head[1]*head[3] + head[2]*head[4], 6);
+        merror (yval[0], "phase_one_correct()");
+        yval[1] = (float  *) (yval[0] + head[1]*head[3]);
+        xval[0] = (ushort *) (yval[1] + head[2]*head[4]);
+        xval[1] = (ushort *) (xval[0] + head[1]*head[3]);
+        get2();
+        for (i=0; i < 2; i++)
+            for (j=0; j < head[i+1]*head[i+3]; j++)
+	            yval[i][j] = getreal(11);
+        for (i=0; i < 2; i++)
+            for (j=0; j < head[i+1]*head[i+3]; j++)
+	            xval[i][j] = get2();
+        for (row=0; row < raw_height; row++)
+            for (col=0; col < raw_width; col++) {
+	            cfrac = (float) col * head[3] / raw_width;
+	            cfrac -= cip = cfrac;
+	            num = RAW(row,col) * 0.5;
+	            for (i=cip; i < cip+2; i++) {
+	                for (k=j=0; j < head[1]; j++)
+	                    if (num < xval[0][k = head[1]*i+j])
+	                        break;
+	                frac = (j == 0 || j == head[1]) ? 0 : (xval[0][k] - num) / (xval[0][k] - xval[0][k-1]);
+	                mult[i-cip] = yval[0][k-1] * frac + yval[0][k] * (1-frac);
+	            }
+	            i = ((mult[0] * (1-cfrac) + mult[1] * cfrac) * row + num) * 2;
+	            RAW(row,col) = LIM(i,0,65535);
+        }
+        free (yval[0]);
+    }
 }
 
 void CLASS phase_one_load_raw()
@@ -1705,9 +1750,35 @@ unsigned CLASS ph1_bithuff_t::operator() (int nbits, ushort *huff)
   vbits -= nbits;
   return c;
 }
-#define ph1_bits(n) ph1_bithuff(n,0)
+
+inline unsigned CLASS ph1_bithuff_t::operator() (int nbits)
+{
+/*RT  static UINT64 bitbuf=0; */
+/*RT  static int vbits=0; */
+
+  if (vbits < nbits) {
+    bitbuf = bitbuf << 32 | get4();
+    vbits += 32;
+  }
+  unsigned c = bitbuf << (64-vbits) >> (64-nbits);
+  vbits -= nbits;
+  return c;
+}
+
+inline unsigned CLASS ph1_bithuff_t::operator() ()
+{
+/*RT  static UINT64 bitbuf=0; */
+/*RT  static int vbits=0; */
+  return bitbuf = vbits = 0;
+}
+
+
+#define ph1_init() ph1_bithuff()
+#define ph1_bits(n) ph1_bithuff(n)
+#define hb_bits(n) ph1_bithuff(n,0)
 #define ph1_huff(h) ph1_bithuff(*h,h+1)
 
+#ifndef MYFILE_MMAP
 void CLASS phase_one_load_raw_c()
 {
   static const int length[] = { 8,7,6,9,11,10,5,12,14,13 };
@@ -1731,9 +1802,10 @@ void CLASS phase_one_load_raw_c()
     read_shorts ((ushort *) rblack[0], raw_width*2);
   for (i=0; i < 256; i++)
     curve[i] = i*i / 3.969 + 0.5;
+  ph1_bithuff_t ph1_bithuff(this, ifp, order);
   for (row=0; row < raw_height; row++) {
     fseek (ifp, data_offset + offset[row], SEEK_SET);
-    ph1_bits(-1);
+    ph1_init();
     pred[0] = pred[1] = 0;
     for (col=0; col < raw_width; col++) {
       if (col >= (raw_width & -8))
@@ -1761,7 +1833,92 @@ void CLASS phase_one_load_raw_c()
   free (pixel);
   maximum = 0xfffc - ph1.black;
 }
+#else
+void CLASS phase_one_load_raw_c()
+{
+    static const int length[] = { 8,7,6,9,11,10,5,12,14,13 };
 
+    int *offset = (int *)calloc(raw_width * 2 + raw_height * 4, 2);
+    fseek(ifp, strip_offset, SEEK_SET);
+    for (int row = 0; row < raw_height; row++) {
+        offset[row] = get4();
+    }
+
+    short (*cblack)[2] = (short (*)[2]) (offset + raw_height);
+    fseek(ifp, ph1.black_col, SEEK_SET);
+    if (ph1.black_col) {
+        read_shorts ((ushort *) cblack[0], raw_height * 2);
+    }
+
+    short (*rblack)[2] = cblack + raw_height;
+    fseek(ifp, ph1.black_row, SEEK_SET);
+    if (ph1.black_row) {
+        read_shorts ((ushort *) rblack[0], raw_width * 2);
+    }
+
+    for (int i = 0; i < 256; i++) {
+        curve[i] = i * i / 3.969 + 0.5;
+    }
+
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+{
+    int len[2], pred[2];
+    IMFILE ifpthr = *ifp;
+    ifpthr.plistener = nullptr;
+
+#ifdef _OPENMP
+#pragma omp master
+#endif
+{
+    ifpthr.plistener = ifp->plistener;
+}
+
+    ph1_bithuff_t ph1_bithuff(this, &ifpthr, order);
+
+#ifdef _OPENMP
+    #pragma omp for schedule(dynamic,16)
+#endif
+
+    for (int row = 0; row < raw_height; row++) {
+        const int shift = 2 * (ph1.format != 8);
+        fseek(&ifpthr, data_offset + offset[row], SEEK_SET);
+        ph1_init();
+        pred[0] = pred[1] = 0;
+        for (int col = 0; col < raw_width; col++) {
+            if (col >= (raw_width & -8)) {
+	            len[0] = len[1] = 14;
+            } else if ((col & 7) == 0) {
+                for (int i = 0; i < 2; i++) {
+                    int j;
+                    for (j = 0; j < 5 && !ph1_bits(1); j++)
+                        ;
+	                if (j--) {
+                        len[i] = length[j * 2 + ph1_bits(1)];
+	                }
+	            }
+            }
+
+            int i = len[col & 1];
+            ushort pixel;
+            if (i == 14) {
+	            pixel = pred[col & 1] = ph1_bits(16);
+            } else {
+	            pixel = pred[col & 1] += ph1_bits(i) + 1 - (1 << (i - 1));
+            }
+            if (ph1.format == 5 && pixel < 256) {
+	            pixel = curve[pixel];
+            }
+            int rawVal = (pixel << shift) - ph1.black + cblack[row][col >= ph1.split_col] + rblack[col][row >= ph1.split_row];
+            RAW(row,col) = std::max(rawVal, 0);
+        }
+    }
+}
+  free(offset);
+  maximum = 0xfffc - ph1.black;
+}
+#endif
 void CLASS parse_hasselblad_gain()
 {
     /*
@@ -1837,13 +1994,12 @@ void CLASS parse_hasselblad_gain()
       not be seen as clipped).
     */
 
-    ushort raw_h, count, ch_count, u16;
-    int i, offset;
+    int offset;
     off_t base;
 
     base = ftell(ifp);
     fseek(ifp, 2 * 23, SEEK_CUR);
-    raw_h = get2();
+    get2();
     fseek(ifp, 48, SEEK_CUR);
     offset = get4();
     hbd.levels = offset ? base + offset : 0;
@@ -2103,7 +2259,8 @@ void CLASS hasselblad_load_raw()
 
   if (!ljpeg_start (&jh, 0)) return;
   order = 0x4949;
-  ph1_bits(-1);
+  ph1_bithuff_t ph1_bithuff(this, ifp, order);
+  hb_bits(-1);
   back[4] = (int *) calloc (raw_width, 3*sizeof **back);
   merror (back[4], "hasselblad_load_raw()");
   FORC3 back[c] = back[4] + c*raw_width;
@@ -2115,7 +2272,7 @@ void CLASS hasselblad_load_raw()
       for (s=0; s < tiff_samples*2; s+=2) {
 	FORC(2) len[c] = ph1_huff(jh.huff[0]);
 	FORC(2) {
-	  diff[s+c] = ph1_bits(len[c]);
+	  diff[s+c] = hb_bits(len[c]);
 	  if ((diff[s+c] & (1 << (len[c]-1))) == 0)
 	    diff[s+c] -= (1 << len[c]) - 1;
 	  if (diff[s+c] == 65535) diff[s+c] = -32768;
@@ -2191,6 +2348,37 @@ void CLASS unpacked_load_raw()
 	&& (unsigned) (row-top_margin) < height
 	&& (unsigned) (col-left_margin) < width) derror();
 }
+
+
+// RT
+void CLASS sony_arq_load_raw()
+{
+  static unsigned frame2pos[] = { 0, 1, 3, 2 };
+  int row, col, bits=0;
+  ushort samples[4];
+  unsigned frame = frame2pos[shot_select];
+
+  while (1 << ++bits < maximum);
+  for (row=0; row < ((frame < 2) ? 1 : raw_height); row++) {
+    for (col=0; col < ((row == 0) ? raw_width : 1); col++) {
+      RAW(row,col) = 0;
+    }
+  }
+  for (row=0; row < raw_height; row++) {
+    int r = row + (frame & 1);
+    for (col=0; col < raw_width; col++) {
+      int c = col + ((frame >> 1) & 1);
+      read_shorts(samples, 4);
+      if (r < raw_height && c < raw_width) {
+          RAW(r,c) = samples[(2 * (r & 1)) + (c & 1)];
+          if ((RAW(r,c) >>= load_flags) >> bits
+              && (unsigned) (row-top_margin) < height
+              && (unsigned) (col-left_margin) < width) derror();
+      }
+    }
+  }
+}
+
 
 void CLASS sinar_4shot_load_raw()
 {
@@ -2335,6 +2523,7 @@ unsigned CLASS pana_bits_t::operator() (int nbits)
 
 void CLASS panasonic_load_raw()
 {
+  pana_bits_t pana_bits(ifp,load_flags);
   int row, col, i, j, sh=0, pred[2], nonz[2];
 
   pana_bits(0);
@@ -2544,6 +2733,12 @@ void CLASS kodak_radc_load_raw()
   for (row=0; row < height; row+=4) {
     FORC3 mul[c] = getbits(6);
     FORC3 {
+        if (!mul[c]) {
+            mul[c] = 1;
+            derror();
+        }
+    }
+    FORC3 {
       val = ((0x1000000/last[c] + 0x7ff) >> 12) * mul[c];
       s = val > 65564 ? 10:12;
       x = ~(-1 << (s-1));
@@ -2603,7 +2798,7 @@ void CLASS kodak_radc_load_raw()
 
 #ifdef NO_JPEG
 void CLASS kodak_jpeg_load_raw() {}
-void CLASS lossy_dng_load_raw() {}
+// RT void CLASS lossy_dng_load_raw() {}
 #else
 
 METHODDEF(boolean)
@@ -2613,7 +2808,7 @@ fill_input_buffer (j_decompress_ptr cinfo)
   size_t nbytes;
 
   nbytes = fread (jpeg_buffer, 1, 4096, ifp);
-  swab ((char*)jpeg_buffer, (char*)jpeg_buffer, nbytes);
+  rtengine::swab ((char*)jpeg_buffer, (char*)jpeg_buffer, nbytes);
   cinfo->src->next_input_byte = jpeg_buffer;
   cinfo->src->bytes_in_buffer = nbytes;
   return TRUE;
@@ -2660,6 +2855,7 @@ void CLASS kodak_jpeg_load_raw()
 }
 
 void CLASS gamma_curve (double pwr, double ts, int mode, int imax);
+/*RT*/#endif
 
 void CLASS lossy_dng_load_raw()
 {
@@ -2703,7 +2899,8 @@ void CLASS lossy_dng_load_raw()
     fseek (ifp, save+=4, SEEK_SET);
     if (tile_length < INT_MAX)
       fseek (ifp, get4(), SEEK_SET);
-    jpeg_stdio_src (&cinfo, ifp);
+    /*RT jpeg_stdio_src (&cinfo, ifp); */
+    /*RT*/jpeg_memory_src(&cinfo, fdata(ftell(ifp), ifp), ifp->size - ftell(ifp));
     jpeg_read_header (&cinfo, TRUE);
     jpeg_start_decompress (&cinfo);
     buf = (*cinfo.mem->alloc_sarray)
@@ -2723,7 +2920,7 @@ void CLASS lossy_dng_load_raw()
   jpeg_destroy_decompress (&cinfo);
   maximum = 0xffff;
 }
-#endif
+/*RT #endif */
 
 void CLASS kodak_dc120_load_raw()
 {
@@ -2903,9 +3100,13 @@ void CLASS kodak_65000_load_raw()
       pred[0] = pred[1] = 0;
       len = MIN (256, width-col);
       ret = kodak_65000_decode (buf, len);
-      for (i=0; i < len; i++)
-	if ((RAW(row,col+i) =	curve[ret ? buf[i] :
-		(pred[i & 1] += buf[i])]) >> 12) derror();
+      for (i=0; i < len; i++) {
+	    int idx = ret ? buf[i] : (pred[i & 1] += buf[i]);
+        if(idx >=0 && idx <= 0xffff) {
+          if ((RAW(row,col+i) = curve[idx]) >> 12) derror();
+        } else
+          derror();
+      }
     }
 }
 
@@ -3027,34 +3228,60 @@ void CLASS sony_arw_load_raw()
 
 void CLASS sony_arw2_load_raw()
 {
-  uchar *data, *dp;
-  ushort pix[16];
-  int row, col, val, max, min, imax, imin, sh, bit, i;
 
-  data = (uchar *) malloc (raw_width+1);
-  merror (data, "sony_arw2_load_raw()");
-  for (row=0; row < height; row++) {
-    fread (data, 1, raw_width, ifp);
-    for (dp=data, col=0; col < raw_width-30; dp+=16) {
-      max = 0x7ff & (val = sget4(dp));
-      min = 0x7ff & val >> 11;
-      imax = 0x0f & val >> 22;
-      imin = 0x0f & val >> 26;
-      for (sh=0; sh < 4 && 0x80 << sh <= max-min; sh++);
-      for (bit=30, i=0; i < 16; i++)
-	if      (i == imax) pix[i] = max;
-	else if (i == imin) pix[i] = min;
-	else {
-	  pix[i] = ((sget2(dp+(bit >> 3)) >> (bit & 7) & 0x7f) << sh) + min;
-	  if (pix[i] > 0x7ff) pix[i] = 0x7ff;
-	  bit += 7;
-	}
-      for (i=0; i < 16; i++, col+=2)
-       RAW(row,col) = curve[pix[i] << 1]; // >> 2; RT: disabled shifting to avoid precision loss
-      col -= col & 1 ? 1:31;
+#if defined( _OPENMP ) && defined( MYFILE_MMAP )
+#pragma omp parallel
+#endif
+{
+    uchar *data = new (std::nothrow) uchar[raw_width + 1];
+    merror(data, "sony_arw2_load_raw()");
+    IMFILE ifpthr = *ifp;
+    int pos = ifpthr.pos;
+    ushort pix[16];
+
+#if defined( _OPENMP ) && defined( MYFILE_MMAP )
+    // only master thread will update the progress bar
+    ifpthr.plistener = nullptr;
+    #pragma omp master
+    {
+    ifpthr.plistener = ifp->plistener;
     }
-  }
-  free (data);
+    #pragma omp for schedule(dynamic,16) nowait
+#endif
+
+    for (int row = 0; row < height; row++) {
+        fseek(&ifpthr, pos + row * raw_width, SEEK_SET);
+        fread(data, 1, raw_width, &ifpthr);
+        uchar *dp = data;
+        for (int col = 0; col < raw_width - 30; dp += 16) {
+            int val = sget4(dp);
+            int max = 0x7ff & val;
+            int min = 0x7ff & val >> 11;
+            int imax = 0x0f & val >> 22;
+            int imin = 0x0f & val >> 26;
+            int bit = 30;
+            for (int i = 0; i < 16; i++) {
+                if (i == imax) {
+                    pix[i] = max;
+                } else if (i == imin) {
+                    pix[i] = min;
+                } else {
+                    int sh;
+                    for (sh = 0; sh < 4 && 0x80 << sh <= max - min; sh++)
+                        ;
+                    pix[i] = ((sget2(dp + (bit >> 3)) >> (bit & 7) & 0x7f) << sh) + min;
+                    pix[i] = std::min(pix[i], (ushort)0x7ff);
+                    bit += 7;
+                }
+            }
+            for (int i = 0; i < 16; i++, col += 2) {
+                RAW(row,col) = curve[pix[i] << 1]; // >> 2; RT: disabled shifting to avoid precision loss
+            }
+            col -= col & 1 ? 1:31;
+        }
+    }
+  delete [] data;
+}
   maximum = curve[0x7ff << 1]; // RT: fix maximum.
   maximum = 16300; // RT: conservative white level tested on various ARW2 cameras. This constant was set in 2013-12-17, may need re-evaluation in the future.
 }
@@ -3064,22 +3291,23 @@ void CLASS samsung_load_raw()
   int row, col, c, i, dir, op[4], len[4];
 
   order = 0x4949;
+  ph1_bithuff_t ph1_bithuff(this, ifp, order);
   for (row=0; row < raw_height; row++) {
     fseek (ifp, strip_offset+row*4, SEEK_SET);
     fseek (ifp, data_offset+get4(), SEEK_SET);
-    ph1_bits(-1);
+    hb_bits(-1);
     FORC4 len[c] = row < 2 ? 7:4;
     for (col=0; col < raw_width; col+=16) {
-      dir = ph1_bits(1);
-      FORC4 op[c] = ph1_bits(2);
+      dir = hb_bits(1);
+      FORC4 op[c] = hb_bits(2);
       FORC4 switch (op[c]) {
-	case 3: len[c] = ph1_bits(4);	break;
+	case 3: len[c] = hb_bits(4);	break;
 	case 2: len[c]--;		break;
 	case 1: len[c]++;
       }
       for (c=0; c < 16; c+=2) {
 	i = len[((c & 1) << 1) | (c >> 3)];
-        RAW(row,col+c) = ((signed) ph1_bits(i) << (32-i) >> (32-i)) +
+        RAW(row,col+c) = ((signed) hb_bits(i) << (32-i) >> (32-i)) +
 	  (dir ? RAW(row+(~c | -2),col+c) : col ? RAW(row,col+(c | -2)) : 128);
 	if (c == 14) c = -1;
       }
@@ -3121,27 +3349,28 @@ void CLASS samsung3_load_raw()
   fseek (ifp, 9, SEEK_CUR);
   opt = fgetc(ifp);
   init = (get2(),get2());
+  ph1_bithuff_t ph1_bithuff(this, ifp, order);
   for (row=0; row < raw_height; row++) {
     fseek (ifp, (data_offset-ftell(ifp)) & 15, SEEK_CUR);
-    ph1_bits(-1);
+    hb_bits(-1);
     mag = 0; pmode = 7;
     FORC(6) ((ushort *)lent)[c] = row < 2 ? 7:4;
     prow[ row & 1] = &RAW(row-1,1-((row & 1) << 1));	// green
     prow[~row & 1] = &RAW(row-2,0);			// red and blue
     for (tab=0; tab+15 < raw_width; tab+=16) {
       if (~opt & 4 && !(tab & 63)) {
-	i = ph1_bits(2);
-	mag = i < 3 ? mag-'2'+"204"[i] : ph1_bits(12);
+	i = hb_bits(2);
+	mag = i < 3 ? mag-'2'+"204"[i] : hb_bits(12);
       }
       if (opt & 2)
-	pmode = 7 - 4*ph1_bits(1);
-      else if (!ph1_bits(1))
-	pmode = ph1_bits(3);
-      if (opt & 1 || !ph1_bits(1)) {
-	FORC4 len[c] = ph1_bits(2);
+	pmode = 7 - 4*hb_bits(1);
+      else if (!hb_bits(1))
+	pmode = hb_bits(3);
+      if (opt & 1 || !hb_bits(1)) {
+	FORC4 len[c] = hb_bits(2);
 	FORC4 {
 	  i = ((row & 1) << 1 | (c & 1)) % 3;
-	  len[c] = len[c] < 3 ? lent[i][0]-'1'+"120"[len[c]] : ph1_bits(4);
+	  len[c] = len[c] < 3 ? lent[i][0]-'1'+"120"[len[c]] : hb_bits(4);
 	  lent[i][0] = lent[i][1];
 	  lent[i][1] = len[c];
 	}
@@ -3152,7 +3381,7 @@ void CLASS samsung3_load_raw()
 	     ? (tab ? RAW(row,tab-2+(col & 1)) : init)
 	     : (prow[col & 1][col-'4'+"0224468"[pmode]] +
 		prow[col & 1][col-'4'+"0244668"[pmode]] + 1) >> 1;
-	diff = ph1_bits (i = len[c >> 2]);
+	diff = hb_bits (i = len[c >> 2]);
 	if (diff >> (i-1)) diff -= 1 << i;
 	diff = diff * (mag*2+1) + mag;
 	RAW(row,col) = pred + diff;
@@ -3622,11 +3851,11 @@ float CLASS foveon_avg (short *pix, int range[2], float cfilt)
 short * CLASS foveon_make_curve (double max, double mul, double filt)
 {
   short *curve;
-  unsigned i, size;
+  size_t i, size;
   double x;
 
   if (!filt) filt = 0.8;
-  size = 4*M_PI*max / filt;
+  size = 4*rtengine::RT_PI*max / filt;
   if (size == UINT_MAX) size--;
   curve = (short *) calloc (size+1, sizeof *curve);
   merror (curve, "foveon_make_curve()");
@@ -4082,7 +4311,6 @@ void CLASS crop_masked_pixels()
       }
     }
   } else {
-
 #pragma omp parallel for
     for (int row=0; row < height; row++)
       for (int col=0; col < width; col++)
@@ -4506,6 +4734,7 @@ void CLASS colorcheck()
 //  free (fimg);
 //}
 
+/*
 void CLASS scale_colors()
 {
   unsigned bottom, right, size, row, col, ur, uc, i, x, y, c, sum[8];
@@ -4621,6 +4850,7 @@ skip_block: ;
   }
 }
 
+*/
 void CLASS pre_interpolate()
 {
   ushort (*img)[4];
@@ -5892,7 +6122,7 @@ int CLASS parse_tiff_ifd (int base)
 	break;
       case 33422:			/* CFAPattern */
 	if (filters == 9) {
-	  FORC(36) ((char *)xtrans)[c] = fgetc(ifp) & 3;
+	  FORC(36) ((int *)xtrans)[c] = fgetc(ifp) & 3;
 	  break;
 	}
       case 64777:			/* Kodak P-series */
@@ -6185,6 +6415,16 @@ guess_cfa_pc:
     free (buf);
   }
 
+  /* RT -- do not use CameraCalibration matrices for DNGs - see #4129 */
+  for (j=0; j < 4; j++) {
+      ab[j] = 1;
+      for (i=0; i < 4; i++) {
+          cc[0][j][i] = i == j;
+          cc[1][j][i] = i == j;
+      }
+  }
+  /* RT end */
+
   for (i=0; i < colors; i++)
     FORCC cc[cm_D65][i][c] *= ab[i];
   if (use_cm) {
@@ -6201,6 +6441,9 @@ guess_cfa_pc:
   }
   if (!use_cm)
     FORCC pre_mul[c] /= cc[cm_D65][c][c];
+
+  RT_from_adobe_dng_converter = !strncmp(software, "Adobe DNG Converter", 19);
+
   return 0;
 }
 
@@ -6264,6 +6507,7 @@ void CLASS apply_tiff()
       tile_width    = tiff_ifd[i].tile_width;
       tile_length   = tiff_ifd[i].tile_length;
       shutter       = tiff_ifd[i].shutter;
+      raw_size      = tiff_ifd[i].bytes;
       raw = i;
     }
   }
@@ -6311,6 +6555,17 @@ void CLASS apply_tiff()
 		   if (!strncmp(make,"OLYMPUS",7) &&
 			tiff_ifd[raw].bytes*7 > raw_width*raw_height)
 		     load_raw = &CLASS olympus_load_raw;
+                   // ------- RT -------
+                   if (!strncmp(make,"SONY",4) &&
+                       !strncmp(model,"ILCE-7RM3",9) &&
+                       tiff_samples == 4 &&
+                       tiff_ifd[raw].bytes == raw_width*raw_height*tiff_samples*2) {
+                       load_raw = &CLASS sony_arq_load_raw;
+                       colors = 3;
+                       is_raw = 4;
+                       filters = 0x94949494;
+                   }
+                   // ------------------
 	}
 	break;
       case 6:  case 7:  case 99:
@@ -6677,7 +6932,7 @@ void CLASS parse_sinar_ia()
 
 void CLASS parse_phase_one (int base)
 {
-  unsigned entries, tag, type, len, data, save, i, c;
+  unsigned entries, tag, len, data, save, i, c;
   float romm_cam[3][3];
   char *cp;
 
@@ -6690,7 +6945,7 @@ void CLASS parse_phase_one (int base)
   get4();
   while (entries--) {
     tag  = get4();
-    type = get4();
+    get4();
     len  = get4();
     data = get4();
     save = ftell(ifp);
@@ -8572,7 +8827,7 @@ void CLASS identify()
 	parse_fuji (i);
     }
     load_raw = &CLASS unpacked_load_raw;
-    fseek (ifp, 100+28*(shot_select > 0), SEEK_SET);
+    fseek (ifp, 100+28*(shot_select > 0 && shot_select < is_raw), SEEK_SET);
     parse_tiff (data_offset = get4());
     parse_tiff (thumb_offset+12);
 /*RT*/    exif_base = thumb_offset+12;
@@ -9000,6 +9255,10 @@ canon_a5:
       flip = 6;
     } else if (load_raw != &CLASS packed_load_raw)
       maximum = (is_raw == 2 && shot_select) ? 0x2f00 : 0x3e00;
+    if (!strncmp(model,"X-A10",5)) {
+        raw_width = 4912;
+        raw_height = 3278;
+    }
     top_margin = (raw_height - height) >> 2 << 1;
     left_margin = (raw_width - width ) >> 2 << 1;
     if (width == 2848 || width == 3664) filters = 0x16161616;
@@ -9014,7 +9273,7 @@ canon_a5:
     }
     if (fuji_layout) raw_width *= is_raw;
     if (filters == 9)
-      FORC(36) ((char *)xtrans)[c] =
+      FORC(36) ((int *)xtrans)[c] =
 	xtrans_abs[(c/6+top_margin) % 6][(c+left_margin) % 6];
   } else if (!strcmp(model,"KD-400Z")) {
     height = 1712;
@@ -9476,7 +9735,13 @@ bw:   colors = 1;
   }
 dng_skip:
   if ((use_camera_matrix & (use_camera_wb || dng_version))
-	&& cmatrix[0][0] > 0.125) {
+        && cmatrix[0][0] > 0.125
+        && !RT_from_adobe_dng_converter /* RT -- do not use the embedded
+                                         * matrices for DNGs coming from the
+                                         * Adobe DNG Converter, to ensure
+                                         * consistency of WB values between
+                                         * DNG-converted and original raw
+                                         * files. See #4129 */) {
     memcpy (rgb_cam, cmatrix, sizeof cmatrix);
     raw_color = 0;
   }
@@ -9486,13 +9751,13 @@ dng_skip:
 	adobe_coeff (make, model);
   if(!strncmp(make, "Samsung", 7) && !strncmp(model, "NX1",3))
 	adobe_coeff (make, model);
-  if(!strncmp(make, "Pentax", 6) && (!strncmp(model, "K10D",4) || !strncmp(model, "K-70",4)))
+  if((!strncmp(make, "Pentax", 6) && (!strncmp(model, "K10D",4) || !strncmp(model, "K-70",4) || !strncmp(model, "K-1",3) || !strncmp(model, "KP",2))) && filters != 0)
 	adobe_coeff (make, model);
   if(!strncmp(make, "Leica", 5) && !strncmp(model, "Q",1))
     adobe_coeff (make, model);
   if(!strncmp(make, "Leica", 5) && !strncmp(model, "SL",2))
     adobe_coeff (make, model);
-  if(!strncmp(make, "XIAOYI", 6) && !strncmp(model, "M1",2))
+  if((!strncmp(make, "XIAOYI", 6) || !strncmp(make, "YI", 2)) && !strncmp(model, "M1",2))
 	adobe_coeff (make, model);
   if (raw_color) adobe_coeff (make, model);
   if (load_raw == &CLASS kodak_radc_load_raw)
@@ -9520,8 +9785,8 @@ dng_skip:
   }
 #endif
 #ifdef NO_JPEG
-  if (load_raw == &CLASS kodak_jpeg_load_raw ||
-      load_raw == &CLASS lossy_dng_load_raw) {
+  if (load_raw == &CLASS kodak_jpeg_load_raw /* RT ||
+      load_raw == &CLASS lossy_dng_load_raw*/) {
     fprintf (stderr,_("%s: You must link dcraw with %s!!\n"),
 	ifname, "libjpeg");
     is_raw = 0;
@@ -9730,11 +9995,45 @@ static void copyFloatDataToInt(float * src, ushort * dst, size_t size, float max
     fprintf(stderr, "DNG Float: NaN data found in input file\n");
 }
 
+static int decompress(size_t srcLen, size_t dstLen, unsigned char *in, unsigned char *out) {
+    // At least in zlib 1.2.11 the uncompress function is not thread save while it is thread save in zlib 1.2.8
+    // This simple replacement is thread save. Used example code from https://zlib.net/zlib_how.html
+
+    int ret;
+    z_stream strm;
+    /* allocate inflate state */
+    strm.zalloc = Z_NULL;
+    strm.zfree = Z_NULL;
+    strm.opaque = Z_NULL;
+    strm.avail_in = 0;
+    strm.next_in = Z_NULL;
+    ret = inflateInit(&strm);
+    if (ret != Z_OK) {
+        return ret;
+    }
+    strm.avail_out = dstLen;
+    strm.next_out = out;
+    strm.avail_in = srcLen;
+    strm.next_in = in;
+    ret = inflate(&strm, Z_NO_FLUSH);
+    switch (ret) {
+    case Z_NEED_DICT:
+        ret = Z_DATA_ERROR;     /* and fall through */
+    case Z_DATA_ERROR:
+    case Z_MEM_ERROR:
+        (void)inflateEnd(&strm);
+        return ret;
+    }
+    /* clean up and return */
+    (void)inflateEnd(&strm);
+    return ret == Z_STREAM_END ? Z_OK : Z_DATA_ERROR;
+}
+
 void CLASS deflate_dng_load_raw() {
     float_raw_image = new float[raw_width * raw_height];
 
 #ifdef _OPENMP
-#pragma omp parallel for
+    #pragma omp parallel for
 #endif
     for (size_t i = 0; i < raw_width * raw_height; ++i)
       float_raw_image[i] = 0.0f;
@@ -9799,34 +10098,37 @@ void CLASS deflate_dng_load_raw() {
     Bytef * uBuffer = new Bytef[dstLen];
 
 #ifdef _OPENMP
-#pragma omp for collapse(2) nowait
+    #pragma omp for collapse(2) schedule(dynamic) nowait
 #endif
     for (size_t y = 0; y < raw_height; y += tile_length) {
-      for (size_t x = 0; x < raw_width; x += tile_width) {
-		size_t t = (y / tile_length) * tilesWide + (x / tile_width);
-#pragma omp critical
-{
-        fseek(ifp, tileOffsets[t], SEEK_SET);
-        fread(cBuffer, 1, tileBytes[t], ifp);
-}
-        int err = uncompress(uBuffer, &dstLen, cBuffer, tileBytes[t]);
-        if (err != Z_OK) {
-          fprintf(stderr, "DNG Deflate: Failed uncompressing tile %d, with error %d\n", (int)t, err);
-        } else if (ifd->sample_format == 3) {  // Floating point data
-          int bytesps = ifd->bps >> 3;
-          size_t thisTileLength = y + tile_length > raw_height ? raw_height - y : tile_length;
-          size_t thisTileWidth = x + tile_width > raw_width ? raw_width - x : tile_width;
-          for (size_t row = 0; row < thisTileLength; ++row) {
-            Bytef * src = uBuffer + row*tile_width*bytesps;
-            Bytef * dst = (Bytef *)&float_raw_image[(y+row)*raw_width + x];
-            if (predFactor)
-              decodeFPDeltaRow(src, dst, thisTileWidth, tile_width, bytesps, predFactor);
-            expandFloats(dst, thisTileWidth, bytesps);
-          }
-        } else {  // 32-bit Integer data
-          // TODO
+        for (size_t x = 0; x < raw_width; x += tile_width) {
+            size_t t = (y / tile_length) * tilesWide + (x / tile_width);
+#ifdef _OPENMP
+            #pragma omp critical
+#endif
+            {
+                fseek(ifp, tileOffsets[t], SEEK_SET);
+                fread(cBuffer, 1, tileBytes[t], ifp);
+            }
+            int err = decompress(tileBytes[t], dstLen, cBuffer, uBuffer);
+            if (err != Z_OK) {
+                fprintf(stderr, "DNG Deflate: Failed uncompressing tile %d, with error %d\n", (int)t, err);
+            } else if (ifd->sample_format == 3) {  // Floating point data
+                int bytesps = ifd->bps >> 3;
+                size_t thisTileLength = y + tile_length > raw_height ? raw_height - y : tile_length;
+                size_t thisTileWidth = x + tile_width > raw_width ? raw_width - x : tile_width;
+                for (size_t row = 0; row < thisTileLength; ++row) {
+                    Bytef * src = uBuffer + row*tile_width*bytesps;
+                    Bytef * dst = (Bytef *)&float_raw_image[(y+row)*raw_width + x];
+                    if (predFactor) {
+                        decodeFPDeltaRow(src, dst, thisTileWidth, tile_width, bytesps, predFactor);
+                    }
+                    expandFloats(dst, thisTileWidth, bytesps);
+                }
+            } else {  // 32-bit Integer data
+                // TODO
+            }
         }
-      }
     }
 
     delete [] cBuffer;
@@ -9863,6 +10165,8 @@ struct tiff_hdr {
   char desc[512], make[64], model[64], soft[32], date[20], artist[64];
 };
 
+#include "fujicompressed.cc"
+
 /* RT: Delete from here */
 /*RT*/#undef SQR
 /*RT*/#undef MAX
@@ -9871,3 +10175,6 @@ struct tiff_hdr {
 /*RT*/#undef LIM
 /*RT*/#undef ULIM
 /*RT*/#undef CLIP
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
