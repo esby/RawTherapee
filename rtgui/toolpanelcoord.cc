@@ -258,7 +258,7 @@ ToolPanelCoordinator::ToolPanelCoordinator (bool batch, bool benchmark) : ipc(nu
     env->registerPanel (rawPanel, flatfield);
 
     env->panelPushBack (coarse);
-    toolPanels.push_back(metadata);
+ //   env-toolPanels.push_back(metadata); //todo adapt that ?
 
   // new panels are registered diffently
     env->registerPanel (usefulPanel, Gtk::manage (new TTSaver()));
@@ -275,8 +275,6 @@ ToolPanelCoordinator::ToolPanelCoordinator (bool batch, bool benchmark) : ipc(nu
 
     //todo: this might not be necessary anymore
     coarse->setToolName("coarse");
-    exifpanel->setToolName("exifpanel");  
-    iptcpanel->setToolName("iptcpanel");  
 
     int panelIter = 0;
 
