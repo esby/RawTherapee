@@ -33,14 +33,11 @@ BatchToolPanelCoordinator::BatchToolPanelCoordinator (FilePanel* parent) : ToolP
         toolBar->setBatchMode ();
     }
 
-//todo: this might not be needed anymore
-    toolPanelNotebook->remove_page (*metadataPanel);
-
     env->setMetadataState(false);
 
-//todo: this might not be needed anymore
-    metadataPanel = nullptr;
-    toiM = nullptr;
+// probably not needed anymore
+//    metadata = nullptr;
+//    toiM = nullptr;
 
     for (size_t i = 0; i < env->countPanel(); i++) {
         env->getPanel(i)->setBatchMode (true);
