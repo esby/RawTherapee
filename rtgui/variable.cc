@@ -22,10 +22,10 @@ using namespace rtengine::procparams;
 
 
 // RtVariableStore dummy implementation
-int RtVariableStore::getAsInt() {}
-double RtVariableStore::getAsDouble(){}
-Glib::ustring RtVariableStore::getAsString(){}
-bool RtVariableStore::getAsBool(){}
+int RtVariableStore::getAsInt() { return -1;}
+double RtVariableStore::getAsDouble(){ return -1;}
+Glib::ustring RtVariableStore::getAsString(){return "";}
+bool RtVariableStore::getAsBool(){return false;}
 
 void RtVariableStore::setAsInt(int v){}
 void RtVariableStore::setAsDouble(double v){}
