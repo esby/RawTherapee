@@ -59,6 +59,7 @@ class Environment {
      int customVariableCount; // for creating unique custom variable
 
   public:
+     int envId;
      int state;
      int prevState;
      // this can be customized in theory - panel can be moved to bottom instead of top when moving left.
@@ -80,11 +81,12 @@ class Environment {
      void panelPushBack(ToolPanel* p);
      void setMetadataState(bool b) {metadataState = b;}
      bool getMetadataState() {return metadataState;}
+     int getId() { return envId; }
 
      MyExpander* getExpander(int pos);
-     int countExpander();
+     size_t countExpander();
      
-     int countPanel();
+     size_t countPanel();
      void setFavoritePanel(ToolVBox* p);
      void setTrashPanel(ToolVBox* p);
 

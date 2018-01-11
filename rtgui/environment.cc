@@ -22,8 +22,12 @@
 
 using namespace rtengine::procparams;
 
+int nbEnv = 0;
+
 Environment::Environment()
 {
+  envId = nbEnv;
+  nbEnv++;
   state = ENV_STATE_IN_FAV;
   prevState = ENV_STATE_IN_FAV;
   moveLeftToBottom = false; // moving left adds to top.
@@ -54,7 +58,7 @@ ToolPanel* Environment::getPanel(Glib::ustring name)
 ToolPanel* Environment::getPanel(int pos)
 {
   if ((pos > -1)
-  && (pos < toolPanels.size()))
+  && (pos < (signed int)(toolPanels.size())))
   {
     FoldableToolPanel* p = static_cast<FoldableToolPanel*> (toolPanels[pos]);
     return p;
@@ -78,7 +82,7 @@ std::vector<ToolPanel*>::iterator   Environment::panelEnd()
   return toolPanels.end();
 }
 
-int Environment::countPanel()
+size_t Environment::countPanel()
 {
   return toolPanels.size();
 }
@@ -93,7 +97,7 @@ MyExpander* Environment::getExpander(int pos)
   return expList.at(pos);
 }
 
-int Environment::countExpander()
+size_t Environment::countExpander()
 {
   return expList.size();
 }
@@ -125,7 +129,7 @@ void Environment::addVBox(ToolVBox* box)
 void Environment::reAttachPanel(ToolPanel *panel, ToolVBox* box, int pos)
 {
 //  printf("reattaching panel %s from %s to %s \n", panel->getToolName().c_str(), panel->getOriginalBox()->getBoxName().c_str(), box->getBoxName().c_str());
-  Gtk::Container* c = (Gtk::Container*)box;
+//  Gtk::Container* c = (Gtk::Container*)box;
   panel->getOriginalBox()->remPanel(panel);
   box->addPanel(panel, pos);
 }
