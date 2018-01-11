@@ -135,6 +135,17 @@ GThreadLock::~GThreadLock() {
 }
 */
 
+Glib::ustring getHtmlColor(Gdk::RGBA rgba)
+{
+  char* str = strdup(rgba.to_string().c_str());
+  unsigned int r, g, b;
+  sscanf(str, "rgb(%d,%d,%d)",&r,&g,&b);
+  char hexcol[8];
+  snprintf(hexcol, sizeof hexcol, "#%02x%02x%02x", r,g,b);
+  free(str);
+  return hexcol;
+}
+
 Glib::ustring escapeHtmlChars(const Glib::ustring &src)
 {
 
@@ -563,8 +574,8 @@ void MyExpander::init()
 ToolPanelAncestor*  MyExpander::getPanel() {
   return panel;
 };
-
-MyExpander::MyExpander(bool useEnabled, Gtk::Widget* titleWidget, ToolPanelAncestor* _panel) :
+//todo: check if ToolPanelAncestor should exist or not
+MyExpander::MyExpander(bool useEnabled, Gtk::Widget* titleWidget, ToolPanel* _panel) :
     enabled(false), inconsistent(false), flushEvent(false), expBox(nullptr),
     child(nullptr), headerWidget(nullptr), statusImage(nullptr),
     label(nullptr), useEnabled(useEnabled)
@@ -578,9 +589,6 @@ MyExpander::MyExpander(bool useEnabled, Gtk::Widget* titleWidget, ToolPanelAnces
     headerHBox = Gtk::manage( new Gtk::HBox());
     headerHBox->set_can_focus(false);
     setExpandAlignProperties(headerHBox, true, false, Gtk::ALIGN_FILL, Gtk::ALIGN_FILL);
-
-    buttonHBox = Gtk::manage( new Gtk::HBox());
-    buttonHBox->set_can_focus(false);
 
     buttonHBox = Gtk::manage( new Gtk::HBox());
     buttonHBox->set_can_focus(false);

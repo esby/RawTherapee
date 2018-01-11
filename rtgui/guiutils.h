@@ -40,6 +40,7 @@
 
 
 Glib::ustring escapeHtmlChars(const Glib::ustring &src);
+Glib::ustring getHtmlColor(Gdk::RGBA rgba);
 bool removeIfThere (Gtk::Container* cont, Gtk::Widget* w, bool increference = true);
 void thumbInterp (const unsigned char* src, int sw, int sh, unsigned char* dst, int dw, int dh);
 bool confirmOverwrite (Gtk::Window& parent, const std::string& filename);
@@ -286,9 +287,13 @@ public:
 
     /// Add a Gtk::Container for the content of the expander
     /// Warning: do not manually Show/Hide the widget, because this parameter is handled by the click on the Expander's title
-==== BASE ====
-    void add  (Gtk::Container& widget);
-==== BASE ====
+    void add  (Gtk::Container& widget, bool setChild = true);
+
+   Gtk::HBox* getTitleContainer() {return titleContainer; }
+   Gtk::HBox* getHeaderHBox() {return headerHBox; }
+   Gtk::HBox* getButtonHBox() {return buttonHBox; }
+
+    void updateVScrollbars(bool hide);
 };
 
 
