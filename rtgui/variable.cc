@@ -193,5 +193,8 @@ Glib::ustring RtVariable::toString()
 
   if (type == RT_VARIABLE_TYPE_BOOL)
  return getAsBool() ? "true" : "false";
+  return "";
 }
+
+
 
