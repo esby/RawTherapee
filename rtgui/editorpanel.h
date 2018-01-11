@@ -54,7 +54,7 @@ class EditorPanel final :
         public rtengine::HistogramListener
 {
 public:
-    explicit EditorPanel (FilePanel* filePanel = nullptr);
+    explicit EditorPanel (FilePanel* filePanel = nullptr, bool benchmark = false);
     ~EditorPanel ();
 
     void open (Thumbnail* tmb, rtengine::InitialImage* isrc);
@@ -141,6 +141,7 @@ public:
     bool saveImmediately (const Glib::ustring &filename, const SaveFormat &sf);
 
     Gtk::Paned* catalogPane;
+    void doDeployLate();
 
 private:
     void close ();

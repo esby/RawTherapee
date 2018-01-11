@@ -490,7 +490,7 @@ public:
 
 };
 
-EditorPanel::EditorPanel (FilePanel* filePanel)
+EditorPanel::EditorPanel (FilePanel* filePanel, bool benchmark)
     : catalogPane (nullptr), realized (false), tbBeforeLock (nullptr), iHistoryShow (nullptr), iHistoryHide (nullptr),
       iTopPanel_1_Show (nullptr), iTopPanel_1_Hide (nullptr), iRightPanel_1_Show (nullptr), iRightPanel_1_Hide (nullptr),
       iBeforeLockON (nullptr), iBeforeLockOFF (nullptr), previewHandler (nullptr), beforePreviewHandler (nullptr),
@@ -508,7 +508,7 @@ EditorPanel::EditorPanel (FilePanel* filePanel)
     firstProcessingDone = false;
 
     // construct toolpanelcoordinator
-    tpc = new ToolPanelCoordinator ();
+    tpc = new ToolPanelCoordinator (false, benchmark);
 
     // build GUI
 
@@ -949,7 +949,7 @@ void EditorPanel::doDeployLate()
   tpc->doDeployLate();
 }
 
-void EditorPanel::leftPaneButtonReleased (GdkEventButton *event)
+void EditorPanel::leftPaneButtonReleased(GdkEventButton *event)
 {
     if (event->button == 1) {
         // Button 1 released : it's a resize
@@ -1089,6 +1089,12 @@ void EditorPanel::open (Thumbnail* tmb, rtengine::InitialImage* isrc)
     }
 
     history->resetSnapShotNumber();
+    int pp3version = tmb->getpp3version();
+    printf("transmitting pp3_version via env = %i \n", pp3version);
+    tpc->getEnv()->setVar("pp3version", pp3version );
+    tpc->doReact(FakeEvExifTransmitted);
+    tpc->doReact(FakeEvPP3Transmitted);
+
 }
 
 void EditorPanel::close ()
@@ -1174,32 +1180,20 @@ void EditorPanel::procParamsChanged (rtengine::procparams::ProcParams* params, r
 // we avoid transmitting all events to the structure.
 // ideally we should maintain a list of event monitored and check against it.
 //todo
-  if (ev == rtengine::EvPhotoLoaded)
-    tpc->doReact(FakeEvPhotoLoaded);
-  if (ev == rtengine::EvProfileChanged)  
-    tpc->doReact(FakeEvProfileChanged);
+    if (ev == rtengine::EvPhotoLoaded)
+      tpc->doReact(FakeEvPhotoLoaded);
+    if (ev == rtengine::EvProfileChanged)
+      tpc->doReact(FakeEvProfileChanged);
 
-struct spsparams {
-    bool inProcessing;
-    EditorPanelIdleHelper* epih;
-};
+    rtengine::eSensorType sensorType = isrc->getImageSource()->getSensorType();
 
-int setProgressStateUIThread (void* data)
-{
-
-    spsparams* p = static_cast<spsparams*>(data);
-
-    if (p->epih->destroyed) {
-        if (p->epih->pending == 1) {
-            delete p->epih;
-        } else {
-            p->epih->pending--;
-        }
-
-        delete p;
-
-        return 0;
+    selectedFrame = 0;
+    if (sensorType == rtengine::ST_BAYER) {
+        selectedFrame = params->raw.bayersensor.imageNum;
+    //} else if (sensorType == rtengine::ST_FUJI_XTRANS) {
+    //    selectedFrame = params->raw.xtranssensor.imageNum;
     }
+    selectedFrame = rtengine::LIM<int>(selectedFrame, 0, isrc->getImageSource()->getMetaData()->getFrameCount() - 1);
 
     info_toggled();
 }
@@ -1399,9 +1393,9 @@ void EditorPanel::info_toggled ()
         env->setVar("Height", ipc->getFullHeight());
  
         printf("exif transmitted for variable \n");
-        tpc->doReact(FakeEvExifTransmitted);
+        // we will react later 
 
-        infoString2 = Glib::ustring::compose ("<span size=\"small\">f/</span><span size=\"large\">%1</span>  <span size=\"large\">%2</span><span size=\"small\">s</span>  <span size=\"small\">%3</span><span size=\"large\">%4</span>  <span size=\"large\">%5</span><span size=\"small\">mm</span>",
+        infoString = Glib::ustring::compose ("<span size=\"small\">f/</span><span size=\"large\">%1</span>  <span size=\"large\">%2</span><span size=\"small\">s</span>  <span size=\"small\">%3</span><span size=\"large\">%4</span>  <span size=\"large\">%5</span><span size=\"small\">mm</span>",
                                               Glib::ustring(idata->apertureToString(idata->getFNumber())),
                                               Glib::ustring(idata->shutterToString(idata->getShutterSpeed())),
                                               M("QINFO_ISO"), idata->getISOSpeed(),
