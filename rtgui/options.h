@@ -147,6 +147,8 @@ public:
     bool browserDirPanelOpened;
     bool editorFilmStripOpened;
     int historyPanelWidth;
+    Glib::ustring font;
+    Glib::ustring colorPickerFont;
     int windowX;
     int windowY;
     int windowWidth;
