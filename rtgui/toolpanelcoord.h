@@ -246,7 +246,7 @@ public:
     CoarsePanel* coarse;
     Gtk::Notebook* toolPanelNotebook;
 
-    ToolPanelCoordinator (bool batch = false);
+    ToolPanelCoordinator (bool batch = false, bool benchmark=false);
     virtual ~ToolPanelCoordinator ();
 
     bool getChangedState                ()
@@ -352,9 +352,9 @@ public:
     void toolSelected (ToolMode tool);
     void editModeSwitchedOff ();
 
-    void setEditProvider(EditDataProvider *provider);
+    void setEditProvider (EditDataProvider *provider);
 
-    void on_notebook_switch_page(GtkNotebookPage* page, guint page_num);
+    void on_notebook_switch_page(Gtk::Widget* page, guint page_num);
 };
 
 #endif

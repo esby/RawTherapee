@@ -28,10 +28,10 @@
 
 using namespace rtengine::procparams;
 
-void ToolPanelCoordinator::on_notebook_switch_page(GtkNotebookPage* page, guint page_num){
+void ToolPanelCoordinator::on_notebook_switch_page(Gtk::Widget* /* page */, guint page_num){
 
-    if (env->disableSwitchPageReaction)
-      return;
+  if (!env->disableSwitchPageReaction)
+    {
 
     env->prevState = env->state;
     if (options.rtSettings.verbose)     
@@ -100,13 +100,14 @@ void ToolPanelCoordinator::on_notebook_switch_page(GtkNotebookPage* page, guint 
     // updating the label info (currently the position number)
     for (size_t i=0; i<env->countPanel(); i++)
        env->getPanel(i)->updateLabelInfo();
-
+  }
 }
 
-
-ToolPanelCoordinator::ToolPanelCoordinator () : ipc(nullptr)
+ToolPanelCoordinator::ToolPanelCoordinator (bool batch, bool benchmark) : ipc(nullptr), editDataProvider(nullptr)
 {
     env =  new Environment();
+    if (benchmark)
+      env->setVar("benchmark", 1);
 
     favoritePanel   = Gtk::manage (new ToolVBox ());
 
@@ -148,7 +149,7 @@ ToolPanelCoordinator::ToolPanelCoordinator () : ipc(nullptr)
     coarse              = Gtk::manage (new CoarsePanel ());
     toneCurve           = Gtk::manage (new ToneCurve ());
     shadowshighlights   = Gtk::manage (new ShadowsHighlights ());
-    localContrast       = Gtk::manage(new LocalContrast());
+    localContrast       = Gtk::manage (new LocalContrast());
     impulsedenoise      = Gtk::manage (new ImpulseDenoise ());
     defringe            = Gtk::manage (new Defringe ());
     dirpyrdenoise       = Gtk::manage (new DirPyrDenoise ());
@@ -209,7 +210,7 @@ ToolPanelCoordinator::ToolPanelCoordinator () : ipc(nullptr)
     env->registerPanel (colorPanel, whitebalance);
     env->registerPanel (exposurePanel, toneCurve);
     env->registerPanel (colorPanel, vibrance);
-    env->registerPanel (colorPanel, chmixer); 
+    env->registerPanel (colorPanel, chmixer); // TODO: Add "Enabled"?
     env->registerPanel (colorPanel, blackwhite);
     env->registerPanel (exposurePanel, localContrast);
     env->registerPanel (exposurePanel, shadowshighlights);
@@ -218,14 +219,14 @@ ToolPanelCoordinator::ToolPanelCoordinator () : ipc(nullptr)
     env->registerPanel (detailsPanel, sharpenMicro);
     env->registerPanel (colorPanel, hsvequalizer);
     env->registerPanel (colorPanel, filmSimulation);
-    env->registerPanel (colorPanel, rgbcurves); // 
+    env->registerPanel (colorPanel, rgbcurves); // << TODO: Add "Enabled"?
     env->registerPanel (colorPanel, colortoning);
     env->registerPanel (exposurePanel, epd);
     env->registerPanel (exposurePanel, fattal);
-    env->registerPanel (exposurePanel, retinex);
+    env->registerPanel (exposurePanel, retinex); 
     env->registerPanel (exposurePanel, pcvignette);
     env->registerPanel (exposurePanel, gradient);
-    env->registerPanel (exposurePanel, lcurve); // 
+    env->registerPanel (exposurePanel, lcurve); // << TODO: Add "Enabled" ???
     env->registerPanel (exposurePanel, colorappearance);
     env->registerPanel (detailsPanel, impulsedenoise);
     env->registerPanel (detailsPanel, dirpyrdenoise);
@@ -256,9 +257,8 @@ ToolPanelCoordinator::ToolPanelCoordinator () : ipc(nullptr)
     env->registerPanel (rawPanel, darkframe);
     env->registerPanel (rawPanel, flatfield);
 
-    toolPanels.push_back (coarse);
+    env->panelPushBack (coarse);
     toolPanels.push_back(metadata);
-
 
   // new panels are registered diffently
     env->registerPanel (usefulPanel, Gtk::manage (new TTSaver()));
@@ -269,19 +269,16 @@ ToolPanelCoordinator::ToolPanelCoordinator () : ipc(nullptr)
     env->registerPanel (usefulPanel, Gtk::manage (new TTTweaker()));
     env->registerPanel (usefulPanel, Gtk::manage (new TTVarDisplayer()));
 
-    env->panelPushBack (coarse);
-    env->panelPushBack (exifpanel);
-    env->panelPushBack (iptcpanel);
- 
+    toolPanelNotebook = new Gtk::Notebook ();
+    toolPanelNotebook->set_name ("ToolPanelNotebook");
+    env->setToolPanelNotebook(toolPanelNotebook);
+
     //todo: this might not be necessary anymore
     coarse->setToolName("coarse");
     exifpanel->setToolName("exifpanel");  
     iptcpanel->setToolName("iptcpanel");  
 
-    metadataPanel = Gtk::manage (new Gtk::Notebook ());
-    toolPanelNotebook = new Gtk::Notebook ();
-    toolPanelNotebook->set_name ("ToolPanelNotebook");
-
+    int panelIter = 0;
 
     favoritePanelSW    = Gtk::manage (new MyScrolledWindow ()); 
     exposurePanelSW    = Gtk::manage (new MyScrolledWindow ());
@@ -294,6 +291,7 @@ ToolPanelCoordinator::ToolPanelCoordinator () : ipc(nullptr)
     usefulPanelSW      = Gtk::manage (new MyScrolledWindow ());
     updateVScrollbars (options.hideTPVScrollbar);
 
+    printf("before panel loading\n");
     // load panel endings
     for (int i=0; i< NB_PANEL; i++) {
         vbPanelEnd[i] = Gtk::manage (new Gtk::VBox ());
@@ -303,8 +301,7 @@ ToolPanelCoordinator::ToolPanelCoordinator () : ipc(nullptr)
         vbPanelEnd[i]->show_all();
         hsPanelEnd[i] = Gtk::manage(new Gtk::HSeparator);
     }
-
-    int panelIter = 0;
+    printf("after panel loading\n");
 
     handlePanel(favoritePanel, favoritePanelSW, panelIter++, 4);
     handlePanel(exposurePanel, exposurePanelSW, panelIter++, 4);
@@ -316,6 +313,7 @@ ToolPanelCoordinator::ToolPanelCoordinator () : ipc(nullptr)
     handlePanel(usefulPanel, usefulPanelSW, panelIter++, 4);
     handlePanel(trashPanel, trashPanelSW, panelIter++, 4);
 
+    printf("after panel handling\n");
 
     for (int i=PANEL_SWITCHABLE_START; i< PANEL_SWITCHABLE_START + NB_PANEL_SWITCHABLE; i++) { //last panel is trash thus ignored
       int modOp  = NB_PANEL_SWITCHABLE ; //-2 because we ignore first panel and trash panel
@@ -379,7 +377,7 @@ ToolPanelCoordinator::ToolPanelCoordinator () : ipc(nullptr)
     toolPanelNotebook->append_page (*waveletPanelSW,   *toiW);
     toolPanelNotebook->append_page (*transformPanelSW, *toiT);
     toolPanelNotebook->append_page (*rawPanelSW,       *toiR);
-    toolPanelNotebook->append_page (*metadataPanel,    *toiM);
+    toolPanelNotebook->append_page (*metadata,         *toiM);
     toolPanelNotebook->append_page (*usefulPanelSW,    *toiU);
     toolPanelNotebook->append_page (*trashPanelSW,     *toiP);
 
@@ -388,7 +386,9 @@ ToolPanelCoordinator::ToolPanelCoordinator () : ipc(nullptr)
     toolPanelNotebook->set_scrollable ();
     toolPanelNotebook->show_all ();
 
+    printf("before deploy\n");
     doDeploy();
+    printf("after deploy\n");
 
     for (size_t i=0; i<env->countPanel(); i++)
       env->getPanel(i)->setListener (this);
@@ -406,16 +406,6 @@ ToolPanelCoordinator::ToolPanelCoordinator () : ipc(nullptr)
     toolBar->setToolBarListener(this);
 
     toolPanelNotebook->signal_switch_page().connect (sigc::mem_fun(*this,  &ToolPanelCoordinator::on_notebook_switch_page) );
-}
-
-void ToolPanelCoordinator::addPanel (Gtk::Box* where, FoldableToolPanel* panel, int level)
-{
-    panel->setParent (where);
-    panel->setLevel (level);
-
-    expList.push_back (panel->getExpander());
-    where->pack_start (*panel->getExpander(), false, false);
-    toolPanels.push_back (panel);
 }
 
 void ToolPanelCoordinator::doDeploy()
@@ -439,6 +429,28 @@ void ToolPanelCoordinator::doDeployLate()
       env->getPanel(i)->deployLate();
     }
     env->disableSwitchPageReaction = false;
+
+}
+
+void ToolPanelCoordinator::doReact(FakeProcEvent ev)
+{
+    if( options.rtSettings.verbose ) 
+      printf("enabling panel reac for envId=%i\n", env->getId());
+    for (size_t i=0; i<env->countPanel(); i++)
+    {
+//      printf("panel nb=%i \n",  i);
+      env->getPanel(i)->react(ev);
+    }
+}
+
+void ToolPanelCoordinator::handlePanel(Gtk::VBox* vbox, Gtk::ScrolledWindow* panelSW, int panelIterator, int spacing) {
+   panelSW->add (*vbox);
+   vbox->pack_start (*hsPanelEnd[panelIterator], Gtk::PACK_SHRINK,0);
+   vbox->pack_start (*vbPanelEnd[panelIterator], Gtk::PACK_SHRINK,spacing);
+   vbPanel[panelIterator] = vbox;
+   ToolVBox* box =  (ToolVBox*)vbox;
+   box->setParent(toolPanelNotebook);
+   box->setParentSW(panelSW);
 }
 
 ToolPanelCoordinator::~ToolPanelCoordinator ()
@@ -446,6 +458,7 @@ ToolPanelCoordinator::~ToolPanelCoordinator ()
 
     closeImage ();
 
+    env->disableSwitchPageReaction = true;
     delete toolPanelNotebook;
     delete toolBar;
 }
@@ -604,7 +617,7 @@ void ToolPanelCoordinator::profileChange  (const PartialProfile *nparams, rtengi
     // updating the GUI with updated values
     for (unsigned int i=0; i<env->countPanel(); i++) {
         env->getPanel(i)->read (params);
-        if (event==rtengine::EvPhotoLoaded || event==rtengine::EvProfileChanged) {
+        if (event == rtengine::EvPhotoLoaded || event == rtengine::EvProfileChanged) {
             env->getPanel(i)->autoOpenCurve();
         }
     }
@@ -729,22 +742,22 @@ void ToolPanelCoordinator::updateToolState()
 
 void ToolPanelCoordinator::readOptions ()
 {
-
     crop->readOptions ();
-
-/*
-// this does not exist anymore in the new code
-for (size_t i=0; i<options.tpOpen.size(); i++)
-        if (i<env->countExpander())
-            env->getExpander(i)->set_expanded (options.tpOpen.at(i));
-}
-*/
 }
 
 void ToolPanelCoordinator::writeOptions ()
 {
-
     crop->writeOptions ();
+}
+
+
+void ToolPanelCoordinator::writeToolExpandedStatus (std::vector<int> &tpOpen)
+{
+    tpOpen.clear ();
+
+    for (size_t i=0; i<env->countExpander(); i++) {
+        options.tpOpen.push_back (env->getExpander(i)->get_expanded ());
+    }
 
     wavelet->writeOptions (tpOpen);
     retinex->writeOptions (tpOpen);
@@ -963,45 +976,48 @@ bool ToolPanelCoordinator::handleShortcutKey (GdkEventKey* event)
 
     if (alt) {
         switch(event->keyval) {
-        case GDK_f:
+        case GDK_KEY_f:
             toolPanelNotebook->set_current_page (toolPanelNotebook->page_num(*favoritePanelSW));
             return true;
-        case GDK_e:
+
+        case GDK_KEY_e:
             toolPanelNotebook->set_current_page (toolPanelNotebook->page_num(*exposurePanelSW));
             return true;
 
-        case GDK_d:
+        case GDK_KEY_d:
             toolPanelNotebook->set_current_page (toolPanelNotebook->page_num(*detailsPanelSW));
             return true;
 
-        case GDK_c:
+        case GDK_KEY_c:
             toolPanelNotebook->set_current_page (toolPanelNotebook->page_num(*colorPanelSW));
             return true;
 
-        case GDK_t:
+        case GDK_KEY_t:
             toolPanelNotebook->set_current_page (toolPanelNotebook->page_num(*transformPanelSW));
             return true;
 
-        case GDK_r:
+        case GDK_KEY_r:
             toolPanelNotebook->set_current_page (toolPanelNotebook->page_num(*rawPanelSW));
             return true;
 
-        case GDK_w:
+        case GDK_KEY_w:
             toolPanelNotebook->set_current_page (toolPanelNotebook->page_num(*waveletPanelSW));
             return true;
 
-        case GDK_p:
+        case GDK_KEY_p:
             toolPanelNotebook->set_current_page (toolPanelNotebook->page_num(*trashPanelSW));
             return true;
 
-        case GDK_u:
+        case GDK_KEY_u:
             toolPanelNotebook->set_current_page (toolPanelNotebook->page_num(*usefulPanelSW));
             return true;
 
-        case GDK_m:
-            if (metadataPanel) {
-                toolPanelNotebook->set_current_page (toolPanelNotebook->page_num(*metadataPanel));
+
+        case GDK_KEY_m:
+            if (metadata) {
+                toolPanelNotebook->set_current_page (toolPanelNotebook->page_num(*metadata));
                 return true;
+            }
         }
     }
 
@@ -1021,6 +1037,11 @@ void ToolPanelCoordinator::updateVScrollbars (bool hide)
     waveletPanelSW->set_policy      (Gtk::POLICY_AUTOMATIC, policy);
     trashPanelSW->set_policy        (Gtk::POLICY_AUTOMATIC, policy);
     usefulPanelSW->set_policy       (Gtk::POLICY_AUTOMATIC, policy);
+
+    for (auto currExp : expList) {
+        currExp->updateVScrollbars (hide);
+    }
+
 }
 
 void ToolPanelCoordinator::updateTabsHeader (bool useIcons)
@@ -1028,12 +1049,12 @@ void ToolPanelCoordinator::updateTabsHeader (bool useIcons)
     GThreadLock lock; // All GUI acces from idle_add callbacks or separate thread HAVE to be protected
     TOITypes type = useIcons ? TOI_ICON : TOI_TEXT;
 
+    toiF->switchTo(type);
     toiE->switchTo(type);
     toiD->switchTo(type);
     toiC->switchTo(type);
     toiT->switchTo(type);
     toiR->switchTo(type);
-    toiF->switchTo(type);
     toiP->switchTo(type);
     toiU->switchTo(type);
 
