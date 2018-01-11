@@ -82,7 +82,7 @@ void ToolPanel::updateLabelInfo() {
 void ToolPanel::moveUp () {
   int pos;
   int npos;
-  int count;
+ // int count;
   ToolVBox* box;
 
   if (env->state == ENV_STATE_IN_FAV) {
@@ -94,7 +94,7 @@ void ToolPanel::moveUp () {
   }
   pos = box->getPos(this);
   npos = pos-1;
-  count = box->size();
+// count = box->size();
 
   if (npos > -1){
 //     printf("- realized.\n");
@@ -144,7 +144,7 @@ void ToolPanel::moveLeft() {
 
     //adjusting the scroll to the end     
     Gtk::ScrolledWindow* parentSw = (Gtk::ScrolledWindow*) (nbox->getParentSW());
-    Gtk::Adjustment* adj = parentSw->get_vadjustment();
+    Glib::RefPtr<Gtk::Adjustment> adj =  parentSw->get_vadjustment();
     if (!env->moveLeftToBottom)
       adj->set_value(adj->get_lower());
     else
@@ -186,7 +186,7 @@ void ToolPanel::moveRight() {
  
    //adjusting the scroll to the top     
     Gtk::ScrolledWindow* parentSw = (Gtk::ScrolledWindow*) (nbox->getParentSW());
-    Gtk::Adjustment* adj = parentSw->get_vadjustment();
+    Glib::RefPtr<Gtk::Adjustment> adj = parentSw->get_vadjustment();
     if (env->moveRightToTop)
       adj->set_value(adj->get_lower());
     else 
@@ -316,457 +316,7 @@ void ToolPanel::favorite_others_tabs_switch(int dc)
 
     int posOri = getPosOri();
     int posFav = getPosFav();
-    int posTra = getPosTra();
-    //    printf("dc=%i\n",dc);
-
-    // handling all the possible cases
-    switch(dc)
-    {
-      case 11:                   // fav to fav
-        //we do nothing
-        break;
-      case 12:                   // fav to normal
-        if (favoriteButton->get_active())
-        {
-          if (trashButton->get_active())
-          {
-            moveToTrash(posFav,posOri);
-          }
-          else
-          {
-            moveToOriginal(posFav,posOri);
-          }
-        }
-        else
-        {
-          if (trashButton->get_active())
-          {
-            moveToTrash(posFav,posOri);
-          }
-          else
-          {
-            moveToOriginal(posFav,posOri);
-          }
-        }
-        break;
-      case 13:                   // fav to trash
-        if (favoriteButton->get_active())
-        {
-          if(trashButton->get_active())
-          {
-            moveToTrash(posFav,posOri);
-          }
-          else
-          {
-            moveToOriginal(posFav,posOri);
-          }
-
-        }
-        else
-        {
-          if(trashButton->get_active())
-          {
-            moveToTrash(posFav,posOri);
-          }
-          else
-          {
-            moveToOriginal(posFav,posOri);
-          }
-        }
-        break;
-      case 21:                   // normal to favorite
-        if (favoriteButton->get_active())
-        {
-          moveToFavorite(posFav,posOri);
-        }
-        else
-        {
-          moveToOriginal(posFav, posOri);
-        }
-        break;
-
-      case 22:                   // normal to normal
-        if (trashButton->get_active())
-        {
-          moveToTrash(posFav,posOri);
-        }
-        else
-        {
-          moveToOriginal(posFav,posOri);
-        }
-        break;
-
-      case 23:                   // normal -> trash
-        if (trashButton->get_active())
-        {
-          moveToTrash(posFav,posOri);
-        }
-        else                     // resume check here
-        {
-          moveToOriginal(posFav, posOri);
-        }
-        break;
-
-      case 31:                   // trash -> favorite
-        if (trashButton->get_active())
-        {
-          if (favoriteButton->get_active())
-          {
-            moveToFavorite(posFav,posOri);
-          }
-          else
-          {
-            moveToOriginal(posFav,posOri);
-          }
-        }
-        else                     // not trash
-        {
-          if (favoriteButton->get_active())
-          {
-            moveToFavorite(posFav,posOri);
-          }
-          else
-          {
-            moveToOriginal(posFav,posOri);
-          }
-        }
-        break;
-
-      case 32:                   // trash -> normal
-        if (!trashButton->get_active())
-        {
-          moveToOriginal(posFav,posOri);
-        }
-        break;
-
-      case 33:                   // trash -> trash - nothing to be done
-        break;
-    }
-  }
-}
-
-Glib::ustring IntToString(int iVal)
-{
-    std::ostringstream ssIn;
-    ssIn << iVal;
-    Glib::ustring strOut = ssIn.str();
-    return strOut;
-}
-
-Glib::ustring ToolPanel::getThemeInfo() {
-  Glib::ustring res;
-  res = getToolName();
-  res += "|" + originalBox->getBoxName();
-  res += "|" + IntToString(originalBox->getPos(this));
-  res += "=" ;
-  if (favoriteButton->get_active())
-     res += "F" + IntToString(favoriteBox->getPos(this));
-  else 
-  if (trashButton->get_active())
-     res += "T";
-  else
-     res += "N";
-
-  return res;
-}
-
-
-
-void ToolPanel::initVBox(ToolVBox* _originalBox, ToolVBox* _favoriteBox, ToolVBox* _trashBox, Environment* _env){
-//     printf("initVBox for name=%s \n", getToolName().c_str());
-
-     env = _env;
-     originalDummy = Gtk::manage (new DummyToolPanel("normal_PosSaver_of_" + this->getToolName(), env));
-     favoriteDummy = Gtk::manage (new DummyToolPanel("favorite_PosSaver_of_" + this->getToolName(), env));
-
-     originalBox = _originalBox;
-     favoriteBox = _favoriteBox;
-     trashBox = _trashBox;
-
-
-//     printf("name=%s  ", getToolName().c_str());
-//     printf("positionOriginal=%i\n", originalBox->getPos(this));
-     updateLabelInfo();
-
-}
-
-void ToolPanel::updateLabelInfo() {
- if ((this->getExpander() != nullptr)
-  && ((!this->canBeIgnored()))) {
-
-//    printf("toolName=%s \n",this->getToolName().c_str());
-
-    int pos = originalBox->getPos(this);
-
-    if (env->state == ENV_STATE_IN_FAV ) // favorite panel is visible
-         pos = favoriteBox->getPos(this);
-
-   if (env->state == ENV_STATE_IN_TRASH ) // favorite panel is visible
-         pos = trashBox->getPos(this);
-
-    char buffer[50];
-
-/*
-    int buttonChecked = 2;
-    if (enabledButtonRef!=nullptr){
-      buttonChecked = 0;
-      if (enabledButtonRef->get_active()) 
-         buttonChecked = 1;
-      }
-
-    if (buttonChecked==2)
-      sprintf(buffer, "%i [*]",pos);
-    else
-    if (buttonChecked==1)
-      sprintf(buffer, "%i [✓]",pos);
-    else
-      sprintf(buffer, "%i [ ]",pos);
-*/
-    sprintf(buffer, "<tt>%2i</tt>", pos);
-    this->labelInfo->set_markup(buffer); 
-    this->labelInfoNotifier->activate();
-  }
-
-}
-
-void ToolPanel::moveUp () {
-  int pos;
-  int npos;
-  int count;
-  ToolVBox* box;
-
-  if (env->state == ENV_STATE_IN_FAV) {
-//     printf("moveTop favorite - ");
-     box = favoriteBox;
-  }else {
-//     printf("moveTop nopefav  - ");
-     box = originalBox;
-  }
-  pos = box->getPos(this);
-  npos = pos-1;
-  count = box->size();
-
-  if (npos > -1){
-//     printf("- realized.\n");
-     box->reorder_child(*getExpander(), npos); 
-     updateLabelInfo();
-     box->getPanel(pos)->updateLabelInfo(); // since we swapped it's pos and not npos
-  }//else  printf("- canceled.\n");
-}
-
-void ToolPanel::moveDown () { 
-  int pos;
-  int npos;
-  int count;
-  ToolVBox* box;
-
-  if (env->state == ENV_STATE_IN_FAV) {
-//     printf("moveDown favorite - ");
-     box = favoriteBox;
-  }else {
-//     printf("moveDown nopefav   - ");
-     box = originalBox;
-  }
-  pos = box->getPos(this);
-  npos = pos+1;
-  count = box->size();
-
-  if (npos < count-2){ // since there are two elements at the end...
-//     printf("- realized.\n");
-     box->reorder_child(*getExpander(), npos);     
-     updateLabelInfo();
-     box->getPanel(pos)->updateLabelInfo(); // since we swapped it's pos and not npos
-  }//else  printf("- canceled.\n");
-
-}
-
-void ToolPanel::moveLeft() {
-  ToolVBox* box =  originalBox;
-  ToolVBox* nbox = (ToolVBox*) originalBox->getPrevBox();
-
-  if (env->state == ENV_STATE_IN_NORM)
-  {
-//    printf("Moving %s from %s to %s \n", this->getToolName().c_str(), box->getBoxName().c_str(), nbox->getBoxName().c_str());
-
-    //getting the page number where the object will be moved 
-    Gtk::Notebook* notebook = (Gtk::Notebook*)nbox->getParent();
-    int page_num = notebook->page_num(*nbox->getParentSW());
-
-    //adjusting the scroll to the end     
-    Gtk::ScrolledWindow* parentSw = (Gtk::ScrolledWindow*) (nbox->getParentSW());
-    Gtk::Adjustment* adj = parentSw->get_vadjustment();
-    if (!env->moveLeftToBottom)
-      adj->set_value(adj->get_lower());
-    else
-      adj->set_value(adj->get_upper());
-
-    box->remove(*this->getExpander());
-    nbox->pack_start(*this->getExpander(), false,false);
-   if (!env->moveLeftToBottom)
-       nbox->reorder_child(*this->getExpander(), 0);             
-    else
-      nbox->reorder_child(*this->getExpander(), nbox->size()-1);
-
-//    printf("page %i \n" , page_num);
-
-    // the original box is changed
-    this->originalBox = nbox;
-    // updating panel infos
-    int pos = nbox->getPos(this);
-    nbox->getPanel(pos)->updateLabelInfo(); 
-    notebook->set_current_page (page_num);
-  }
-}
-
-
-//  moveLeftToBottom 
-//       moveRightToTop 
-
-void ToolPanel::moveRight() {
-  ToolVBox* box =  originalBox;
-  ToolVBox* nbox = (ToolVBox*) originalBox->getNextBox();
-
-  if (env->state == ENV_STATE_IN_NORM)
-  {
- //   printf("Moving %s from %s to %s \n", this->getToolName().c_str(), box->getBoxName().c_str(), nbox->getBoxName().c_str());
-
-    //getting the page number where the object will be moved 
-    Gtk::Notebook* notebook = (Gtk::Notebook*) nbox->getParent();
-    int page_num = notebook->page_num(*nbox->getParentSW());
- 
-   //adjusting the scroll to the top     
-    Gtk::ScrolledWindow* parentSw = (Gtk::ScrolledWindow*) (nbox->getParentSW());
-    Gtk::Adjustment* adj = parentSw->get_vadjustment();
-    if (env->moveRightToTop)
-      adj->set_value(adj->get_lower());
-    else 
-      adj->set_value(adj->get_upper());
-
-    box->remove(*this->getExpander());
-    nbox->pack_start(*this->getExpander(), false,false);
-    if (env->moveRightToTop)
-       nbox->reorder_child(*this->getExpander(), 0);   
-    else
-      nbox->reorder_child(*this->getExpander(), nbox->size()-1);
-      
-
-//    printf("page %i \n" , page_num);
-
-    // the original box is changed
-    this->originalBox = nbox;
-  // updating panel infos
-    int pos = nbox->getPos(this);
-    nbox->getPanel(pos)->updateLabelInfo();
-    notebook->set_current_page (page_num);
-
-  }
-}
-
-void ToolPanel::on_toggle_button_favorite() 
-{
-
-}
-
-void ToolPanel::on_toggle_button_trash() {
-
-}
-
-
-void ToolPanel::cleanBox() {
-  location = -1;
-  favoriteBox->remPanel(favoriteDummy);
-  originalBox->remPanel(originalDummy);
-  favoriteBox->remPanel(this);
-  originalBox->remPanel(this);
-  trashBox->remPanel(this);
-}
-
-
-void ToolPanel::moveToFavorite(int posFav, int posOri)
-{
-  if (location != 0)
-  {
-    cleanBox();
-    originalBox->addPanel(originalDummy,posOri);
-    favoriteBox->addPanel(this, posFav);
-    location = 0;
-  }
-}
-
-void ToolPanel::moveToOriginal(int posFav, int posOri)
-{
-  if (location != 1)
-  {
-    cleanBox();
-    if (posFav > -1)
-      favoriteBox->addPanel(favoriteDummy,posFav);
-    originalBox->addPanel(this, posOri);
-    location = 1;
-  }
-}
-
-void ToolPanel::moveToTrash(int posFav, int posOri)
-{
- if (location != 2)
-  {
-    cleanBox();
-    if (posFav>-1)
-      favoriteBox->addPanel(favoriteDummy,posFav);
-    originalBox->addPanel(originalDummy,posOri);
-    trashBox->addPanel(this, -1); // there is no pos saved for this one
-    location =2;
-  }
-}
-
-int  ToolPanel::getPosOri()
-{
-  if (originalBox == nullptr)
-    return -1;
-  int posOri = originalBox->getPos(this);
-  if (posOri == -1) posOri = originalBox->getPos(originalDummy);
-  if (posOri == -1) posOri = originalBox->size()-2;
-  return posOri;
-}
-
-int  ToolPanel::getPosFav()
-{
-  if (favoriteBox == nullptr)
-    return -1;
-  int posFav = favoriteBox->getPos(this);
-  if (posFav == -1) posFav = favoriteBox->getPos(favoriteDummy);
-  return posFav;
-}
-
-int  ToolPanel::getPosTra()
-{
-  if (trashBox == nullptr) 
-    return -1;
-  int posTra = trashBox->getPos(this);
-  return posTra;
-}
-
-
-void ToolPanel::favorite_others_tabs_switch(int dc) 
-{
-
-  if ((this->getExpander() != nullptr)
-    && ((!this->canBeIgnored())))
-  {
-
-    // dc determine the tabs that was displayed before the tab switch
-    // 11 for favorite to favorite tabs.
-    // 12 for favorite to normal tabs.
-    // 13 for favorite to trash tabs.
-    // 21 for normal to favorite tabs.
-    // 22 n -> n
-    // 23 n -> t
-    // 31 t -> f
-    // 32 t -> n
-    // 33 t -> t
-
-    int posOri = getPosOri();
-    int posFav = getPosFav();
-    int posTra = getPosTra();
+    //int posTra = getPosTra();
     //    printf("dc=%i\n",dc);
 
     // handling all the possible cases
@@ -941,7 +491,6 @@ void ToolPanel::initVBox(ToolVBox* _originalBox, ToolVBox* _favoriteBox, ToolVBo
 }
 
 FoldableToolPanel::FoldableToolPanel(Gtk::Box* content, Glib::ustring toolName, Glib::ustring UILabel, bool need11, bool useEnabled) : ToolPanel(toolName, need11), parentContainer(nullptr), exp(nullptr), lastEnabled(true)
-
 {
     if (!content) {
         return;
@@ -1000,12 +549,7 @@ FoldableToolPanel::FoldableToolPanel(Gtk::Box* content, Glib::ustring toolName, 
         labelBox->pack_end(*labelInfo, false, false,0);
 
         buttonBox = exp->getButtonHBox();
-        buttonBox->pack_start(*fudlrBox, Gtk::PACK_EXPAND_WIDGET, true, 0);
-//todo: this might not be necessary anymore
-/*        labelWidget = Gtk::manage (new Gtk::Label("this will be updated later"));
-        labelWidget->set_use_markup();
-        labelBox->pack_start(*labelWidget, false, false, 0);
-*/
+        buttonBox->pack_start(*fudlrBox, Gtk::PACK_EXPAND_WIDGET, true, 0); 
 
 
     exp->signal_button_release_event().connect_notify( sigc::mem_fun(this, &FoldableToolPanel::foldThemAll) );
