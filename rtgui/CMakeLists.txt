@@ -50,10 +50,11 @@ set(NONCLISOURCEFILES
     edit.cc
     editorpanel.cc
     editwindow.cc
-    environment.cc
     epd.cc
     exiffiltersettings.cc
-    exifpanel.cc  
+    exifpanel.cc 
+    environment.cc
+    toolvboxdef.cc 
     exportpanel.cc
     extprog.cc
     filebrowser.cc
@@ -141,7 +142,6 @@ set(NONCLISOURCEFILES
     toolbar.cc
     toolpanel.cc
     toolpanelcoord.cc
-    toolvboxdef.cc
     vibrance.cc
     vignetting.cc
     wavelet.cc
@@ -153,6 +153,7 @@ set(NONCLISOURCEFILES
     localcontrast.cc
     eventmapper.cc
     metadatapanel.cc
+    variable.cc 
     ttsaver.cc 
     ttfavoritecolorer.cc 
     ttpanelcolorer.cc 
