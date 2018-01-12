@@ -70,7 +70,7 @@ FoldableToolPanel::FoldableToolPanel(Gtk::Box* content, Glib::ustring toolName, 
       } else {
          exp = Gtk::manage (new MyExpander (useEnabled, UILabel, this));
     }
-#    printf("expander created for %s\n", getToolName().c_str());
+//    printf("expander created for %s\n", getToolName().c_str());
 
     labelBox = exp->getHeaderHBox();
     labelBox->pack_end(*labelInfo, false, false,0);
