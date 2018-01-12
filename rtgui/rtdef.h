@@ -41,6 +41,7 @@ enum FakeProcEvent {
     }; 
 
 class Environment;
+class MovableToolPanel;
 class ToolPanel;
 class FoldableToolPanel;
 class DummyToolPanel;

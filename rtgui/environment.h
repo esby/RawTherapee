@@ -25,7 +25,7 @@
 #include "../rtengine/procparams.h"
 #include "rtdef.h"
 #include "guiutils.h"
-#include "toolpanel.h"
+#include "movabletoolpanel.h"
 #include "variable.h"
 
 #define ENV_STATE_IN_FAV    1
@@ -72,7 +72,7 @@ class Environment {
 
      virtual ~Environment() ;
 
-     ToolPanel*  getPanel(Glib::ustring name);
+     MovableToolPanel*  getPanel(Glib::ustring name);
      ToolPanel*  getPanel(int pos);     
      std::vector<ToolPanel*> getPanels() { return toolPanels; }
      std::vector<ToolPanel*>::iterator panelBegin();
@@ -105,7 +105,7 @@ class Environment {
 
      //variables related code follow
 
-     int countVar(){return varList.size();}
+     size_t countVar(){return varList.size();}
      RtVariable* getVariable(int pos);
      RtVariable* getVariableByName(Glib::ustring name);
 

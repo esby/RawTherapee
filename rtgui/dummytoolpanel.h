@@ -30,13 +30,11 @@
 #include "rtdef.h"
 #include "guiutils.h"
 #include "environment.h"
+#include "toolpanel.h"
 
 
 // this class is used to keep the position of a favorited or trashed panel. this is used to preserve the orders of the toolpanel relative to the others in its Vbox.
 class DummyToolPanel : public ToolParamBlock , public FoldableToolPanel {
-
-  protected:
-
 
   public:
 

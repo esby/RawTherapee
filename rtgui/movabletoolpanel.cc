@@ -16,77 +16,72 @@
  *  You should have received a copy of the GNU General Public License
  *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include "toolpanel.h"
+#include "movabletoolpanel.h"
 #include "toolpanelcoord.h"
 #include "dummytoolpanel.h"
 
 
 using namespace rtengine::procparams;
 
-
-
-void MovablePanel::MovablePanel(Gtk::Box* content, Glib::ustring toolName, Glib::ustring UILabel, bool need11, bool useEnabled) : ToolPanel(toolName, need11), parentContainer(nullptr), exp(nullptr), lastEnabled(true)
+MovableToolPanel::MovableToolPanel (Glib::ustring _toolName )  
 {
-    if (!content) {
-        return;
-    }
-        labelInfo = Gtk::manage (new Gtk::Label("Infos"));
-        labelInfoNotifier = Gtk::manage (new Gtk::Button());
+    setToolName(_toolName);
+    location = 1; // normal panel location
 
-        //defining buttons
-        favoriteButton = Gtk::manage (new Gtk::ToggleButton (M("GENERAL_STATE_FAVORITE")));
-        trashButton = Gtk::manage (new Gtk::ToggleButton (M("GENERAL_STATE_TRASH")));
+    labelInfo = Gtk::manage (new Gtk::Label("Infos"));
+    labelInfoNotifier = Gtk::manage (new Gtk::Button());
 
-        moveUButton = Gtk::manage (new Gtk::Button (M("GENERAL_MOVE_UP")));
-        moveDButton = Gtk::manage (new Gtk::Button (M("GENERAL_MOVE_DOWN")));
-        moveRButton = Gtk::manage (new Gtk::Button (M("GENERAL_MOVE_RIGHT")));
-        moveLButton = Gtk::manage (new Gtk::Button (M("GENERAL_MOVE_LEFT")));
-        fudlrBox = Gtk::manage (new Gtk::HBox ());
+    //defining buttons
+    favoriteButton = Gtk::manage (new Gtk::ToggleButton (M("GENERAL_STATE_FAVORITE")));
+    trashButton = Gtk::manage (new Gtk::ToggleButton (M("GENERAL_STATE_TRASH")));
 
-        //move buttons listeners
-        favoriteButton->signal_toggled().connect( sigc::mem_fun(*this, &FoldableToolPanel::on_toggle_button_favorite) );
-        trashButton->signal_toggled().connect( sigc::mem_fun(*this, &FoldableToolPanel::on_toggle_button_trash) );
+    moveUButton = Gtk::manage (new Gtk::Button (M("GENERAL_MOVE_UP")));
+    moveDButton = Gtk::manage (new Gtk::Button (M("GENERAL_MOVE_DOWN")));
+    moveRButton = Gtk::manage (new Gtk::Button (M("GENERAL_MOVE_RIGHT")));
+    moveLButton = Gtk::manage (new Gtk::Button (M("GENERAL_MOVE_LEFT")));
+    fudlrBox = Gtk::manage (new Gtk::HBox ());
 
-        moveUButton->signal_clicked().connect(sigc::mem_fun(*this, &FoldableToolPanel::moveUp));
-        moveDButton->signal_clicked().connect(sigc::mem_fun(*this, &FoldableToolPanel::moveDown));
-        moveRButton->signal_clicked().connect(sigc::mem_fun(*this, &FoldableToolPanel::moveRight));
-        moveLButton->signal_clicked().connect(sigc::mem_fun(*this, &FoldableToolPanel::moveLeft));
-  
-        fudlrBox->pack_end( *trashButton,  Gtk::PACK_SHRINK, true, 0);
+   //move buttons listeners
+    favoriteButton->signal_toggled().connect( sigc::mem_fun(*this, &MovableToolPanel::on_toggle_button_favorite) );
+    trashButton->signal_toggled().connect( sigc::mem_fun(*this, &MovableToolPanel::on_toggle_button_trash) );
 
-        fudlrBox->pack_end( *moveRButton,       Gtk::PACK_SHRINK, true, 0);
-        fudlrBox->pack_end( *moveLButton,       Gtk::PACK_SHRINK, true, 0);
-        fudlrBox->pack_end( *moveUButton,       Gtk::PACK_SHRINK, true, 0);
-        fudlrBox->pack_end( *moveDButton,       Gtk::PACK_SHRINK, true, 0);
-        fudlrBox->pack_end( *favoriteButton,  Gtk::PACK_SHRINK, true, 0);
+    moveUButton->signal_clicked().connect(sigc::mem_fun(*this, &MovableToolPanel::moveUp));
+    moveDButton->signal_clicked().connect(sigc::mem_fun(*this, &MovableToolPanel::moveDown));
+    moveRButton->signal_clicked().connect(sigc::mem_fun(*this, &MovableToolPanel::moveRight));
+    moveLButton->signal_clicked().connect(sigc::mem_fun(*this, &MovableToolPanel::moveLeft));
 
-         if (need11) {
-         Gtk::HBox *titleHBox = Gtk::manage(new Gtk::HBox());
-         Gtk::Label *label = Gtk::manage(new Gtk::Label());
-         label->set_markup(Glib::ustring("<b>") + escapeHtmlChars(UILabel) + Glib::ustring("</b>"));
-         label->set_alignment(Gtk::ALIGN_START, Gtk::ALIGN_CENTER);
-         titleHBox->pack_start(*label, Gtk::PACK_EXPAND_WIDGET, 0);
+    fudlrBox->pack_end( *trashButton,  Gtk::PACK_SHRINK, true, 0);
 
-         RTImage *image = Gtk::manage (new RTImage("zoom-100-identifier.png"));
-         image->set_tooltip_text(M("TP_GENERAL_11SCALE_TOOLTIP"));
-         titleHBox->pack_end(*image, Gtk::PACK_SHRINK, 0);
-
-         exp = Gtk::manage (new MyExpander (useEnabled, titleHBox, this ));
-         }
-     } else {
-         if (exp != nullptr)
-           exp = Gtk::manage (new MyExpander (useEnabled, UILabel, this));
-     }
-     labelBox = exp->getHeaderHBox();
-     labelBox->pack_end(*labelInfo, false, false,0);
-
-     buttonBox = exp->getButtonHBox();
-     buttonBox->pack_start(*fudlrBox, Gtk::PACK_EXPAND_WIDGET, true, 0); 
+    fudlrBox->pack_end( *moveRButton,       Gtk::PACK_SHRINK, true, 0);
+    fudlrBox->pack_end( *moveLButton,       Gtk::PACK_SHRINK, true, 0);
+    fudlrBox->pack_end( *moveUButton,       Gtk::PACK_SHRINK, true, 0);
+    fudlrBox->pack_end( *moveDButton,       Gtk::PACK_SHRINK, true, 0);
+    fudlrBox->pack_end( *favoriteButton,  Gtk::PACK_SHRINK, true, 0);
+            
 }
 
+void MovableToolPanel::initVBox(ToolVBox* _originalBox, ToolVBox* _favoriteBox, ToolVBox* _trashBox, Environment* _env){
+//     printf("initVBox for name=%s \n", getToolName().c_str());
+
+     env = _env;   
+     buttonBox = getExpander()->getButtonHBox();
+     buttonBox->pack_start(*fudlrBox, Gtk::PACK_EXPAND_WIDGET, true, 0); 
 
 
-void ToolPanel::updateLabelInfo() {
+     originalDummy = Gtk::manage (new DummyToolPanel("normal_PosSaver_of_" + this->getToolName(), env));
+     favoriteDummy = Gtk::manage (new DummyToolPanel("favorite_PosSaver_of_" + this->getToolName(), env));
+
+     originalBox = _originalBox;
+     favoriteBox = _favoriteBox;
+     trashBox = _trashBox;
+
+//     printf("name=%s  ", getToolName().c_str());
+//     printf("positionOriginal=%i\n", originalBox->getPos(this));
+     updateLabelInfo();
+
+}
+
+void MovableToolPanel::updateLabelInfo() {
  if ((this->getExpander() != nullptr)
   && ((!this->canBeIgnored()))) {
 
@@ -125,7 +120,7 @@ void ToolPanel::updateLabelInfo() {
 
 }
 
-void ToolPanel::moveUp () {
+void MovableToolPanel::moveUp () {
   int pos;
   int npos;
  // int count;
@@ -150,7 +145,7 @@ void ToolPanel::moveUp () {
   }//else  printf("- canceled.\n");
 }
 
-void ToolPanel::moveDown () { 
+void MovableToolPanel::moveDown () { 
   int pos;
   int npos;
   int count;
@@ -176,7 +171,7 @@ void ToolPanel::moveDown () {
 
 }
 
-void ToolPanel::moveLeft() {
+void MovableToolPanel::moveLeft() {
   ToolVBox* box =  originalBox;
   ToolVBox* nbox = (ToolVBox*) originalBox->getPrevBox();
 
@@ -218,7 +213,7 @@ void ToolPanel::moveLeft() {
 //  moveLeftToBottom 
 //       moveRightToTop 
 
-void ToolPanel::moveRight() {
+void MovableToolPanel::moveRight() {
   ToolVBox* box =  originalBox;
   ToolVBox* nbox = (ToolVBox*) originalBox->getNextBox();
 
@@ -258,7 +253,7 @@ void ToolPanel::moveRight() {
   }
 }
 
-void ToolPanel::cleanBox() {
+void MovableToolPanel::cleanBox() {
   location = -1;
   favoriteBox->remPanel(favoriteDummy);
   originalBox->remPanel(originalDummy);
@@ -267,8 +262,7 @@ void ToolPanel::cleanBox() {
   trashBox->remPanel(this);
 }
 
-
-void ToolPanel::moveToFavorite(int posFav, int posOri)
+void MovableToolPanel::moveToFavorite(int posFav, int posOri)
 {
   if (location != 0)
   {
@@ -279,7 +273,7 @@ void ToolPanel::moveToFavorite(int posFav, int posOri)
   }
 }
 
-void ToolPanel::moveToOriginal(int posFav, int posOri)
+void MovableToolPanel::moveToOriginal(int posFav, int posOri)
 {
   if (location != 1)
   {
@@ -291,7 +285,7 @@ void ToolPanel::moveToOriginal(int posFav, int posOri)
   }
 }
 
-void ToolPanel::moveToTrash(int posFav, int posOri)
+void MovableToolPanel::moveToTrash(int posFav, int posOri)
 {
  if (location != 2)
   {
@@ -304,7 +298,7 @@ void ToolPanel::moveToTrash(int posFav, int posOri)
   }
 }
 
-int  ToolPanel::getPosOri()
+int  MovableToolPanel::getPosOri()
 {
   if (originalBox == nullptr)
     return -1;
@@ -314,7 +308,7 @@ int  ToolPanel::getPosOri()
   return posOri;
 }
 
-int  ToolPanel::getPosFav()
+int  MovableToolPanel::getPosFav()
 {
   if (favoriteBox == nullptr)
     return -1;
@@ -323,7 +317,7 @@ int  ToolPanel::getPosFav()
   return posFav;
 }
 
-int  ToolPanel::getPosTra()
+int  MovableToolPanel::getPosTra()
 {
   if (trashBox == nullptr) 
     return -1;
@@ -332,7 +326,7 @@ int  ToolPanel::getPosTra()
 }
 
 
-void ToolPanel::favorite_others_tabs_switch(int dc) 
+void MovableToolPanel::favorite_others_tabs_switch(int dc) 
 {
 
   if ((this->getExpander() != nullptr)
@@ -481,15 +475,17 @@ void ToolPanel::favorite_others_tabs_switch(int dc)
   }
 }
 
-Glib::ustring IntToString(int iVal)
+void MovableToolPanel::on_toggle_button_favorite() 
 {
-    std::ostringstream ssIn;
-    ssIn << iVal;
-    Glib::ustring strOut = ssIn.str();
-    return strOut;
+
 }
 
-Glib::ustring ToolPanel::getThemeInfo() {
+void MovableToolPanel::on_toggle_button_trash() {
+
+}
+
+
+Glib::ustring MovableToolPanel::getThemeInfo() {
   Glib::ustring res;
   res = getToolName();
   res += "|" + originalBox->getBoxName();
@@ -506,49 +502,35 @@ Glib::ustring ToolPanel::getThemeInfo() {
   return res;
 }
 
-
-
-void ToolPanel::initVBox(ToolVBox* _originalBox, ToolVBox* _favoriteBox, ToolVBox* _trashBox, Environment* _env){
-//     printf("initVBox for name=%s \n", getToolName().c_str());
-
-     env = _env;
-     originalDummy = Gtk::manage (new DummyToolPanel("normal_PosSaver_of_" + this->getToolName(), env));
-     favoriteDummy = Gtk::manage (new DummyToolPanel("favorite_PosSaver_of_" + this->getToolName(), env));
-
-     originalBox = _originalBox;
-     favoriteBox = _favoriteBox;
-     trashBox = _trashBox;
-
-
-//     printf("name=%s  ", getToolName().c_str());
-//     printf("positionOriginal=%i\n", originalBox->getPos(this));
-     updateLabelInfo();
-
-}
-
-
-void FoldableToolPanel::setLevel (int level)
+void MovableToolPanel::setLevel (int level)
 {
-    if (exp) {
-        exp->setLevel(level);
+    if (getExpander()) {
+        getExpander()->setLevel(level);
     }
 }
 
-void FoldableToolPanel::deploy() 
+void MovableToolPanel::deploy() 
 {
 // the empty implementation has to stay even if the method is empty because of linking issue if the implementation is in the .h include.
 
 }
 
-void FoldableToolPanel::deployLate()
+void MovableToolPanel::deployLate()
 {
 // same remark as deploy()
 }
 
-void FoldableToolPanel::react(FakeProcEvent ev)
+void MovableToolPanel::react(FakeProcEvent ev)
 {
 // same remark as deploy()
 }
 
 
+Glib::ustring IntToString(int iVal)
+{
+    std::ostringstream ssIn;
+    ssIn << iVal;
+    Glib::ustring strOut = ssIn.str();
+    return strOut;
+}
 

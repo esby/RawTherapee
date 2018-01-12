@@ -16,8 +16,8 @@
  *  You should have received a copy of the GNU General Public License
  *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef __MOVABLRPANEL__
-#define __MOVABLELPANEL__
+#ifndef __MOVABLETOOLPANEL__
+#define __MOVABLETOOLPANEL__
 
 #include <gtkmm.h>
 #include <glibmm.h>
@@ -39,18 +39,20 @@
 
 class MovableToolPanel
 {
-    protected
+    protected:
     // 0 for favorite tabs.
     // 1 for normal tabs.
     // 2 for trash tabs.
     // this integer should be used to speed-up moveTo() methods that are not necessary.
+    Environment* env;
     int location;
+    Glib::ustring toolName;
 
     ToolVBox* originalBox;
     ToolVBox* favoriteBox;
     ToolVBox* trashBox;
-    DummyToolPanel* originalDummy;
-    DummyToolPanel* favoriteDummy;
+    ToolPanel* originalDummy;
+    ToolPanel* favoriteDummy;
 
     Glib::ustring uilabel;
 
@@ -69,11 +71,17 @@ class MovableToolPanel
     Gtk::Button* moveLButton;
     Gtk::Button* moveRButton;
 
+    public:
 
-    virtual void moveToFavorite(int posFav, int posOri);
-    virtual void moveToTrash(int posFav, int posOri);
+   MovableToolPanel (Glib::ustring _toolName = "");
 
-    public
+    virtual ~MovableToolPanel() {}
+
+    virtual MyExpander* getExpander() // it will be redefined later
+    {
+      return nullptr;  
+    }
+
 
     virtual bool                 canBeIgnored()      { return true; } // useful for determining if the panel is skippable or not.
     int                  getPosOri();
@@ -91,10 +99,12 @@ class MovableToolPanel
     Gtk::Button*         getMoveLButton() { return moveLButton; }
     Gtk::Button*         getMoveRButton() { return moveRButton; }
     void                 setOriginalBox(ToolVBox* tc) {originalBox = tc; }
-    DummyToolPanel*      getFavoriteDummy() { return originalDummy;}
+    ToolPanel*      getFavoriteDummy() { return favoriteDummy; }
+    ToolPanel*      getOriginalDummy() { return originalDummy; }
 //    ToolVBoxDef*         getOriginalBox() { return originalBox; }
     ToolVBox*         getOriginalBox() { return originalBox; }
     ToolVBox*            getFavoriteBox() { return favoriteBox;}
+
 
     virtual void cleanBox();
  // tt filters should reimplement these methods, normal filters should not need these
@@ -102,19 +112,6 @@ class MovableToolPanel
     virtual Glib::ustring themeExport() { return ""; }
 
    
-    virtual void                 deploy()       {} // used to handle post operations steps.
-    virtual void        deployLate() {} // used to handle post operations in a later way than deploy ie: for hiding stuf.
-    virtual void react(FakeProcEvent ev) {} // used to react to external event like image loading / image saving / profile loading etc. 
-
-    void                setToolName(Glib::ustring _name) { toolName = _name; }
-    Glib::ustring               getToolName() { return toolName; } 
-  
-    void                setNeed100Percent(bool b) { need100Percent = b; }
-    bool                getNeed100Percent() { return need100Percent; }
-
-    virtual int getLocation() {return location;}
-    void setLocation(int _location) { location = _location;}
-
     Glib::ustring getThemeInfo ();
     void favorite_others_tabs_switch(int dc);
     void initVBox(ToolVBox* _originalBox, ToolVBox* _favoriteBox, ToolVBox* _trashBox, Environment* _env);
@@ -126,7 +123,23 @@ class MovableToolPanel
     void moveLeft();
     void moveRight();
     void updateLabelInfo ();
-}
+
+    void                setToolName(Glib::ustring _name) { toolName = _name; }
+    Glib::ustring               getToolName() { return toolName; } 
+    void setLevel (int level);
+
+    virtual int getLocation() {return location;}
+    void setLocation(int _location) { location = _location;}
+
+    virtual void deploy();
+    virtual void deployLate();
+    virtual void react(FakeProcEvent ev) ;
+
+    virtual void moveToFavorite(int posFav, int posOri);
+    virtual void moveToTrash(int posFav, int posOri);
+    virtual void moveToOriginal(int posFav, int posOri);
+
+};
 
 Glib::ustring IntToString(int iVal);
 
