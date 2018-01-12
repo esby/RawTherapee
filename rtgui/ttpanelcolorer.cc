@@ -74,7 +74,7 @@ void TTPanelColorChooser::deploy()
       && (!(p->canBeIgnored())))
       {
 //        printf("connecting to %s \n", p->getToolName().c_str());
-        printf("panel: %s exp=%p\n",p->getToolName().c_str(),p->getExpander());
+//        printf("panel: %s exp=%p\n",p->getToolName().c_str(),p->getExpander());
         p->getExpander()->signal_enabled_toggled().connect( sigc::bind(sigc::mem_fun(*this, &TTPanelColorChooser::colorer) , p ));
         if (p->getExpander()->getEnabled())
         {
