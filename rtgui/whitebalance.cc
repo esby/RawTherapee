@@ -851,6 +851,12 @@ std::pair<bool, const WBEntry&> WhiteBalance::findWBEntry(const Glib::ustring& l
     return {false, WBParams::getWbEntries()[0]};
 }
 
+void WhiteBalance::resetWBToCamera()
+{
+  Gtk::TreeModel::Children::iterator iter = refTreeModel->children().begin();
+  method->set_active(iter);
+}
+
 int WhiteBalance::_setActiveMethod(Glib::ustring &label, Gtk::TreeModel::Children &children)
 {
     int found = -1;
