@@ -156,6 +156,13 @@ FrameData::FrameData (rtexif::TagDirectory* frameRootDir_, rtexif::TagDirectory*
         model = "Unknown";
     }
 
+    if (model == "Unknown") {
+        tag = newFrameRootDir->findTag("UniqueCameraModel");
+        if (tag) {
+            model = tag->valueToString();
+        }
+    }
+
     tag = newFrameRootDir->findTagUpward("Orientation");
     if (tag) {
         orientation = tag->valueToString ();
@@ -207,7 +214,7 @@ FrameData::FrameData (rtexif::TagDirectory* frameRootDir_, rtexif::TagDirectory*
         // Focus distance from EXIF or XMP. MakerNote ones are scattered and partly encrypted
         int num = -3, denom = -3;
 
-        // First try, offical EXIF. Set by Adobe on some DNGs
+        // First try, official EXIF. Set by Adobe on some DNGs
         tag = exif->getTag("SubjectDistance");
 
         if (tag) {
@@ -483,7 +490,7 @@ FrameData::FrameData (rtexif::TagDirectory* frameRootDir_, rtexif::TagDirectory*
     if (mnote && (!make.compare (0, 6, "PENTAX") || (!make.compare (0, 5, "RICOH") && !model.compare (0, 6, "PENTAX")))) {
         const rtexif::Tag* const hdr = mnote->findTag("HDR");
         if (hdr) {
-            if (hdr->toInt() > 0 && hdr->toInt(2) > 0) {
+            if (hdr->toInt() > 0) {
                 isHDR = true;
 #if PRINT_HDR_PS_DETECTION
                 printf("HDR detected ! -> \"HDR\" tag found\n");
@@ -506,7 +513,7 @@ FrameData::FrameData (rtexif::TagDirectory* frameRootDir_, rtexif::TagDirectory*
 
         if (!isHDR) {
             const rtexif::Tag* const q = mnote->findTag("Quality");
-            if (q && q->toInt() == 7) {
+            if (q && (q->toInt() == 7 || q->toInt() == 8)) {
                 isPixelShift = true;
 #if PRINT_HDR_PS_DETECTION
                 printf("PixelShift detected ! -> \"Quality\" = 7\n");
@@ -558,28 +565,51 @@ FrameData::FrameData (rtexif::TagDirectory* frameRootDir_, rtexif::TagDirectory*
                 sampleFormat = IIOSF_UNSIGNED_SHORT;
             }
         } else if (sampleformat == SAMPLEFORMAT_IEEEFP) {
-            /*
-             * Not yet supported
-             *
-             if (bitspersample==16) {
-                sampleFormat = IIOSF_HALF;
-                isHDR = true;
-            }*/
-            if (bitspersample == 32) {
-                sampleFormat = IIOSF_FLOAT;
+            if (bitspersample==16) {
+                sampleFormat = IIOSF_FLOAT16;
                 isHDR = true;
 #if PRINT_HDR_PS_DETECTION
-                printf("HDR detected ! -> sampleFormat = %d\n", sampleFormat);
+                printf("HDR detected ! -> sampleFormat = %d   (16-bit)\n", sampleFormat);
+#endif
+            }
+            else if (bitspersample == 24) {
+                sampleFormat = IIOSF_FLOAT24;
+                isHDR = true;
+#if PRINT_HDR_PS_DETECTION
+                printf("HDR detected ! -> sampleFormat = %d   (24-bit)\n", sampleFormat);
+#endif
+            }
+            else if (bitspersample == 32) {
+                sampleFormat = IIOSF_FLOAT32;
+                isHDR = true;
+#if PRINT_HDR_PS_DETECTION
+                printf("HDR detected ! -> sampleFormat = %d   (32-bit)\n", sampleFormat);
 #endif
             }
         }
     } else if (photometric == PHOTOMETRIC_CFA) {
         if (sampleformat == SAMPLEFORMAT_IEEEFP) {
-            sampleFormat = IIOSF_FLOAT;
-            isHDR = true;
+            if (bitspersample == 16) {
+                sampleFormat = IIOSF_FLOAT16;
+                isHDR = true;
 #if PRINT_HDR_PS_DETECTION
-            printf("HDR detected ! -> sampleFormat = %d\n", sampleFormat);
+                printf("HDR detected ! -> sampleFormat = %d   (16-bit)\n", sampleFormat);
 #endif
+            }
+            else if (bitspersample == 24) {
+                sampleFormat = IIOSF_FLOAT24;
+                isHDR = true;
+#if PRINT_HDR_PS_DETECTION
+                printf("HDR detected ! -> sampleFormat = %d   (24-bit)\n", sampleFormat);
+#endif
+            }
+            else if (bitspersample == 32) {
+                sampleFormat = IIOSF_FLOAT32;
+                isHDR = true;
+#if PRINT_HDR_PS_DETECTION
+                printf("HDR detected ! -> sampleFormat = %d   (32-bit)\n", sampleFormat);
+#endif
+            }
         } else if (sampleformat == SAMPLEFORMAT_INT || sampleformat == SAMPLEFORMAT_UINT) {
             if (bitspersample == 8) {   // shouldn't occur...
                 sampleFormat = IIOSF_UNSIGNED_CHAR;
@@ -589,7 +619,7 @@ FrameData::FrameData (rtexif::TagDirectory* frameRootDir_, rtexif::TagDirectory*
         }
     } else if (photometric == 34892 || photometric == 32892  /* Linear RAW (see DNG spec ; 32892 seem to be a flaw from Sony's ARQ files) */) {
         if (sampleformat == SAMPLEFORMAT_IEEEFP) {
-            sampleFormat = IIOSF_FLOAT;
+            sampleFormat = IIOSF_FLOAT32;
             isHDR = true;
 #if PRINT_HDR_PS_DETECTION
             printf("HDR detected ! -> sampleFormat = %d\n", sampleFormat);
@@ -692,6 +722,10 @@ bool FrameData::getHDR () const
 {
     return isHDR;
 }
+std::string FrameData::getImageType () const
+{
+    return isPixelShift ? "PS" : isHDR ? "HDR" : "STD";
+}
 IIOSampleFormat FrameData::getSampleFormat () const
 {
     return sampleFormat;
@@ -782,30 +816,28 @@ unsigned int FramesData::getFrameCount () const
     return dcrawFrameCount ? dcrawFrameCount : frames.size();
 }
 
-FrameData *FramesData::getFrameData (unsigned int frame) const
+bool FramesData::getPixelShift () const
 {
-    return frames.empty() || frame >= frames.size() ? nullptr : frames.at(frame);
-}
-
-bool FramesData::getPixelShift (unsigned int frame) const
-{
-    // So far only Pentax and Sony provide multi-frame HDR file.
-    // Only the first frame contains the HDR tag
+    // So far only Pentax and Sony provide multi-frame Pixel Shift files.
+    // Only the first frame contains the Pixel Shift tag
     // If more brand have to be supported, this rule may need
     // to evolve
 
-    //return frames.at(frame)->getPixelShift ();
-    return frames.empty() || frame >= frames.size()  ? false : frames.at(0)->getPixelShift ();
+    return frames.empty() ? false : frames.at(0)->getPixelShift ();
 }
 bool FramesData::getHDR (unsigned int frame) const
 {
-    // So far only Pentax provide multi-frame HDR file.
+    // So far only Pentax provides multi-frame HDR file.
     // Only the first frame contains the HDR tag
     // If more brand have to be supported, this rule may need
     // to evolve
 
-    //return frames.at(frame)->getHDR ();
     return frames.empty() || frame >= frames.size()  ? false : frames.at(0)->getHDR ();
+}
+
+std::string FramesData::getImageType (unsigned int frame) const
+{
+    return frames.empty() || frame >= frames.size() ? "STD" : frames.at(0)->getImageType();
 }
 
 IIOSampleFormat FramesData::getSampleFormat (unsigned int frame) const
@@ -1088,9 +1120,7 @@ FramesData::FramesData (const Glib::ustring& fname, std::unique_ptr<RawMetaDataL
 
                 // creating FrameData
                 for (auto currFrame : exifManager.frames) {
-                    FrameData* fd = new FrameData(currFrame, currFrame->getRoot(), roots.at(0));
-
-                    frames.push_back(fd);
+                    frames.push_back(std::unique_ptr<FrameData>(new FrameData(currFrame, currFrame->getRoot(), roots.at(0))));
                 }
                 for (auto currRoot : roots) {
                     rtexif::Tag* t = currRoot->getTag(0x83BB);
@@ -1112,8 +1142,7 @@ FramesData::FramesData (const Glib::ustring& fname, std::unique_ptr<RawMetaDataL
                 exifManager.parseJPEG ();
                 roots = exifManager.roots;
                 for (auto currFrame : exifManager.frames) {
-                    FrameData* fd = new FrameData(currFrame, currFrame->getRoot(), roots.at(0));
-                    frames.push_back(fd);
+                    frames.push_back(std::unique_ptr<FrameData>(new FrameData(currFrame, currFrame->getRoot(), roots.at(0))));
                 }
                 rewind (exifManager.f); // Not sure this is necessary
                 iptc = iptc_data_new_from_jpeg_file (exifManager.f);
@@ -1131,9 +1160,7 @@ FramesData::FramesData (const Glib::ustring& fname, std::unique_ptr<RawMetaDataL
 
             // creating FrameData
             for (auto currFrame : exifManager.frames) {
-                FrameData* fd = new FrameData(currFrame, currFrame->getRoot(), roots.at(0));
-
-                frames.push_back(fd);
+                frames.push_back(std::unique_ptr<FrameData>(new FrameData(currFrame, currFrame->getRoot(), roots.at(0))));
             }
             for (auto currRoot : roots) {
                 rtexif::Tag* t = currRoot->getTag(0x83BB);

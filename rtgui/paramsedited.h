@@ -53,6 +53,9 @@ public:
     bool expcomp;
     bool hrenabled;
     bool method;
+    bool histmatching;
+    bool fromHistMatching;
+    bool clampOOG;
 };
 
 class RetinexParamsEdited
@@ -119,7 +122,8 @@ public:
 };
 
 
-class LocalContrastParamsEdited {
+class LocalContrastParamsEdited
+{
 public:
     bool enabled;
     bool radius;
@@ -170,6 +174,12 @@ public:
     bool satlow;
     bool sathigh;
     bool lumamode;
+    bool labgridALow;
+    bool labgridBLow;
+    bool labgridAHigh;
+    bool labgridBHigh;
+    bool labregions;
+    bool labregionsShowMask;
 };
 
 class SharpenEdgeParamsEdited
@@ -188,6 +198,7 @@ public :
     bool enabled;
     bool matrix;
     bool amount;
+    bool contrast;
     bool uniformity;
 
 };
@@ -197,6 +208,7 @@ class SharpeningParamsEdited
 
 public:
     bool enabled;
+    bool contrast;
     bool radius;
     bool amount;
     bool threshold;
@@ -377,11 +389,13 @@ public:
 };
 
 
-class FattalToneMappingParamsEdited {
+class FattalToneMappingParamsEdited
+{
 public:
     bool enabled;
     bool threshold;
     bool amount;
+    bool anchor;
 };
 
 
@@ -390,12 +404,12 @@ class SHParamsEdited
 
 public:
     bool enabled;
-    bool hq;
     bool highlights;
     bool htonalwidth;
     bool shadows;
     bool stonalwidth;
     bool radius;
+    bool lab;
 };
 
 class CropParamsEdited
@@ -560,26 +574,28 @@ public:
     bool width;
     bool height;
     bool enabled;
+    bool allowUpscaling;
 };
 
 class ColorManagementParamsEdited
 {
 
 public:
-    bool input;
+    bool inputProfile;
     bool toneCurve;
     bool applyLookTable;
     bool applyBaselineExposureOffset;
     bool applyHueSatMap;
     bool dcpIlluminant;
-    bool working;
-    bool output;
+
+    bool workingProfile;
+    bool workingTRC;
+    bool workingTRCGamma;
+    bool workingTRCSlope;
+
+    bool outputProfile;
     bool outputIntent;
     bool outputBPC;
-    bool gamma;
-    bool gampos;
-    bool slpos;
-    bool freegamma;
 };
 class WaveletParamsEdited
 {
@@ -703,6 +719,23 @@ public:
     bool strength;
 };
 
+class SoftLightParamsEdited
+{
+public:
+    bool enabled;
+    bool strength;
+};
+
+class DehazeParamsEdited
+{
+public:
+    bool enabled;
+    bool strength;
+    bool showDepthMap;
+    bool depth;
+};
+
+
 class RAWParamsEdited
 {
 
@@ -712,6 +745,7 @@ public:
 
     public:
         bool method;
+        bool border;
         bool imageNum;
         bool ccSteps;
         bool exBlack0;
@@ -722,41 +756,28 @@ public:
         bool dcbIterations;
         bool dcbEnhance;
         bool lmmseIterations;
-        bool pixelShiftMotion;
-        bool pixelShiftMotionCorrection;
+        bool dualDemosaicAutoContrast;
+        bool dualDemosaicContrast;
         bool pixelShiftMotionCorrectionMethod;
-        bool pixelShiftStddevFactorGreen;
-        bool pixelShiftStddevFactorRed;
-        bool pixelShiftStddevFactorBlue;
         bool pixelShiftEperIso;
-        bool pixelShiftNreadIso;
-        bool pixelShiftPrnu;
         bool pixelShiftSigma;
-        bool pixelShiftSum;
-        bool pixelShiftRedBlueWeight;
         bool pixelShiftShowMotion;
         bool pixelShiftShowMotionMaskOnly;
-        bool pixelShiftAutomatic;
-        bool pixelShiftNonGreenHorizontal;
-        bool pixelShiftNonGreenVertical;
         bool pixelShiftHoleFill;
         bool pixelShiftMedian;
-        bool pixelShiftMedian3;
         bool pixelShiftGreen;
         bool pixelShiftBlur;
         bool pixelShiftSmooth;
-        bool pixelShiftExp0;
-        bool pixelShiftLmmse;
-        bool pixelShiftOneGreen;
         bool pixelShiftEqualBright;
         bool pixelShiftEqualBrightChannel;
         bool pixelShiftNonGreenCross;
-        bool pixelShiftNonGreenCross2;
-        bool pixelShiftNonGreenAmaze;
+        bool pixelShiftDemosaicMethod;
 
         //bool allEnhance;
         bool greenEq;
         bool linenoise;
+        bool linenoiseDirection;
+        bool pdafLinesFilter;
 
         bool isUnchanged() const;
     };
@@ -766,6 +787,8 @@ public:
 
     public:
         bool method;
+        bool dualDemosaicAutoContrast;
+        bool dualDemosaicContrast;
         bool ccSteps;
         bool exBlackRed;
         bool exBlackGreen;
@@ -778,6 +801,8 @@ public:
     XTransSensor xtranssensor;
 
     bool ca_autocorrect;
+    bool ca_avoidcolourshift;
+    bool caautoiterations;
     bool cared;
     bool cablue;
     bool hotPixelFilter;
@@ -798,7 +823,8 @@ public:
 };
 
 
-class MetaDataParamsEdited {
+class MetaDataParamsEdited
+{
 public:
     bool mode;
 };
@@ -852,14 +878,16 @@ public:
     WaveletParamsEdited             wavelet;
     HSVEqualizerParamsEdited      hsvequalizer;
     FilmSimulationParamsEdited    filmSimulation;
+    SoftLightParamsEdited         softlight;
+    DehazeParamsEdited            dehaze;
     MetaDataParamsEdited          metadata;
     bool                          exif;
     bool                          iptc;
 
-    explicit ParamsEdited (bool value = false);
+    explicit ParamsEdited(bool value = false);
 
-    void set   (bool v);
-    void initFrom (const std::vector<rtengine::procparams::ProcParams>& src);
-    void combine (rtengine::procparams::ProcParams& toEdit, const rtengine::procparams::ProcParams& mods, bool forceSet);
+    void set(bool v);
+    void initFrom(const std::vector<rtengine::procparams::ProcParams>& src);
+    void combine(rtengine::procparams::ProcParams& toEdit, const rtengine::procparams::ProcParams& mods, bool forceSet);
 };
 #endif

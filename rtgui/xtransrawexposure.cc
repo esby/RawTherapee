@@ -53,6 +53,10 @@ XTransRAWExposure::XTransRAWExposure () : FoldableToolPanel(this, "xtransrawexpo
     pack_start( *PexBlackRed, Gtk::PACK_SHRINK, 0);//black
     pack_start( *PexBlackGreen, Gtk::PACK_SHRINK, 0);//black
     pack_start( *PexBlackBlue, Gtk::PACK_SHRINK, 0);//black
+
+    PexBlackRed->setLogScale(100, 0);
+    PexBlackGreen->setLogScale(100, 0);
+    PexBlackBlue->setLogScale(100, 0);
 }
 
 void XTransRAWExposure::read(const rtengine::procparams::ProcParams* pp, const ParamsEdited* pedited)
@@ -86,7 +90,7 @@ void XTransRAWExposure::write( rtengine::procparams::ProcParams* pp, ParamsEdite
 
 }
 
-void XTransRAWExposure::adjusterChanged (Adjuster* a, double newval)
+void XTransRAWExposure::adjusterChanged(Adjuster* a, double newval)
 {
     if (listener) {
         Glib::ustring value = a->getTextValue();
@@ -99,6 +103,10 @@ void XTransRAWExposure::adjusterChanged (Adjuster* a, double newval)
             listener->panelChanged (EvPreProcessExpBlackBlue, value);
         }
     }
+}
+
+void XTransRAWExposure::adjusterAutoToggled(Adjuster* a, bool newval)
+{
 }
 
 void XTransRAWExposure::setBatchMode(bool batchMode)

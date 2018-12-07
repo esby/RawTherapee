@@ -106,6 +106,9 @@ void ImProcFunctions::Lanczos (const Imagefloat* src, Imagefloat* dst, float sca
 
             // weights for interpolation in y direction
             float w[support];
+            for (auto& f : w) {
+                f = 0.f;
+            }
 
             // sum of weights used for normalization
             float ws = 0.0f;
@@ -159,9 +162,9 @@ void ImProcFunctions::Lanczos (const Imagefloat* src, Imagefloat* dst, float sca
                     b += wh[k] * lb[jj];
                 }
 
-                dst->r (i, j) = CLIP (r);//static_cast<int> (r));
-                dst->g (i, j) = CLIP (g);//static_cast<int> (g));
-                dst->b (i, j) = CLIP (b);//static_cast<int> (b));
+                dst->r (i, j) = /*CLIP*/ (r);//static_cast<int> (r));
+                dst->g (i, j) = /*CLIP*/ (g);//static_cast<int> (g));
+                dst->b (i, j) = /*CLIP*/ (b);//static_cast<int> (b));
             }
         }
 
@@ -175,7 +178,7 @@ void ImProcFunctions::Lanczos (const Imagefloat* src, Imagefloat* dst, float sca
 }
 
 
-SSEFUNCTION void ImProcFunctions::Lanczos (const LabImage* src, LabImage* dst, float scale)
+void ImProcFunctions::Lanczos (const LabImage* src, LabImage* dst, float scale)
 {
     const float delta = 1.0f / scale;
     const float a = 3.0f;
@@ -229,6 +232,7 @@ SSEFUNCTION void ImProcFunctions::Lanczos (const LabImage* src, LabImage* dst, f
         float* const lb = aligned_buffer_lb.data;
         // weights for interpolation in y direction
         float w[support] ALIGNED64;
+        memset(w, 0, sizeof(w));
 
         // Phase 2: do actual interpolation
 #ifdef _OPENMP
@@ -370,6 +374,7 @@ float ImProcFunctions::resizeScale (const ProcParams* params, int fw, int fh, in
             } else {
                 dScale = (double)params->resize.height / (double)refh;
             }
+            dScale = (dScale > 1.0 && !params->resize.allowUpscaling) ? 1.0 : dScale;
 
             break;
 

@@ -39,7 +39,7 @@ public:
     Gtk::CheckButton* composition;
     Gtk::CheckButton* meta;
     Gtk::CheckButton* raw;
-    Gtk::CheckButton* wav;
+    Gtk::CheckButton* advanced;
 
     // options in basic:
     Gtk::CheckButton* wb;
@@ -63,6 +63,7 @@ public:
     Gtk::CheckButton* dirpyrden;
     Gtk::CheckButton* defringe;
     Gtk::CheckButton* dirpyreq;
+    Gtk::CheckButton* dehaze;
 
     // options in wavelet
     Gtk::CheckButton* wavelet;
@@ -73,6 +74,7 @@ public:
     Gtk::CheckButton* chmixer;
     Gtk::CheckButton* blackwhite;
     Gtk::CheckButton* hsveq;
+    Gtk::CheckButton* softlight;
     Gtk::CheckButton* filmSimulation;
     Gtk::CheckButton* rgbcurves;
     Gtk::CheckButton* colortoning;
@@ -93,6 +95,7 @@ public:
     Gtk::CheckButton* commonTrans;
 
     // options in meta:
+    Gtk::CheckButton *metadata;
     Gtk::CheckButton* exifch;
     Gtk::CheckButton* iptc;
 
@@ -103,11 +106,14 @@ public:
     Gtk::CheckButton* raw_black;
     Gtk::CheckButton* raw_ca_autocorrect;
     Gtk::CheckButton* raw_caredblue;
+    Gtk::CheckButton* raw_ca_avoid_colourshift;
     Gtk::CheckButton* raw_hotpix_filt;
     Gtk::CheckButton* raw_deadpix_filt;
+    Gtk::CheckButton* raw_pdaf_lines_filter;
     Gtk::CheckButton* raw_linenoise;
     Gtk::CheckButton* raw_greenthresh;
     Gtk::CheckButton* raw_method;
+    Gtk::CheckButton* raw_border;
     Gtk::CheckButton* raw_imagenum;
     Gtk::CheckButton* raw_ccSteps;
     Gtk::CheckButton* raw_dcb_iterations;
@@ -123,16 +129,16 @@ public:
     Gtk::CheckButton* ff_BlurType;
     Gtk::CheckButton* ff_ClipControl;
 
-    sigc::connection everythingConn, basicConn, detailConn, colorConn, lensConn, compositionConn, metaConn, rawConn, wavConn;
+    sigc::connection everythingConn, basicConn, detailConn, colorConn, lensConn, compositionConn, metaConn, rawConn, advancedConn;
 
     sigc::connection wbConn, exposureConn, localcontrastConn, shConn, pcvignetteConn, gradientConn, labcurveConn, colorappearanceConn;
-    sigc::connection sharpenConn, gradsharpenConn, microcontrastConn, impdenConn, dirpyrdenConn, defringeConn, epdConn, fattalConn, dirpyreqConn, waveletConn, retinexConn;
-    sigc::connection vibranceConn, chmixerConn, hsveqConn, rgbcurvesConn, chmixerbwConn, colortoningConn, filmSimulationConn;
+    sigc::connection sharpenConn, gradsharpenConn, microcontrastConn, impdenConn, dirpyrdenConn, defringeConn, epdConn, fattalConn, dirpyreqConn, waveletConn, retinexConn, dehazeConn;
+    sigc::connection vibranceConn, chmixerConn, hsveqConn, rgbcurvesConn, chmixerbwConn, colortoningConn, filmSimulationConn, softlightConn;
     sigc::connection distortionConn, cacorrConn, vignettingConn, lcpConn;
     sigc::connection coarserotConn, finerotConn, cropConn, resizeConn, prsharpeningConn, perspectiveConn, commonTransConn;
-    sigc::connection exifchConn, iptcConn, icmConn;
+    sigc::connection metadataConn, exifchConn, iptcConn, icmConn;
     sigc::connection df_fileConn, df_AutoSelectConn, ff_fileConn, ff_AutoSelectConn, ff_BlurRadiusConn, ff_BlurTypeConn, ff_ClipControlConn;
-    sigc::connection raw_caredblueConn, raw_ca_autocorrectConn, raw_hotpix_filtConn, raw_deadpix_filtConn, raw_linenoiseConn, raw_greenthreshConn, raw_ccStepsConn, raw_methodConn, raw_imagenumConn, raw_dcb_iterationsConn, raw_lmmse_iterationsConn, raw_pixelshiftConn, raw_dcb_enhanceConn, raw_exposConn, raw_preserConn, raw_blackConn;
+    sigc::connection raw_caredblueConn, raw_ca_autocorrectConn, raw_ca_avoid_colourshiftconn, raw_hotpix_filtConn, raw_deadpix_filtConn, raw_pdaf_lines_filterConn, raw_linenoiseConn, raw_greenthreshConn, raw_ccStepsConn, raw_methodConn, raw_borderConn, raw_imagenumConn, raw_dcb_iterationsConn, raw_lmmse_iterationsConn, raw_pixelshiftConn, raw_dcb_enhanceConn, raw_exposConn, raw_preserConn, raw_blackConn;
 
 public:
     PartialPasteDlg (const Glib::ustring &title, Gtk::Window* parent);
@@ -147,7 +153,7 @@ public:
     void compositionToggled ();
     void metaToggled ();
     void rawToggled ();
-    void wavToggled ();
+    void advancedToggled ();
 };
 
 #endif

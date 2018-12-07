@@ -90,11 +90,9 @@ BlackWhite::BlackWhite (): FoldableToolPanel(this, "blackwhite", M("TP_BWMIX_LAB
     autoHBox = Gtk::manage (new Gtk::HBox ());
 
     autoch = Gtk::manage (new Gtk::ToggleButton (M("TP_BWMIX_AUTOCH")));
-    autoch->set_tooltip_markup (M("TP_BWMIX_AUTOCH_TIP"));
     autoconn = autoch->signal_toggled().connect( sigc::mem_fun(*this, &BlackWhite::autoch_toggled) );
 
     neutral = Gtk::manage (new Gtk::Button (M("TP_BWMIX_NEUTRAL")));
-    neutral->set_tooltip_text (M("TP_BWMIX_NEUTRAL_TIP"));
     neutralconn = neutral->signal_pressed().connect( sigc::mem_fun(*this, &BlackWhite::neutral_pressed) );
     neutral->show();
 
@@ -130,7 +128,7 @@ BlackWhite::BlackWhite (): FoldableToolPanel(this, "blackwhite", M("TP_BWMIX_LAB
     setting->append (M("TP_BWMIX_SET_ROYGCBPMREL"));
     setting->append (M("TP_BWMIX_SET_INFRARED"));
 
-    setting->set_active (0);
+    setting->set_active (11);
     settingHBox->pack_start (*setting);
     mixerVBox->pack_start (*settingHBox);
     settingconn = setting->signal_changed().connect ( sigc::mem_fun(*this, &BlackWhite::settingChanged) );
@@ -181,18 +179,18 @@ BlackWhite::BlackWhite (): FoldableToolPanel(this, "blackwhite", M("TP_BWMIX_LAB
 
     //----------- RGB / ROYGCBPM Mixer ------------------------------
 
-    imgIcon[0] = Gtk::manage (new RTImage ("Chanmixer-R.png"));
-    imgIcon[1] = Gtk::manage (new RTImage ("Chanmixer-O.png"));
-    imgIcon[2] = Gtk::manage (new RTImage ("Chanmixer-Y.png"));
-    imgIcon[3] = Gtk::manage (new RTImage ("Chanmixer-G.png"));
-    imgIcon[4] = Gtk::manage (new RTImage ("Chanmixer-C.png"));
-    imgIcon[5] = Gtk::manage (new RTImage ("Chanmixer-B.png"));
-    imgIcon[6] = Gtk::manage (new RTImage ("Chanmixer-P.png"));
-    imgIcon[7] = Gtk::manage (new RTImage ("Chanmixer-M.png"));
+    imgIcon[0] = Gtk::manage (new RTImage ("circle-red-small.png"));
+    imgIcon[1] = Gtk::manage (new RTImage ("circle-orange-small.png"));
+    imgIcon[2] = Gtk::manage (new RTImage ("circle-yellow-small.png"));
+    imgIcon[3] = Gtk::manage (new RTImage ("circle-green-small.png"));
+    imgIcon[4] = Gtk::manage (new RTImage ("circle-cyan-small.png"));
+    imgIcon[5] = Gtk::manage (new RTImage ("circle-blue-small.png"));
+    imgIcon[6] = Gtk::manage (new RTImage ("circle-purple-small.png"));
+    imgIcon[7] = Gtk::manage (new RTImage ("circle-magenta-small.png"));
 
-    imgIcon[8]  = Gtk::manage (new RTImage ("Chanmixer-Rgamma.png"));
-    imgIcon[9]  = Gtk::manage (new RTImage ("Chanmixer-Ggamma.png"));
-    imgIcon[10] = Gtk::manage (new RTImage ("Chanmixer-Bgamma.png"));
+    imgIcon[8]  = Gtk::manage (new RTImage ("circle-empty-red-small.png"));
+    imgIcon[9]  = Gtk::manage (new RTImage ("circle-empty-green-small.png"));
+    imgIcon[10] = Gtk::manage (new RTImage ("circle-empty-blue-small.png"));
 
     mixerVBox->pack_start (*Gtk::manage (new  Gtk::HSeparator()));
 
@@ -390,9 +388,21 @@ bool BlackWhite::BWComputed_ ()
 
     disableListener ();
     mixerRed->setValue (nextredbw);
+    adjusterChanged(mixerRed, mixerRed->getValue());
     mixerGreen->setValue (nextgreenbw);
+    adjusterChanged(mixerGreen, mixerGreen->getValue());
     mixerBlue->setValue (nextbluebw);
+    adjusterChanged(mixerBlue, mixerBlue->getValue());
+    autoconn.block (true);
+    autoch->set_active (true);
+    autoconn.block (false);
+    lastAuto = false;
+    nextcount++;
     enableListener ();
+    if (listener  && nextcount <= 1 ) {
+        // activated only 1 time, but perhaps in some cases if we want that all is update pp3, auto, sliders : nextcount <= 2 but it cost time and result is identical
+        listener->panelChanged (EvAutoch, M("GENERAL_ENABLED"));
+    }
 
     updateRGBLabel();
 
@@ -791,6 +801,7 @@ void BlackWhite::filterChanged ()
 
     if (listener && (multiImage || getEnabled())) {
         listener->panelChanged (EvBWfilter, filter->get_active_text ());
+        listener->panelChanged (EvAutoch, M("GENERAL_ENABLED"));
     }
 }
 
@@ -886,8 +897,9 @@ void BlackWhite::neutral_pressed ()
 
     updateRGBLabel();
 
+    nextcount = 0;
     if(listener) {
-        listener->panelChanged (EvNeutralBW, M("ADJUSTER_RESET_TO_DEFAULT"));
+        listener->panelChanged (EvNeutralBW, M("GENERAL_RESET"));
     }
 }
 
@@ -1003,7 +1015,7 @@ void BlackWhite::autoch_toggled ()
         bool wasEnabled = disableListener();
 
         if (mixerRed->getAddMode()) {
-            mixerRed->resetValue(false);
+            mixerRed->resetValue(true);
         }
 
         if (mixerGreen->getAddMode()) {
@@ -1053,14 +1065,14 @@ void BlackWhite::autoch_toggled ()
     } else {
         if (autoch->get_active()) {
             bool wasEnabled = disableListener();
-            mixerRed->setValue(33);
-            mixerGreen->setValue(33);
-            mixerBlue->setValue(33);
-            mixerOrange->setValue(33);
-            mixerYellow->setValue(33);
-            mixerMagenta->setValue(33);
-            mixerPurple->setValue(33);
-            mixerCyan->setValue(33);
+            mixerRed->resetValue(false);
+            mixerGreen->resetValue(false);
+            mixerBlue->resetValue(false);
+            mixerOrange->resetValue(false);
+            mixerYellow->resetValue(false);
+            mixerMagenta->resetValue(false);
+            mixerPurple->resetValue(false);
+            mixerCyan->resetValue(false);
             setting->set_active (11);
             filter->set_active (0);
 
@@ -1082,15 +1094,15 @@ void BlackWhite::autoch_toggled ()
 
 }
 
-void BlackWhite::adjusterChanged (Adjuster* a, double newval)
+void BlackWhite::adjusterChanged(Adjuster* a, double newval)
 {
-
     // Checking "listener" to avoid "autoch" getting toggled off because it has to change the sliders when toggling on
     if (listener && (a == mixerRed || a == mixerGreen || a == mixerBlue || a == mixerOrange || a == mixerYellow || a == mixerMagenta || a == mixerPurple || a == mixerCyan) ) {
         if (multiImage && autoch->get_inconsistent()) {
             autoch->set_inconsistent (false);
         }
 
+        nextcount = 0;
         autoconn.block(true);
         autoch->set_active (false);
         autoconn.block(false);
@@ -1132,6 +1144,10 @@ void BlackWhite::adjusterChanged (Adjuster* a, double newval)
             listener->panelChanged (EvBWpur, value );
         }
     }
+}
+
+void BlackWhite::adjusterAutoToggled(Adjuster* a, bool newval)
+{
 }
 
 void BlackWhite::updateRGBLabel ()

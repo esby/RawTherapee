@@ -545,7 +545,7 @@ bool MyDiagonalCurve::handleEvents (GdkEvent* event)
     double minDistanceY = double(MIN_DISTANCE) / double(graphH - 1);
 
     switch (event->type) {
-    case Gdk::BUTTON_PRESS:
+    case GDK_BUTTON_PRESS:
         snapToElmt = -100;
 
         if (curve.type != DCT_Parametric) {
@@ -559,7 +559,7 @@ bool MyDiagonalCurve::handleEvents (GdkEvent* event)
                     getCursorPosition(Gdk::EventType(event->type), event->motion.is_hint != 0, int(event->button.x), int(event->button.y), Gdk::ModifierType(event->button.state));
                     findClosestPoint();
 
-                    new_type = CSMove;
+                    new_type = CSMove2D; // Shown when dragging a node.
 
                     if (distanceX > minDistanceX) {
                         if (mod_type & GDK_CONTROL_MASK) {
@@ -694,7 +694,7 @@ bool MyDiagonalCurve::handleEvents (GdkEvent* event)
 
         break;
 
-    case Gdk::BUTTON_RELEASE:
+    case GDK_BUTTON_RELEASE:
         snapToElmt = -100;
 
         if (curve.type != DCT_Parametric && edited_point == -1) {
@@ -735,7 +735,7 @@ bool MyDiagonalCurve::handleEvents (GdkEvent* event)
                 }
 
                 if (distanceX <= minDistanceX) {
-                    new_type = CSMove;
+                    new_type = CSMove2D; // Shown on node release.
                     lit_point = closest_point;
                 } else {
                     new_type = CSPlus;
@@ -755,7 +755,7 @@ bool MyDiagonalCurve::handleEvents (GdkEvent* event)
 
         break;
 
-    case Gdk::LEAVE_NOTIFY:
+    case GDK_LEAVE_NOTIFY:
 
         // Pointer can LEAVE even when dragging the point, so we don't modify the cursor in this case
         // The cursor will have to LEAVE another time after the drag...
@@ -772,7 +772,7 @@ bool MyDiagonalCurve::handleEvents (GdkEvent* event)
         retval = true;
         break;
 
-    case Gdk::MOTION_NOTIFY:
+    case GDK_MOTION_NOTIFY:
         snapToElmt = -100;
 
         if (curve.type == DCT_Linear || curve.type == DCT_Spline || curve.type == DCT_NURBS) {
@@ -799,7 +799,7 @@ bool MyDiagonalCurve::handleEvents (GdkEvent* event)
                         lit_point = -1;
                     } else if (distanceX <= minDistanceX) {
                         // the cursor is close to an existing point
-                        new_type = CSMove;
+                        new_type = CSPlus; // Shown when hovering over node snapping distance (not necessarily over node).
                         lit_point = closest_point;
                     } else {
                         // the cursor is inside the graph but away from existing points
@@ -1280,7 +1280,7 @@ void MyDiagonalCurve::pipetteDrag(EditDataProvider *provider, int modifierKey)
 void MyDiagonalCurve::getCursorPositionFromCurve(float x)
 {
 
-    // the graph is refreshed only if a new point is created (snaped to a pixel)
+    // the graph is refreshed only if a new point is created (snapped to a pixel)
     clampedX = x;
     clampedY = point.getVal01(x);
 
@@ -1292,7 +1292,7 @@ void MyDiagonalCurve::getCursorPositionFromCurve(float x)
 void MyDiagonalCurve::getCursorPositionFromCurve(int x)
 {
 
-    // the graph is refreshed only if a new point is created (snaped to a pixel)
+    // the graph is refreshed only if a new point is created (snapped to a pixel)
     cursorX = x - graphX;
     clampedX = (float(cursorX) - 1.5) / float(graphW - 3);
     clampedY = point.getVal01(clampedX);

@@ -69,11 +69,11 @@
 #include "improcfun.h"
 #include "settings.h"
 #include "iccstore.h"
-//#define BENCHMARK
 #include "StopWatch.h"
 #include "sleef.c"
 #include "opthelper.h"
 #include "rt_algo.h"
+#include "rescale.h"
 
 namespace rtengine
 {
@@ -154,7 +154,7 @@ void downSample (const Array2Df& A, Array2Df& B)
     const int height = B.getRows();
 
     // Note, I've uncommented all omp directives. They are all ok but are
-    // applied to too small problems and in total don't lead to noticable
+    // applied to too small problems and in total don't lead to noticeable
     // speed improvements. The main issue is the pde solver and in case of the
     // fft solver uses optimised threaded fftw routines.
     //#pragma omp parallel for
@@ -277,7 +277,7 @@ float calculateGradients (Array2Df* H, Array2Df* G, int k, bool multithread)
     const int width = H->getCols();
     const int height = H->getRows();
     const float divider = pow ( 2.0f, k + 1 );
-    float avgGrad = 0.0f;
+    double avgGrad = 0.0; // use double precision for large summations
 
     #pragma omp parallel for reduction(+:avgGrad) if(multithread)
 
@@ -294,7 +294,7 @@ float calculateGradients (Array2Df* H, Array2Df* G, int k, bool multithread)
             gx = ((*H) (w, y) - (*H) (e, y));
 
             gy = ((*H) (x, s) - (*H) (x, n));
-            // note this implicitely assumes that H(-1)=H(0)
+            // note this implicitly assumes that H(-1)=H(0)
             // for the fft-pde slover this would need adjustment as H(-1)=H(1)
             // is assumed, which means gx=0.0, gy=0.0 at the boundaries
             // however, the impact is not visible so we ignore this here
@@ -416,8 +416,8 @@ void tmo_fattal02 (size_t width,
 //     msec_timer stop_watch;
 //     stop_watch.start();
 // #endif
-    static const float black_point = 0.1f;
-    static const float white_point = 0.5f;
+    // static const float black_point = 0.1f;
+    // static const float white_point = 0.5f;
     static const float gamma = 1.0f; // 0.8f;
 
     // static const int   detail_level = 3;
@@ -452,7 +452,7 @@ void tmo_fattal02 (size_t width,
     int size = width * height;
 
     // find max value, normalize to range 0..100 and take logarithm
-    float minLum = Y (0, 0);
+    // float minLum = Y (0, 0);
     float maxLum = Y (0, 0);
 
     #pragma omp parallel for reduction(max:maxLum) if(multithread)
@@ -646,22 +646,6 @@ void tmo_fattal02 (size_t width,
             for (; j < width; j++) {
                 L[i][j] = xexpf ( gamma * L[i][j]);
             }
-        }
-    }
-
-    // remove percentile of min and max values and renormalize
-    float cut_min = 0.01f * black_point;
-    float cut_max = 1.0f - 0.01f * white_point;
-    assert (cut_min >= 0.0f && (cut_max <= 1.0f) && (cut_min < cut_max));
-    findMinMaxPercentile (L.data(), L.getRows() * L.getCols(), cut_min, minLum, cut_max, maxLum, multithread);
-    float dividor = (maxLum - minLum);
-
-    #pragma omp parallel for if(multithread)
-
-    for (size_t i = 0; i < height; ++i) {
-        for (size_t j = 0; j < width; ++j) {
-            L[i][j] = std::max ((L[i][j] - minLum) / dividor, 0.f);
-            // note, we intentionally do not cut off values > 1.0
         }
     }
 }
@@ -923,18 +907,6 @@ void solve_pde_fft (Array2Df *F, Array2Df *U, Array2Df *buf, bool multithread)/*
     for (int i = 0; i < width * height; i++) {
         (*U) (i) -= max;
     }
-
-    // fft parallel threads cleanup, better handled outside this function?
-#ifdef RT_FFTW3F_OMP
-
-    if (multithread) {
-        fftwf_cleanup_threads();
-    }
-
-#endif
-
-    // ph.setValue(90);
-    //DEBUG_STR << "solve_pde_fft: done" << std::endl;
 }
 
 
@@ -967,72 +939,20 @@ void solve_pde_fft (Array2Df *F, Array2Df *U, Array2Df *buf, bool multithread)/*
  * RT code from here on
  *****************************************************************************/
 
-inline float get_bilinear_value (const Array2Df &src, float x, float y)
+inline void rescale_bilinear (const Array2Df &src, Array2Df &dst, bool multithread)
 {
-    // Get integer and fractional parts of numbers
-    int xi = x;
-    int yi = y;
-    float xf = x - xi;
-    float yf = y - yi;
-    int xi1 = std::min (xi + 1, src.getCols() - 1);
-    int yi1 = std::min (yi + 1, src.getRows() - 1);
-
-    float bl = src (xi, yi);
-    float br = src (xi1, yi);
-    float tl = src (xi, yi1);
-    float tr = src (xi1, yi1);
-
-    // interpolate
-    float b = xf * br + (1.f - xf) * bl;
-    float t = xf * tr + (1.f - xf) * tl;
-    float pxf = yf * t + (1.f - yf) * b;
-    return pxf;
+    rescaleBilinear(src, dst, multithread);
 }
 
-
-void rescale_bilinear (const Array2Df &src, Array2Df &dst, bool multithread)
+inline void rescale_nearest (const Array2Df &src, Array2Df &dst, bool multithread)
 {
-    float col_scale = float (src.getCols()) / float (dst.getCols());
-    float row_scale = float (src.getRows()) / float (dst.getRows());
-
-#ifdef _OPENMP
-    #pragma omp parallel for if (multithread)
-#endif
-
-    for (int y = 0; y < dst.getRows(); ++y) {
-        float ymrs = y * row_scale;
-
-        for (int x = 0; x < dst.getCols(); ++x) {
-            dst (x, y) = get_bilinear_value (src, x * col_scale, ymrs);
-        }
-    }
-}
-
-void rescale_nearest (const Array2Df &src, Array2Df &dst, bool multithread)
-{
-    const int width = src.getCols();
-    const int height = src.getRows();
-    const int nw = dst.getCols();
-    const int nh = dst.getRows();
-
-#ifdef _OPENMP
-    #pragma omp parallel for if (multithread)
-#endif
-
-    for (int y = 0; y < nh; ++y) {
-        int sy = y * height / nh;
-
-        for (int x = 0; x < nw; ++x) {
-            int sx = x * width / nw;
-            dst (x, y) = src (sx, sy);
-        }
-    }
+    rescaleNearest(src, dst, multithread);
 }
 
 
 inline float luminance (float r, float g, float b, TMatrix ws)
 {
-    return r * ws[1][0] + g * ws[1][1] + b * ws[1][2];
+    return Color::rgbLuminance(r, g, b, ws);
 }
 
 
@@ -1055,8 +975,9 @@ inline int find_fast_dim (int dim)
 {
     // as per the FFTW docs:
     //
-    //   FFTW is generally best at handling sizes of the form 2a 3b 5c 7d 11e
-    //   13f, where e+f is either 0 or 1.
+    //   FFTW is generally best at handling sizes of the form
+    //     2^a 3^b 5^c 7^d 11^e 13^f,
+    //   where e+f is either 0 or 1.
     //
     // Here, we try to round up to the nearest dim that can be expressed in
     // the above form. This is not exhaustive, but should be ok for pictures
@@ -1093,6 +1014,10 @@ inline int find_fast_dim (int dim)
 
 void ImProcFunctions::ToneMapFattal02 (Imagefloat *rgb)
 {
+    if (!params->fattal.enabled) {
+        return;
+    }
+    
     BENCHFUN
     const int detail_level = 3;
 
@@ -1116,43 +1041,24 @@ void ImProcFunctions::ToneMapFattal02 (Imagefloat *rgb)
 
     Array2Df Yr (w, h);
 
-    const float epsilon = 1e-4f;
-    const float luminance_noise_floor = 65.535f;
-    const float min_luminance = 1.f;
-    TMatrix ws = ICCStore::getInstance()->workingSpaceMatrix (params->icm.working);
+    constexpr float epsilon = 1e-4f;
+    constexpr float luminance_noise_floor = 65.535f;
+    constexpr float min_luminance = 1.f;
 
-    float max_Y = 0.f;
-    int max_x = 0, max_y = 0;
+    TMatrix ws = ICCStore::getInstance()->workingSpaceMatrix (params->icm.workingProfile);
 
 #ifdef _OPENMP
-    #pragma omp parallel if (multiThread)
-#endif
-{
-    float max_YThr = 0.f;
-    int max_xThr = 0, max_yThr = 0;
-#ifdef _OPENMP
-    #pragma omp for schedule(dynamic,16) nowait
+    #pragma omp parallel for if(multiThread)
 #endif
     for (int y = 0; y < h; y++) {
         for (int x = 0; x < w; x++) {
             Yr (x, y) = std::max (luminance (rgb->r (y, x), rgb->g (y, x), rgb->b (y, x), ws), min_luminance); // clip really black pixels
-            if (Yr(x, y) > max_YThr) {
-                max_YThr = Yr(x, y);
-                max_xThr = x;
-                max_yThr = y;
-            }
         }
     }
-#ifdef _OPENMP
-#pragma omp critical
-#endif
-    if (max_YThr > max_Y) {
-        max_Y = max_YThr;
-        max_x = max_xThr;
-        max_y = max_yThr;
-    }
-}
 
+    float oldMedian;
+    const float percentile = float(LIM(params->fattal.anchor, 1, 100)) / 100.f;
+    findMinMaxPercentile (Yr.data(), Yr.getRows() * Yr.getCols(), percentile, oldMedian, percentile, oldMedian, multiThread);
     // median filter on the deep shadows, to avoid boosting noise
     // because w2 >= w and h2 >= h, we can use the L buffer as temporary buffer for Median_Denoise()
     int w2 = find_fast_dim (w) + 1;
@@ -1193,26 +1099,28 @@ void ImProcFunctions::ToneMapFattal02 (Imagefloat *rgb)
     const float hr = float(h2) / float(h);
     const float wr = float(w2) / float(w);
 
-    const float scale = 65535.f / std::max(L(max_x * wr + 1, max_y * hr + 1), epsilon) * (65535.f / Yr(max_x, max_y));
-    
+    float newMedian;
+    findMinMaxPercentile (L.data(), L.getRows() * L.getCols(), percentile, newMedian, percentile, newMedian, multiThread);
+    const float scale = (oldMedian == 0.f || newMedian == 0.f) ? 65535.f : (oldMedian / newMedian); // avoid Nan
+
 #ifdef _OPENMP
     #pragma omp parallel for schedule(dynamic,16) if(multiThread)
 #endif
     for (int y = 0; y < h; y++) {
         int yy = y * hr + 1;
-        
+
         for (int x = 0; x < w; x++) {
             int xx = x * wr + 1;
-            
-            float Y = Yr (x, y);
-            float l = std::max (L (xx, yy), epsilon) * (scale / Y);
-            rgb->r (y, x) = std::max (rgb->r (y, x), 0.f) * l;
-            rgb->g (y, x) = std::max (rgb->g (y, x), 0.f) * l;
-            rgb->b (y, x) = std::max (rgb->b (y, x), 0.f) * l;
 
-            assert (std::isfinite (rgb->r (y, x)));
-            assert (std::isfinite (rgb->g (y, x)));
-            assert (std::isfinite (rgb->b (y, x)));
+            float Y = std::max(Yr(x, y), epsilon);
+            float l = std::max(L(xx, yy), epsilon) * (scale / Y);
+            rgb->r(y, x) *= l;
+            rgb->g(y, x) *= l;
+            rgb->b(y, x) *= l;
+
+            assert(std::isfinite(rgb->r(y, x)));
+            assert(std::isfinite(rgb->g(y, x)));
+            assert(std::isfinite(rgb->b(y, x)));
         }
     }
 }

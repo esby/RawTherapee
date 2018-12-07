@@ -44,7 +44,7 @@ CropWindow::CropWindow (ImageArea* parent, bool isLowUpdatePriority_, bool isDet
       crop_custom_ratio(0.f)
 {
     initZoomSteps();
-    
+
     Glib::RefPtr<Pango::Context> context = parent->get_pango_context () ;
     Pango::FontDescription fontd = context->get_font_description ();
     fontd.set_weight (Pango::WEIGHT_BOLD);
@@ -57,11 +57,11 @@ CropWindow::CropWindow (ImageArea* parent, bool isLowUpdatePriority_, bool isDet
 
     titleHeight = ih;
 
-    bZoomOut = new LWButton (RTImage::createFromPng ("gtk-zoom-out-small.png"), 0, nullptr, LWButton::Left, LWButton::Center, "Zoom Out");
-    bZoomIn  = new LWButton (RTImage::createFromPng ("gtk-zoom-in-small.png"),  1, nullptr, LWButton::Left, LWButton::Center, "Zoom In");
-    bZoom100 = new LWButton (RTImage::createFromPng ("gtk-zoom-100-small.png"), 2, nullptr, LWButton::Left, LWButton::Center, "Zoom 100/%");
-    //bZoomFit = new LWButton (RTImage::createFromPng ("gtk-zoom-fit.png"), 3, NULL, LWButton::Left, LWButton::Center, "Zoom Fit");
-    bClose   = new LWButton (RTImage::createFromPng ("gtk-close-small.png"),    4, nullptr, LWButton::Right, LWButton::Center, "Close");
+    bZoomOut = new LWButton (RTImage::createFromPng ("magnifier-minus-small.png"), 0, nullptr, LWButton::Left, LWButton::Center, "Zoom Out");
+    bZoomIn  = new LWButton (RTImage::createFromPng ("magnifier-plus-small.png"),  1, nullptr, LWButton::Left, LWButton::Center, "Zoom In");
+    bZoom100 = new LWButton (RTImage::createFromPng ("magnifier-1to1-small.png"), 2, nullptr, LWButton::Left, LWButton::Center, "Zoom 100/%");
+    //bZoomFit = new LWButton (RTImage::createFromPng ("magnifier-fit.png"), 3, NULL, LWButton::Left, LWButton::Center, "Zoom Fit");
+    bClose   = new LWButton (RTImage::createFromPng ("cancel-small.png"),    4, nullptr, LWButton::Right, LWButton::Center, "Close");
 
     buttonSet.add (bZoomOut);
     buttonSet.add (bZoomIn);
@@ -267,15 +267,26 @@ void CropWindow::flawnOver (bool isFlawnOver)
     this->isFlawnOver = isFlawnOver;
 }
 
-void CropWindow::scroll (int state, GdkScrollDirection direction, int x, int y)
+void CropWindow::scroll (int state, GdkScrollDirection direction, int x, int y, double deltaX, double deltaY)
 {
+    double delta = 0.0;
+    if (abs(deltaX) > abs(deltaY)) {
+        delta = deltaX;
+    } else {
+        delta = deltaY;
+    }
+    if (delta == 0.0 && direction == GDK_SCROLL_SMOOTH) {
+        // sometimes this case happens. To avoid zooming into the wrong direction in this case, we just do nothing
+        return;
+    }
+    bool isUp = direction == GDK_SCROLL_UP || (direction == GDK_SCROLL_SMOOTH && delta < 0.0);
     if ((state & GDK_CONTROL_MASK) && onArea(ColorPicker, x, y)) {
         // resizing a color picker
-        if (direction == GDK_SCROLL_UP) {
+        if (isUp) {
             hoveredPicker->incSize();
             updateHoveredPicker();
             iarea->redraw ();
-        }else if (direction == GDK_SCROLL_DOWN) {
+        } else {
             hoveredPicker->decSize();
             updateHoveredPicker();
             iarea->redraw ();
@@ -287,9 +298,9 @@ void CropWindow::scroll (int state, GdkScrollDirection direction, int x, int y)
 
         screenCoordToImage(newCenterX, newCenterY, newCenterX, newCenterY);
 
-        if (direction == GDK_SCROLL_UP && !isMaxZoom()) {
+        if (isUp && !isMaxZoom()) {
             zoomIn (true, newCenterX, newCenterY);
-        } else if (!isMinZoom()) {
+        } else if (!isUp && !isMinZoom()) {
             zoomOut (true, newCenterX, newCenterY);
         }
     }
@@ -344,7 +355,7 @@ void CropWindow::buttonPress (int button, int type, int bstate, int x, int y)
                     if ((bstate & GDK_SHIFT_MASK) && cropHandler.cropParams.w > 0 && cropHandler.cropParams.h > 0) {
                         crop_custom_ratio = float(cropHandler.cropParams.w) / float(cropHandler.cropParams.h);
                     }
-                    
+
                     if (iarea->getToolMode () == TMColorPicker) {
                         if (hoveredPicker) {
                             if ((bstate & GDK_CONTROL_MASK) && !(bstate & GDK_SHIFT_MASK)) {
@@ -362,7 +373,7 @@ void CropWindow::buttonPress (int button, int type, int bstate, int x, int y)
                             // Add a new Color Picker
                             rtengine::Coord imgPos;
                             screenCoordToImage(x, y, imgPos.x, imgPos.y);
-                            LockableColorPicker *newPicker = new LockableColorPicker(this, &cropHandler.colorParams.output, &cropHandler.colorParams.working);
+                            LockableColorPicker *newPicker = new LockableColorPicker(this, &cropHandler.colorParams.outputProfile, &cropHandler.colorParams.workingProfile);
                             colorPickers.push_back(newPicker);
                             hoveredPicker = newPicker;
                             updateHoveredPicker(&imgPos);
@@ -754,10 +765,6 @@ void CropWindow::buttonRelease (int button, int num, int bstate, int x, int y)
         }
 
         iarea->setToolHand ();
-
-        if (pmhlistener) {
-            pmhlistener->toggleFreeze();
-        }
     }
 
     state = SNormal;
@@ -1007,23 +1014,25 @@ void CropWindow::pointerMoved (int bstate, int x, int y)
         int mx, my;
         screenCoordToImage (x, y, mx, my);
 
-        if (!onArea (CropImage, x, y) || !cropHandler.cropPixbuf) {
+        MyMutex::MyLock lock(cropHandler.cimg);
+
+        if (!onArea (CropImage, x, y) || !cropHandler.cropPixbuftrue) {
             cropHandler.getFullImageSize(mx, my);
             //    pmlistener->pointerMoved (false, cropHandler.colorParams.working, mx, my, -1, -1, -1);
             //   if (pmhlistener) pmhlistener->pointerMoved (false, cropHandler.colorParams.working, mx, my, -1, -1, -1);
             /*    Glib::ustring outputProfile;
                 outputProfile =cropHandler.colorParams.output ;
                 printf("Using \"%s\" output\n", outputProfile.c_str());
-                if(outputProfile=="RT_sRGB") printf("OK SRGB2");
+                if(outputProfile==options.rtSettings.srgb) printf("OK SRGB2");
             */
-            pmlistener->pointerMoved (false, cropHandler.colorParams.output, cropHandler.colorParams.working, mx, my, -1, -1, -1);
+            pmlistener->pointerMoved (false, cropHandler.colorParams.outputProfile, cropHandler.colorParams.workingProfile, mx, my, -1, -1, -1);
 
             if (pmhlistener) {
-                pmhlistener->pointerMoved (false, cropHandler.colorParams.output, cropHandler.colorParams.working, mx, my, -1, -1, -1);
+                pmhlistener->pointerMoved (false, cropHandler.colorParams.outputProfile, cropHandler.colorParams.workingProfile, mx, my, -1, -1, -1);
             }
 
         } else {
-            /*MyMutex::MyLock lock(cropHandler.cimg);
+            /*
 
             int vx = x - xpos - imgX;
             int vy = y - ypos - imgY;
@@ -1033,7 +1042,6 @@ void CropWindow::pointerMoved (int bstate, int x, int y)
 
             */
 
-            cropHandler.cimg.lock ();
             int vx = x - xpos - imgX;
             int vy = y - ypos - imgY;
 
@@ -1045,34 +1053,35 @@ void CropWindow::pointerMoved (int bstate, int x, int y)
 //          guint8* pix = cropHandler.cropPixbuf->get_pixels() + vy*cropHandler.cropPixbuf->get_rowstride() + vx*3;
 //          if (vx < cropHandler.cropPixbuf->get_width() && vy < cropHandler.cropPixbuf->get_height())
 //              pmlistener->pointerMoved (true, mx, my, pix[0], pix[1], pix[2]);
-            int imwidth = cropHandler.cropPixbuf->get_width();
-            int imheight = cropHandler.cropPixbuf->get_height();
-            guint8* pix = cropHandler.cropPixbuftrue->get_pixels() + vy * cropHandler.cropPixbuf->get_rowstride() + vx * 3;
+            int imwidth = cropHandler.cropPixbuftrue->get_width();
+            int imheight = cropHandler.cropPixbuftrue->get_height();
+            guint8* pix = cropHandler.cropPixbuftrue->get_pixels() + vy * cropHandler.cropPixbuftrue->get_rowstride() + vx * 3;
 
             int rval = pix[0];
             int gval = pix[1];
             int bval = pix[2];
+            bool isRaw = false;
             if (vx < imwidth && vy < imheight) {
                 rtengine::StagedImageProcessor* ipc = iarea->getImProcCoordinator();
                 if(ipc) {
                     procparams::ProcParams params;
                     ipc->getParams(&params);
-                    if(params.raw.bayersensor.method == RAWParams::BayerSensor::getMethodString(RAWParams::BayerSensor::Method::NONE) || params.raw.xtranssensor.method == RAWParams::XTransSensor::getMethodString(RAWParams::XTransSensor::Method::NONE)) {
+                    isRaw = params.raw.bayersensor.method == RAWParams::BayerSensor::getMethodString(RAWParams::BayerSensor::Method::NONE) || params.raw.xtranssensor.method == RAWParams::XTransSensor::getMethodString(RAWParams::XTransSensor::Method::NONE);
+                    if(isRaw) {
                         ImageSource *isrc = static_cast<ImageSource*>(ipc->getInitialImage());
                         isrc->getRawValues(mx, my, params.coarse.rotate, rval, gval, bval);
                     }
                 }
-                //      pmlistener->pointerMoved (true, cropHandler.colorParams.working, mx, my, pix[0], pix[1], pix[2]);
-                pmlistener->pointerMoved (true, cropHandler.colorParams.output, cropHandler.colorParams.working, mx, my, rval, gval, bval);
 
-                if (pmhlistener)
-                    //    pmhlistener->pointerMoved (true, cropHandler.colorParams.working, mx, my, pix[0], pix[1], pix[2]);
-                {
-                    pmhlistener->pointerMoved (true, cropHandler.colorParams.output, cropHandler.colorParams.working, mx, my, pix[0], pix[1], pix[2]);
+                // Updates the Navigator
+                // TODO: possible double color conversion if rval, gval, bval come from cropHandler.cropPixbuftrue ? see issue #4583
+                pmlistener->pointerMoved (true, cropHandler.colorParams.outputProfile, cropHandler.colorParams.workingProfile, mx, my, rval, gval, bval, isRaw);
+
+                if (pmhlistener) {
+                    // Updates the HistogramRGBArea
+                    pmhlistener->pointerMoved (true, cropHandler.colorParams.outputProfile, cropHandler.colorParams.workingProfile, mx, my, rval, gval, bval);
                 }
             }
-
-            cropHandler.cimg.unlock ();
         }
     }
 }
@@ -1251,7 +1260,7 @@ void CropWindow::updateCursor (int x, int y)
                 if (onArea (CropObserved, x, y)) {
                     newType = CSMove;
                 } else {
-                    newType = CSOpenHand;
+                    newType = CSCrosshair;
                 }
             } else if (tm == TMSpotWB) {
                 newType = CSSpotWB;
@@ -1284,7 +1293,7 @@ void CropWindow::updateCursor (int x, int y)
     } else if (state == SCropMove || state == SCropWinMove || state == SObservedMove) {
         newType = CSMove;
     } else if (state == SHandMove || state == SCropImgMove) {
-        newType = CSClosedHand;
+        newType = CSHandClosed;
     } else if (state == SResizeW1 || state == SResizeW2) {
         newType = CSResizeWidth;
     } else if (state == SResizeH1 || state == SResizeH2) {
@@ -1379,8 +1388,8 @@ void CropWindow::expose (Cairo::RefPtr<Cairo::Context> cr)
                 break;
             }
         }
-        bool useBgColor = (state == SNormal);
-    
+        bool useBgColor = (state == SNormal || state == SDragPicker || state == SDeletePicker || state == SEditDrag1);
+
         if (cropHandler.cropPixbuf) {
             imgW = cropHandler.cropPixbuf->get_width ();
             imgH = cropHandler.cropPixbuf->get_height ();
@@ -1648,7 +1657,7 @@ void CropWindow::expose (Cairo::RefPtr<Cairo::Context> cr)
                     const int shThreshold = options.shadowThreshold;
                     const float ShawdowFac = 64.f / (options.shadowThreshold + 1);
                     const float HighlightFac = 64.f / (256 - options.highlightThreshold);
-                    const bool showclippedAny = (!showR && !showG && !showB && !showL); // will show clipping if any (all) of RGB chanels is (shadow) clipped
+                    const bool showclippedAny = (!showR && !showG && !showB && !showL); // will show clipping if any (all) of RGB channels is (shadow) clipped
 
 #ifdef _OPENMP
                     #pragma omp parallel for schedule(dynamic,16)
@@ -1955,7 +1964,7 @@ void CropWindow::zoomIn (bool toCursor, int cursorX, int cursorY)
                 int x1 = cropHandler.cropParams.x + cropHandler.cropParams.w / 2;
                 int y1 = cropHandler.cropParams.y + cropHandler.cropParams.h / 2;
                 double cropd = sqrt(cropHandler.cropParams.h * cropHandler.cropParams.h + cropHandler.cropParams.w * cropHandler.cropParams.w) * zoomSteps[cropZoom].zoom;
-                double imd = sqrt(imgW * imgW + imgH + imgH);
+                double imd = sqrt(imgW * imgW + imgH * imgH);
                 double d;
 
                 // the more we can see of the crop, the more gravity towards crop center
@@ -2005,7 +2014,7 @@ void CropWindow::zoomOut (bool toCursor, int cursorX, int cursorY)
     fitZoom = false;
 }
 
-void CropWindow::zoom11 ()
+void CropWindow::zoom11 (bool notify)
 {
 
     int x = -1;
@@ -2027,7 +2036,7 @@ void CropWindow::zoom11 ()
         screenCoordToImage(xpos + imgX + imgW / 2, ypos + imgY + imgH / 2, x, y);
     }
 
-    changeZoom (zoom11index, true, x, y);
+    changeZoom (zoom11index, notify, x, y, notify);
     fitZoom = false;
 }
 
@@ -2182,7 +2191,7 @@ void CropWindow::updateHoveredPicker (rtengine::Coord *imgPos)
         }
     }
 }
-void CropWindow::changeZoom  (int zoom, bool notify, int centerx, int centery)
+void CropWindow::changeZoom (int zoom, bool notify, int centerx, int centery, bool needsRedraw)
 {
 
     if (zoom < 0) {
@@ -2201,7 +2210,8 @@ void CropWindow::changeZoom  (int zoom, bool notify, int centerx, int centery)
             listener->cropZoomChanged (this);
         }
 
-    iarea->redraw ();
+    if (needsRedraw)
+        iarea->redraw ();
 }
 
 LockableColorPicker::Validity CropWindow::checkValidity (LockableColorPicker*  picker, const rtengine::Coord &pos)
@@ -2577,7 +2587,7 @@ void CropWindow::initialImageArrived ()
 {
 
     for (auto listener : listeners) {
-        listener->initialImageArrived (this);
+        listener->initialImageArrived();
     }
 }
 

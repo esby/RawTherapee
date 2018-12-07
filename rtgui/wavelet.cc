@@ -100,7 +100,7 @@ Wavelet::Wavelet() :
     bllev(Gtk::manage(new ThresholdAdjuster(M("TP_WAVELET_LOWLIGHT"), 0., 100., 0., 2., 50., 25., 0, false))),
     pastlev(Gtk::manage(new ThresholdAdjuster(M("TP_WAVELET_PASTEL"), 0., 70., 0., 2., 30., 20., 0, false))),
     satlev(Gtk::manage(new ThresholdAdjuster(M("TP_WAVELET_SAT"), 0., 130., 30., 45., 130., 100., 0, false))),
-    edgcont(Gtk::manage(new ThresholdAdjuster(M("TP_WAVELET_EDGCONT"), 0., 100., options.rtSettings.bot_left, options.rtSettings.top_left, options.rtSettings.bot_right, options.rtSettings.top_right, 0., false))),
+    edgcont(Gtk::manage(new ThresholdAdjuster(M("TP_WAVELET_EDGCONT"), 0., 100., 0, 10, 75, 40, 0., false))),
     level0noise(Gtk::manage(new ThresholdAdjuster(M("TP_WAVELET_LEVZERO"), -30., 100., 0., M("TP_WAVELET_STREN"), 1., 0., 100., 0., M("TP_WAVELET_NOIS"), 1., nullptr, false))),
     level1noise(Gtk::manage(new ThresholdAdjuster(M("TP_WAVELET_LEVONE"), -30., 100., 0., M("TP_WAVELET_STREN"), 1., 0., 100., 0., M("TP_WAVELET_NOIS"), 1., nullptr, false))),
     level2noise(Gtk::manage(new ThresholdAdjuster(M("TP_WAVELET_LEVTWO"), -30., 100., 0., M("TP_WAVELET_STREN"), 1., 0., 100., 0., M("TP_WAVELET_NOIS"), 1., nullptr, false))),
@@ -698,20 +698,20 @@ Wavelet::Wavelet() :
     cbenabConn = cbenab->signal_toggled().connect( sigc::mem_fun(*this, &Wavelet::cbenabToggled) );
     cbenab->set_tooltip_text (M("TP_WAVELET_CB_TOOLTIP"));
 
-    Gtk::Image* const iblueR   = Gtk::manage (new RTImage ("ajd-wb-temp1.png"));
-    Gtk::Image* const iyelL    = Gtk::manage (new RTImage ("ajd-wb-temp2.png"));
-    Gtk::Image* const imagL    = Gtk::manage (new RTImage ("ajd-wb-green1.png"));
-    Gtk::Image* const igreenR  = Gtk::manage (new RTImage ("ajd-wb-green2.png"));
+    Gtk::Image* const iblueR   = Gtk::manage (new RTImage ("circle-blue-small.png"));
+    Gtk::Image* const iyelL    = Gtk::manage (new RTImage ("circle-yellow-small.png"));
+    Gtk::Image* const imagL    = Gtk::manage (new RTImage ("circle-magenta-small.png"));
+    Gtk::Image* const igreenR  = Gtk::manage (new RTImage ("circle-green-small.png"));
 
-    Gtk::Image* const  iblueRm  = Gtk::manage (new RTImage ("ajd-wb-temp1.png"));
-    Gtk::Image* const  iyelLm   = Gtk::manage (new RTImage ("ajd-wb-temp2.png"));
-    Gtk::Image* const  imagLm   = Gtk::manage (new RTImage ("ajd-wb-green1.png"));
-    Gtk::Image* const  igreenRm = Gtk::manage (new RTImage ("ajd-wb-green2.png"));
+    Gtk::Image* const  iblueRm  = Gtk::manage (new RTImage ("circle-blue-small.png"));
+    Gtk::Image* const  iyelLm   = Gtk::manage (new RTImage ("circle-yellow-small.png"));
+    Gtk::Image* const  imagLm   = Gtk::manage (new RTImage ("circle-magenta-small.png"));
+    Gtk::Image* const  igreenRm = Gtk::manage (new RTImage ("circle-green-small.png"));
 
-    Gtk::Image* const iblueRh  = Gtk::manage (new RTImage ("ajd-wb-temp1.png"));
-    Gtk::Image* const iyelLh   = Gtk::manage (new RTImage ("ajd-wb-temp2.png"));
-    Gtk::Image* const imagLh   = Gtk::manage (new RTImage ("ajd-wb-green1.png"));
-    Gtk::Image* const igreenRh = Gtk::manage (new RTImage ("ajd-wb-green2.png"));
+    Gtk::Image* const iblueRh  = Gtk::manage (new RTImage ("circle-blue-small.png"));
+    Gtk::Image* const iyelLh   = Gtk::manage (new RTImage ("circle-yellow-small.png"));
+    Gtk::Image* const imagLh   = Gtk::manage (new RTImage ("circle-magenta-small.png"));
+    Gtk::Image* const igreenRh = Gtk::manage (new RTImage ("circle-green-small.png"));
 
     greenhigh = Gtk::manage (new Adjuster ("", -100., 100., 1., 0., igreenRh, imagLh));
     bluehigh = Gtk::manage (new Adjuster ("", -100., 100., 1., 0., iblueRh, iyelLh));
@@ -745,7 +745,7 @@ Wavelet::Wavelet() :
     resBox->pack_start(*chanMixerMidFrame, Gtk::PACK_SHRINK);
     resBox->pack_start(*chanMixerShadowsFrame, Gtk::PACK_SHRINK);
 
-    //RTImage *resetImg = Gtk::manage (new RTImage ("gtk-undo-ltr-small.png", "gtk-undo-rtl-small.png"));
+    //RTImage *resetImg = Gtk::manage (new RTImage ("undo-small.png", "redo-small.png"));
     //neutral->set_image(*resetImg);
     Gtk::Button* const neutral = Gtk::manage(new Gtk::Button(M("TP_COLORTONING_NEUTRAL")));
     neutral->set_tooltip_text (M("TP_COLORTONING_NEUTRAL_TIP"));
@@ -890,7 +890,7 @@ void Wavelet::wavChanged (double nlevel)
     nextnlevel = nlevel;
 
     const auto func = [](gpointer data) -> gboolean {
-        GThreadLock lock; // All GUI acces from idle_add callbacks or separate thread HAVE to be protected
+        GThreadLock lock; // All GUI access from idle_add callbacks or separate thread HAVE to be protected
         static_cast<Wavelet*>(data)->wavComputed_();
 
         return FALSE;
@@ -919,7 +919,7 @@ void Wavelet::updatewavLabel ()
     }
 }
 
-// Will only reset the chanel mixer
+// Will only reset the channel mixer
 // WARNING!  In mutiImage mode, and for sliders in ADD mode, this will reset the slider to 0, but not to the default value as in SET mode.
 void Wavelet::neutral_pressed ()
 {
@@ -934,7 +934,7 @@ void Wavelet::neutral_pressed ()
     enableListener();
 
     if (listener && getEnabled()) {
-        listener->panelChanged (EvWavNeutral, M("ADJUSTER_RESET_TO_DEFAULT"));
+        listener->panelChanged (EvWavNeutral, M("GENERAL_RESET"));
     }
 }
 
@@ -1096,7 +1096,7 @@ void Wavelet::read (const ProcParams* pp, const ParamsEdited* pedited)
         Dirmethod->set_active (3);
     }
 
-    int selectedLevel = atoi(pp->wavelet.Lmethod.data()) - 1;
+    int selectedLevel = pp->wavelet.Lmethod - 1;
     Lmethod->set_active (selectedLevel == -1 ? 4 : selectedLevel);
 
     ccshape->setCurve (pp->wavelet.ccwcurve);
@@ -1735,9 +1735,7 @@ void Wavelet::write (ProcParams* pp, ParamsEdited* pedited)
         pp->wavelet.Dirmethod = "all";
     }
 
-    char lMethod[3]; // one additional char to avoid buffer overrun if someone increases number of levels > 9
-    sprintf(lMethod, "%d", Lmethod->get_active_row_number() + 1);
-    pp->wavelet.Lmethod = lMethod;
+    pp->wavelet.Lmethod = Lmethod->get_active_row_number() + 1;
 }
 
 void Wavelet::curveChanged (CurveEditor* ce)
@@ -1923,7 +1921,8 @@ void Wavelet::setDefaults (const ProcParams* defParams, const ParamsEdited* pedi
         }
     }
 }
-void Wavelet::adjusterChanged (ThresholdAdjuster* a, double newBottom, double newTop)
+
+void Wavelet::adjusterChanged(ThresholdAdjuster* a, double newBottom, double newTop)
 {
     if (listener && (multiImage || getEnabled()) ) {
         if(a == level0noise) {
@@ -1943,8 +1942,19 @@ void Wavelet::adjusterChanged (ThresholdAdjuster* a, double newBottom, double ne
     }
 }
 
+void Wavelet::adjusterChanged(ThresholdAdjuster* a, double newBottomLeft, double newTopLeft, double newBottomRight, double newTopRight)
+{
+}
 
-void Wavelet::adjusterChanged2 (ThresholdAdjuster* a, int newBottomL, int newTopL, int newBottomR, int newTopR)
+void Wavelet::adjusterChanged(ThresholdAdjuster* a, int newBottom, int newTop)
+{
+}
+
+void Wavelet::adjusterChanged(ThresholdAdjuster* a, int newBottomLeft, int newTopLeft, int newBottomRight, int newTopRight)
+{
+}
+
+void Wavelet::adjusterChanged2(ThresholdAdjuster* a, int newBottomL, int newTopL, int newBottomR, int newTopR)
 {
     if (listener && (multiImage || getEnabled()) ) {
         if(a == hueskin) {
@@ -2391,7 +2401,7 @@ void Wavelet::adjusterUpdateUI (Adjuster* a)
     */
 }
 
-void Wavelet::adjusterChanged (Adjuster* a, double newval)
+void Wavelet::adjusterChanged(Adjuster* a, double newval)
 {
     if (listener && (multiImage || getEnabled()) ) {
         if (a == edgthresh) {
@@ -2517,6 +2527,10 @@ void Wavelet::adjusterChanged (Adjuster* a, double newval)
                                    );
         }
     }
+}
+
+void Wavelet::adjusterAutoToggled(Adjuster* a, bool newval)
+{
 }
 
 void Wavelet::enabledUpdateUI ()

@@ -61,11 +61,11 @@ bool extractLensInfo (std::string &fullname, double &minFocal, double &maxFocal,
 
 unsigned short sget2 (unsigned char *s, ByteOrder order);
 int sget4 (unsigned char *s, ByteOrder order);
-inline unsigned short get2 (FILE* f, ByteOrder order);
-inline int get4 (FILE* f, ByteOrder order);
-inline void sset2 (unsigned short v, unsigned char *s, ByteOrder order);
-inline void sset4 (int v, unsigned char *s, ByteOrder order);
-inline float int_to_float (int i);
+unsigned short get2 (FILE* f, ByteOrder order);
+int get4 (FILE* f, ByteOrder order);
+void sset2 (unsigned short v, unsigned char *s, ByteOrder order);
+void sset4 (int v, unsigned char *s, ByteOrder order);
+float int_to_float (int i);
 short int int2_to_signed (short unsigned int i);
 
 struct TIFFHeader {
@@ -78,7 +78,7 @@ struct TIFFHeader {
 class Tag;
 class Interpreter;
 
-/// Structure of informations describing an Exif tag
+/// Structure of information describing an Exif tag
 struct TagAttrib {
     int                 ignore;   // =0: never ignore, =1: always ignore, =2: ignore if the subdir type is reduced image, =-1: end of table
     ActionCode          action;
@@ -155,11 +155,11 @@ public:
     virtual Tag*     findTagUpward (const char* name) const;
     bool             getXMPTagValue (const char* name, char* value) const;
 
-    void             keepTag       (int ID);
-    virtual void     addTag        (Tag* a);
-    virtual void     addTagFront   (Tag* a);
-    virtual void     replaceTag    (Tag* a);
-    inline Tag*      getTagByIndex (int ix)
+    void        keepTag       (int ID);
+    void        addTag        (Tag* &a);
+    void        addTagFront   (Tag* &a);
+    void        replaceTag    (Tag* a);
+    inline Tag* getTagByIndex (int ix)
     {
         return tags[ix];
     }
@@ -171,7 +171,7 @@ public:
     virtual int      calculateSize ();
     virtual int      write         (int start, unsigned char* buffer);
     virtual TagDirectory* clone    (TagDirectory* parent);
-    virtual void     applyChange   (std::string field, Glib::ustring value);
+    void     applyChange   (const std::string &field, const Glib::ustring &value);
 
     virtual void     printAll      (unsigned  int level = 0) const; // reentrant debug function, keep level=0 on first call !
     virtual bool     CPBDump       (const Glib::ustring &commFName, const Glib::ustring &imageFName, const Glib::ustring &profileFName, const Glib::ustring &defaultPParams,
@@ -191,10 +191,10 @@ public:
     TagDirectoryTable();
     TagDirectoryTable (TagDirectory* p, unsigned char *v, int memsize, int offs, TagType type, const TagAttrib* ta, ByteOrder border);
     TagDirectoryTable (TagDirectory* p, FILE* f, int memsize, int offset, TagType type, const TagAttrib* ta, ByteOrder border);
-    virtual ~TagDirectoryTable();
-    virtual int calculateSize ();
-    virtual int write (int start, unsigned char* buffer);
-    virtual TagDirectory* clone (TagDirectory* parent);
+    ~TagDirectoryTable() override;
+    int calculateSize () override;
+    int write (int start, unsigned char* buffer) override;
+    TagDirectory* clone (TagDirectory* parent) override;
 };
 
 // a class representing a single tag
@@ -236,7 +236,7 @@ public:
     void initLongArray   (const char* data, int len);
     void initRational    (int num, int den);
 
-    static void swapByteOrder2 (char *buffer, int count);
+    static void swapByteOrder2 (unsigned char *buffer, int count);
 
     // get basic tag properties
     int                  getID          () const
@@ -281,15 +281,15 @@ public:
     }
 
     // read/write value
-    int     toInt         (int ofs = 0, TagType astype = INVALID) const;
-    void    fromInt       (int v);
-    double  toDouble      (int ofs = 0) const;
-    double* toDoubleArray (int ofs = 0) const;
-    void    toRational    (int& num, int& denom, int ofs = 0) const;
-    void    toString      (char* buffer, int ofs = 0) const;
-    void    fromString    (const char* v, int size = -1);
-    void    setInt        (int v, int ofs = 0, TagType astype = LONG);
-
+    int     toInt           (int ofs = 0, TagType astype = INVALID) const;
+    void    fromInt         (int v);
+    double  toDouble        (int ofs = 0) const;
+    double* toDoubleArray   (int ofs = 0) const;
+    void    toRational      (int& num, int& denom, int ofs = 0) const;
+    void    toString        (char* buffer, int ofs = 0) const;
+    void    fromString      (const char* v, int size = -1);
+    void    setInt          (int v, int ofs = 0, TagType astype = LONG);
+    int     getDistanceFrom (const TagDirectory *root);
 
     // additional getter/setter for more comfortable use
     std::string valueToString         ();
@@ -488,7 +488,7 @@ protected:
     std::map<int, std::string> choices;
 public:
     ChoiceInterpreter () {};
-    virtual std::string toString (Tag* t)
+    std::string toString (Tag* t) override
     {
         std::map<int, std::string>::iterator r = choices.find (t->toInt());
 

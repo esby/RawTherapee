@@ -40,13 +40,9 @@ extern const Settings* settings;
 
 //sequence of scales
 
-SSEFUNCTION void ImProcFunctions :: dirpyr_equalizer(float ** src, float ** dst, int srcwidth, int srcheight, float ** l_a, float ** l_b, const double * mult, const double dirpyrThreshold, const double skinprot, float b_l, float t_l, float t_r, int scaleprev)
+void ImProcFunctions :: dirpyr_equalizer(float ** src, float ** dst, int srcwidth, int srcheight, float ** l_a, float ** l_b, const double * mult, const double dirpyrThreshold, const double skinprot, float b_l, float t_l, float t_r, int scaleprev)
 {
     int lastlevel = maxlevel;
-
-    if(settings->verbose) {
-        printf("Dirpyr scaleprev=%i\n", scaleprev);
-    }
 
     float atten123 = (float) settings->level123_cbdl;
 
@@ -103,10 +99,6 @@ SSEFUNCTION void ImProcFunctions :: dirpyr_equalizer(float ** src, float ** dst,
             }
         }
 
-    }
-
-    if(settings->verbose) {
-        printf("CbDL mult0=%f  1=%f 2=%f 3=%f 4=%f 5=%f\n", multi[0], multi[1], multi[2], multi[3], multi[4], multi[5]);
     }
 
     multi_array2D<float, maxlevel> dirpyrlo (srcwidth, srcheight);
@@ -191,7 +183,7 @@ SSEFUNCTION void ImProcFunctions :: dirpyr_equalizer(float ** src, float ** dst,
                 int j;
 
                 for(j = 0; j < srcwidth - 3; j += 4) {
-                    _mm_storeu_ps(&tmpChr[i][j], _mm_sqrt_ps(SQRV(LVFU(l_b[i][j])) + SQRV(LVFU(l_a[i][j]))) / div);
+                    _mm_storeu_ps(&tmpChr[i][j], vsqrtf(SQRV(LVFU(l_b[i][j])) + SQRV(LVFU(l_a[i][j]))) / div);
                 }
 
                 for(; j < srcwidth; j++) {
@@ -240,7 +232,7 @@ SSEFUNCTION void ImProcFunctions :: dirpyr_equalizer(float ** src, float ** dst,
 
     for (int i = 0; i < srcheight; i++)
         for (int j = 0; j < srcwidth; j++) {
-            dst[i][j] = CLIP(buffer[i][j]);  // TODO: Really a clip necessary?
+            dst[i][j] = /*CLIP*/(buffer[i][j]);  // TODO: Really a clip necessary?
         }
 
 }
@@ -367,7 +359,7 @@ void ImProcFunctions :: dirpyr_equalizercam (CieImage *ncie, float ** src, float
         for (int i = 0; i < srcheight; i++)
             for (int j = 0; j < srcwidth; j++) {
                 if(ncie->J_p[i][j] > 8.f && ncie->J_p[i][j] < 92.f) {
-                    dst[i][j] = CLIP( buffer[i][j] );    // TODO: Really a clip necessary?
+                    dst[i][j] = /*CLIP*/( buffer[i][j] );    // TODO: Really a clip necessary?
                 } else {
                     dst[i][j] = src[i][j];
                 }
@@ -375,12 +367,12 @@ void ImProcFunctions :: dirpyr_equalizercam (CieImage *ncie, float ** src, float
     } else {
         for (int i = 0; i < srcheight; i++)
             for (int j = 0; j < srcwidth; j++) {
-                dst[i][j] = CLIP( buffer[i][j] );  // TODO: Really a clip necessary?
+                dst[i][j] = /*CLIP*/( buffer[i][j] );  // TODO: Really a clip necessary?
             }
     }
 }
 
-SSEFUNCTION void ImProcFunctions::dirpyr_channel(float ** data_fine, float ** data_coarse, int width, int height, int level, int scale)
+void ImProcFunctions::dirpyr_channel(float ** data_fine, float ** data_coarse, int width, int height, int level, int scale)
 {
     // scale is spacing of directional averaging weights
     // calculate weights, compute directionally weighted average

@@ -18,12 +18,15 @@
  */
 #include "resize.h"
 #include "guiutils.h"
+#include "eventmapper.h"
 
 using namespace rtengine;
 using namespace rtengine::procparams;
 
 Resize::Resize () : FoldableToolPanel(this, "resize", M("TP_RESIZE_LABEL"), false, true), maxw(100000), maxh(100000)
 {
+    auto m = ProcEventMapper::getInstance();
+    EvResizeAllowUpscaling = m->newEvent(RESIZE, "HISTORY_MSG_RESIZE_ALLOWUPSCALING");
 
     cropw = 0;
     croph = 0;
@@ -65,7 +68,7 @@ Resize::Resize () : FoldableToolPanel(this, "resize", M("TP_RESIZE_LABEL"), fals
 
     pack_start (*combos, Gtk::PACK_SHRINK, 4);
 
-    scale = new Adjuster (M("TP_RESIZE_SCALE"), 0.01, 4, 0.01, 1.);
+    scale = new Adjuster (M("TP_RESIZE_SCALE"), 0.01, MAX_SCALE, 0.01, 1.);
     scale->setAdjusterListener (this);
 
     pack_start (*scale, Gtk::PACK_SHRINK, 4);
@@ -88,18 +91,23 @@ Resize::Resize () : FoldableToolPanel(this, "resize", M("TP_RESIZE_LABEL"), fals
     sbox->pack_start (*hbox);
 
     sizeBox->pack_start (*sbox, Gtk::PACK_SHRINK, 0);
+
+    allowUpscaling = Gtk::manage(new Gtk::CheckButton(M("TP_RESIZE_ALLOW_UPSCALING")));
+    sizeBox->pack_start(*allowUpscaling);
+    allowUpscaling->signal_toggled().connect(sigc::mem_fun(*this, &Resize::allowUpscalingChanged));
+    
     sizeBox->show_all ();
     sizeBox->reference ();
 
     w->set_digits (0);
     w->set_increments (1, 100);
     w->set_value (800);
-    w->set_range (32, 4 * maxw);
+    w->set_range (32, MAX_SCALE * maxw);
 
     h->set_digits (0);
     h->set_increments (1, 100);
     h->set_value (600);
-    h->set_range (32, 4 * maxh);
+    h->set_range (32, MAX_SCALE * maxh);
 
     wconn = w->signal_value_changed().connect ( sigc::mem_fun(*this, &Resize::entryWChanged), true);
     hconn = h->signal_value_changed().connect ( sigc::mem_fun(*this, &Resize::entryHChanged), true);
@@ -137,6 +145,7 @@ void Resize::read (const ProcParams* pp, const ParamsEdited* pedited)
     h->set_value (pp->resize.height);
     setEnabled (pp->resize.enabled);
     spec->set_active (pp->resize.dataspec);
+    allowUpscaling->set_active(pp->resize.allowUpscaling);
     updateGUI();
 
     appliesTo->set_active (0);
@@ -175,6 +184,7 @@ void Resize::read (const ProcParams* pp, const ParamsEdited* pedited)
             spec->set_active (4);
         }
 
+        allowUpscaling->set_inconsistent(!pedited->resize.allowUpscaling);
         set_inconsistent (multiImage && !pedited->resize.enabled);
     }
 
@@ -214,9 +224,11 @@ void Resize::write (ProcParams* pp, ParamsEdited* pedited)
     pp->resize.enabled = getEnabled ();
     //printf("  L:%d   H:%d\n", pp->resize.width, pp->resize.height);
 
+    pp->resize.allowUpscaling = allowUpscaling->get_active();
+
     if (pedited) {
         pedited->resize.enabled   = !get_inconsistent();
-        pedited->resize.dataspec  = dataSpec != 4;
+        pedited->resize.dataspec  = dataSpec != MAX_SCALE;
         pedited->resize.appliesTo = appliesTo->get_active_row_number() != 2;
         pedited->resize.method    = method->get_active_row_number() != 3;
 
@@ -229,6 +241,7 @@ void Resize::write (ProcParams* pp, ParamsEdited* pedited)
             pedited->resize.width     = false;
             pedited->resize.height    = false;
         }
+        pedited->resize.allowUpscaling = !allowUpscaling->get_inconsistent();
     }
 }
 
@@ -244,9 +257,8 @@ void Resize::setDefaults (const ProcParams* defParams, const ParamsEdited* pedit
     }
 }
 
-void Resize::adjusterChanged (Adjuster* a, double newval)
+void Resize::adjusterChanged(Adjuster* a, double newval)
 {
-
     if (!batchMode) {
         wconn.block (true);
         hconn.block (true);
@@ -259,6 +271,10 @@ void Resize::adjusterChanged (Adjuster* a, double newval)
     if (listener && (getEnabled () || batchMode)) {
         listener->panelChanged (EvResizeScale, Glib::ustring::format (std::setw(5), std::fixed, std::setprecision(2), scale->getValue()));
     }
+}
+
+void Resize::adjusterAutoToggled(Adjuster* a, bool newval)
+{
 }
 
 int Resize::getComputedWidth()
@@ -338,9 +354,8 @@ void Resize::update (bool isCropped, int cw, int ch, int ow, int oh)
     setDimensions();
 }
 
-void Resize::sizeChanged (int mw, int mh, int ow, int oh)
+void Resize::sizeChanged(int mw, int mh, int ow, int oh)
 {
-
     // updating max values now
     maxw = ow;
     maxh = oh;
@@ -370,8 +385,8 @@ void Resize::setDimensions ()
             refh = self->maxh;
         }
 
-        self->w->set_range(32, 4 * refw);
-        self->h->set_range(32, 4 * refh);
+        self->w->set_range(32, MAX_SCALE * refw);
+        self->h->set_range(32, MAX_SCALE * refh);
 
         switch (self->spec->get_active_row_number()) {
             case 0: {
@@ -619,6 +634,22 @@ void Resize::enabledChanged ()
         }
     }
 }
+
+
+void Resize::allowUpscalingChanged()
+{
+
+    if (listener) {
+        if (allowUpscaling->get_inconsistent()) {
+            listener->panelChanged(EvResizeAllowUpscaling, M("GENERAL_UNCHANGED"));
+        } else if (allowUpscaling->get_active()) {
+            listener->panelChanged(EvResizeAllowUpscaling, M("GENERAL_ENABLED"));
+        } else {
+            listener->panelChanged(EvResizeAllowUpscaling, M("GENERAL_DISABLED"));
+        }
+    }
+}
+
 
 void Resize::setAdjusterBehavior (bool scaleadd)
 {

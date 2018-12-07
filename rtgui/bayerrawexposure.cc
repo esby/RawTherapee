@@ -65,6 +65,11 @@ BayerRAWExposure::BayerRAWExposure () : FoldableToolPanel(this, "bayerrawexposur
     pack_start( *PexBlack3, Gtk::PACK_SHRINK, 0);//black G2
     pack_start( *PexBlack2, Gtk::PACK_SHRINK, 0);//black B
     pack_start( *PextwoGreen, Gtk::PACK_SHRINK, 0);//black 2 green
+
+    PexBlack0->setLogScale(100, 0);
+    PexBlack1->setLogScale(100, 0);
+    PexBlack2->setLogScale(100, 0);
+    PexBlack3->setLogScale(100, 0);
 }
 
 void BayerRAWExposure::read(const rtengine::procparams::ProcParams* pp, const ParamsEdited* pedited)
@@ -116,7 +121,7 @@ void BayerRAWExposure::write( rtengine::procparams::ProcParams* pp, ParamsEdited
 
 }
 
-void BayerRAWExposure::adjusterChanged (Adjuster* a, double newval)
+void BayerRAWExposure::adjusterChanged(Adjuster* a, double newval)
 {
     if (listener) {
         Glib::ustring value = a->getTextValue();
@@ -141,6 +146,10 @@ void BayerRAWExposure::adjusterChanged (Adjuster* a, double newval)
             }
         }
     }
+}
+
+void BayerRAWExposure::adjusterAutoToggled(Adjuster* a, bool newval)
+{
 }
 
 void BayerRAWExposure::checkBoxToggled (CheckBox* c, CheckValue newval)

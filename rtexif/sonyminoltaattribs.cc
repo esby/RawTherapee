@@ -693,6 +693,7 @@ public:
             {216, "Tamron SP 45mm f/1.8 Di USD"},
             {217, "Tamron SP 35mm f/1.8 Di USD"},
             {218, "Tamron SP 90mm f/2.8 Di Macro 1:1 USD (F017)"},
+            {220, "Tamron SP 150-600mm f/5-6.3 Di USD G2"},
             {224, "Tamron SP 90mm f/2.8 Di Macro 1:1 USD (F004)"},
             {255, "Tamron Lens (255)"},
             {255, "Tamron SP AF 17-50mm f/2.8 XR Di II LD Aspherical"},
@@ -745,6 +746,7 @@ public:
             {2561, "Tokina AF 730 II 75-300mm f/4.5-5.6"},
             {2561, "Sigma 800mm f/5.6 APO"},
             {2561, "Sigma AF 400mm f/5.6 APO Macro"},
+            {2561, "Sigma 1000mm f/8 APO"},
             {2562, "Minolta AF 50mm f/1.4 [New]"},
             {2563, "Minolta AF 300mm f/2.8 APO or Sigma Lens"},
             {2563, "Sigma AF 50-500mm f/4-6.3 EX DG APO"},
@@ -816,6 +818,7 @@ public:
             {2672, "Minolta AF 24-105mm f/3.5-4.5 (D)"},
             {3046, "Metabones Canon EF Speed Booster"},
             {4567, "Tokina 70-210mm f/4-5.6"},
+            {4570, "Tamron AF 35-135mm f/3.5-4.5"},
             {4571, "Vivitar 70-210mm f/4.5-5.6"},
             {4574, "2x Teleconverter or Tamron or Tokina Lens"},
             {4574, "Tamron SP AF 90mm f/2.5"},
@@ -849,6 +852,8 @@ public:
             {6553, "Sony FE 12-24mm f/4 G"},
             {6553, "Sony FE 90mm f/2.8 Macro G OSS"},
             {6553, "Sony E 18-50mm f/4-5.6"},
+            {6553, "Sony FE 24mm f/1.4 GM"},
+            {6553, "Sony FE 24-105mm f/4 G OSS"},
             {6553, "Sony E PZ 18-200mm f/3.5-6.3 OSS"},
             {6553, "Sony FE 55mm f/1.8 ZA"},
             {6553, "Sony FE 70-200mm f/4 G OSS"},
@@ -871,24 +876,36 @@ public:
             {6553, "Sony FE 100-400mm f/4.5-5.6 GM OSS"},
             {6553, "Sony FE 70-200mm f/2.8 GM OSS"},
             {6553, "Sony FE 16-35mm f/2.8 GM"},
+            {6553, "Sony FE 400mm f/2.8 GM OSS"},
+            {6553, "Sony E 18-135mm f/3.5-5.6 OSS"},
             {6553, "Sony FE 70-200mm f/2.8 GM OSS + 1.4X Teleconverter"},
             {6553, "Sony FE 70-200mm f/2.8 GM OSS + 2X Teleconverter"},
             {6553, "Sony FE 100-400mm f/4.5-5.6 GM OSS + 1.4X Teleconverter"},
             {6553, "Sony FE 100-400mm f/4.5-5.6 GM OSS + 2X Teleconverter"},
+            {6553, "Sony FE 400mm f/2.8 GM OSS + 1.4X Teleconverter"},
+            {6553, "Sony FE 400mm f/2.8 GM OSS + 2X Teleconverter"},
             {6553, "Samyang AF 50mm f/1.4 FE"},
             {6553, "Samyang AF 14mm f/2.8 FE"},
+            {6553, "Samyang AF 24mm f/2.8"},
             {6553, "Samyang AF 35mm f/2.8 FE"},
+            {6553, "Samyang AF 35mm f/1.4"},
             {6553, "Sigma 19mm f/2.8 [EX] DN"},
             {6553, "Sigma 30mm f/2.8 [EX] DN"},
             {6553, "Sigma 60mm f/2.8 DN"},
             {6553, "Sigma 30mm f/1.4 DC DN | C"},
+            {6553, "Sigma 85mm f/1.4 DG HSM | A"},
+            {6553, "Sigma 16mm f/1.4 DC DN | C"},
+            {6553, "Sigma 70mm f/2.8 DG MACRO | A"},
             {6553, "Tamron 18-200mm f/3.5-6.3 Di III VC"},
+            {6553, "Tamron 28-75mm f/2.8 Di III RXD"},
             {6553, "Tokina Firin 20mm f/2 FE MF"},
             {6553, "Voigtlander SUPER WIDE-HELIAR 15mm f/4.5 III"},
             {6553, "Voigtlander HELIAR-HYPER WIDE 10mm f/5.6"},
             {6553, "Voigtlander ULTRA WIDE-HELIAR 12mm f/5.6 III"},
             {6553, "Voigtlander MACRO APO-LANTHAR 65mm f/2 Aspherical"},
             {6553, "Voigtlander NOKTON 40mm f/1.2 Aspherical"},
+            {6553, "Voigtlander NOKTON classic 35mm f/1.4"},
+            {6553, "Voigtlander COLOR-SKOPAR 21mm f/3.5 Aspherical"},
             {6553, "Zeiss Touit 12mm f/2.8"},
             {6553, "Zeiss Touit 32mm f/1.8"},
             {6553, "Zeiss Touit 50mm f/2.8 Macro"},
@@ -896,10 +913,12 @@ public:
             {6553, "Zeiss Batis 85mm f/1.8"},
             {6553, "Zeiss Batis 18mm f/2.8"},
             {6553, "Zeiss Batis 135mm f/2.8"},
+            {6553, "Zeiss Batis 40mm f/2 CF"},
             {6553, "Zeiss Loxia 50mm f/2"},
             {6553, "Zeiss Loxia 35mm f/2"},
             {6553, "Zeiss Loxia 21mm f/2.8"},
             {6553, "Zeiss Loxia 85mm f/2.4"},
+            {6553, "Zeiss Loxia 25mm f/2.4"},
             {6553, "Arax MC 35mm f/2.8 Tilt+Shift"},
             {6553, "Arax MC 80mm f/2.8 Tilt+Shift"},
             {6553, "Zenitar MF 16mm f/2.8 Fisheye M42"},
@@ -948,6 +967,7 @@ public:
             {25611, "Tokina AF 730 II 75-300mm f/4.5-5.6"},
             {25611, "Sigma 800mm f/5.6 APO"},
             {25611, "Sigma AF 400mm f/5.6 APO Macro"},
+            {25611, "Sigma 1000mm f/8 APO"},
             {25621, "Minolta AF 50mm f/1.4 [New]"},
             {25631, "Minolta AF 300mm f/2.8 APO or Sigma Lens"},
             {25631, "Sigma AF 50-500mm f/4-6.3 EX DG APO"},
@@ -1019,6 +1039,7 @@ public:
             {26721, "Minolta AF 24-105mm f/3.5-4.5 (D)"},
             {30464, "Metabones Canon EF Speed Booster"},
             {45671, "Tokina 70-210mm f/4-5.6"},
+            {45701, "Tamron AF 35-135mm f/3.5-4.5"},
             {45711, "Vivitar 70-210mm f/4.5-5.6"},
             {45741, "2x Teleconverter or Tamron or Tokina Lens"},
             {45741, "Tamron SP AF 90mm f/2.5"},
@@ -1052,6 +1073,8 @@ public:
             {65535, "Sony FE 12-24mm f/4 G"},
             {65535, "Sony FE 90mm f/2.8 Macro G OSS"},
             {65535, "Sony E 18-50mm f/4-5.6"},
+            {65535, "Sony FE 24mm f/1.4 GM"},
+            {65535, "Sony FE 24-105mm f/4 G OSS"},
             {65535, "Sony E PZ 18-200mm f/3.5-6.3 OSS"},
             {65535, "Sony FE 55mm f/1.8 ZA"},
             {65535, "Sony FE 70-200mm f/4 G OSS"},
@@ -1074,24 +1097,36 @@ public:
             {65535, "Sony FE 100-400mm f/4.5-5.6 GM OSS"},
             {65535, "Sony FE 70-200mm f/2.8 GM OSS"},
             {65535, "Sony FE 16-35mm f/2.8 GM"},
+            {65535, "Sony FE 400mm f/2.8 GM OSS"},
+            {65535, "Sony E 18-135mm f/3.5-5.6 OSS"},
             {65535, "Sony FE 70-200mm f/2.8 GM OSS + 1.4X Teleconverter"},
             {65535, "Sony FE 70-200mm f/2.8 GM OSS + 2X Teleconverter"},
             {65535, "Sony FE 100-400mm f/4.5-5.6 GM OSS + 1.4X Teleconverter"},
             {65535, "Sony FE 100-400mm f/4.5-5.6 GM OSS + 2X Teleconverter"},
+            {65535, "Sony FE 400mm f/2.8 GM OSS + 1.4X Teleconverter"},
+            {65535, "Sony FE 400mm f/2.8 GM OSS + 2X Teleconverter"},
             {65535, "Samyang AF 50mm f/1.4 FE"},
             {65535, "Samyang AF 14mm f/2.8 FE"},
+            {65535, "Samyang AF 24mm f/2.8"},
             {65535, "Samyang AF 35mm f/2.8 FE"},
+            {65535, "Samyang AF 35mm f/1.4"},
             {65535, "Sigma 19mm f/2.8 [EX] DN"},
             {65535, "Sigma 30mm f/2.8 [EX] DN"},
             {65535, "Sigma 60mm f/2.8 DN"},
             {65535, "Sigma 30mm f/1.4 DC DN | C"},
+            {65535, "Sigma 85mm f/1.4 DG HSM | A"},
+            {65535, "Sigma 16mm f/1.4 DC DN | C"},
+            {65535, "Sigma 70mm f/2.8 DG MACRO | A"},
             {65535, "Tamron 18-200mm f/3.5-6.3 Di III VC"},
+            {65535, "Tamron 28-75mm f/2.8 Di III RXD"},
             {65535, "Tokina Firin 20mm f/2 FE MF"},
             {65535, "Voigtlander SUPER WIDE-HELIAR 15mm f/4.5 III"},
             {65535, "Voigtlander HELIAR-HYPER WIDE 10mm f/5.6"},
             {65535, "Voigtlander ULTRA WIDE-HELIAR 12mm f/5.6 III"},
             {65535, "Voigtlander MACRO APO-LANTHAR 65mm f/2 Aspherical"},
             {65535, "Voigtlander NOKTON 40mm f/1.2 Aspherical"},
+            {65535, "Voigtlander NOKTON classic 35mm f/1.4"},
+            {65535, "Voigtlander COLOR-SKOPAR 21mm f/3.5 Aspherical"},
             {65535, "Zeiss Touit 12mm f/2.8"},
             {65535, "Zeiss Touit 32mm f/1.8"},
             {65535, "Zeiss Touit 50mm f/2.8 Macro"},
@@ -1099,21 +1134,23 @@ public:
             {65535, "Zeiss Batis 85mm f/1.8"},
             {65535, "Zeiss Batis 18mm f/2.8"},
             {65535, "Zeiss Batis 135mm f/2.8"},
+            {65535, "Zeiss Batis 40mm f/2 CF"},
             {65535, "Zeiss Loxia 50mm f/2"},
             {65535, "Zeiss Loxia 35mm f/2"},
             {65535, "Zeiss Loxia 21mm f/2.8"},
             {65535, "Zeiss Loxia 85mm f/2.4"},
+            {65535, "Zeiss Loxia 25mm f/2.4"},
             {65535, "Arax MC 35mm f/2.8 Tilt+Shift"},
             {65535, "Arax MC 80mm f/2.8 Tilt+Shift"},
             {65535, "Zenitar MF 16mm f/2.8 Fisheye M42"},
             {65535, "Samyang 500mm Mirror f/8.0"},
             {65535, "Pentacon Auto 135mm f/2.8"},
             {65535, "Pentacon Auto 29mm f/2.8"},
-            {65535, "Helios 44-2 58mm f/2.0"},
+            {65535, "Helios 44-2 58mm f/2.0"}
         };
     }
 
-    virtual std::string toString (Tag* t)
+    std::string toString (Tag* t) override
     {
         int lensID = t->toInt();
         Tag *lensInfoTag = t->getParent()->getRoot()->findTag ("LensInfo");
@@ -1173,7 +1210,8 @@ public:
         choices.insert (p_t (32791, "Sony E 16-70mm f/4 ZA OSS"));
         choices.insert (p_t (32792, "Sony E 10-18mm f/4 OSS"));
         choices.insert (p_t (32793, "Sony E PZ 16-50mm f/3.5-5.6 OSS"));
-        choices.insert (p_t (32794, "Sony FE 35mm f/2.8 ZA"));
+        choices.insert (p_t (32794, "Sony FE 35mm f/2.8 ZA or Samyang AF 24mm f/2.8 FE"));
+        choices.insert (p_t (32794, "Samyang AF 24mm f/2.8 FE"));
         choices.insert (p_t (32795, "Sony FE 24-70mm f/4 ZA OSS"));
         choices.insert (p_t (32796, "Sony FE 85mm f/1.8"));
         choices.insert (p_t (32797, "Sony E 18-200mm f/3.5-6.3 OSS LE"));
@@ -1183,6 +1221,8 @@ public:
         choices.insert (p_t (32801, "Sony FE 12-24mm f/4 G"));
         choices.insert (p_t (32802, "Sony FE 90mm f/2.8 Macro G OSS"));
         choices.insert (p_t (32803, "Sony E 18-50mm f/4-5.6"));
+        choices.insert (p_t (32804, "Sony FE 24mm f/1.4 GM"));
+        choices.insert (p_t (32805, "Sony FE 24-105mm f/4 G OSS"));
         choices.insert (p_t (32807, "Sony E PZ 18-200mm f/3.5-6.3 OSS"));
         choices.insert (p_t (32808, "Sony FE 55mm f/1.8 ZA"));
         choices.insert (p_t (32810, "Sony FE 70-200mm f/4 G OSS"));
@@ -1205,12 +1245,15 @@ public:
         choices.insert (p_t (32829, "Sony FE 100-400mm f/4.5-5.6 GM OSS"));
         choices.insert (p_t (32830, "Sony FE 70-200mm f/2.8 GM OSS"));
         choices.insert (p_t (32831, "Sony FE 16-35mm f/2.8 GM"));
-        choices.insert (p_t (33002, "Sigma 85mm f/1.4 DG HSM | A (+ Metabones Ver.50)"));
+        choices.insert (p_t (32848, "Sony FE 400mm f/2.8 GM OSS"));
+        choices.insert (p_t (32849, "Sony E 18-135mm f/3.5-5.6 OSS"));
         choices.insert (p_t (33072, "Sony FE 70-200mm f/2.8 GM OSS + 1.4X Teleconverter"));
         choices.insert (p_t (33073, "Sony FE 70-200mm f/2.8 GM OSS + 2X Teleconverter"));
         choices.insert (p_t (33076, "Sony FE 100mm f/2.8 STF GM OSS (macro mode)"));
         choices.insert (p_t (33077, "Sony FE 100-400mm f/4.5-5.6 GM OSS + 1.4X Teleconverter"));
         choices.insert (p_t (33078, "Sony FE 100-400mm f/4.5-5.6 GM OSS + 2X Teleconverter"));
+        choices.insert (p_t (33079, "Sony FE 400mm f/2.8 GM OSS + 1.4X Teleconverter"));
+        choices.insert (p_t (33080, "Sony FE 400mm f/2.8 GM OSS + 2X Teleconverter"));
         choices.insert (p_t (49201, "Zeiss Touit 12mm f/2.8"));
         choices.insert (p_t (49202, "Zeiss Touit 32mm f/1.8"));
         choices.insert (p_t (49203, "Zeiss Touit 50mm f/2.8 Macro"));
@@ -1218,10 +1261,13 @@ public:
         choices.insert (p_t (49217, "Zeiss Batis 85mm f/1.8"));
         choices.insert (p_t (49218, "Zeiss Batis 18mm f/2.8"));
         choices.insert (p_t (49219, "Zeiss Batis 135mm f/2.8"));
+        choices.insert (p_t (49220, "Zeiss Batis 40mm f/2 CF"));
         choices.insert (p_t (49232, "Zeiss Loxia 50mm f/2"));
         choices.insert (p_t (49233, "Zeiss Loxia 35mm f/2"));
         choices.insert (p_t (49234, "Zeiss Loxia 21mm f/2.8"));
         choices.insert (p_t (49235, "Zeiss Loxia 85mm f/2.4"));
+        choices.insert (p_t (49236, "Zeiss Loxia 25mm f/2.4"));
+        choices.insert (p_t (49457, "Tamron 28-75mm f/2.8 Di III RXD"));
         choices.insert (p_t (50480, "Sigma 30mm f/1.4 DC DN | C"));
         choices.insert (p_t (50481, "Sigma 50mm f/1.4 DG HSM | A + MC-11"));
         choices.insert (p_t (50482, "Sigma 18-300mm f/3.5-6.3 DC MACRO OS HSM | C + MC-11"));
@@ -1235,16 +1281,23 @@ public:
         choices.insert (p_t (50492, "Sigma 24-105mm f/4 DG OS HSM | A + MC-11"));
         choices.insert (p_t (50493, "Sigma 17-70mm f/2.8-4 DC MACRO OS HSM | C + MC-11"));
         choices.insert (p_t (50495, "Sigma 50-100mm f/1.8 DC HSM | A + MC-11"));
+        choices.insert (p_t (50499, "Sigma 85mm f/1.4 DG HSM | A"));
+        choices.insert (p_t (50501, "Sigma 100-400mm f/5-6.3 DG OS HSM | C + MC-11"));
+        choices.insert (p_t (50503, "Sigma 16mm f/1.4 DC DN | C"));
+        choices.insert (p_t (50513, "Sigma 70mm f/2.8 DG MACRO | A"));
         choices.insert (p_t (50992, "Voigtlander SUPER WIDE-HELIAR 15mm f/4.5 III"));
         choices.insert (p_t (50993, "Voigtlander HELIAR-HYPER WIDE 10mm f/5.6"));
         choices.insert (p_t (50994, "Voigtlander ULTRA WIDE-HELIAR 12mm f/5.6 III"));
         choices.insert (p_t (50995, "Voigtlander MACRO APO-LANTHAR 65mm f/2 Aspherical"));
         choices.insert (p_t (50996, "Voigtlander NOKTON 40mm f/1.2 Aspherical"));
+        choices.insert (p_t (50997, "Voigtlander NOKTON classic 35mm f/1.4"));
+        choices.insert (p_t (50999, "Voigtlander COLOR-SKOPAR 21mm f/3.5 Aspherical"));
         choices.insert (p_t (51505, "Samyang AF 14mm f/2.8 FE or Samyang AF 35mm f/2.8 FE"));
         choices.insert (p_t (51505, "Samyang AF 35mm f/2.8 FE"));
+        choices.insert (p_t (51507, "Samyang AF 35mm f/1.4"));
     }
 
-    virtual std::string toString (Tag* t)
+    std::string toString (Tag* t) override
     {
         int lensID = t->toInt();
         Tag *lensInfoTag = t->getParent()->getRoot()->findTag ("LensInfo");
@@ -2038,7 +2091,7 @@ class SAExposureTimeInterpreter : public Interpreter
 {
 public:
     SAExposureTimeInterpreter () {}
-    virtual std::string toString (Tag* t)
+    std::string toString (Tag* t) override
     {
         double a = t->toDouble();
 
@@ -2050,7 +2103,7 @@ public:
             return "n/a";
         }
     }
-    virtual double toDouble (const Tag* t, int ofs)
+    double toDouble (const Tag* t, int ofs) override
     {
         // Get the value; Depending on the camera model, this parameter can be a BYTE or a SHORT
         TagType astype = t->getType();
@@ -2069,7 +2122,7 @@ public:
             return 0.;
         }
     }
-    virtual int toInt (const Tag* t, int ofs, TagType astype)
+    int toInt (const Tag* t, int ofs, TagType astype) override
     {
         // Get the value; Depending on the camera model, this parameter can be a BYTE or a SHORT
         int a = 0;
@@ -2098,7 +2151,7 @@ class SAFNumberInterpreter : public Interpreter
 {
 public:
     SAFNumberInterpreter () {}
-    virtual std::string toString (Tag* t)
+    std::string toString (Tag* t) override
     {
         double a = double (t->toDouble());
 
@@ -2110,7 +2163,7 @@ public:
             return "n/a";
         }
     }
-    virtual double toDouble (const Tag* t, int ofs)
+    double toDouble (const Tag* t, int ofs) override
     {
         // Get the value; Depending on the camera model, this parameter can be a BYTE or a SHORT
         TagType astype = t->getType();
@@ -2129,7 +2182,7 @@ public:
             return 0.;
         }
     }
-    virtual int toInt (const Tag* t, int ofs, TagType astype)
+    int toInt (const Tag* t, int ofs, TagType astype) override
     {
         // Get the value; Depending on the camera model, this parameter can be a BYTE or a SHORT
         int a = 0;
@@ -2158,7 +2211,7 @@ class SAISOSettingInterpreter : public Interpreter
 {
 public:
     SAISOSettingInterpreter () {}
-    virtual std::string toString (Tag* t)
+    std::string toString (Tag* t) override
     {
         int a = t->toInt();
 
@@ -2170,7 +2223,7 @@ public:
             return "Auto";
         }
     }
-    virtual int toInt (const Tag* t, int ofs, TagType astype)
+    int toInt (const Tag* t, int ofs, TagType astype) override
     {
         // Get the value; Depending on the camera model, this parameter can be a BYTE or a SHORT
         int a = 0;
@@ -2199,14 +2252,14 @@ class SAExposureCompSetInterpreter : public Interpreter
 {
 public:
     SAExposureCompSetInterpreter () {}
-    virtual std::string toString (Tag* t)
+    std::string toString (Tag* t) override
     {
         double a = t->toDouble();
         char buffer[32];
         sprintf (buffer, "%.2f", a );
         return buffer;
     }
-    virtual double toDouble (const Tag* t, int ofs)
+    double toDouble (const Tag* t, int ofs) override
     {
         // Get the value
         int a = t->getValue()[ofs];
@@ -2220,13 +2273,13 @@ class SAAFMicroAdjValueInterpreter : public Interpreter
 {
 public:
     SAAFMicroAdjValueInterpreter() {}
-    virtual std::string toString (Tag* t)
+    std::string toString (Tag* t) override
     {
         char buffer[32];
         sprintf (buffer, "%d", t->getValue()[0] - 20);
         return buffer;
     }
-    virtual int toInt (const Tag* t, int ofs, TagType astype)
+    int toInt (const Tag* t, int ofs, TagType astype) override
     {
         return t->getValue()[0] - 20;
     }
@@ -2237,7 +2290,7 @@ class SAAFMicroAdjModeInterpreter : public Interpreter
 {
 public:
     SAAFMicroAdjModeInterpreter() {}
-    virtual std::string toString (Tag* t)
+    std::string toString (Tag* t) override
     {
         int a = t->getValue()[0] & 0x80;
 
@@ -2247,7 +2300,7 @@ public:
 
         return "Off";
     }
-    virtual int toInt (const Tag* t, int ofs, TagType astype)
+    int toInt (const Tag* t, int ofs, TagType astype) override
     {
         return (t->getValue()[0] & 0x80) == 0x80 ? 1 : 0;
     }
@@ -2259,13 +2312,13 @@ class SAAFMicroAdjRegisteredLensesInterpreter : public Interpreter
 {
 public:
     SAAFMicroAdjRegisteredLensesInterpreter() {}
-    virtual std::string toString (Tag* t)
+    std::string toString (Tag* t) override
     {
         char buffer[32];
         sprintf (buffer, "%d", t->getValue()[0] & 0x7f);
         return buffer;
     }
-    virtual int toInt (const Tag* t, int ofs, TagType astype)
+    int toInt (const Tag* t, int ofs, TagType astype) override
     {
         return t->getValue()[0] & 0x7f;
     }
@@ -2276,7 +2329,7 @@ class SAFocusStatusInterpreter : public Interpreter
 {
 public:
     SAFocusStatusInterpreter () {}
-    virtual std::string toString (Tag* t)
+    std::string toString (Tag* t) override
     {
         std::string retval;
         int a = t->toInt();
@@ -2315,13 +2368,13 @@ class SAColorTemperatureSettingInterpreter : public Interpreter
 {
 public:
     SAColorTemperatureSettingInterpreter () {}
-    virtual std::string toString (Tag* t)
+    std::string toString (Tag* t) override
     {
         char buffer[32];
         sprintf (buffer, "%d", t->toInt());
         return buffer;
     }
-    virtual int toInt (const Tag* t, int ofs, TagType astype)
+    int toInt (const Tag* t, int ofs, TagType astype) override
     {
         int a = 0;
 

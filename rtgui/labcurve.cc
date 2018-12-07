@@ -47,6 +47,10 @@ LCurve::LCurve () : FoldableToolPanel(this, "labcurves", M("TP_LABCURVE_LABEL"),
     contrast->setAdjusterListener (this);
     chromaticity->setAdjusterListener (this);
 
+    brightness->setLogScale(2, 0, true);
+    contrast->setLogScale(2, 0, true);
+    chromaticity->setLogScale(2, 0, true);
+
     //%%%%%%%%%%%%%%%%%%
     Gtk::HSeparator *hsep2 = Gtk::manage (new  Gtk::HSeparator());
     hsep2->show ();
@@ -517,9 +521,8 @@ void LCurve::curveChanged (CurveEditor* ce)
     }
 }
 
-void LCurve::adjusterChanged (Adjuster* a, double newval)
+void LCurve::adjusterChanged(Adjuster* a, double newval)
 {
-
     Glib::ustring costr;
 
     if (a == brightness) {
@@ -559,6 +562,10 @@ void LCurve::adjusterChanged (Adjuster* a, double newval)
             listener->panelChanged (EvLSaturation, costr);
         }
     }
+}
+
+void LCurve::adjusterAutoToggled(Adjuster* a, bool newval)
+{
 }
 
 void LCurve::colorForValue (double valX, double valY, enum ColorCaller::ElemType elemType, int callerId, ColorCaller *caller)
@@ -638,14 +645,21 @@ void LCurve::setBatchMode (bool batchMode)
 }
 
 
-void LCurve::updateCurveBackgroundHistogram (LUTu & histToneCurve, LUTu & histLCurve, LUTu & histCCurve,/* LUTu & histCLurve, LUTu & histLLCurve,*/ LUTu & histLCAM,  LUTu & histCCAM, LUTu & histRed, LUTu & histGreen, LUTu & histBlue, LUTu & histLuma, LUTu & histLRETI)
+void LCurve::updateCurveBackgroundHistogram(
+    const LUTu& histToneCurve,
+    const LUTu& histLCurve,
+    const LUTu& histCCurve,
+    const LUTu& histLCAM,
+    const LUTu& histCCAM,
+    const LUTu& histRed,
+    const LUTu& histGreen,
+    const LUTu& histBlue,
+    const LUTu& histLuma,
+    const LUTu& histLRETI
+)
 {
-
     lshape->updateBackgroundHistogram (histLCurve);
     ccshape->updateBackgroundHistogram (histCCurve);
-//  clshape->updateBackgroundHistogram (histCLurve);
-//  lcshape->updateBackgroundHistogram (histLLCurve);
-
 }
 
 void LCurve::setAdjusterBehavior (bool bradd, bool contradd, bool satadd)

@@ -49,6 +49,7 @@ bool ProfileStore::init (bool loadAll)
     if ((storeState == STORESTATE_NOTINITIALIZED || storeState == STORESTATE_DIRTY) && loadAll) {
         storeState = STORESTATE_BEINGINITIALIZED;
         _parseProfiles ();
+        std::stable_partition(entries.begin(), entries.end(), [](const ProfileStoreEntry *e) { return e->type == PSET_FOLDER; });
         storeState = STORESTATE_INITIALIZED;
     }
 
@@ -120,11 +121,14 @@ void ProfileStore::_parseProfiles ()
     Glib::ustring p2 = options.getGlobalProfilePath();
     bool displayLevel0 = options.useBundledProfiles && !p1.empty() && !p2.empty() && p1 != p2;
 
-    Glib::ustring virtualPath ("${U}");
-    Glib::ustring currDir ("${U}");
-    parseDir (p1, virtualPath, currDir, 0, 0, displayLevel0);
-
-    if (displayLevel0) {
+    Glib::ustring virtualPath;
+    Glib::ustring currDir;
+    if (!p1.empty()) {
+        virtualPath = "${U}";
+        currDir = "${U}";
+        parseDir (p1, virtualPath, currDir, 0, 0, displayLevel0);
+    }
+    if (p1.empty() || displayLevel0) {
         virtualPath = "${G}";
         currDir = "${G}";
         parseDir (p2, virtualPath, currDir, 0, 0, displayLevel0);

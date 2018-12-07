@@ -347,7 +347,7 @@ void drawCrop (Cairo::RefPtr<Cairo::Context> cr, int imx, int imy, int imw, int 
                 }
             } else if (cparams.guide == "ePassport") {
                 /* Official measurements do not specify exact ratios, just min/max measurements within which the eyes and chin-crown distance must lie. I averaged those measurements to produce these guides.
-                 * The first horizontal guide is for the crown, the second is rougly for the nostrils, the third is for the chin.
+                 * The first horizontal guide is for the crown, the second is roughly for the nostrils, the third is for the chin.
                  * http://www.homeoffice.gov.uk/agencies-public-bodies/ips/passports/information-photographers/
                  * "(...) the measurement of the face from the bottom of the chin to the crown (ie the top of the head, not the top of the hair) is between 29mm and 34mm."
                  */
@@ -564,11 +564,11 @@ void ExpanderBox::hideBox()
 
 void MyExpander::init()
 {
-    inconsistentPBuf = Gdk::Pixbuf::create_from_file(rtengine::findIconAbsolutePath("expanderInconsistent.png"));
-    enabledPBuf = Gdk::Pixbuf::create_from_file(rtengine::findIconAbsolutePath("expanderEnabled.png"));
-    disabledPBuf = Gdk::Pixbuf::create_from_file(rtengine::findIconAbsolutePath("expanderDisabled.png"));
-    openedPBuf = Gdk::Pixbuf::create_from_file(rtengine::findIconAbsolutePath("expanderOpened.png"));
-    closedPBuf = Gdk::Pixbuf::create_from_file(rtengine::findIconAbsolutePath("expanderClosed.png"));
+    inconsistentPBuf = Gdk::Pixbuf::create_from_file(rtengine::findIconAbsolutePath("power-inconsistent-small.png"));
+    enabledPBuf = Gdk::Pixbuf::create_from_file(rtengine::findIconAbsolutePath("power-on-small.png"));
+    disabledPBuf = Gdk::Pixbuf::create_from_file(rtengine::findIconAbsolutePath("power-off-small.png"));
+    openedPBuf = Gdk::Pixbuf::create_from_file(rtengine::findIconAbsolutePath("expander-open-small.png"));
+    closedPBuf = Gdk::Pixbuf::create_from_file(rtengine::findIconAbsolutePath("expander-closed-small.png"));
 }
 
 ToolPanel*  MyExpander::getPanel() {
@@ -996,6 +996,9 @@ bool MyScrolledWindow::on_scroll_event (GdkEventScroll* event)
         double step  = adjust->get_step_increment();
         double value2 = 0.;
 
+//        printf("MyScrolledwindow::on_scroll_event / delta_x=%.5f, delta_y=%.5f, direction=%d, type=%d, send_event=%d\n",
+//                event->delta_x, event->delta_y, (int)event->direction, (int)event->type, event->send_event);
+
         if (event->direction == GDK_SCROLL_DOWN) {
             value2 = value + step;
 
@@ -1006,13 +1009,20 @@ bool MyScrolledWindow::on_scroll_event (GdkEventScroll* event)
             if (value2 != value) {
                 scroll->set_value(value2);
             }
-        } else {
+        } else if (event->direction == GDK_SCROLL_UP) {
             value2 = value - step;
 
             if (value2 < lower) {
                 value2 = lower;
             }
 
+            if (value2 != value) {
+                scroll->set_value(value2);
+            }
+        } else if (event->direction == GDK_SCROLL_SMOOTH) {
+            if (abs(event->delta_y) > 0.1) {
+                value2 = rtengine::LIM<double>(value + (event->delta_y > 0 ? step : -step), lower, upper);
+            }
             if (value2 != value) {
                 scroll->set_value(value2);
             }
@@ -1032,16 +1042,93 @@ void MyScrolledWindow::get_preferred_height_for_width_vfunc (int width, int &min
     natural_height = minimum_height = 50;
 }
 
+/*
+ *
+ * Derived class of some widgets to properly handle the scroll wheel ;
+ * the user has to use the Shift key to be able to change the widget's value,
+ * otherwise the mouse wheel will scroll the toolbar.
+ *
+ */
+MyScrolledToolbar::MyScrolledToolbar ()
+{
+    set_policy (Gtk::POLICY_EXTERNAL, Gtk::POLICY_NEVER);
+    get_style_context()->add_class("scrollableToolbar");
+
+    // Works fine with Gtk 3.22, but a a custom made get_preferred_height had to be created as a workaround
+    // taken from the official Gtk3.22 source code
+    //set_propagate_natural_height(true);
+}
+
+bool MyScrolledToolbar::on_scroll_event (GdkEventScroll* event)
+{
+    Glib::RefPtr<Gtk::Adjustment> adjust = get_hadjustment();
+    Gtk::Scrollbar *scroll = get_hscrollbar();
+
+    if (adjust && scroll) {
+        double upper = adjust->get_upper();
+        double lower = adjust->get_lower();
+        double value = adjust->get_value();
+        double step  = adjust->get_step_increment() * 2;
+        double value2 = 0.;
+
+//        printf("MyScrolledToolbar::on_scroll_event / delta_x=%.5f, delta_y=%.5f, direction=%d, type=%d, send_event=%d\n",
+//                event->delta_x, event->delta_y, (int)event->direction, (int)event->type, event->send_event);
+
+        if (event->direction == GDK_SCROLL_DOWN) {
+            value2 = rtengine::min<double>(value + step, upper);
+            if (value2 != value) {
+                scroll->set_value(value2);
+            }
+        } else if (event->direction == GDK_SCROLL_UP) {
+            value2 = rtengine::max<double>(value - step, lower);
+            if (value2 != value) {
+                scroll->set_value(value2);
+            }
+        } else if (event->direction == GDK_SCROLL_SMOOTH) {
+            if (event->delta_x) {  // if the user use a pad, it can scroll horizontally
+                value2 = rtengine::LIM<double>(value + (event->delta_x > 0 ? 30 : -30), lower, upper);
+            } else if (event->delta_y) {
+                value2 = rtengine::LIM<double>(value + (event->delta_y > 0 ? 30 : -30), lower, upper);
+            }
+            if (value2 != value) {
+                scroll->set_value(value2);
+            }
+        }
+    }
+
+    return true;
+}
+
+void MyScrolledToolbar::get_preferred_height (int &minimumHeight, int &naturalHeight)
+{
+    int currMinHeight = 0;
+    int currNatHeight = 0;
+    std::vector<Widget*> childs = get_children();
+    minimumHeight = naturalHeight = 0;
+
+    for (auto child : childs)
+    {
+        if(child->is_visible()) {
+            child->get_preferred_height(currMinHeight, currNatHeight);
+            minimumHeight = rtengine::max(currMinHeight, minimumHeight);
+            naturalHeight = rtengine::max(currNatHeight, naturalHeight);
+        }
+    }
+}
+
 MyComboBoxText::MyComboBoxText (bool has_entry) : Gtk::ComboBoxText(has_entry)
 {
     minimumWidth = naturalWidth = 70;
     Gtk::CellRendererText* cellRenderer = dynamic_cast<Gtk::CellRendererText*>(get_first_cell());
     cellRenderer->property_ellipsize() = Pango::ELLIPSIZE_MIDDLE;
+    add_events(Gdk::SCROLL_MASK|Gdk::SMOOTH_SCROLL_MASK);
 }
 
 bool MyComboBoxText::on_scroll_event (GdkEventScroll* event)
 {
 
+//    printf("MyComboboxText::on_scroll_event / delta_x=%.5f, delta_y=%.5f, direction=%d, type=%d, send_event=%d\n",
+//            event->delta_x, event->delta_y, (int)event->direction, (int)event->type, event->send_event);
     // If Shift is pressed, the widget is modified
     if (event->state & GDK_SHIFT_MASK) {
         Gtk::ComboBoxText::on_scroll_event(event);
@@ -1199,6 +1286,8 @@ bool MySpinButton::on_scroll_event (GdkEventScroll* event)
 bool MyHScale::on_scroll_event (GdkEventScroll* event)
 {
 
+//    printf("MyHScale::on_scroll_event / delta_x=%.5f, delta_y=%.5f, direction=%d, type=%d, send_event=%d\n",
+//            event->delta_x, event->delta_y, (int)event->direction, (int)event->type, event->send_event);
     // If Shift is pressed, the widget is modified
     if (event->state & GDK_SHIFT_MASK) {
         Gtk::HScale::on_scroll_event(event);
@@ -1230,7 +1319,7 @@ MyFileChooserButton::MyFileChooserButton(const Glib::ustring &title, Gtk::FileCh
     set_none();
     box_.pack_start(lbl_, true, true);
     Gtk::Image *img = Gtk::manage(new Gtk::Image());
-    img->set_from_icon_name("document-open", Gtk::ICON_SIZE_BUTTON);
+    img->set_from_icon_name("folder-open", Gtk::ICON_SIZE_BUTTON);
     box_.pack_start(*Gtk::manage(new Gtk::VSeparator()), false, false, 5);
     box_.pack_start(*img, false, false);
     box_.show_all_children();
@@ -1323,7 +1412,7 @@ void MyFileChooserButton::set_filter(const Glib::RefPtr<Gtk::FileFilter> &filter
 {
     cur_filter_ = filter;
 }
-    
+
 
 std::vector<Glib::RefPtr<Gtk::FileFilter>> MyFileChooserButton::list_filters()
 {
@@ -1414,63 +1503,15 @@ void MyFileChooserButton::get_preferred_width_for_height_vfunc (int height, int 
 
 
 
-TextOrIcon::TextOrIcon (Glib::ustring fname, Glib::ustring labelTx, Glib::ustring tooltipTx, TOITypes type)
+TextOrIcon::TextOrIcon (const Glib::ustring &fname, const Glib::ustring &labelTx, const Glib::ustring &tooltipTx)
 {
 
-    imgIcon = nullptr;
-    label = nullptr;
-    filename = fname;
-    labelText = labelTx;
-    tooltipText = tooltipTx;
+    pack_start(*Gtk::manage(new RTImage(fname)), Gtk::PACK_SHRINK, 0);
+    set_tooltip_markup("<span font_size=\"large\" font_weight=\"bold\">" + labelTx  + "</span>\n" + tooltipTx);
 
     set_name("TextOrIcon");
-
-    switchTo(type);
-}
-
-TextOrIcon::~TextOrIcon ()
-{
-    if (imgIcon) {
-        delete imgIcon;
-    }
-
-    if (label) {
-        delete label;
-    }
-}
-
-void TextOrIcon::switchTo(TOITypes type)
-{
-    switch (type) {
-    case (TOI_ICON):
-        if (!imgIcon) {
-            removeIfThere(this, label, false);
-            delete label;
-            label = nullptr;
-            imgIcon = new RTImage (filename);
-            pack_start(*imgIcon, Gtk::PACK_SHRINK, 0);
-            set_tooltip_markup ("<span font_size=\"large\" font_weight=\"bold\">" + labelText  + "</span>\n" + tooltipText);
-        }
-
-        // do nothing if imgIcon exist, which mean that it is currently being displayed
-        break;
-
-    case(TOI_TEXT):
-    default:
-        if (!label) {
-            removeIfThere(this, imgIcon, false);
-            delete imgIcon;
-            imgIcon = nullptr;
-            label = new Gtk::Label (labelText, Gtk::ALIGN_CENTER);
-            pack_start(*label, Gtk::PACK_EXPAND_WIDGET, 0);
-            set_tooltip_markup (tooltipText);
-        }
-
-        // do nothing if label exist, which mean that it is currently being displayed
-        break;
-    }
-
     show_all();
+
 }
 
 MyImageMenuItem::MyImageMenuItem(Glib::ustring label, Glib::ustring imageFileName)

@@ -12,10 +12,6 @@
 #define SLEEFSSEAVX
 
 #include <assert.h>
-//#include <math.h>
-//#include <bits/nan.h>
-//#include <bits/inf.h>
-//#include "sleefsseavx.h"
 #include "rt_math.h"
 #ifdef __SSE2__
 #include "helpersse2.h"
@@ -30,8 +26,6 @@
 #define INLINE inline
 #endif
 
-//
-
 #define PI4_A .7853981554508209228515625
 #define PI4_B .794662735614792836713604629039764404296875e-8
 #define PI4_C .306161699786838294306516483068750264552437361480769e-16
@@ -40,8 +34,6 @@
 #define L2U .69314718055966295651160180568695068359375
 #define L2L .28235290563031577122588448175013436025525412068e-12
 #define R_LN2 1.442695040888963407359924681001892137426645954152985934135449406931
-
-//
 
 #define PI4_Af 0.78515625f
 #define PI4_Bf 0.00024127960205078125f
@@ -54,8 +46,6 @@
 
 #define INFINITYf ((float)rtengine::RT_INFINITY)
 #define NANf ((float)rtengine::RT_NAN)
-
-//
 
 static INLINE vdouble vadd3(vdouble v0, vdouble v1, vdouble v2) {
   return vadd(vadd(v0, v1), v2);
@@ -916,7 +906,7 @@ typedef struct {
 static INLINE vfloat vabsf(vfloat f) { return (vfloat)vandnotm((vmask)vcast_vf_f(-0.0f), (vmask)f); }
 static INLINE vfloat vnegf(vfloat f) { return (vfloat)vxorm((vmask)f, (vmask)vcast_vf_f(-0.0f)); }
 
-#if defined( __SSE4_1__ ) && defined( __x86_64__ )
+#ifdef __SSE4_1__
 	// only one instruction when using SSE4.1
 	static INLINE vfloat vself(vmask mask, vfloat x, vfloat y) {
 		return _mm_blendv_ps(y,x,(vfloat)mask);
@@ -980,6 +970,8 @@ static INLINE vmask vmaskf_isinf(vfloat d) { return vmaskf_eq(vabsf(d), vcast_vf
 static INLINE vmask vmaskf_ispinf(vfloat d) { return vmaskf_eq(d, vcast_vf_f(INFINITYf)); }
 static INLINE vmask vmaskf_isminf(vfloat d) { return vmaskf_eq(d, vcast_vf_f(-INFINITYf)); }
 static INLINE vmask vmaskf_isnan(vfloat d) { return vmaskf_neq(d, d); }
+// the following is equivalent to vorm(vmaskf_isnan(a), vmaskf_isnan(b)), but faster
+static INLINE vmask vmaskf_isnan(vfloat a, vfloat b) { return (vmask)_mm_cmpunord_ps(a, b); }
 static INLINE vfloat visinf2f(vfloat d, vfloat m) { return (vfloat)vandm(vmaskf_isinf(d), vorm(vsignbitf(d), (vmask)m)); }
 static INLINE vfloat visinff(vfloat d) { return visinf2f(d, vcast_vf_f(1.0f)); }
 
@@ -1211,7 +1203,7 @@ static INLINE vfloat xatan2f(vfloat y, vfloat x) {
   r = vself(vmaskf_isinf(y), vsubf(vcast_vf_f((float)(rtengine::RT_PI/2)), visinf2f(x, vmulsignf(vcast_vf_f((float)(rtengine::RT_PI/4)), x))), r);
   r = vself(vmaskf_eq(y, vcast_vf_f(0.0f)), vselfzero(vmaskf_eq(vsignf(x), vcast_vf_f(-1.0f)), vcast_vf_f((float)rtengine::RT_PI)), r);
 
-  return vself(vorm(vmaskf_isnan(x), vmaskf_isnan(y)), vcast_vf_f(NANf), vmulsignf(r, y));
+  return vself(vmaskf_isnan(x, y), vcast_vf_f(NANf), vmulsignf(r, y));
 }
 
 static INLINE vfloat xasinf(vfloat d) {
@@ -1323,10 +1315,8 @@ static INLINE vfloat xexpf(vfloat d) {
 
   u = vldexpf(u, q);
 
-  u = vself(vmaskf_isminf(d), vcast_vf_f(0.0f), u);
-// -104.0
-  u = vself(vmaskf_gt(vcast_vf_f(-104), d), vcast_vf_f(0), u);
-  return u;
+  // -104.0
+  return vselfnotzero(vmaskf_gt(vcast_vf_f(-104.f), d), u);
 }
 
 static INLINE vfloat xexpfNoCheck(vfloat d) { // this version does not check input values. Use it only when you know the input values are > -104.f e.g. when filling a lookup table
@@ -1378,8 +1368,9 @@ static INLINE vfloat xcbrtf(vfloat d) {
   return y;
 }
 
-static INLINE vfloat LIMV( vfloat a, vfloat b, vfloat c ) {
-return vmaxf( b, vminf(a,c));
+static INLINE vfloat vclampf(vfloat value, vfloat low, vfloat high) {
+    // clamps value in [low;high], returns low if value is NaN
+    return vmaxf(vminf(high, value), low);
 }
 
 static INLINE vfloat SQRV(vfloat a){
@@ -1389,8 +1380,7 @@ static INLINE vfloat SQRV(vfloat a){
 static inline void vswap( vmask condition, vfloat &a, vfloat &b) {
     // conditional swap the elements of two vfloats
     vfloat temp = vself(condition, a, b); // the values which fit to condition
-    condition = vnotm(condition); // invert the condition
-    a = vself(condition, a, b); // the values which fit to inverted condition
+    a = vself(condition, b, a); // the values which fit to inverted condition
     b = temp;
 }
 

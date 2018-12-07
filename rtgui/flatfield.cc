@@ -33,7 +33,7 @@ FlatField::FlatField () : FoldableToolPanel(this, "flatfield", M("TP_FLATFIELD_L
     bindCurrentFolder (*flatFieldFile, options.lastFlatfieldDir);
     ffLabel = Gtk::manage(new Gtk::Label(M("GENERAL_FILE")));
     flatFieldFileReset = Gtk::manage(new Gtk::Button());
-    flatFieldFileReset->set_image (*Gtk::manage(new RTImage ("gtk-cancel.png")));
+    flatFieldFileReset->set_image (*Gtk::manage(new RTImage ("cancel-small.png")));
     hbff->pack_start(*ffLabel, Gtk::PACK_SHRINK, 0);
     hbff->pack_start(*flatFieldFile);
     hbff->pack_start(*flatFieldFileReset, Gtk::PACK_SHRINK, 0);
@@ -104,6 +104,11 @@ FlatField::FlatField () : FoldableToolPanel(this, "flatfield", M("TP_FLATFIELD_L
     }
 }
 
+FlatField::~FlatField ()
+{
+    idle_register.destroy();
+}
+
 void FlatField::read(const rtengine::procparams::ProcParams* pp, const ParamsEdited* pedited)
 {
     disableListener ();
@@ -136,7 +141,7 @@ void FlatField::read(const rtengine::procparams::ProcParams* pp, const ParamsEdi
         flatFieldClipControl->setAutoInconsistent(multiImage && !pedited->raw.ff_AutoClipControl);
 
         if( !pedited->raw.ff_BlurType ) {
-            flatFieldBlurType->set_active(std::numeric_limits<int>::max());    // No name
+            flatFieldBlurType->set_active_text(M("GENERAL_UNCHANGED"));
         }
     }
 
@@ -217,7 +222,7 @@ void FlatField::write( rtengine::procparams::ProcParams* pp, ParamsEdited* pedit
 
     int currentRow = flatFieldBlurType->get_active_row_number();
 
-    if( currentRow >= 0 && currentRow < std::numeric_limits<int>::max()) {
+    if( currentRow >= 0 && flatFieldBlurType->get_active_text() != M("GENERAL_UNCHANGED")) {
         pp->raw.ff_BlurType = procparams::RAWParams::getFlatFieldBlurTypeStrings()[currentRow];
     }
 
@@ -227,16 +232,15 @@ void FlatField::write( rtengine::procparams::ProcParams* pp, ParamsEdited* pedit
         pedited->raw.ff_BlurRadius = flatFieldBlurRadius->getEditedState ();
         pedited->raw.ff_clipControl = flatFieldClipControl->getEditedState ();
         pedited->raw.ff_AutoClipControl = !flatFieldClipControl->getAutoInconsistent();
-        pedited->raw.ff_BlurType = flatFieldBlurType->get_active_row_number() != std::numeric_limits<int>::max();
+        pedited->raw.ff_BlurType = flatFieldBlurType->get_active_text() != M("GENERAL_UNCHANGED");
     }
 
 }
 
-void FlatField::adjusterChanged (Adjuster* a, double newval)
+void FlatField::adjusterChanged(Adjuster* a, double newval)
 {
     if (listener) {
-
-        Glib::ustring value = a->getTextValue();
+        const Glib::ustring value = a->getTextValue();
 
         if (a == flatFieldBlurRadius) {
             listener->panelChanged (EvFlatFieldBlurRadius,  value);
@@ -248,7 +252,6 @@ void FlatField::adjusterChanged (Adjuster* a, double newval)
 
 void FlatField::adjusterAutoToggled (Adjuster* a, bool newval)
 {
-
     if (multiImage) {
         if (flatFieldClipControl->getAutoInconsistent()) {
             flatFieldClipControl->setAutoInconsistent(false);
@@ -340,20 +343,14 @@ void FlatField::flatFieldBlurTypeChanged ()
     const int curSelection = flatFieldBlurType->get_active_row_number();
     const RAWParams::FlatFieldBlurType blur_type = RAWParams::FlatFieldBlurType(curSelection);
 
-    Glib::ustring s;
-
-    if (curSelection >= 0 && curSelection < std::numeric_limits<int>::max()) {
-        s = flatFieldBlurType->get_active_text();
-    }
-
     if (multiImage || blur_type == procparams::RAWParams::FlatFieldBlurType::AREA) {
         flatFieldClipControl->show();
     } else {
         flatFieldClipControl->hide();
     }
 
-    if (listener) {
-        listener->panelChanged (EvFlatFieldBlurType, s);
+    if (listener && curSelection >= 0) {
+        listener->panelChanged (EvFlatFieldBlurType, flatFieldBlurType->get_active_text());
     }
 }
 
@@ -410,4 +407,23 @@ void FlatField::setShortcutPath(const Glib::ustring& path)
         lastShortcutPath = path;
 
     } catch (Glib::Error&) {}
+}
+
+void FlatField::flatFieldAutoClipValueChanged(int n)
+{
+    struct Data {
+        FlatField *me;
+        int n;
+    };
+    const auto func = [](gpointer data) -> gboolean {
+        Data *d = static_cast<Data *>(data);
+        FlatField *me = d->me;
+        me->disableListener();
+        me->flatFieldClipControl->setValue (d->n);
+        me->enableListener();
+        delete d;
+        return FALSE;
+    };
+
+    idle_register.add(func, new Data { this, n });
 }

@@ -1,5 +1,6 @@
 # Common source files for both CLI and non-CLI execautables
 set(CLISOURCEFILES
+    alignedmalloc.cc
     edit.cc
     main-cli.cc
     multilangmgr.cc
@@ -11,6 +12,7 @@ set(CLISOURCEFILES
 
 set(NONCLISOURCEFILES
     adjuster.cc
+    alignedmalloc.cc
     batchqueue.cc
     batchqueuebuttonset.cc
     batchqueueentry.cc
@@ -71,6 +73,7 @@ set(NONCLISOURCEFILES
     histogrampanel.cc
     history.cc
     hsvequalizer.cc
+    iccprofilecreator.cc
     icmpanel.cc
     ilabel.cc
     imagearea.cc
@@ -153,6 +156,9 @@ set(NONCLISOURCEFILES
     localcontrast.cc
     eventmapper.cc
     metadatapanel.cc
+    labgrid.cc
+    softlight.cc
+    dehaze.cc
     variable.cc 
     ttsaver.cc 
     ttfavoritecolorer.cc 
@@ -160,7 +166,7 @@ set(NONCLISOURCEFILES
     ttudlrhider.cc 
     tttabhider.cc 
     tttweaker.cc
-    ttvardisplayer
+    ttvardisplayer    
     )
 
 include_directories(BEFORE "${CMAKE_CURRENT_BINARY_DIR}")
@@ -174,7 +180,7 @@ endif()
 
 if(WIN32)
     set(EXTRA_SRC_CLI myicon.rc)
-    set(EXTRA_SRC_NONCLI myicon.rc windirmonitor.cc)
+    set(EXTRA_SRC_NONCLI myicon.rc)
     set(EXTRA_LIB_RTGUI winmm)
     include_directories(${EXTRA_INCDIR}
         ${GIOMM_INCLUDE_DIRS}
@@ -228,6 +234,10 @@ else()
         ${LCMS_LIBRARY_DIRS}
         ${LENSFUN_LIBRARY_DIRS}
         )
+endif()
+
+if(OPENMP_FOUND AND NOT APPLE)
+    set(EXTRA_LIB_RTGUI ${EXTRA_LIB_RTGUI} "atomic")
 endif()
 
 # Create config.h which defines where data are stored

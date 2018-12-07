@@ -88,7 +88,7 @@ History::History (bool bookmarkSupport) : historyVPaned(nullptr), blistener(null
     //addBookmark->get_style_context()->set_junction_sides(Gtk::JUNCTION_RIGHT);
     addBookmark->get_style_context()->add_class("Left");
     addBookmark->set_tooltip_markup (M("HISTORY_NEWSNAPSHOT_TOOLTIP"));
-    Gtk::Image* addimg = Gtk::manage (new RTImage ("gtk-add.png"));
+    Gtk::Image* addimg = Gtk::manage (new RTImage ("add-small.png"));
     addBookmark->set_image (*addimg);
     ahbox->pack_start (*addBookmark);
 
@@ -96,7 +96,7 @@ History::History (bool bookmarkSupport) : historyVPaned(nullptr), blistener(null
     setExpandAlignProperties(delBookmark, true, false, Gtk::ALIGN_FILL, Gtk::ALIGN_START);
     //delBookmark->get_style_context()->set_junction_sides(Gtk::JUNCTION_LEFT);
     delBookmark->get_style_context()->add_class("Right");
-    Gtk::Image* delimg = Gtk::manage (new RTImage ("list-remove.png"));
+    Gtk::Image* delimg = Gtk::manage (new RTImage ("remove-small.png"));
     delBookmark->set_image (*delimg);
     ahbox->pack_start (*delBookmark);
 
@@ -152,12 +152,6 @@ void History::initHistory ()
     ConnectionBlocker selBlocker(selchangehist);
     historyModel->clear ();
     bookmarkModel->clear ();
-}
-
-void History::clearParamChanges ()
-{
-
-    initHistory ();
 }
 
 void History::historySelectionChanged ()
@@ -216,9 +210,13 @@ void History::bookmarkSelectionChanged ()
     }
 }
 
-void History::procParamsChanged (ProcParams* params, ProcEvent ev, Glib::ustring descr, ParamsEdited* paramsEdited)
+void History::procParamsChanged(
+    const ProcParams* params,
+    const ProcEvent& ev,
+    const Glib::ustring& descr,
+    const ParamsEdited* paramsEdited
+)
 {
-
     // to prevent recursion, we filter out the events triggered by the history and events that should not be registered
     if (ev == EvHistoryBrowsed || ev == EvMonitorTransform) {
         return;
@@ -298,6 +296,11 @@ void History::procParamsChanged (ProcParams* params, ProcEvent ev, Glib::ustring
 
     selchangehist.block (false);
     selchangebm.block (false);
+}
+
+void History::clearParamChanges ()
+{
+    initHistory ();
 }
 
 void History::addBookmarkWithText (Glib::ustring text)
