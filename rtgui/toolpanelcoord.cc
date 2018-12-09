@@ -266,6 +266,7 @@ ToolPanelCoordinator::ToolPanelCoordinator (bool batch, bool benchmark) : ipc(nu
 
   // new panels are registered diffently
     env->registerPanel (usefulPanel, Gtk::manage (new TTSaver()));
+    env->registerPanel (usefulPanel, Gtk::manage (new TTProfileLoader()));
     env->registerPanel (usefulPanel, Gtk::manage (new TTTabHider()));
     env->registerPanel (usefulPanel, Gtk::manage (new TTFavoriteColorChooser()));
     env->registerPanel (usefulPanel, Gtk::manage (new TTPanelColorChooser()));

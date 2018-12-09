@@ -89,6 +89,7 @@
 #include "tttabhider.h"
 #include "tttweaker.h"
 #include "ttvardisplayer.h"
+#include "ttprofileloader.h"
 
 //defining the number of panels for once.
 #define NB_PANEL 9
@@ -275,6 +276,11 @@ public:
     {
         paramcListeners.push_back (pp);
     }
+    void setProfilePanel(ProfilePanel* pp) 
+    {
+      env->setProfilePanel(pp);
+    }
+
 
     void doDeploy();
     void doDeployLate();

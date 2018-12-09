@@ -26,7 +26,9 @@
 #include "rtdef.h"
 #include "guiutils.h"
 #include "movabletoolpanel.h"
+//include "toolplanel.h"
 #include "variable.h"
+#include "profilepanel.h"
 
 #define ENV_STATE_IN_FAV    1
 #define ENV_STATE_IN_NORM   2
@@ -57,6 +59,7 @@ class Environment {
      Gtk::Notebook* toolPanelNotebook;
      std::vector<RtVariable*> varList;
      int customVariableCount; // for creating unique custom variable
+     ProfilePanel* profilepanel ;
 
   public:
      int envId;
@@ -123,6 +126,10 @@ class Environment {
      int getVarAsInt(Glib::ustring name);
      double getVarAsDouble(Glib::ustring name);
      bool getVarAsBool(Glib::ustring name);
+
+     void setProfilePanel(ProfilePanel* _profilep);
+     ProfilePanel* getProfilePanel();
+
 };
 
 #endif

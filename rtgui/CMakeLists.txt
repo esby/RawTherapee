@@ -162,13 +162,15 @@ set(NONCLISOURCEFILES
     softlight.cc
     dehaze.cc
     variable.cc 
+    ttdep.cc
     ttsaver.cc 
     ttfavoritecolorer.cc 
     ttpanelcolorer.cc 
     ttudlrhider.cc 
     tttabhider.cc 
     tttweaker.cc
-    ttvardisplayer    
+    ttvardisplayer.cc
+    ttprofileloader.cc
     )
 
 include_directories(BEFORE "${CMAKE_CURRENT_BINARY_DIR}")

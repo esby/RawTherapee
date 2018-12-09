@@ -23,6 +23,7 @@
 #include <sstream>
 #include <fstream>
 
+#include "ttdep.h"
 
 using namespace rtengine;
 using namespace rtengine::procparams;
@@ -85,26 +86,6 @@ void TTSaver::deploy()
       profilbox->set_active(index);
     }
   }
-}
-
-bool sortByFav(ToolPanel* t1, ToolPanel* t2)
-{
-  if (t1->canBeIgnored()
-  || t2->canBeIgnored()) return false;
-
-  return (t1->getPosFav() < t2->getPosFav());
-}
-
-
-bool sortByOri(ToolPanel* t1, ToolPanel* t2)
-{
-  if (t1->canBeIgnored()
-  || t2->canBeIgnored()) return false;
-  
-  
-  if (t1->getOriginalBox()->getBoxName() == t2->getOriginalBox()->getBoxName())
-    return (t1->getPosOri() < t2->getPosOri());
-  else return (t1->getOriginalBox()->getBoxName() < t2->getOriginalBox()->getBoxName());
 }
 
 void TTSaver::profileBoxChanged()

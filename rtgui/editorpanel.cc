@@ -826,6 +826,7 @@ EditorPanel::EditorPanel (FilePanel* filePanel, bool benchmark)
     profilep->setProfileChangeListener (tpc);
     history->setProfileChangeListener (tpc);
     history->setHistoryBeforeLineListener (this);
+    tpc->setProfilePanel(profilep);
     tpc->addPParamsChangeListener (profilep);
     tpc->addPParamsChangeListener (history);
     tpc->addPParamsChangeListener (this);

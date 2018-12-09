@@ -16,6 +16,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
  */
+//#include "toolpanel.h"
 #include "toolpanelcoord.h"
 #include "guiutils.h"
 
@@ -34,6 +35,7 @@ Environment::Environment()
   disableSwitchPageReaction = true;
   metadataState = true; // true if metadata tab is here
   customVariableCount = 0;
+  profilepanel=nullptr;
 }
 
 Environment::~Environment()
@@ -144,14 +146,14 @@ void Environment::setFavoritePos(ToolPanel *panel, int pos)
 
 RtVariable* Environment::getVariable(int pos)
 {
-  if ((pos > -1) && ((size_t)pos)<countVar())
+  if ((pos > -1) && (size_t)pos<countVar())
     return varList[pos] ;
   return nullptr;
 }
 
 Glib::ustring Environment::getVariableName(int pos)
 {
-  if ((pos > -1) && ((size_t)pos)<countVar())
+  if ((pos > -1) && (size_t)pos<countVar())
     return  varList[pos]->getName();
   return "";
 }
@@ -305,5 +307,14 @@ Glib::ustring Environment::getVarAsString(Glib::ustring name)
   return "";
 }
 
+void Environment::setProfilePanel(ProfilePanel* _profilep)
+{
+  profilepanel = _profilep;
+}
+
+ProfilePanel*  Environment::getProfilePanel()
+{
+  return profilepanel;
+}
 
 
