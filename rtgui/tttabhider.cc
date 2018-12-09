@@ -52,7 +52,7 @@ TTTabHider::TTTabHider () : FoldableToolPanel(this,"tttabhider",M("TP_THEMETOOL_
   themeBox9->set_spacing(4);
 
   buttonSave = Gtk::manage(new Gtk::Button());
-  buttonSave->set_image (*Gtk::manage(new RTImage ("saved.png")));
+  buttonSave->set_image (*Gtk::manage(new RTImage ("save.png")));
 
   lbHideFavorite = Gtk::manage(new Gtk::Label(M("TP_THEMETOOL_HIDE_FAVORITE")));
   cbHideFavorite = Gtk::manage(new Gtk::CheckButton());

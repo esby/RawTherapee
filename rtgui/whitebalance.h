@@ -122,7 +122,7 @@ public:
 
     void setAdjusterBehavior (bool tempadd, bool greenadd, bool equaladd, bool tempbiasadd);
     void trimValues          (rtengine::procparams::ProcParams* pp);
-    void enabledChanged(); override;
+    void enabledChanged() override;
     void resetWBToCamera();
 
 };

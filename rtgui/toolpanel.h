@@ -210,7 +210,11 @@ public:
     void setEnabledTooltipText(Glib::ustring tooltipText);
     bool get_inconsistent();  // related to the enabled/disabled state
     void set_inconsistent(bool isInconsistent);  // related to the enabled/disabled state
+
+    void setLevel (int level);
+
     bool canBeIgnored() {return false;}
+    void setGrayedOut(bool doGrayOut); // Set whether the tool should be disabled, collapsed and grayed-out.
 
     // Functions that want to receive an enabled/disabled event from this class
     // will have to receive it from MyExpander directly, we do not create
