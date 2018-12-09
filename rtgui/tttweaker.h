@@ -32,6 +32,8 @@ protected:
 
     Gtk::HBox* themeBox1;
     Gtk::HBox* themeBox2;
+    Gtk::HBox* themeBox3;
+    Gtk::HBox* themeBox4;
 
 
     Gtk::Label* lbAutoDistortionCorrect;
@@ -39,6 +41,13 @@ protected:
 
     Gtk::Label* lbCloseAfterSave;
     Gtk::CheckButton* cbCloseAfterSave;
+
+    Gtk::Label* lbReduceAfterSave;
+    Gtk::CheckButton* cbReduceAfterSave;
+
+    Gtk::Label* lbResetWBForRt4Profiles;
+    Gtk::CheckButton* cbResetWBForRt4Profiles;
+
 
 public:
 

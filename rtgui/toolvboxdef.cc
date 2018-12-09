@@ -36,7 +36,7 @@ int ToolVBoxDef::size() {
              return panelList.size ();
 }
 
-int ToolVBoxDef::getPos(ToolPanel* panel) {
+int ToolVBoxDef::getPos(MovableToolPanel* panel) {
 
   panelList = box->get_children ();
   Gtk::Widget *w = panel->getExpander();
@@ -47,9 +47,9 @@ int ToolVBoxDef::getPos(ToolPanel* panel) {
     return  std::distance(panelList.begin(), it);
 }
 
-ToolPanel* ToolVBoxDef::getPanel(int pos) {
+MovableToolPanel* ToolVBoxDef::getPanel(int pos) {
  panelList = box->get_children ();
- ToolPanel* p = static_cast<MyExpander*>(panelList[pos])->getPanel();
+ MovableToolPanel* p = static_cast<MyExpander*>(panelList[pos])->getPanel();
    return p;
 }
 
@@ -72,7 +72,7 @@ Gtk::VBox* ToolVBoxDef::getNextBox() {
 }
 
 
-void ToolVBoxDef::remPanel(ToolPanel* t)
+void ToolVBoxDef::remPanel(MovableToolPanel* t)
 {
   ToolVBox* v = (ToolVBox*) this;
   MyExpander* exp = t->getExpander();
@@ -85,7 +85,7 @@ void ToolVBoxDef::remPanel(ToolPanel* t)
 }
 
 
-void ToolVBoxDef::addPanel(ToolPanel* t, int pos)
+void ToolVBoxDef::addPanel(MovableToolPanel* t, int pos)
 {
   ToolVBox* v = (ToolVBox*) this;
   MyExpander* exp = t->getExpander();

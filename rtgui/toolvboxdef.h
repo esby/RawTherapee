@@ -29,6 +29,7 @@
 #include "edit.h"
 #include "rtdef.h"
 #include "environment.h"
+#include "movabletoolpanel.h"
 
 
 
@@ -74,16 +75,16 @@ class ToolVBoxDef
       // return the number of element the box contains.
       virtual int size();
 
-      virtual int getPos(ToolPanel* panel);
-      virtual ToolPanel* getPanel(int pos);
+      virtual int getPos(MovableToolPanel* panel);
+      virtual MovableToolPanel* getPanel(int pos);
 
       // return the box a panel should be moved to when using left arrow.
       virtual Gtk::VBox* getPrevBox();
       // return the box a panel should be moved to when using right arrow.
       virtual Gtk::VBox* getNextBox();
 
-      virtual void remPanel(ToolPanel* t);
-      virtual void addPanel(ToolPanel* t, int pos);
+      virtual void remPanel(MovableToolPanel* t);
+      virtual void addPanel(MovableToolPanel* t, int pos);
 
 };
 

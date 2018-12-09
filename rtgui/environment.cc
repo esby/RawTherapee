@@ -16,7 +16,6 @@
  *  You should have received a copy of the GNU General Public License
  *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include "toolpanel.h"
 #include "toolpanelcoord.h"
 #include "guiutils.h"
 
@@ -42,12 +41,12 @@ Environment::~Environment()
 }
 
 // Environment implementation
-ToolPanel* Environment::getPanel(Glib::ustring name)
+MovableToolPanel* Environment::getPanel(Glib::ustring name)
 {
   printf("call to a potentially slow method : getPanel of Environement\n");
   for (size_t i=0; i<toolPanels.size(); i++)
    {
-      FoldableToolPanel* p = static_cast<FoldableToolPanel*> (toolPanels[i]);
+      MovableToolPanel* p = static_cast<MovableToolPanel*> (toolPanels[i]);
       if (p != nullptr)
         if (p->getToolName() == name)
           return (ToolPanel*)p;
@@ -145,14 +144,14 @@ void Environment::setFavoritePos(ToolPanel *panel, int pos)
 
 RtVariable* Environment::getVariable(int pos)
 {
-  if ((pos > -1) && pos<countVar())
+  if ((pos > -1) && ((size_t)pos)<countVar())
     return varList[pos] ;
   return nullptr;
 }
 
 Glib::ustring Environment::getVariableName(int pos)
 {
-  if ((pos > -1) && pos<countVar())
+  if ((pos > -1) && ((size_t)pos)<countVar())
     return  varList[pos]->getName();
   return "";
 }

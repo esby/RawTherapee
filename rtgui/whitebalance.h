@@ -121,8 +121,10 @@ public:
     void WBChanged           (double temp, double green) override;
 
     void setAdjusterBehavior (bool tempadd, bool greenadd, bool equaladd, bool tempbiasadd);
-    void trimValues          (rtengine::procparams::ProcParams* pp) override;
-    void enabledChanged() override;
+    void trimValues          (rtengine::procparams::ProcParams* pp);
+    void enabledChanged(); override;
+    void resetWBToCamera();
+
 };
 
 #endif
