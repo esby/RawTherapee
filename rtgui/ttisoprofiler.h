@@ -16,8 +16,8 @@
  *  You should have received a copy of the GNU General Public License
  *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef _THEMETOOL_PROFILE_LOADER_H_
-#define _THEMETOOL_PROFILE_LOADER_H_
+#ifndef _THEMETOOL_ISO_PROFILER_H_
+#define _THEMETOOL_ISO_PROFILER_H_
 
 #include <memory>
 #include <gtkmm.h>
@@ -26,18 +26,21 @@
 #include "guiutils.h"
 
 
-class TTProfileLoader : public ToolParamBlock, public FoldableToolPanel {
+class TTIsoProfiler : public ToolParamBlock, public FoldableToolPanel {
 
 protected:
 
     Gtk::HBox* themeBox1;
     Gtk::HBox* themeBox2;
-    Gtk::HBox* themeBox3;
+    Gtk::VBox* themeBox3;
 
-    Gtk::Label* themeLabel;
+    Gtk::Label* themeIsoLabel;
+    Gtk::Label* themeProfilePickerLabel;
     Gtk::Button* buttonLoad;
     Gtk::Button* buttonSave;
     sigc::connection s;
+
+    Gtk::Entry* entry;
     MyComboBoxText* profilbox;
 
     Gtk::Label* lbAutoloadSettings;
@@ -45,7 +48,22 @@ protected:
 
     Gtk::Label* lbAutoloadSettingsLine;
 
-    std::vector<Glib::ustring> entries;
+    std::vector<Glib::ustring> paths;
+    std::vector<Glib::ustring> names;
+
+    std::vector<Glib::ustring> listIsos;
+    std::vector<Glib::ustring> listNames;
+    std::vector<Glib::ustring> listPaths;
+
+    std::vector<Gtk::Entry*> entryNames;
+    std::vector<Gtk::Entry*> entryIsos;
+    std::vector<Gtk::Button*> entryDelButtons;
+
+
+    bool donotreacttoprofileload;
+
+//    std::vector<vector<Glib::ustring>> isoEntries;
+//    std::vector<Glib::ustring> boxEntries;
 
 
 protected:
@@ -54,17 +72,24 @@ protected:
 
 public:
 
-    TTProfileLoader ();
+    TTIsoProfiler ();
     void load_profile(Glib::ustring filename);
-    void save_profile(Glib::ustring filename);
-    void resetFavoriteAndTrashState();
+    void save_profile(Glib::ustring isolimit, Glib::ustring name, Glib::ustring filename);
+    void affect_profiles();
     void save_clicked (GdkEventButton* event);
     void autoload_clicked (GdkEventButton* event);
+    void delete_clicked (int pos);
+
+
+    void react(FakeProcEvent ev);
+
    
     void parseProfileFolder();
 
     void profileBoxChanged();
     void deploy();
+
+    void sortVectorsByIsos();
 
 
 

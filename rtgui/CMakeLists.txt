@@ -170,7 +170,7 @@ set(NONCLISOURCEFILES
     tttabhider.cc 
     tttweaker.cc
     ttvardisplayer.cc
-    ttprofileloader.cc
+    ttisoprofiler.cc
     )
 
 include_directories(BEFORE "${CMAKE_CURRENT_BINARY_DIR}")

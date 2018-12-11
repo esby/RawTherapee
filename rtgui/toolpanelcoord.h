@@ -89,7 +89,7 @@
 #include "tttabhider.h"
 #include "tttweaker.h"
 #include "ttvardisplayer.h"
-#include "ttprofileloader.h"
+#include "ttisoprofiler.h"
 
 //defining the number of panels for once.
 #define NB_PANEL 9
