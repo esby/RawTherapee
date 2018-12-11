@@ -59,9 +59,6 @@ protected:
     std::vector<Gtk::Entry*> entryIsos;
     std::vector<Gtk::Button*> entryDelButtons;
 
-
-    bool donotreacttoprofileload;
-
 //    std::vector<vector<Glib::ustring>> isoEntries;
 //    std::vector<Glib::ustring> boxEntries;
 

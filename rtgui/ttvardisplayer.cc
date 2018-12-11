@@ -44,6 +44,8 @@ TTVarDisplayer::TTVarDisplayer () : FoldableToolPanel(this,"ttvardisplayer",M("T
 void TTVarDisplayer::deploy()
 {
 	FoldableToolPanel::deploy();
+        env->registerPriority(getToolName());
+
 }
 
 void TTVarDisplayer::deployLate()

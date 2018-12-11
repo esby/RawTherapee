@@ -60,6 +60,8 @@ class Environment {
      std::vector<RtVariable*> varList;
      int customVariableCount; // for creating unique custom variable
      ProfilePanel* profilepanel ;
+     Glib::ustring priorityToolname; // used to check which tool has priority for reacting
+     std::vector<Glib::ustring>priorityList;
 
   public:
      int envId;
@@ -130,6 +132,10 @@ class Environment {
      void setProfilePanel(ProfilePanel* _profilep);
      ProfilePanel* getProfilePanel();
 
+     void registerPriority(Glib::ustring _name);
+     void setPriority(Glib::ustring _name); 
+     bool checkPriority(Glib::ustring _name);
+  
 };
 
 #endif

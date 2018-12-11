@@ -83,6 +83,8 @@ TTTweaker::TTTweaker() : FoldableToolPanel(this,"TTTweaker",M("TT_TWEAKER_LABEL"
 void TTTweaker::deploy()
 {
   FoldableToolPanel::deploy();
+  env->registerPriority(getToolName());
+
   // button enable / disable
 
 //   getExpander()->signal_enabled_toggled().connect(sigc::mem_fun(this, &TTTweaker::enabledChanged));
@@ -103,7 +105,8 @@ void TTTweaker::react(FakeProcEvent ev)
    
 
   
-  if (cbAutoDistortionCorrect->get_active())
+  if ((cbAutoDistortionCorrect->get_active())
+  && (env->checkPriority(getToolName())))
   {
     if ((ev == FakeEvPhotoLoaded)
     || (ev == FakeEvProfileChanged))
@@ -117,6 +120,7 @@ void TTTweaker::react(FakeProcEvent ev)
         {
           printf("Clicking on auto distorsion correction button.\n");
           Distortion* d = static_cast<Distortion*> (p);
+          env->setPriority(getToolName());
           d->idPressed();
         }
       }

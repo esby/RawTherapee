@@ -317,4 +317,41 @@ ProfilePanel*  Environment::getProfilePanel()
   return profilepanel;
 }
 
+void Environment::registerPriority(Glib::ustring _name)
+{
+  priorityList.push_back(_name);
+}
+
+void  Environment::setPriority(Glib::ustring _name)
+{ 
+  priorityToolname = _name;
+}
+
+bool Environment::checkPriority(Glib::ustring _name)
+{
+//  return true;
+  printf("checking priority of %s vs %s \n", _name.c_str(), priorityToolname.c_str() );
+  size_t i;
+
+  if (priorityToolname == "") return true;
+
+  for (i=0; i<priorityList.size(); i++)
+  {
+    printf("checking priority= %s  \n", priorityList[i].c_str());
+    if (priorityList[i] == _name )
+    {
+      priorityToolname= "";
+       printf("returning true and resetting priority \n");
+      return true;
+    }
+
+    if (priorityList[i] == priorityToolname )  
+    {
+      printf("returning false \n");
+      return false;
+    }
+  }
+  printf("returning true (default case) \n");
+  return true; // we return true by default if the name1 and name2 are not found
+}
 

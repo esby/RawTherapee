@@ -29,7 +29,7 @@ using namespace rtengine;
 using namespace rtengine::procparams;
 
 
-TTIsoProfiler::TTIsoProfiler () : FoldableToolPanel(this,"TTIsoProfiler",M("TT_ISO_PROFILER"),false,false)
+TTIsoProfiler::TTIsoProfiler () : FoldableToolPanel(this,"TTIsoProfiler",M("TT_ISO_PROFILER"),false,true)
 {
 	themeBox1 = Gtk::manage(new Gtk::HBox());
 	themeBox1->set_spacing(4);
@@ -75,12 +75,11 @@ TTIsoProfiler::TTIsoProfiler () : FoldableToolPanel(this,"TTIsoProfiler",M("TT_I
 
        buttonSave->signal_button_release_event().connect_notify( sigc::mem_fun(*this, &TTIsoProfiler::save_clicked) );
        profilbox->signal_changed ().connect (sigc::mem_fun (*this, &TTIsoProfiler::profileBoxChanged));
-       donotreacttoprofileload = false;
-
 }
 
 void TTIsoProfiler::deploy()
 {
+  env->registerPriority(getToolName());
 /*
   if (options.TTPAutoload)
   {
@@ -97,11 +96,16 @@ void TTIsoProfiler::deploy()
 
 void TTIsoProfiler::react(FakeProcEvent ev)
 {
-   if (ev == FakeEvExifTransmitted)
+   if ((ev == FakeEvExifTransmitted)
+   && (env->checkPriority(getToolName()))
+)
    {
-     if (!donotreacttoprofileload)  
+     if  (getExpander()->getEnabled())
      {
-       Glib::ustring iso_as_string = env->getVariableByName("Iso")->toString();
+       RtVariable *v = env->getVariableByName("Iso");
+       if (v == nullptr) return;
+
+       Glib::ustring iso_as_string = v->toString();
        printf("iso_as_string= %s \n", iso_as_string.c_str());
 
        int iso = atoi(env->getVariableByName("Iso")->toString().c_str());
@@ -121,16 +125,13 @@ void TTIsoProfiler::react(FakeProcEvent ev)
        
        // we load the i-1 profile, supposed it exists.
        i = i -1;
-       if (i>0)
+       if ((i>=0) && (i<listIsos.size()))
        {
          printf("loading profile= %s \n", listPaths[i].c_str());
-         donotreacttoprofileload = true;
+         env->setPriority(getToolName());
          load_profile(listPaths[i]);
        }
        }
-    }else
-    {
-       donotreacttoprofileload=false;
     }
 }
 
@@ -232,7 +233,9 @@ void TTIsoProfiler::parseProfileFolder()
 void TTIsoProfiler::load_profile(Glib::ustring path)
 {
   printf("changing to %s \n", path.c_str());
-  env->getProfilePanel()->setProfilePanel(path);
+
+  env->getProfilePanel()->changeProfile(path);
+
 }
 
 void TTIsoProfiler::save_profile(Glib::ustring iso, Glib::ustring name, Glib::ustring path)
@@ -423,6 +426,7 @@ Glib::ustring TTIsoProfiler::themeExport()
 {
 
   Glib::ustring settings = "";
+  settings = getToolName() + ":" + "active:" + std::string(  getExpander()->getEnabled() ? "1" : "0") + "\n" ;
 
   size_t i;
   for (i=0; i < entryIsos.size(); i++)
@@ -460,6 +464,17 @@ void TTIsoProfiler::themeImport(std::ifstream& myfile)
       {
         if (getline(tokensplitter, token, ':'))
         {
+
+         if (token == "active")
+          {
+            if(getline(tokensplitter, token, ' '))
+            {
+              getExpander()->setEnabled((token == "1") ? true: false);
+            }
+          }
+          else
+          {
+
            iso = token;
            if (getline(tokensplitter, token, ':'))
            {
@@ -471,6 +486,7 @@ void TTIsoProfiler::themeImport(std::ifstream& myfile)
                  printf("ttp: %s read values: iso= %s name= %s path=%s \n", getToolName().c_str(),  iso.c_str(), name.c_str(), path.c_str());
                save_profile(iso,name,path);
              }
+           }
            }              
         }
       }
