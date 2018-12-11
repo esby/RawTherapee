@@ -394,7 +394,7 @@ Glib::ustring TTSaver::themeExport()
     if ((p != nullptr)
     && (!p->canBeIgnored()))
     {
-      int posFav = p->getPosOri();
+//      int posFav = p->getPosOri();
       if (p->getFavoriteButton()->get_active())
         favSettings += p->getToolName() + " ";
     }
