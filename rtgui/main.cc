@@ -65,6 +65,7 @@ Glib::ustring argv2;
 bool simpleEditor = false;
 bool gimpPlugin = false;
 bool remote = false;
+bool benchmark = false;
 Glib::RefPtr<Gtk::CssProvider> cssForced;
 Glib::RefPtr<Gtk::CssProvider> cssRT;
 //Glib::Threads::Thread* mainThread;
@@ -153,6 +154,11 @@ int processLineParams ( int argc, char **argv )
 
                     break;
 #endif
+
+                case 'B':
+                    benchmark = true; 
+                    printf("activating benchmark \n");
+                    break;
 
                 case 'g':
                     if (currParam == "-gimp") {
@@ -342,7 +348,7 @@ RTWindow *create_rt_window()
     // ------- end loading theme files
 
     //gdk_threads_enter ();
-    RTWindow *rtWindow = new RTWindow();
+    RTWindow *rtWindow = new RTWindow(benchmark);
 
     return rtWindow;
 }
@@ -461,6 +467,7 @@ int main (int argc, char **argv)
     simpleEditor = false;
     gimpPlugin = false;
     remote = false;
+    benchmark = false;
     argv0 = "";
     argv1 = "";
     argv2 = "";

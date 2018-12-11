@@ -81,7 +81,7 @@ osx_open_file_cb (GtkosxApplication *app, gchar *path_, gpointer data)
 }
 #endif // __APPLE__
 
-RTWindow::RTWindow ()
+RTWindow::RTWindow (bool _benchmark)
     : mainNB (nullptr)
     , bpanel (nullptr)
     , splash (nullptr)
@@ -89,7 +89,7 @@ RTWindow::RTWindow ()
     , epanel (nullptr)
     , fpanel (nullptr)
 {
-
+    benchmark = _benchmark;
     cacheMgr->init ();
     WhiteBalance::init();
     ProfilePanel::init (this);
@@ -158,7 +158,7 @@ RTWindow::RTWindow ()
     signal_key_press_event().connect ( sigc::mem_fun (*this, &RTWindow::keyPressed) );
 
     if (simpleEditor) {
-        epanel = Gtk::manage ( new EditorPanel (nullptr) );
+        epanel = Gtk::manage ( new EditorPanel (nullptr, benchmark) );
         epanel->setParent (this);
         epanel->setParentWindow (this);
         add (*epanel);
@@ -301,6 +301,12 @@ RTWindow::RTWindow ()
                 fpanel->fileCatalog->openRequested ({thm});
             }
         }
+        if (benchmark)
+        {
+          printf("exiting the application for benchmark purpose\n");
+          exit(0);
+        }
+
     }
 }
 

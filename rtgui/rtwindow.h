@@ -44,6 +44,7 @@ private:
     PLDBridge* pldBridge;
     bool is_fullscreen;
     bool on_delete_has_run;
+    bool benchmark;
     Gtk::Button * btn_fullscreen;
 
     Gtk::Image *iFullscreen, *iFullscreen_exit;
@@ -67,7 +68,7 @@ private:
 #endif
 
 public:
-    RTWindow ();
+    RTWindow (bool _benchmark=false);
     ~RTWindow() override;
 
 #if defined(__APPLE__)
