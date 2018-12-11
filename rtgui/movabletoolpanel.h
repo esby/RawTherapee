@@ -87,7 +87,6 @@ class MovableToolPanel
     int                  getPosOri();
     int                  getPosFav();
     int                  getPosTra();
- //   virtual Gtk::CheckButton*    getEnabledButton()  { return enabledButtonRef;}
     virtual Gtk::ToggleButton*   getFavoriteButton() { return favoriteButton;}
     virtual Gtk::ToggleButton*   getTrashButton()    { return trashButton;}
     virtual Gtk::HBox*           getLabelBox()       { return labelBox;}
