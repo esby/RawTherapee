@@ -42,5 +42,3 @@ bool sortByOri(ToolPanel* t1, ToolPanel* t2)
     return (t1->getPosOri() < t2->getPosOri());
   else return (t1->getOriginalBox()->getBoxName() < t2->getOriginalBox()->getBoxName());
 }
-
-
