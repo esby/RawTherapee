@@ -1406,7 +1406,7 @@ void EditorPanel::info_toggled ()
         env->setVar("Width",ipc->getFullWidth());
         env->setVar("Height", ipc->getFullHeight());
  
-        printf("exif transmitted for variable \n");
+        printf("exif transmitted by variables \n");
         // we will react later 
 
         infoString = Glib::ustring::compose ("<span size=\"small\">f/</span><span size=\"large\">%1</span>  <span size=\"large\">%2</span><span size=\"small\">s</span>  <span size=\"small\">%3</span><span size=\"large\">%4</span>  <span size=\"large\">%5</span><span size=\"small\">mm</span>",
