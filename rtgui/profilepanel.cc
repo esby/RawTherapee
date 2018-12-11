@@ -846,8 +846,8 @@ void ProfilePanel::writeOptions()
 }
 
 
-void ProfilePanel::setProfilePanel(Glib::ustring profilename)
+void ProfilePanel::changeProfile(Glib::ustring profilename)
 {
    profiles->setActiveRowFromFullPath(profilename);
-  selection_changed();
+//  selection_changed();
 }

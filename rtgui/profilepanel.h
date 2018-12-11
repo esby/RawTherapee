@@ -104,7 +104,7 @@ public:
     void paste_clicked (GdkEventButton* event);
     void selection_changed ();
     void writeOptions();
-    void setProfilePanel(Glib::ustring profilename);
+    void changeProfile(Glib::ustring profilename);
 };
 
 #endif
