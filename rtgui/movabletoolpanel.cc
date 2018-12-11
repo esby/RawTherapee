@@ -65,7 +65,7 @@ void MovableToolPanel::initVBox(ToolVBox* _originalBox, ToolVBox* _favoriteBox, 
 
      env = _env;   
      buttonBox = getExpander()->getButtonHBox();
-     buttonBox->pack_start(*fudlrBox, Gtk::PACK_EXPAND_WIDGET, true, 0); 
+     buttonBox->pack_start(*fudlrBox); //, Gtk::PACK_EXPAND_WIDGET, true, 0); 
 
 
      originalDummy = Gtk::manage (new DummyToolPanel("normal_PosSaver_of_" + this->getToolName(), env));
