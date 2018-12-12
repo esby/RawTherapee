@@ -19,7 +19,7 @@ Enabled=true
 Method=Blend
 
 [Channel Mixer]
-Red=1000;0;0;;
+Red=1000;0;0;
 Green=0;1000;0;
 Blue=0;0;1000;
 
