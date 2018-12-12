@@ -104,8 +104,8 @@ void TTSaver::parseProfileFolder()
    Glib::ustring p1 = options.getUserProfilePath();
    Glib::ustring p2 = options.getGlobalProfilePath();
 
-   printf("p1= %s \n",p1.c_str());
-   printf("p2= %s \n",p2.c_str());
+//   printf("p1= %s \n",p1.c_str());
+//   printf("p2= %s \n",p2.c_str());
     
    Glib::ustring realPath;
    Glib::ustring currDir;

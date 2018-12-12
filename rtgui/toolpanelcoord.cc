@@ -294,7 +294,6 @@ ToolPanelCoordinator::ToolPanelCoordinator (bool batch, bool benchmark) : ipc(nu
     usefulPanelSW      = Gtk::manage (new MyScrolledWindow ());
     updateVScrollbars (options.hideTPVScrollbar);
 
-    printf("before panel loading\n");
     // load panel endings
     for (int i=0; i< NB_PANEL; i++) {
         vbPanelEnd[i] = Gtk::manage (new Gtk::VBox ());
@@ -304,7 +303,6 @@ ToolPanelCoordinator::ToolPanelCoordinator (bool batch, bool benchmark) : ipc(nu
         vbPanelEnd[i]->show_all();
         hsPanelEnd[i] = Gtk::manage(new Gtk::HSeparator);
     }
-    printf("after panel loading\n");
 
     handlePanel(favoritePanel, favoritePanelSW, panelIter++, 4);
     handlePanel(exposurePanel, exposurePanelSW, panelIter++, 4);
@@ -316,7 +314,8 @@ ToolPanelCoordinator::ToolPanelCoordinator (bool batch, bool benchmark) : ipc(nu
     handlePanel(usefulPanel, usefulPanelSW, panelIter++, 4);
     handlePanel(trashPanel, trashPanelSW, panelIter++, 4);
 
-    printf("after panel handling\n");
+    if( options.rtSettings.verbose )
+      printf("panel handling performed. \n");
 
     for (int i=PANEL_SWITCHABLE_START; i< PANEL_SWITCHABLE_START + NB_PANEL_SWITCHABLE; i++) { //last panel is trash thus ignored
       int modOp  = NB_PANEL_SWITCHABLE ; //-2 because we ignore first panel and trash panel
@@ -389,9 +388,11 @@ ToolPanelCoordinator::ToolPanelCoordinator (bool batch, bool benchmark) : ipc(nu
     toolPanelNotebook->set_scrollable ();
     toolPanelNotebook->show_all ();
 
-    printf("before deploy\n");
+    if( options.rtSettings.verbose )
+      printf("Starting toolpanel deployment\n");
     doDeploy();
-    printf("after deploy\n");
+    if( options.rtSettings.verbose )
+      printf("Panel deployment finished\n");
 
     for (size_t i=0; i<env->countPanel(); i++)
       env->getPanel(i)->setListener (this);
@@ -413,8 +414,6 @@ ToolPanelCoordinator::ToolPanelCoordinator (bool batch, bool benchmark) : ipc(nu
 
 void ToolPanelCoordinator::doDeploy()
 {
-    if( options.rtSettings.verbose ) 
-      printf("panel deployment \n");
     for (size_t i=0; i<env->countPanel(); i++)
     {
 //      printf("panel nb=%i \n",  i);

@@ -95,7 +95,7 @@ void TTTweaker::deploy()
 void TTTweaker::react(FakeProcEvent ev)
 {
   int benchmark = env->getVarAsInt("benchmark");
-  printf("benchmark=%i\n",benchmark);
+//  printf("benchmark=%i\n",benchmark);
   if ((ev == FakeEvPP3Transmitted)
   && benchmark == 1)
   {

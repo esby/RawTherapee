@@ -106,19 +106,17 @@ void TTIsoProfiler::react(FakeProcEvent ev)
        if (v == nullptr) return;
 
        Glib::ustring iso_as_string = v->toString();
-       printf("iso_as_string= %s \n", iso_as_string.c_str());
 
        int iso = atoi(env->getVariableByName("Iso")->toString().c_str());
-       printf("iso_as_int= %i \n", iso);
 
        size_t i;
        for (i=0; i<listIsos.size(); i++)
        {
          int isolimit = atoi(listIsos[i].c_str());
-         printf("i= %zu isolimit=  %i \n", i, isolimit);
+         printf("%s p Checking iso= %i vs isolimit= %i #%zu \n", getToolName().c_str(),  iso, isolimit, i);
          if (isolimit > iso) 
          {
-           printf("excessing profile found, previous one will be used\n");
+           printf("%s excessing profile found, previous one will be used\n",getToolName().c_str());
            break;
          }
        }
@@ -127,7 +125,7 @@ void TTIsoProfiler::react(FakeProcEvent ev)
        i = i -1;
        if ((i>=0) && (i<listIsos.size()))
        {
-         printf("loading profile= %s \n", listPaths[i].c_str());
+//         printf("loading profile= %s \n", listPaths[i].c_str());
          env->setPriority(getToolName());
          load_profile(listPaths[i]);
        }
@@ -141,7 +139,7 @@ void TTIsoProfiler::profileBoxChanged()
    Glib::ustring name =  profilbox->get_active_text() ;
    int row = profilbox->get_active_row_number();
    Glib::ustring path = paths[row];
-   printf("preparing to load Filename : %s - %s\n", name.c_str(), path.c_str());
+   printf("%s preparing to load Filename [%s] - %s",getToolName().c_str(), name.c_str(), + path.c_str());
    load_profile(path);
    if( options.rtSettings.verbose ) 
      printf("Loaded profile : %s - %s\n", name.c_str(), path.c_str());
@@ -155,8 +153,8 @@ void TTIsoProfiler::parseProfileFolder()
    Glib::ustring p1 = Glib::build_filename(lp1,"Partial");
    Glib::ustring p2 = Glib::build_filename(lp2,"Partial");
 
-   printf("p1= %s \n",p1.c_str());
-   printf("p2= %s \n",p2.c_str());
+//   printf("p1= %s \n",p1.c_str());
+//   printf("p2= %s \n",p2.c_str());
     
    Glib::ustring realPath;
    Glib::ustring currDir;
@@ -215,8 +213,8 @@ void TTIsoProfiler::parseProfileFolder()
                       fname = fname.substr(0,fname.find(name)) + name;
                     }
 
-                    printf("fname= %s \n",fname.c_str());
-                    printf("name=%s\n",name.c_str());
+//                    printf("fname= %s \n",fname.c_str());
+//                    printf("name=%s\n",name.c_str());
                     profilbox->append(name);
                     paths.push_back(fname);
                     names.push_back(name);
@@ -232,8 +230,7 @@ void TTIsoProfiler::parseProfileFolder()
 
 void TTIsoProfiler::load_profile(Glib::ustring path)
 {
-  printf("changing to %s \n", path.c_str());
-
+  printf("%s changing profile to %s \n", getToolName().c_str(), path.c_str());
   env->getProfilePanel()->changeProfile(path);
 
 }
@@ -261,22 +258,15 @@ void TTIsoProfiler::save_profile(Glib::ustring iso, Glib::ustring name, Glib::us
 
 void TTIsoProfiler::affect_profiles()
 {
- size_t i;
- for (i=0; i<listIsos.size(); i++)
-  {
-    Glib::ustring name = listNames[i];
-    Glib::ustring iso  = listIsos[i];
-    printf("recording iso= %s name= %s \n", name.c_str(), iso.c_str());
-  }
-
-  printf("sorting elements \n");
+  size_t i;
   sortVectorsByIsos();
 
- for (i=0; i<listIsos.size(); i++)
+  printf("%s, listing partial iso profiles \n",getToolName().c_str());
+  for (i=0; i<listIsos.size(); i++)
   {
     Glib::ustring name = listNames[i];
     Glib::ustring iso  = listIsos[i];
-    printf("recording iso= %s name= %s \n", name.c_str(), iso.c_str());
+    printf("%s, %zu isolimit= %s name= %s \n",getToolName().c_str(),i, name.c_str(), iso.c_str());
   }
 
 
