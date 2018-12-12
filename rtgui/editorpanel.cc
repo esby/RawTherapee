@@ -1091,9 +1091,11 @@ void EditorPanel::open (Thumbnail* tmb, rtengine::InitialImage* isrc)
 
     history->resetSnapShotNumber();
     navigator->setInvalid(ipc->getFullWidth(),ipc->getFullHeight());
-int pp3version = tmb->getpp3version();
-    printf("transmitting pp3_version via env = %i \n", pp3version);
+    int pp3version = tmb->getpp3version();
     tpc->getEnv()->setVar("pp3version", pp3version );
+    printf("pp3version transmitted by variables = %i \n", pp3version);
+
+    // we react to the data added
     tpc->doReact(FakeEvExifTransmitted);
     tpc->doReact(FakeEvPP3Transmitted);
 }
@@ -1406,8 +1408,8 @@ void EditorPanel::info_toggled ()
         env->setVar("Width",ipc->getFullWidth());
         env->setVar("Height", ipc->getFullHeight());
  
-        printf("exif transmitted by variables \n");
-        // we will react later 
+        // note: we will react later, on pp3 version tranmission
+        printf("exifvalues transmitted by variables \n");
 
         infoString = Glib::ustring::compose ("<span size=\"small\">f/</span><span size=\"large\">%1</span>  <span size=\"large\">%2</span><span size=\"small\">s</span>  <span size=\"small\">%3</span><span size=\"large\">%4</span>  <span size=\"large\">%5</span><span size=\"small\">mm</span>",
                                               Glib::ustring(idata->apertureToString(idata->getFNumber())),
