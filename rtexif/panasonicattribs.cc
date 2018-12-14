@@ -12,6 +12,52 @@ namespace rtexif
 
 // TODO: write interpreters
 
+class PanaSShortReader : public Interpreter
+{
+public:
+    std::string toString (Tag* t) override
+    {
+        char buffer[32];
+        int a = t->toInt (0, SSHORT); 
+         sprintf (buffer,"%i",a);
+        return buffer;
+    }
+
+   double toDouble (const Tag* t, int ofs ) override
+    {
+        return t->toInt (ofs, SSHORT);
+    }
+
+
+};
+PanaSShortReader panaSShortReader;
+
+
+class PanaOrientationInterpreter : public ChoiceInterpreter
+{
+public:
+    PanaOrientationInterpreter ()
+    {
+        choices[0] = "Horizontal (normal)";
+        choices[1] = "Rotate CW";
+        choices[2] = "Rotate 180";
+        choices[3] = "Rotate CCW";
+        choices[4] = "Tilt Upwards";
+        choices[5] = "Tilt Downwards";
+    }
+ 
+     std::string toString (Tag* t) override
+    {
+        int a = t->toInt (0, SHORT);
+      
+        printf("choice= %i %s ",a, choices[a].c_str());
+        return choices[a];
+    }
+
+};
+PanaOrientationInterpreter panaOrientationInterpreter;
+
+
 const TagAttrib panasonicAttribs[] = {
     {0, AC_WRITE, 0, nullptr, 0x0001, AUTO, "Quality", &stdInterpreter},
     {0, AC_WRITE, 0, nullptr, 0x0002, AUTO, "FirmwareVersion", &stdInterpreter},
@@ -84,12 +130,12 @@ const TagAttrib panasonicAttribs[] = {
     {0, AC_WRITE, 0, nullptr, 0x0086, AUTO, "ManometerPressure", &stdInterpreter},
     {0, AC_WRITE, 0, nullptr, 0x0089, AUTO, "PhotoStyle", &stdInterpreter},
     {0, AC_WRITE, 0, nullptr, 0x008a, AUTO, "ShadingCompensation", &stdInterpreter},
-    {0, AC_WRITE, 0, nullptr, 0x008c, AUTO, "AccelerometerZ", &stdInterpreter},
-    {0, AC_WRITE, 0, nullptr, 0x008d, AUTO, "AccelerometerX", &stdInterpreter},
-    {0, AC_WRITE, 0, nullptr, 0x008e, AUTO, "AccelerometerY", &stdInterpreter},
-    {0, AC_WRITE, 0, nullptr, 0x008f, AUTO, "CameraOrientation", &stdInterpreter},
-    {0, AC_WRITE, 0, nullptr, 0x0090, AUTO, "RollAngle", &stdInterpreter},
-    {0, AC_WRITE, 0, nullptr, 0x0091, AUTO, "PitchAngle", &stdInterpreter},
+    {0, AC_WRITE, 0, nullptr, 0x008c, AUTO, "AccelerometerZ", &panaSShortReader},
+    {0, AC_WRITE, 0, nullptr, 0x008d, AUTO, "AccelerometerX", &panaSShortReader},
+    {0, AC_WRITE, 0, nullptr, 0x008e, AUTO, "AccelerometerY", &panaSShortReader},
+    {0, AC_WRITE, 0, nullptr, 0x008f, AUTO, "CameraOrientation", &panaOrientationInterpreter},
+    {0, AC_WRITE, 0, nullptr, 0x0090, AUTO, "RollAngle", &panaSShortReader},
+    {0, AC_WRITE, 0, nullptr, 0x0091, AUTO, "PitchAngle", &panaSShortReader},
     {0, AC_WRITE, 0, nullptr, 0x0093, AUTO, "SweepPanoramaDirection", &stdInterpreter},
     {0, AC_WRITE, 0, nullptr, 0x0094, AUTO, "PanoramaFieldOfView", &stdInterpreter},
     {0, AC_WRITE, 0, nullptr, 0x0096, AUTO, "TimerRecording", &stdInterpreter},

@@ -129,6 +129,11 @@ public:
     /** @return the sample format based on MetaData */
     virtual IIOSampleFormat getSampleFormat (unsigned int frame = 0) const = 0;
 
+    virtual double getPitchAngle (unsigned int frame = 0) const = 0;
+    /** @return the pitch angle detected by the camera and written in exif */
+    virtual double getRollAngle (unsigned int frame = 0) const = 0;
+    /** @return the roll angle detected by the camera and written in exif */
+
     /** Functions to convert between floating point and string representation of shutter and aperture */
     static std::string apertureToString (double aperture);
     /** Functions to convert between floating point and string representation of shutter and aperture */

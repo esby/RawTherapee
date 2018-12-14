@@ -129,6 +129,18 @@ int CacheImageData::load (const Glib::ustring& fname)
                         focalLen35mm = focalLen;    // prevent crashes on old files
                     }
 
+                    if (keyFile.has_key ("ExifInfo", "PitchAngle")) {
+                        pitchAngle = keyFile.get_double ("ExifInfo", "PitchAngle");
+                    } else {
+                        pitchAngle = 0;    
+                    }
+
+                    if (keyFile.has_key ("ExifInfo", "RollAngle")) {
+                        rollAngle = keyFile.get_double ("ExifInfo", "RollAngle");
+                    } else {
+                        rollAngle = 0;    
+                    }
+
                     if (keyFile.has_key ("ExifInfo", "FocusDist")) {
                         focusDist = keyFile.get_double ("ExifInfo", "FocusDist");
                     } else {
@@ -256,7 +268,9 @@ int CacheImageData::save (const Glib::ustring& fname)
         keyFile.set_boolean ("ExifInfo", "IsHDR", isHDR);
         keyFile.set_boolean ("ExifInfo", "IsPixelShift", isPixelShift);
         keyFile.set_string  ("ExifInfo", "ExpComp", expcomp);
-    }
+        keyFile.set_double  ("ExifInfo", "PitchAngle", pitchAngle);
+        keyFile.set_double  ("ExifInfo", "RollAngle", rollAngle);
+     }
 
     keyFile.set_string  ("ExifInfo", "Lens", lens);
     keyFile.set_string  ("ExifInfo", "CameraMake", camMake);
