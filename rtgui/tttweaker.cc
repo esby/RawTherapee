@@ -22,6 +22,8 @@
 #include "rtimage.h"
 #include "distortion.h"
 #include "whitebalance.h"
+#include "variable.h"
+#include "rotate.h"
 #include <chrono>
 #include <thread>
 #include <fstream>
@@ -77,6 +79,16 @@ TTTweaker::TTTweaker() : FoldableToolPanel(this,"TTTweaker",M("TT_TWEAKER_LABEL"
   themeBox4->pack_end(*cbResetWBForRt4Profiles, Gtk::PACK_SHRINK, 0);
 
   pack_start(*themeBox4, Gtk::PACK_SHRINK, 0);
+
+  themeBox5 = Gtk::manage(new Gtk::HBox());
+
+  lbAutoRotateCorrect = Gtk::manage(new Gtk::Label(M("TT_TWEAKER_AUTO_HORIZON_CORRECTION")));
+  cbAutoRotateCorrect = Gtk::manage(new Gtk::CheckButton());
+
+  themeBox5->pack_start(*lbAutoRotateCorrect, Gtk::PACK_SHRINK, 0);
+  themeBox5->pack_end(*cbAutoRotateCorrect, Gtk::PACK_SHRINK, 0);
+
+  pack_start(*themeBox5, Gtk::PACK_SHRINK, 0);
  
 }
 
@@ -90,6 +102,21 @@ void TTTweaker::deploy()
 //   getExpander()->signal_enabled_toggled().connect(sigc::mem_fun(this, &TTTweaker::enabledChanged));
 //   cbAutoDistortionCorrect->signal_clicked().connect( sigc::mem_fun(this, &TTTweaker::enabledChanged));
 
+}
+
+float normalizeRotation(float f)
+{
+  int sign;
+  if ( f>0 )
+    sign = +1;
+  else
+    sign = -1;
+            
+  while (f*sign>45)
+    f = f +180*sign*-1;
+ 
+
+  return f;
 }
 
 void TTTweaker::react(FakeProcEvent ev)
@@ -126,7 +153,75 @@ void TTTweaker::react(FakeProcEvent ev)
       }
     }
   }
-  if ((ev == FakeEvFileSaved)) 
+
+  if ((cbAutoRotateCorrect->get_active())
+  && (ev == FakeEvExifTransmitted ))
+  for (size_t i=0; i< env->countPanel() ; i++)
+  {
+    FoldableToolPanel* p = static_cast<FoldableToolPanel*> (env->getPanel(i));
+    if ( (p != NULL)
+    && (!(p->canBeIgnored())))
+    {
+      if (p->getToolName() == "rotate")
+      {
+        RtVariable* v = env->getVariableByName("RollAngle");
+        double d = atof( v->toString().c_str());
+        printf("d=%f \n",d);
+        if (d!=0)
+        {
+          RtVariable* orientation = env->getVariableByName("Orientation");
+          Glib::ustring s = orientation->toString();
+          bool applyCoarse = false;
+
+          if (s == "Horizontal (normal)")
+          {
+            d = -d;
+          }
+          else
+          if (s == "Rotate 90 CW")
+          { 
+            d = 90-d;
+          }
+          else 
+          if (s == "Rotate 180")
+          {
+            d = -d;
+            d = normalizeRotation(d);
+            applyCoarse= true;
+          }
+          else
+          if (s == "Rotate 270 CW") 
+          {
+            d = -90-d;
+          }
+          //other cases not handled
+
+
+
+          rtengine::procparams::ProcParams* pp;
+          pp = new ProcParams();
+          p->write(pp);
+          if ((pp->rotate.degree == 0) 
+          &&  (pp->rotate.degree != d))
+          {
+             pp->rotate.degree = d;
+             p->read(pp);
+             Rotate* r = static_cast<Rotate*> (p);
+             env->setPriority(getToolName());
+             r->adjusterChanged(nullptr, d);
+
+             if (applyCoarse)
+            {
+ //               params->coarse.rotate == 180
+            }
+            printf("%s auto rotating by degree=%f \n",getToolName().c_str(),d);
+          }
+        }
+      }
+    }
+  }
+
+  if (ev == FakeEvFileSaved)
   {
     if (cbCloseAfterSave->get_active() && simpleEditor)
     {
@@ -182,6 +277,7 @@ Glib::ustring TTTweaker::themeExport()
   Glib::ustring s_close_after_save = getToolName() + ":"  + "enable_close_after_save " + std::string( cbCloseAfterSave->get_active() ? "1" : "0" ) ;
   Glib::ustring s_reduce_after_save = getToolName() + ":"  + "enable_reduce_after_save " + std::string( cbReduceAfterSave->get_active() ? "1" : "0" ) ;
   Glib::ustring s_reset_wb = getToolName() + ":"  + "enable_reset_wb " + std::string( cbResetWBForRt4Profiles->get_active() ? "1" : "0" ) ;
+  Glib::ustring s_auto_rotate = getToolName() + ":"  + "enable_auto_rotate " + std::string( cbAutoRotateCorrect->get_active() ? "1" : "0" ) ;
 
 
   return s_active + "\n" \
@@ -189,6 +285,7 @@ Glib::ustring TTTweaker::themeExport()
        + s_close_after_save + "\n" \
        + s_reduce_after_save + "\n" \
        + s_reset_wb + "\n" \
+       + s_auto_rotate + "\n" \
 ;
 }
 
@@ -254,6 +351,15 @@ void TTTweaker::themeImport(std::ifstream& myfile)
               cbResetWBForRt4Profiles->set_active((token == "1") ? true: false);
             }
           }
+
+          if (token == "enable_auto_rotate")
+          {
+            if(getline(tokensplitter, token, ' '))
+            {
+              cbAutoRotateCorrect->set_active((token == "1") ? true: false);
+            }
+          }
+
 
        }
      }

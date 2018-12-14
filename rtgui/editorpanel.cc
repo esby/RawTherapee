@@ -1397,7 +1397,7 @@ void EditorPanel::info_toggled ()
                                               Glib::ustring (idata->shutterToString (idata->getShutterSpeed(selectedFrame))),
                                               M ("QINFO_ISO"), idata->getISOSpeed(selectedFrame),
                                               Glib::ustring::format (std::setw (3), std::fixed, std::setprecision (2), idata->getFocalLen(selectedFrame)));
-       //todo add idata to rtvar
+       //todo add idata to rtvar?
         Environment* env = tpc->getEnv();
         env->setVar("Iso", idata->getISOSpeed());
         env->setVar("Fnum", Glib::ustring(idata->apertureToString(idata->getFNumber())));
@@ -1407,6 +1407,10 @@ void EditorPanel::info_toggled ()
         env->setVar("Fname",openThm->getFileName());
         env->setVar("Width",ipc->getFullWidth());
         env->setVar("Height", ipc->getFullHeight());
+        env->setVar("PitchAngle", idata->getPitchAngle());
+        env->setVar("RollAngle", idata->getRollAngle());
+        env->setVar("Orientation",idata->getOrientation());
+
  
         // note: we will react later, on pp3 version tranmission
         printf("exifvalues transmitted by variables \n");

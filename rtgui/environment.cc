@@ -329,7 +329,7 @@ void  Environment::setPriority(Glib::ustring _name)
 
 bool Environment::checkPriority(Glib::ustring _name)
 {
-//  return true;
+  return true;
   printf("checking priority of %s vs %s \n", _name.c_str(), priorityToolname.c_str() );
   size_t i;
 
