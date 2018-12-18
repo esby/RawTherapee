@@ -89,8 +89,10 @@ public:
     void error(const Glib::ustring& descr) override;
 
     void error(const Glib::ustring& title, const Glib::ustring& descr);
-    void displayError(const Glib::ustring& title, const Glib::ustring& descr);  // this is called by error in the gtk thread
+    void displayError(const Glib::ustring& title, const Glib::ustring& descr);  // this is called by error in the gtk threada
     void refreshProcessingState (bool inProcessing); // this is called by setProcessingState in the gtk thread
+
+    void doReact(FakeProcEvent ev) { tpc->doReact(ev); }
 
     // PParamsChangeListener interface
     void procParamsChanged(
