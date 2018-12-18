@@ -66,8 +66,8 @@ TTTabHider::TTTabHider () : FoldableToolPanel(this,"tttabhider",M("TP_THEMETOOL_
   lbHideColor = Gtk::manage(new Gtk::Label(M("TP_THEMETOOL_HIDE_COLOR")));
   cbHideColor = Gtk::manage(new Gtk::CheckButton());
 
-  lbHideWavelet = Gtk::manage(new Gtk::Label(M("TP_THEMETOOL_HIDE_WAVELET")));
-  cbHideWavelet = Gtk::manage(new Gtk::CheckButton());
+  lbHideAdvanced = Gtk::manage(new Gtk::Label(M("TP_THEMETOOL_HIDE_ADVANCED")));
+  cbHideAdvanced = Gtk::manage(new Gtk::CheckButton());
 
   lbHideTransform = Gtk::manage(new Gtk::Label(M("TP_THEMETOOL_HIDE_TRANSFORM")));
   cbHideTransform = Gtk::manage(new Gtk::CheckButton());
@@ -92,8 +92,8 @@ TTTabHider::TTTabHider () : FoldableToolPanel(this,"tttabhider",M("TP_THEMETOOL_
   themeBox3->pack_start(*lbHideDetails, Gtk::PACK_SHRINK, 0);
   themeBox4->pack_start(*cbHideColor, Gtk::PACK_SHRINK, 0);
   themeBox4->pack_start(*lbHideColor, Gtk::PACK_SHRINK, 0);
-  themeBox5->pack_start(*cbHideWavelet, Gtk::PACK_SHRINK, 0);
-  themeBox5->pack_start(*lbHideWavelet, Gtk::PACK_SHRINK, 0);
+  themeBox5->pack_start(*cbHideAdvanced, Gtk::PACK_SHRINK, 0);
+  themeBox5->pack_start(*lbHideAdvanced, Gtk::PACK_SHRINK, 0);
   themeBox6->pack_start(*cbHideTransform, Gtk::PACK_SHRINK, 0);
   themeBox6->pack_start(*lbHideTransform, Gtk::PACK_SHRINK, 0);
   themeBox7->pack_start(*cbHideRaw, Gtk::PACK_SHRINK, 0);
@@ -125,7 +125,7 @@ void TTTabHider::deploy()
   cbHideExposure->set_active (options.TTPHideExposure);
   cbHideDetails->set_active (options.TTPHideDetails);
   cbHideColor->set_active (options.TTPHideColor);
-  cbHideWavelet->set_active (options.TTPHideWavelet);
+  cbHideAdvanced->set_active (options.TTPHideAdvanced);
   cbHideTransform->set_active (options.TTPHideTransform);
   cbHideRaw->set_active (options.TTPHideRaw);
   cbHideMetadata->set_active (options.TTPHideMetadata);
@@ -136,7 +136,7 @@ void TTTabHider::deploy()
   cbHideExposure->signal_clicked().connect( sigc::mem_fun(this, &TTTabHider::hide_exposure_clicked));
   cbHideDetails->signal_clicked().connect( sigc::mem_fun(this, &TTTabHider::hide_details_clicked));
   cbHideColor->signal_clicked().connect( sigc::mem_fun(this, &TTTabHider::hide_color_clicked));
-  cbHideWavelet->signal_clicked().connect( sigc::mem_fun(this, &TTTabHider::hide_wavelet_clicked));
+  cbHideAdvanced->signal_clicked().connect( sigc::mem_fun(this, &TTTabHider::hide_advanced_clicked));
   cbHideTransform->signal_clicked().connect( sigc::mem_fun(this, &TTTabHider::hide_transform_clicked));
   cbHideRaw->signal_clicked().connect( sigc::mem_fun(this, &TTTabHider::hide_raw_clicked));
   cbHideMetadata->signal_clicked().connect( sigc::mem_fun(this, &TTTabHider::hide_metadata_clicked));
@@ -152,7 +152,7 @@ void TTTabHider::deployLate()
   hide_exposure_clicked ();
   hide_details_clicked ();
   hide_color_clicked ();
-  hide_wavelet_clicked ();
+  hide_advanced_clicked ();
   hide_transform_clicked ();
   hide_raw_clicked ();
   hide_metadata_clicked ();
@@ -199,11 +199,11 @@ void TTTabHider::hide_color_clicked ()
   options.TTPHideColor = cbHideColor->get_active();
 }
 
-void TTTabHider::hide_wavelet_clicked ()
+void TTTabHider::hide_advanced_clicked ()
 { 
 //  printf("hiding wavelet\n"); 
-  env->getToolPanelNotebook()->get_nth_page(4)->set_visible(not cbHideWavelet->get_active() );
-  options.TTPHideWavelet = cbHideWavelet->get_active();
+  env->getToolPanelNotebook()->get_nth_page(4)->set_visible(not cbHideAdvanced->get_active() );
+  options.TTPHideAdvanced = cbHideAdvanced->get_active();
 }
 
 void TTTabHider::hide_transform_clicked ()
@@ -285,10 +285,38 @@ Glib::ustring TTTabHider::themeExport()
   Glib::ustring favSettings = getToolName() + ":"  + "favorite:";
   Glib::ustring traSettings = getToolName() + ":"  + "trash:";
 
-  favSettings += "visible " + env->getToolPanelNotebook()->get_nth_page(0)->get_visible() ?  "1": "0"; 
-  traSettings += "visible " + env->getToolPanelNotebook()->get_nth_page(NB_PANEL +  -1)->get_visible() ?  "1": "0";
+/*
+  Glib::ustring exposureSettings = getToolName() + ":"  + "exposure:";
+  Glib::ustring detailsSettings = getToolName() + ":"  + "details:";
+  Glib::ustring colorSettings = getToolName() + ":"  + "color:";
+  Glib::ustring advancedSettings = getToolName() + ":"  + "advanced:";
+  Glib::ustring transformSettings = getToolName() + ":"  + "transform:";
+  Glib::ustring rawSettings = getToolName() + ":"  + "raw:";
+  Glib::ustring metadataSettings = getToolName() + ":"  + "metadata:";
+  Glib::ustring usefulSettings = getToolName() + ":"  + "useful:";
+*/
+  favSettings       += "visible " + env->getToolPanelNotebook()->get_nth_page(0)->get_visible() ?  "1": "0"; 
+/*  exposureSettings  += "visible " + cbHideExposure->get_active()  ?  "1": "0";  
+  detailsSettings   += "visible " + cbHideDetails->get_active()  ?  "1": "0";
+  colorSettings     += "visible " + cbHideColor->get_active()  ?  "1": "0";
+  advancedSettings  += "visible " + cbHideAdvanced->get_active()  ?  "1": "0";
+  transformSettings += "visible " + cbHideTransform->get_active()  ?  "1": "0";
+  rawSettings       += "visible " + cbHideRaw->get_active()  ?  "1": "0";
+  metadataSettings  += "visible " + cbHideMetadata->get_active()  ?  "1": "0";
+  usefulSettings    += "visible " + cbHideUseful->get_active()  ?  "1": "0";
+*/
+  traSettings       += "visible " + cbHideTrash->get_active()  ?  "1": "0";
 
-  return favSettings + "\n" +  traSettings + "\n"; 
+  return favSettings + "\n" 
+/*      +  exposureSettings + "\n"
+      +  detailsSettings + "\n"
+      +  colorSettings + "\n"
+      +  advancedSettings + "\n"
+      +  transformSettings + "\n"
+      +  rawSettings + "\n"
+      +  metadataSettings + "\n"
+      +  usefulSettings + "\n"*/
+      +  traSettings + "\n"; 
 }
 
 

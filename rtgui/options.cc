@@ -922,8 +922,8 @@ void Options::readFromFile(Glib::ustring fname)
                     TTPHideColor          = keyFile.get_boolean ("TTP", "HideColor");
                 }
 
-                if (keyFile.has_key ("TTP", "HideWavelet")) {
-                    TTPHideWavelet        = keyFile.get_boolean ("TTP", "HideWavelet");
+                if (keyFile.has_key ("TTP", "HideAdvanced")) {
+                    TTPHideAdvanced       = keyFile.get_boolean ("TTP", "HideAdvanced");
                 }
 
                 if (keyFile.has_key ("TTP", "HideTransform")) {
@@ -2035,7 +2035,7 @@ void Options::saveToFile(Glib::ustring fname)
         keyFile.set_boolean ("TTP", "HideExposure", TTPHideExposure);
         keyFile.set_boolean ("TTP", "HideDetails", TTPHideDetails);
         keyFile.set_boolean ("TTP", "HideColor", TTPHideColor);
-        keyFile.set_boolean ("TTP", "HideWavelet", TTPHideWavelet);
+        keyFile.set_boolean ("TTP", "HideAdvanced", TTPHideAdvanced);
         keyFile.set_boolean ("TTP", "HideTransform", TTPHideTransform);
         keyFile.set_boolean ("TTP", "HideRaw", TTPHideRaw);
         keyFile.set_boolean ("TTP", "HideMetadata", TTPHideMetadata);

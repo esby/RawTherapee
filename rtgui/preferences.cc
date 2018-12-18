@@ -1552,8 +1552,8 @@ Gtk::Widget* Preferences::getTTPanel ()
   lbHideColor = Gtk::manage(new Gtk::Label(M("TP_THEMETOOL_HIDE_COLOR")));
   cbHideColor = Gtk::manage(new Gtk::CheckButton());
 
-  lbHideWavelet = Gtk::manage(new Gtk::Label(M("TP_THEMETOOL_HIDE_WAVELET")));
-  cbHideWavelet = Gtk::manage(new Gtk::CheckButton());
+  lbHideAdvanced = Gtk::manage(new Gtk::Label(M("TP_THEMETOOL_HIDE_ADVANCED")));
+  cbHideAdvanced = Gtk::manage(new Gtk::CheckButton());
 
   lbHideTransform = Gtk::manage(new Gtk::Label(M("TP_THEMETOOL_HIDE_TRANSFORM")));
   cbHideTransform = Gtk::manage(new Gtk::CheckButton());
@@ -1578,8 +1578,8 @@ Gtk::Widget* Preferences::getTTPanel ()
   themeBox3->pack_start(*lbHideDetails, Gtk::PACK_SHRINK, 0);
   themeBox4->pack_start(*cbHideColor, Gtk::PACK_SHRINK, 0);
   themeBox4->pack_start(*lbHideColor, Gtk::PACK_SHRINK, 0);
-  themeBox5->pack_start(*cbHideWavelet, Gtk::PACK_SHRINK, 0);
-  themeBox5->pack_start(*lbHideWavelet, Gtk::PACK_SHRINK, 0);
+  themeBox5->pack_start(*cbHideAdvanced, Gtk::PACK_SHRINK, 0);
+  themeBox5->pack_start(*lbHideAdvanced, Gtk::PACK_SHRINK, 0);
   themeBox6->pack_start(*cbHideTransform, Gtk::PACK_SHRINK, 0);
   themeBox6->pack_start(*lbHideTransform, Gtk::PACK_SHRINK, 0);
   themeBox7->pack_start(*cbHideRaw, Gtk::PACK_SHRINK, 0);
@@ -1918,7 +1918,7 @@ void Preferences::storePreferences ()
    moptions.TTPHideExposure =  cbHideExposure->get_active ();
    moptions.TTPHideDetails =  cbHideDetails->get_active ();
    moptions.TTPHideColor =  cbHideColor->get_active ();
-   moptions.TTPHideWavelet =  cbHideWavelet->get_active ();
+   moptions.TTPHideAdvanced =  cbHideAdvanced->get_active ();
    moptions.TTPHideTransform =  cbHideTransform->get_active ();
    moptions.TTPHideRaw =  cbHideRaw->get_active ();
    moptions.TTPHideMetadata =  cbHideMetadata->get_active ();
@@ -2170,7 +2170,7 @@ void Preferences::fillPreferences ()
    cbHideExposure->set_active (moptions.TTPHideExposure);
    cbHideDetails->set_active (moptions.TTPHideDetails);
    cbHideColor->set_active (moptions.TTPHideColor);
-   cbHideWavelet->set_active (moptions.TTPHideWavelet);
+   cbHideAdvanced->set_active (moptions.TTPHideAdvanced);
    cbHideTransform->set_active (moptions.TTPHideTransform);
    cbHideRaw->set_active (moptions.TTPHideRaw);
    cbHideMetadata->set_active (moptions.TTPHideMetadata);

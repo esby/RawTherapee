@@ -260,7 +260,7 @@ public:
     bool TTPHideExposure;
     bool TTPHideDetails;
     bool TTPHideColor;
-    bool TTPHideWavelet;
+    bool TTPHideAdvanced;
     bool TTPHideTransform;
     bool TTPHideRaw;
     bool TTPHideMetadata;

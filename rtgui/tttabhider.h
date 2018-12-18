@@ -49,8 +49,8 @@ protected:
     Gtk::CheckButton* cbHideDetails;
     Gtk::Label* lbHideColor;
     Gtk::CheckButton* cbHideColor;
-    Gtk::Label* lbHideWavelet;
-    Gtk::CheckButton* cbHideWavelet;
+    Gtk::Label* lbHideAdvanced;
+    Gtk::CheckButton* cbHideAdvanced;
     Gtk::Label* lbHideTransform;
     Gtk::CheckButton* cbHideTransform;
     Gtk::Label* lbHideRaw;
@@ -76,7 +76,7 @@ public:
     void hide_exposure_clicked ();
     void hide_details_clicked ();
     void hide_color_clicked ();
-    void hide_wavelet_clicked ();
+    void hide_advanced_clicked ();
     void hide_transform_clicked ();
     void hide_raw_clicked ();
     void hide_metadata_clicked ();

@@ -224,8 +224,8 @@ class Preferences : public Gtk::Dialog, public ProfileStoreListener
     Gtk::CheckButton* cbHideDetails;
     Gtk::Label* lbHideColor;
     Gtk::CheckButton* cbHideColor;
-    Gtk::Label* lbHideWavelet;
-    Gtk::CheckButton* cbHideWavelet;
+    Gtk::Label* lbHideAdvanced;
+    Gtk::CheckButton* cbHideAdvanced;
     Gtk::Label* lbHideTransform;
     Gtk::CheckButton* cbHideTransform;
     Gtk::Label* lbHideRaw;
