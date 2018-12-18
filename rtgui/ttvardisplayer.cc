@@ -24,6 +24,8 @@
 #include "guiutils.h"
 #include <fstream>
 
+#include "ttudlrhider.h"
+
 using namespace rtengine;
 using namespace rtengine::procparams;
 
@@ -96,7 +98,34 @@ void TTVarDisplayer::react(FakeProcEvent ev)
 		// we display the entries
 		getExpander()->show_all();
 
-	}
+// debugging code if needed
+/*
+   for (size_t i=0; i< env->countPanel() ; i++)
+   {
+      FoldableToolPanel* p = static_cast<FoldableToolPanel*> (env->getPanel(i));
+      if ( (p != NULL)
+      && (!(p->canBeIgnored())))
+      {  
+        if (p->getToolName() == "rotate" )
+        {
+          printf("DEBUG panel.name=%s \n",p->getToolName().c_str());
+          printf("DEBUG expander enabled=%i \n",p->getExpander()->getEnabled());
+        }
+
+      if  (p->getToolName() == "ttudlrhider" )
+        {
+          printf("DEBUG2 panel.name=%s \n",p->getToolName().c_str());
+          printf("DEBUG2 expander enabled=%i \n",p->getExpander()->getEnabled());
+          printf("DEBUG cbhideArrow=%i \n",static_cast<TTUDLRHider*> (p)->cbHideArrow->get_active());
+          printf("DEBUG cbLockFav=%i \n", static_cast<TTUDLRHider*> (p)->cbLockFav->get_active());
+//      static_cast<TTUDLRHider*> (p)->enabledChanged();
+        }
+
+      }
+    }
+*/
+}
+
 }
 
 //void TTUDLRHider::on_toggle_button()

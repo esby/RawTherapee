@@ -34,9 +34,12 @@ protected:
     Gtk::HBox* themeBox2;
 
     Gtk::Label* lbHideArrow;
-    Gtk::CheckButton* cbHideArrow; 
     Gtk::Label* lbLockFav;
+
+    Gtk::CheckButton* cbHideArrow;
     Gtk::CheckButton* cbLockFav;
+
+    bool disableButtons;
 
 public:
 
@@ -47,6 +50,8 @@ public:
     void enabledChanged  ();
 
     void actOnPanel(ToolPanel* panel);
+    void react(FakeProcEvent ev);
+
 
     bool canBeEnabled() {return true;}
 

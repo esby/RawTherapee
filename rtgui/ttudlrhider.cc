@@ -48,6 +48,8 @@ TTUDLRHider::TTUDLRHider () : FoldableToolPanel(this,"ttudlrhider",M("TP_UDLR_HI
   pack_start(*themeBox1, Gtk::PACK_SHRINK, 0);
   pack_start(*themeBox2, Gtk::PACK_SHRINK, 0);
 
+  disableButtons = true;
+
 }
 
 void TTUDLRHider::deploy()
@@ -76,13 +78,22 @@ void TTUDLRHider::deploy()
 
 void TTUDLRHider::deployLate()
 {
+   disableButtons = false;
   enabledChanged();
+}
+
+void TTUDLRHider::react(FakeProcEvent ev)
+{
+  if (ev == FakeEvShowAllTriggered)
+  {
+    enabledChanged();
+  }
 }
 
 //void TTUDLRHider::on_toggle_button()
 void TTUDLRHider::enabledChanged  () 
 {
-   
+   if (disableButtons) return;
    for (size_t i=0; i< env->countPanel() ; i++)
    {
       FoldableToolPanel* p = static_cast<FoldableToolPanel*> (env->getPanel(i));
@@ -98,10 +109,20 @@ void  TTUDLRHider::actOnPanel(ToolPanel* panel)
 {  
   if (panel != NULL)
   {
+    if (panel->getToolName() == "rotate")
+    {
+      printf("DEBUG expander enabled=%i \n",getExpander()->getEnabled());
+      printf("DEBUG panel.name=%s \n",panel->getToolName().c_str());
+      printf("DEBUG cbhideArrow=%i \n",cbHideArrow->get_active());
+      printf("DEBUG cbLockFav=%i \n",cbLockFav->get_active());
+    }
+ 
     if (getExpander()->getEnabled())
     {
       if ( cbHideArrow->get_active())
       {        
+        if (panel->getToolName() == "rotate")
+          printf("DEBUG: hiding move Arrows  \n");
         panel->getMoveRButton()->hide();
         panel->getMoveLButton()->hide();
         panel->getMoveUButton()->hide();
@@ -109,6 +130,8 @@ void  TTUDLRHider::actOnPanel(ToolPanel* panel)
       }   
       else
       {
+        if (panel->getToolName() == "rotate")
+          printf("DEBUG: showing move Arrows \n");
         panel->getMoveRButton()->show();
         panel->getMoveLButton()->show();
         panel->getMoveUButton()->show();
@@ -128,6 +151,7 @@ void  TTUDLRHider::actOnPanel(ToolPanel* panel)
     }
     else
     { 
+      printf("loading the config by default  \n");
       panel->getMoveRButton()->show();
       panel->getMoveLButton()->show();
       panel->getMoveUButton()->show();

@@ -26,6 +26,8 @@
 #include "../rtengine/procevents.h"
 #include "../rtengine/refreshmap.h"
 
+#include "../rtexif/rtexif.h"
+
 using namespace rtengine::procparams;
 
 void ToolPanelCoordinator::on_notebook_switch_page(Gtk::Widget* /* page */, guint page_num){
@@ -106,6 +108,7 @@ void ToolPanelCoordinator::on_notebook_switch_page(Gtk::Widget* /* page */, guin
 ToolPanelCoordinator::ToolPanelCoordinator (bool batch, bool benchmark) : ipc(nullptr), editDataProvider(nullptr)
 {
     env =  new Environment();
+    printf("environment created: #%i \n",env->getEnvRef());
     if (benchmark)
       env->setVar("benchmark", 1);
 
@@ -388,10 +391,10 @@ ToolPanelCoordinator::ToolPanelCoordinator (bool batch, bool benchmark) : ipc(nu
     toolPanelNotebook->set_scrollable ();
     toolPanelNotebook->show_all ();
 
-    if( options.rtSettings.verbose )
+//    if( options.rtSettings.verbose )
       printf("Starting toolpanel deployment\n");
     doDeploy();
-    if( options.rtSettings.verbose )
+//    if( options.rtSettings.verbose )
       printf("Panel deployment finished\n");
 
     for (size_t i=0; i<env->countPanel(); i++)
@@ -423,8 +426,8 @@ void ToolPanelCoordinator::doDeploy()
 
 void ToolPanelCoordinator::doDeployLate()
 {
-    if( options.rtSettings.verbose )
-      printf("late panel deployment \n");
+//    if( options.rtSettings.verbose )
+      printf("late panel deployment for env=#%i \n", env->getEnvRef());
     for (size_t i=0; i<env->countPanel(); i++)
     {   
 //      printf("panel nb=%i \n",  i);
@@ -709,6 +712,26 @@ CropGUIListener* ToolPanelCoordinator::getCropGUIListener ()
     return crop;
 }
 
+void parseDirectory(rtexif::TagDirectory* d, Glib::ustring prefix, Environment* env)
+{
+  if (d)
+    for (int i = 0; i < d->getCount(); ++i)
+    {
+       rtexif::Tag* t = d->getTagByIndex (i);
+       if (t->getCount() >0 )
+       {
+         Glib::ustring prefixedName = prefix + ':' + t->nameToString();
+         if (prefix=="")
+           prefixedName = t->nameToString();
+        
+         parseDirectory(t->getDirectory(),prefixedName,env);
+
+         env->setVar(prefixedName, t->valueToString());
+//         printf("tag name=%s:%s value=%s \n",prefixedName.c_str(), t->nameToString().c_str(), t->valueToString().c_str());
+       }
+   }
+}
+
 void ToolPanelCoordinator::initImage (rtengine::StagedImageProcessor* ipc_, bool raw)
 {
 
@@ -720,6 +743,19 @@ void ToolPanelCoordinator::initImage (rtengine::StagedImageProcessor* ipc_, bool
     if (ipc) {
         const rtengine::FramesMetaData* pMetaData = ipc->getInitialImage()->getMetaData();
         metadata->setImageData(pMetaData);
+
+       //todo imagemetadata search
+/*        printf("metadata frameCount=%i rootCount = %i \n", 
+        pMetaData->getFrameCount(),
+        pMetaData->getRootCount()
+);
+*/
+
+        if (pMetaData->hasExif()) 
+        {
+          rtexif::TagDirectory* root = pMetaData->getRootExifData() ;
+          parseDirectory(root,"rti",env);
+        }
 
         ipc->setAutoExpListener (toneCurve);
         ipc->setAutoCamListener (colorappearance);

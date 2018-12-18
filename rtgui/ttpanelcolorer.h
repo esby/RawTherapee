@@ -46,6 +46,8 @@ public:
     void deploy();
  
     void on_toggle_button();
+    void react(FakeProcEvent ev);
+
 
     int getState(ToolPanel* panel);
     Gdk::RGBA getColor(ToolPanel* panel, int state);

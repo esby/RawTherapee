@@ -29,7 +29,7 @@ using namespace rtengine;
 using namespace rtengine::procparams;
 
 
-TTTabHider::TTTabHider () : FoldableToolPanel(this,"tttabhider",M("TP_THEMETOOL__OPTIONS_LABEL"),false,false)
+TTTabHider::TTTabHider () : FoldableToolPanel(this,"tttabhider",M("TP_THEMETOOL__TAB_HIDDER"),false,false)
 {
   themeBox1 = Gtk::manage(new Gtk::HBox());
   themeBox1->set_spacing(4);
@@ -281,6 +281,7 @@ void TTTabHider::hide_trash_clicked()
 
 Glib::ustring TTTabHider::themeExport()
 {
+//todo: this needs to be recoded to take all panels into account
   Glib::ustring favSettings = getToolName() + ":"  + "favorite:";
   Glib::ustring traSettings = getToolName() + ":"  + "trash:";
 
@@ -311,6 +312,7 @@ void TTTabHider::themeImport(std::ifstream& myfile)
       {
         if (getline(tokensplitter, token, ':'))
         {
+          //todo this needs a recode to take all panels into account
           if (token == "favorite")
           {
             while(getline(tokensplitter, token, ' '))

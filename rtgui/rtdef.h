@@ -37,6 +37,7 @@ enum FakeProcEvent {
     FakeEvProfileChanged=3,
     FakeEvFileSaved=4,
     FakeEvPP3Transmitted=5,
+    FakeEvShowAllTriggered=6,
     nbFakeEvents
     }; 
 

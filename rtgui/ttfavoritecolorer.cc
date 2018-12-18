@@ -151,6 +151,15 @@ void TTFavoriteColorChooser::enabledChanged()
   }
 }
 
+void TTFavoriteColorChooser::react(FakeProcEvent ev)
+{
+  if (ev == FakeEvShowAllTriggered)
+  {
+    enabledChanged();
+  }
+}
+
+
 void  TTFavoriteColorChooser::colorButton(Gtk::ToggleButton* button, Gdk::RGBA rgba, bool deactivate, int bType)
 {  
   bool state;

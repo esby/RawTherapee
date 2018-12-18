@@ -228,11 +228,18 @@ void TTSaver::themeSplitter(std::ifstream& myfile)
  }
  env->disableSwitchPageReaction = false;
 
+//printf("panel positionning done\n");
+
 // activating enabled buttons for toolpanel of usefulPanel
 // because their configuration depends of reloading the button.
  for (size_t i=0; i< env->countPanel() ; i++)
       {
         FoldableToolPanel* p = static_cast<FoldableToolPanel*> (env->getPanel(i));
+
+/*        if ( (p != nullptr)
+        && !(p->canBeIgnored()))
+          printf("boxname=%s \n",p->getOriginalBox()->getBoxName().c_str());
+*/
         if ( (p != nullptr)
         && (!(p->canBeIgnored()))
         && (p->getOriginalBox()->getBoxName() == "usefulPanel"))

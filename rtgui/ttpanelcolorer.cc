@@ -152,6 +152,15 @@ int TTPanelColorChooser::getState(ToolPanel* panel)
 */
 }
 
+void TTPanelColorChooser::react(FakeProcEvent ev)
+{
+  if (ev == FakeEvShowAllTriggered)
+  {
+    on_toggle_button();
+  }
+}
+
+
 Gdk::RGBA TTPanelColorChooser::getColor(ToolPanel* panel, int state)
 {
   Gdk::RGBA rgba;

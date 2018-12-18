@@ -49,6 +49,8 @@ public:
    
    // void on_toggle_button();
    void enabledChanged  ();
+   void react(FakeProcEvent ev);
+
 
     void colorButton(Gtk::ToggleButton* button, Gdk::RGBA rgba, bool deactivate=false, int bType=0);
     void colorFavorite(ToolPanel* panel, bool deactivate=false);
