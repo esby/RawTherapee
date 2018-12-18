@@ -163,6 +163,7 @@ RTWindow::RTWindow (bool _benchmark)
         epanel->setParentWindow (this);
         add (*epanel);
         show_all ();
+        epanel->doReact(FakeEvShowAllTriggered);
 
         pldBridge = nullptr; // No progress listener
 
