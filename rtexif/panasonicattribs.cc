@@ -50,7 +50,7 @@ public:
     {
         int a = t->toInt (0, SHORT);
       
-        printf("choice= %i %s ",a, choices[a].c_str());
+        printf("DEBUG: PanaOrientation choice= %i %s \n",a, choices[a].c_str());
         return choices[a];
     }
 
