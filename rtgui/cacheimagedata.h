@@ -114,7 +114,5 @@ public:
     bool getHDR (unsigned int frame = 0) const override { return isHDR; }
     std::string getImageType (unsigned int frame) const override { return isPixelShift ? "PS" : isHDR ? "HDR" : "STD"; }
     rtengine::IIOSampleFormat getSampleFormat (unsigned int frame = 0) const override { return sampleFormat; }
-    double getPitchAngle (unsigned int frame = 0) const override { return pitchAngle; }
-    double getRollAngle (unsigned int frame = 0) const override { return rollAngle; }
 };
 #endif

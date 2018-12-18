@@ -129,6 +129,8 @@ class Environment {
      double getVarAsDouble(Glib::ustring name);
      bool getVarAsBool(Glib::ustring name);
 
+     Glib::ustring getExifVariable(Glib::ustring name);
+
      void setProfilePanel(ProfilePanel* _profilep);
      ProfilePanel* getProfilePanel();
 

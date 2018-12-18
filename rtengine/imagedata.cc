@@ -211,27 +211,6 @@ FrameData::FrameData (rtexif::TagDirectory* frameRootDir_, rtexif::TagDirectory*
             focal_len35mm = tag->toDouble ();
         }
 
-        pitch_angle = 0;
-        roll_angle = 0;
-        // Notes: exif values for panasonic field are in degrees*10
-        if (mnote) 
-        {
-          if((tag = mnote->getTag ("PitchAngle"))) {            
-            pitch_angle = tag->toDouble()/10;
-          }
-
-          if((tag = mnote->getTag ("RollAngle"))) {            
-            roll_angle = tag->toDouble()/10;
-          }
-
-          //fixing camera orientation (panasonic tag) for R180
-          if((tag = mnote->getTag ("CameraOrientation"))) { 
-            if (tag->valueToString() == "Rotate 180")
-            orientation = tag->valueToString();
-          }
-
-        }
-
         // Focus distance from EXIF or XMP. MakerNote ones are scattered and partly encrypted
         int num = -3, denom = -3;
 
@@ -820,15 +799,7 @@ std::string FrameData::getOrientation () const
     return orientation;
 }
 
-double FrameData::getPitchAngle () const
-{
-    return pitch_angle;
-}
 
-double FrameData::getRollAngle () const
-{
-    return roll_angle;
-}
 
 void FramesData::setDCRawFrameCount (unsigned int frameCount)
 {
@@ -998,14 +969,7 @@ std::string FramesData::getOrientation (unsigned int frame) const
 {
     return frames.empty() || frame >= frames.size()  ? std::string() : frames.at(frame)->getOrientation ();
 }
-double FramesData::getPitchAngle (unsigned int frame) const
-{
-    return frames.empty() || frame >= frames.size()  ? 0. : frames.at(frame)->getPitchAngle ();
-}
-double FramesData::getRollAngle (unsigned int frame) const
-{
-    return frames.empty() || frame >= frames.size()  ? 0. : frames.at(frame)->getRollAngle ();
-}
+
 
 //------inherited functions--------------//
 

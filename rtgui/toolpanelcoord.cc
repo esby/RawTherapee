@@ -754,7 +754,9 @@ void ToolPanelCoordinator::initImage (rtengine::StagedImageProcessor* ipc_, bool
         if (pMetaData->hasExif()) 
         {
           rtexif::TagDirectory* root = pMetaData->getRootExifData() ;
-          parseDirectory(root,"rti",env);
+          parseDirectory(root,ROOT_EXIF_PREFIX,env);
+          doReact(FakeEvFullExifTransmitted);
+
         }
 
         ipc->setAutoExpListener (toneCurve);

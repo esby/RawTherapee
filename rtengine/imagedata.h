@@ -47,8 +47,6 @@ protected:
     float focus_dist;  // dist: 0=unknown, 10000=infinity
     double shutter;
     double expcomp;
-    double pitch_angle;
-    double roll_angle;
     std::string make, model, serial;
     std::string orientation;
     std::string lens;
@@ -82,8 +80,6 @@ public:
     float getFocusDist () const;
     double getShutterSpeed () const;
     double getExpComp  () const;
-    double getPitchAngle() const;
-    double getRollAngle() const;
     std::string getMake () const;
     std::string getModel () const;
     std::string getLens () const;
@@ -126,8 +122,6 @@ public:
     float getFocusDist (unsigned int frame = 0) const override;
     double getShutterSpeed (unsigned int frame = 0) const override;
     double getExpComp (unsigned int frame = 0) const override;
-    double getPitchAngle (unsigned int frame = 0) const override;
-    double getRollAngle (unsigned int frame = 0) const override;
     std::string getMake (unsigned int frame = 0) const override;
     std::string getModel (unsigned int frame = 0) const override;
     std::string getLens (unsigned int frame = 0) const override;

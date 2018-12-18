@@ -1407,9 +1407,6 @@ void EditorPanel::info_toggled ()
         env->setVar("Fname",openThm->getFileName());
         env->setVar("Width",ipc->getFullWidth());
         env->setVar("Height", ipc->getFullHeight());
-        env->setVar("PitchAngle", idata->getPitchAngle());
-        env->setVar("RollAngle", idata->getRollAngle());
-        env->setVar("Orientation",idata->getOrientation());
 
  
         // note: we will react later, on pp3 version tranmission

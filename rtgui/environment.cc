@@ -307,6 +307,15 @@ Glib::ustring Environment::getVarAsString(Glib::ustring name)
   return "";
 }
 
+Glib::ustring Environment::getExifVariable(Glib::ustring name)
+{
+  Glib::ustring pname = ROOT_EXIF_PREFIX + ':' + name;
+  Glib::ustring sval =  getVarAsString(pname);
+  printf("%s= %s \n", pname.c_str(), sval.c_str());
+  return sval;
+}
+
+
 void Environment::setProfilePanel(ProfilePanel* _profilep)
 {
   profilepanel = _profilep;

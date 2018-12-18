@@ -31,6 +31,8 @@
 #define  PANEL_NAME_USEFUL    "usefulPanel"
 #define  PANEL_NAME_TRASH     "trashPanel"
 
+const Glib::ustring ROOT_EXIF_PREFIX="rti";
+
 enum FakeProcEvent {
     FakeEvExifTransmitted = 1,
     FakeEvPhotoLoaded= 2,
@@ -38,6 +40,7 @@ enum FakeProcEvent {
     FakeEvFileSaved=4,
     FakeEvPP3Transmitted=5,
     FakeEvShowAllTriggered=6,
+    FakeEvFullExifTransmitted=7,
     nbFakeEvents
     }; 
 

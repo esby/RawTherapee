@@ -155,7 +155,7 @@ void TTTweaker::react(FakeProcEvent ev)
   }
 
   if ((cbAutoRotateCorrect->get_active())
-  && (ev == FakeEvExifTransmitted ))
+  && (ev == FakeEvFullExifTransmitted))
   for (size_t i=0; i< env->countPanel() ; i++)
   {
     FoldableToolPanel* p = static_cast<FoldableToolPanel*> (env->getPanel(i));
@@ -164,57 +164,59 @@ void TTTweaker::react(FakeProcEvent ev)
     {
       if (p->getToolName() == "rotate")
       {
-        RtVariable* v = env->getVariableByName("RollAngle");
-        double d = atof( v->toString().c_str());
-        printf("d=%f \n",d);
-        if (d!=0)
+        Glib::ustring s_burst = env->getExifVariable("Exif:MakerNote:BurstMode");
+        printf("Exif:MakerNote:BurstMode= %s \n", s_burst.c_str());
+        if (s_burst == "0")
         {
-          RtVariable* orientation = env->getVariableByName("Orientation");
-          Glib::ustring s = orientation->toString();
-          bool applyCoarse = false;
+          Glib::ustring s_roll= env->getExifVariable("Exif:MakerNote:RollAngle");
+          double d = atof(s_roll.c_str()) / 10;
+          printf("d=%f \n",d);
+          if (d!=0)
+          {
+            Glib::ustring s_orientation = env->getExifVariable("Exif:MakerNote:CameraOrientation");
+            bool applyCoarse = false;
 
-          if (s == "Horizontal (normal)")
-          {
-            d = -d;
-          }
-          else
-          if (s == "Rotate 90 CW")
-          { 
-            d = 90-d;
-          }
-          else 
-          if (s == "Rotate 180")
-          {
-            d = -d;
-            d = normalizeRotation(d);
-            applyCoarse= true;
-          }
-          else
-          if (s == "Rotate 270 CW") 
-          {
-            d = -90-d;
-          }
+            if (s_orientation == "Horizontal (normal)")
+            {
+              d = -d;
+            }
+            else
+            if (s_orientation == "Rotate 90 CW")
+            { 
+              d = 90-d;
+            }
+            else 
+            if (s_orientation == "Rotate 180")
+            {
+              d = -d;
+              d = normalizeRotation(d);
+              applyCoarse= true;
+            }
+            else
+            if (s_orientation == "Rotate 270 CW") 
+            {
+              d = -90-d;
+            }
           //other cases not handled
 
-
-
-          rtengine::procparams::ProcParams* pp;
-          pp = new ProcParams();
-          p->write(pp);
-          if ((pp->rotate.degree == 0) 
-          &&  (pp->rotate.degree != d))
-          {
-             pp->rotate.degree = d;
-             p->read(pp);
-             Rotate* r = static_cast<Rotate*> (p);
-             env->setPriority(getToolName());
-             r->adjusterChanged(nullptr, d);
-
-             if (applyCoarse)
+            rtengine::procparams::ProcParams* pp;
+            pp = new ProcParams();
+            p->write(pp);
+            if ((pp->rotate.degree == 0) 
+            &&  (pp->rotate.degree != d))
             {
+              pp->rotate.degree = d;
+              p->read(pp);
+              Rotate* r = static_cast<Rotate*> (p);
+              env->setPriority(getToolName());
+              r->adjusterChanged(nullptr, d);
+
+              if (applyCoarse)
+              {
  //               params->coarse.rotate == 180
+              }
+              printf("%s auto rotating by degree=%f \n",getToolName().c_str(),d);
             }
-            printf("%s auto rotating by degree=%f \n",getToolName().c_str(),d);
           }
         }
       }
