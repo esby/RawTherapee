@@ -135,6 +135,7 @@ class Environment {
      void registerPriority(Glib::ustring _name);
      void setPriority(Glib::ustring _name); 
      bool checkPriority(Glib::ustring _name);
+     int getEnvRef();
   
 };
 

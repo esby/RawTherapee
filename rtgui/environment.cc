@@ -355,3 +355,9 @@ bool Environment::checkPriority(Glib::ustring _name)
   return true; // we return true by default if the name1 and name2 are not found
 }
 
+int Environment::getEnvRef()
+{
+  return envId;
+
+}
+
