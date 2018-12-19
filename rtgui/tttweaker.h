@@ -24,6 +24,10 @@
 #include "toolpanel.h"
 #include "../rtengine/rawimage.h"
 #include "guiutils.h"
+#include "coarsepanel.h"
+#include "distortion.h"
+#include "whitebalance.h"
+#include "rotate.h"
 
 
 class TTTweaker : public ToolParamBlock, public FoldableToolPanel {
@@ -52,6 +56,10 @@ protected:
     Gtk::Label* lbAutoRotateCorrect;
     Gtk::CheckButton* cbAutoRotateCorrect;
 
+    CoarsePanel* coarse;
+    Rotate* rotate;
+    WhiteBalance* whitebalance;
+    Distortion* distortion;
 
 public:
 

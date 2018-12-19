@@ -20,10 +20,7 @@
 #include "options.h"
 #include "guiutils.h"
 #include "rtimage.h"
-#include "distortion.h"
-#include "whitebalance.h"
 #include "variable.h"
-#include "rotate.h"
 #include <chrono>
 #include <thread>
 #include <fstream>
@@ -97,6 +94,24 @@ void TTTweaker::deploy()
   FoldableToolPanel::deploy();
   env->registerPriority(getToolName());
 
+
+  for (size_t i=0; i< env->countPanel() ; i++)
+  {
+    ToolPanel* p = static_cast<ToolPanel*> (env->getPanel(i));
+    if ( (p != NULL))
+    {
+       if (p->getToolName() == "rotate")
+         rotate = static_cast<Rotate*> (p);
+       if (p->getToolName() == "whitebalance")
+         whitebalance = static_cast<WhiteBalance*> (p);
+       if (p->getToolName() == "coarse")
+         coarse = static_cast<CoarsePanel*> (p);
+       if (p->getToolName() == "distortion")
+         distortion = static_cast<Distortion*> (p);
+    }
+  }
+
+
   // button enable / disable
 
 //   getExpander()->signal_enabled_toggled().connect(sigc::mem_fun(this, &TTTweaker::enabledChanged));
@@ -114,8 +129,25 @@ float normalizeRotation(float f)
             
   while (f*sign>45)
     f = f +180*sign*-1;
- 
 
+  return f;
+}
+
+float checkCoarse(float f, CoarsePanel* coarse)
+{
+  while (f>45) 
+   {
+    printf("coase roatating to the left\n");
+     f = f -90;
+     coarse->rotateLeft();
+   }
+
+  while (f<-45)
+  {
+    printf("coase roatating to the right\n");
+    f = f +90;
+    coarse->rotateRight();
+  }
   return f;
 }
 
@@ -137,91 +169,69 @@ void TTTweaker::react(FakeProcEvent ev)
   {
     if ((ev == FakeEvPhotoLoaded)
     || (ev == FakeEvProfileChanged))
-    for (size_t i=0; i< env->countPanel() ; i++)
-    {
-      FoldableToolPanel* p = static_cast<FoldableToolPanel*> (env->getPanel(i));
-      if ( (p != NULL)
-      && (!(p->canBeIgnored())))
+      if (distortion != nullptr)
       {
-        if (p->getToolName() == "distortion")
-        {
           printf("Clicking on auto distorsion correction button.\n");
-          Distortion* d = static_cast<Distortion*> (p);
           env->setPriority(getToolName());
-          d->idPressed();
-        }
+          distortion->idPressed();
       }
-    }
   }
 
   if ((cbAutoRotateCorrect->get_active())
-  && (ev == FakeEvFullExifTransmitted))
-  for (size_t i=0; i< env->countPanel() ; i++)
-  {
-    FoldableToolPanel* p = static_cast<FoldableToolPanel*> (env->getPanel(i));
-    if ( (p != NULL)
-    && (!(p->canBeIgnored())))
+  && (ev == FakeEvPP3Transmitted)) //FakeEvFullExifTransmitted))
+    if ((rotate != nullptr)
+    && (coarse != nullptr))
     {
-      if (p->getToolName() == "rotate")
+      Glib::ustring s_burst = env->getExifVariable("Exif:MakerNote:BurstMode");
+      printf("DEBUG: Exif:MakerNote:BurstMode= %s \n", s_burst.c_str());
+      if (s_burst == "0")
       {
-        Glib::ustring s_burst = env->getExifVariable("Exif:MakerNote:BurstMode");
-        printf("Exif:MakerNote:BurstMode= %s \n", s_burst.c_str());
-        if (s_burst == "0")
+        Glib::ustring s_roll= env->getExifVariable("Exif:MakerNote:RollAngle");
+        double d = atof(s_roll.c_str()) / 10;
+        printf("d=%f \n",d);
+        if (d!=0)
         {
-          Glib::ustring s_roll= env->getExifVariable("Exif:MakerNote:RollAngle");
-          double d = atof(s_roll.c_str()) / 10;
-          printf("d=%f \n",d);
-          if (d!=0)
+          Glib::ustring s_orientation = env->getExifVariable("Exif:MakerNote:CameraOrientation");
+          if (s_orientation == "Horizontal (normal)")
           {
-            Glib::ustring s_orientation = env->getExifVariable("Exif:MakerNote:CameraOrientation");
-            bool applyCoarse = false;
-
-            if (s_orientation == "Horizontal (normal)")
-            {
-              d = -d;
-            }
-            else
-            if (s_orientation == "Rotate 90 CW")
-            { 
-              d = 90-d;
-            }
-            else 
-            if (s_orientation == "Rotate 180")
-            {
-              d = -d;
-              d = normalizeRotation(d);
-              applyCoarse= true;
-            }
-            else
-            if (s_orientation == "Rotate 270 CW") 
-            {
-              d = -90-d;
-            }
+            d = -d;          
+            d = checkCoarse(d, coarse);
+          }
+          else if (s_orientation == "Rotate CW") ///"Rotate 90 CW")
+          {
+            d = 90-d;
+            d = checkCoarse(d, coarse);
+          }
+          else if (s_orientation == "Rotate 180")
+          {
+            d = -d;
+            d = normalizeRotation(d);
+            //correcting a bug
+            coarse->rotateRight();
+            coarse->rotateRight();
+          }
+          else if (s_orientation == "Rotate CCW") // the normal orientation is  "Rotate 270 CW") 
+          {
+            d = -90-d;
+            d = checkCoarse(d, coarse);
+            printf("rotate CCW detected d adjusted to d=%f \n",d);
+          }
           //other cases not handled
-
-            rtengine::procparams::ProcParams* pp;
-            pp = new ProcParams();
-            p->write(pp);
-            if ((pp->rotate.degree == 0) 
-            &&  (pp->rotate.degree != d))
-            {
-              pp->rotate.degree = d;
-              p->read(pp);
-              Rotate* r = static_cast<Rotate*> (p);
-              env->setPriority(getToolName());
-              r->adjusterChanged(nullptr, d);
-
-              if (applyCoarse)
-              {
- //               params->coarse.rotate == 180
-              }
-              printf("%s auto rotating by degree=%f \n",getToolName().c_str(),d);
-            }
+          rtengine::procparams::ProcParams* pp;
+          pp = new ProcParams();
+          rotate->write(pp);
+          if ((pp->rotate.degree == 0) 
+          &&  (pp->rotate.degree != d))
+          {
+            pp->rotate.degree = d;
+            rotate->read(pp);
+            env->setPriority(getToolName());
+            rotate->adjusterChanged(nullptr, d);
+            printf("%s auto rotating by degree=%f \n",getToolName().c_str(),d);
           }
         }
       }
     }
-  }
 
   if (ev == FakeEvFileSaved)
   {
@@ -245,25 +255,16 @@ void TTTweaker::react(FakeProcEvent ev)
  if (cbResetWBForRt4Profiles->get_active())
   {
     if (ev == FakeEvPP3Transmitted)
-    for (size_t i=0; i< env->countPanel() ; i++)
-    {
-      FoldableToolPanel* p = static_cast<FoldableToolPanel*> (env->getPanel(i));
-      if ( (p != nullptr)
-      && (!(p->canBeIgnored())))
+      if (whitebalance != nullptr)
       {
-        if (p->getToolName() == "whitebalance")
+        int pp3version = env->getVarAsInt("pp3version");
+        printf("reading pp3version=%i \n", pp3version);
+        if ((pp3version > -1) && (pp3version < 329))
         {
-          WhiteBalance* w = static_cast<WhiteBalance*> (p);
-          int pp3version = env->getVarAsInt("pp3version");
-          printf("reading pp3version=%i \n", pp3version);
-          if ((pp3version > -1) && (pp3version < 329))
-          {
-            printf("Resetting whitebalance to camera.\n");
-            w->resetWBToCamera();
-          }
+          printf("Resetting whitebalance to camera.\n");
+          whitebalance->resetWBToCamera();
         }
       }
-    }
   }
 
 }
