@@ -109,13 +109,14 @@ void  TTUDLRHider::actOnPanel(ToolPanel* panel)
 {  
   if (panel != NULL)
   {
-    if (panel->getToolName() == "rotate")
+/*    if (panel->getToolName() == "rotate")
     {
       printf("DEBUG expander enabled=%i \n",getExpander()->getEnabled());
       printf("DEBUG panel.name=%s \n",panel->getToolName().c_str());
       printf("DEBUG cbhideArrow=%i \n",cbHideArrow->get_active());
       printf("DEBUG cbLockFav=%i \n",cbLockFav->get_active());
     }
+*/
  
     if (getExpander()->getEnabled())
     {
