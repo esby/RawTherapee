@@ -52,8 +52,6 @@ public:
     double fnumber;
     double shutter;
     double focalLen, focalLen35mm;
-    double pitchAngle;
-    double rollAngle;
     float focusDist;
     unsigned iso;
     bool isHDR;
