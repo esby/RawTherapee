@@ -173,6 +173,8 @@ protected:
 
     rtengine::StagedImageProcessor* ipc;
 
+    bool isReaction;
+
     //std::vector<ToolPanel*> toolPanels;
     ToolVBox* favoritePanel;
     ToolVBox* exposurePanel;

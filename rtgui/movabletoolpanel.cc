@@ -79,6 +79,8 @@ void MovableToolPanel::initVBox(ToolVBox* _originalBox, ToolVBox* _favoriteBox, 
 //     printf("positionOriginal=%i\n", originalBox->getPos(this));
      updateLabelInfo();
 
+     reacted = false;
+
 }
 
 void MovableToolPanel::updateLabelInfo() {
@@ -532,5 +534,15 @@ Glib::ustring IntToString(int iVal)
     ssIn << iVal;
     Glib::ustring strOut = ssIn.str();
     return strOut;
+}
+
+bool MovableToolPanel::getReacted()
+{
+  return reacted;
+}
+
+void MovableToolPanel::setReacted(bool _reacted)
+{
+  reacted = _reacted;
 }
 

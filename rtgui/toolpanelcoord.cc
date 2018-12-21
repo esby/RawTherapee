@@ -108,6 +108,7 @@ void ToolPanelCoordinator::on_notebook_switch_page(Gtk::Widget* /* page */, guin
 ToolPanelCoordinator::ToolPanelCoordinator (bool batch, bool benchmark) : ipc(nullptr), editDataProvider(nullptr)
 {
     env =  new Environment();
+    isReaction = false;
     printf("environment created: #%i \n",env->getEnvRef());
     if (benchmark)
       env->setVar("benchmark", 1);
@@ -441,10 +442,26 @@ void ToolPanelCoordinator::doReact(FakeProcEvent ev)
 {
     if( options.rtSettings.verbose ) 
       printf("enabling panel reac for envId=%i\n", env->getId());
-    for (size_t i=0; i<env->countPanel(); i++)
+
+    if (!isReaction)
     {
+      isReaction = true;
+
+      for (size_t i=0; i<env->countPanel(); i++)
+        env->getPanel(i)->setReacted(false);
+
+      for (size_t i=0; i<env->countPanel(); i++)
+      {
 //      printf("panel nb=%i \n",  i);
-      env->getPanel(i)->react(ev);
+        if (!env->getPanel(i)->getReacted())
+        {
+          env->getPanel(i)->setReacted(true);
+          env->getPanel(i)->react(ev);
+        }
+
+      }
+
+      isReaction = false;
     }
 }
 
@@ -751,10 +768,31 @@ void ToolPanelCoordinator::initImage (rtengine::StagedImageProcessor* ipc_, bool
 );
 */
 
+       const rtengine::FramesMetaData* idata = ipc->getInitialImage()->getMetaData();
+
+
+       printf("transmiting some data via rtvar \n");
+       //todo add idata to rtvar?
+        env->setVar("Iso", idata->getISOSpeed());
+        env->setVar("Fnum",  Glib::ustring(idata->apertureToString(idata->getFNumber())));
+        env->setVar("Speed", Glib::ustring(idata->shutterToString(idata->getShutterSpeed())));
+        env->setVar("FLen", idata->getFocalLen());
+        env->setVar("Ecomp", Glib::ustring(idata->expcompToString(idata->getExpComp(),true)));
+//        env->setVar("Fname", openThm->getFileName());
+//todo search another way of loading it
+        env->setVar("Width", ipc->getFullWidth());
+        env->setVar("Height", ipc->getFullHeight());
+
+
+        // note: we will react later, on pp3 version tranmission
+        printf("partial exif values transmitted by variables \n");
+
+       printf("transmitting full exif data via rtvar \n");
         if (pMetaData->hasExif()) 
         {
           rtexif::TagDirectory* root = pMetaData->getRootExifData() ;
           parseDirectory(root,ROOT_EXIF_PREFIX,env);
+          printf("full exif values tranmitted by variables \n");
           doReact(FakeEvFullExifTransmitted);
 
         }
@@ -778,6 +816,7 @@ void ToolPanelCoordinator::initImage (rtengine::StagedImageProcessor* ipc_, bool
 
         icm->setRawMeta (raw, (const rtengine::FramesData*)pMetaData);
         lensProf->setRawMeta (raw, pMetaData);
+
     }
 
 

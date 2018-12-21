@@ -47,6 +47,7 @@ class MovableToolPanel
     Environment* env;
     int location;
     Glib::ustring toolName;
+    bool reacted;
 
     ToolVBox* originalBox;
     ToolVBox* favoriteBox;
@@ -132,11 +133,14 @@ class MovableToolPanel
 
     virtual void deploy();
     virtual void deployLate();
-    virtual void react(FakeProcEvent ev) ;
+    virtual void react(FakeProcEvent ev);
 
     virtual void moveToFavorite(int posFav, int posOri);
     virtual void moveToTrash(int posFav, int posOri);
     virtual void moveToOriginal(int posFav, int posOri);
+
+    bool getReacted();
+    void setReacted(bool _reacted);
 
 };
 

@@ -1399,18 +1399,10 @@ void EditorPanel::info_toggled ()
                                               Glib::ustring::format (std::setw (3), std::fixed, std::setprecision (2), idata->getFocalLen(selectedFrame)));
        //todo add idata to rtvar?
         Environment* env = tpc->getEnv();
-        env->setVar("Iso", idata->getISOSpeed());
-        env->setVar("Fnum", Glib::ustring(idata->apertureToString(idata->getFNumber())));
-        env->setVar("Speed",Glib::ustring(idata->shutterToString(idata->getShutterSpeed())));
-        env->setVar("FLen",idata->getFocalLen());
-        env->setVar("Ecomp",Glib::ustring(idata->expcompToString(idata->getExpComp(),true)));
         env->setVar("Fname",openThm->getFileName());
-        env->setVar("Width",ipc->getFullWidth());
-        env->setVar("Height", ipc->getFullHeight());
-
  
         // note: we will react later, on pp3 version tranmission
-        printf("exifvalues transmitted by variables \n");
+        printf("filename value transmitted by variables \n");
 
         infoString = Glib::ustring::compose ("<span size=\"small\">f/</span><span size=\"large\">%1</span>  <span size=\"large\">%2</span><span size=\"small\">s</span>  <span size=\"small\">%3</span><span size=\"large\">%4</span>  <span size=\"large\">%5</span><span size=\"small\">mm</span>",
                                               Glib::ustring(idata->apertureToString(idata->getFNumber())),
