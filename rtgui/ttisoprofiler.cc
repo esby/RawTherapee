@@ -79,7 +79,6 @@ TTIsoProfiler::TTIsoProfiler () : FoldableToolPanel(this,"TTIsoProfiler",M("TT_I
 
 void TTIsoProfiler::deploy()
 {
-  env->registerPriority(getToolName());
 /*
   if (options.TTPAutoload)
   {
@@ -96,14 +95,18 @@ void TTIsoProfiler::deploy()
 
 void TTIsoProfiler::react(FakeProcEvent ev)
 {
-   if ((ev == FakeEvExifTransmitted)
-   && (env->checkPriority(getToolName()))
-)
+   if ((ev == FakeEvExifTransmitted )
+   || (ev == FakeEvProfileChanged))
    {
+     printf("TTIsoProfiler::react() \n");
      if  (getExpander()->getEnabled())
      {
+       printf("expander enabled \n");
        RtVariable *v = env->getVariableByName("Iso");
-       if (v == nullptr) return;
+       if (v == nullptr) {
+         printf("iso rtvariable not available yet \n");
+         return;
+       }
 
        Glib::ustring iso_as_string = v->toString();
 
@@ -113,20 +116,21 @@ void TTIsoProfiler::react(FakeProcEvent ev)
        for (i=0; i<listIsos.size(); i++)
        {
          int isolimit = atoi(listIsos[i].c_str());
-         printf("%s p Checking iso= %i vs isolimit= %i #%zu \n", getToolName().c_str(),  iso, isolimit, i);
+//         printf("%s p Checking iso= %i vs isolimit= %i #%zu \n", getToolName().c_str(),  iso, isolimit, i);
          if (isolimit > iso) 
          {
-           printf("%s excessing profile found, previous one will be used\n",getToolName().c_str());
+//           printf("%s excessing profile found, previous one will be used\n",getToolName().c_str());
            break;
          }
        }
        
        // we load the i-1 profile, supposed it exists.
        i = i -1;
+       printf("DEBUG: %s i=%zu listIsos.size()=%zu \n", getToolName().c_str(), i, listIsos.size());
        if ((i>=0) && (i<listIsos.size()))
        {
 //         printf("loading profile= %s \n", listPaths[i].c_str());
-         env->setPriority(getToolName());
+         printf("%s: loading profile: %s \n",getToolName().c_str(),listPaths[i].c_str());
          load_profile(listPaths[i]);
        }
        }
@@ -261,12 +265,12 @@ void TTIsoProfiler::affect_profiles()
   size_t i;
   sortVectorsByIsos();
 
-  printf("%s, listing partial iso profiles \n",getToolName().c_str());
+//  printf("%s, listing partial iso profiles \n",getToolName().c_str());
   for (i=0; i<listIsos.size(); i++)
   {
     Glib::ustring name = listNames[i];
     Glib::ustring iso  = listIsos[i];
-    printf("%s, %zu isolimit= %s name= %s \n",getToolName().c_str(),i, name.c_str(), iso.c_str());
+//    printf("%s, %zu isolimit= %s name= %s \n",getToolName().c_str(),i, name.c_str(), iso.c_str());
   }
 
 
@@ -457,7 +461,7 @@ void TTIsoProfiler::themeImport(std::ifstream& myfile)
 
          if (token == "active")
           {
-            if(getline(tokensplitter, token, ' '))
+            if(getline(tokensplitter, token, ':'))
             {
               getExpander()->setEnabled((token == "1") ? true: false);
             }

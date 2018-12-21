@@ -92,7 +92,6 @@ TTTweaker::TTTweaker() : FoldableToolPanel(this,"TTTweaker",M("TT_TWEAKER_LABEL"
 void TTTweaker::deploy()
 {
   FoldableToolPanel::deploy();
-  env->registerPriority(getToolName());
 
 
   for (size_t i=0; i< env->countPanel() ; i++)
@@ -164,21 +163,20 @@ void TTTweaker::react(FakeProcEvent ev)
    
 
   
-  if ((cbAutoDistortionCorrect->get_active())
-  && (env->checkPriority(getToolName())))
+  if (cbAutoDistortionCorrect->get_active())
   {
-    if ((ev == FakeEvPhotoLoaded)
-    || (ev == FakeEvProfileChanged))
+   if ((ev == FakeEvExifTransmitted )
+   || (ev == FakeEvProfileChanged))
       if (distortion != nullptr)
       {
           printf("Clicking on auto distorsion correction button.\n");
-          env->setPriority(getToolName());
           distortion->idPressed();
       }
   }
 
-  if ((cbAutoRotateCorrect->get_active())
-  && (ev == FakeEvPP3Transmitted)) //FakeEvFullExifTransmitted))
+  if (cbAutoRotateCorrect->get_active())
+   if ((ev == FakeEvExifTransmitted )
+   || (ev == FakeEvProfileChanged))
     if ((rotate != nullptr)
     && (coarse != nullptr))
     {
@@ -225,7 +223,6 @@ void TTTweaker::react(FakeProcEvent ev)
           {
             pp->rotate.degree = d;
             rotate->read(pp);
-            env->setPriority(getToolName());
             rotate->adjusterChanged(nullptr, d);
             printf("%s auto rotating by degree=%f \n",getToolName().c_str(),d);
           }
@@ -254,7 +251,8 @@ void TTTweaker::react(FakeProcEvent ev)
 
  if (cbResetWBForRt4Profiles->get_active())
   {
-    if (ev == FakeEvPP3Transmitted)
+   if ((ev == FakeEvExifTransmitted )
+   || (ev == FakeEvProfileChanged))
       if (whitebalance != nullptr)
       {
         int pp3version = env->getVarAsInt("pp3version");

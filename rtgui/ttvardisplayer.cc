@@ -46,7 +46,6 @@ TTVarDisplayer::TTVarDisplayer () : FoldableToolPanel(this,"ttvardisplayer",M("T
 void TTVarDisplayer::deploy()
 {
 	FoldableToolPanel::deploy();
-        env->registerPriority(getToolName());
 
 }
 
@@ -89,8 +88,11 @@ void TTVarDisplayer::react(FakeProcEvent ev)
 			{
 				varLabel[i]->set_text(d->getName());
 				varEntry[i]->set_text(d->toString());
-				printf("variable : %s ", d->getName().c_str());
-				printf("value: %s \n", d->toString().c_str());
+                                if (false)
+                                {
+   				  printf("variable : %s ", d->getName().c_str());
+  				  printf("value: %s \n", d->toString().c_str());
+                                }
 			}
 		}
 
