@@ -52,8 +52,7 @@ ToolPanelCoordinator::ToolPanelCoordinator (bool batch, bool benchmark) : ipc (n
     trashPanel->setBoxName(PANEL_NAME_TRASH);
     usefulPanel->setBoxName(PANEL_NAME_USEFUL);
 
-    env =  new Environment();
-    env->setToolPanels(toolPanels);
+    env =  new Environment(toolPanels);
     isReaction = false;
     printf("environment created: #%i \n",env->getEnvRef());
     if (benchmark)
@@ -292,6 +291,7 @@ ToolPanelCoordinator::ToolPanelCoordinator (bool batch, bool benchmark) : ipc (n
     box->setNextBox(transformPanel);
     env->addVBox(box);
 
+    toolPanelNotebook->append_page (*favoritePanelSW,  *toiF);
     toolPanelNotebook->append_page (*exposurePanelSW,  *toiE);
     toolPanelNotebook->append_page (*detailsPanelSW,   *toiD);
     toolPanelNotebook->append_page (*colorPanelSW,     *toiC);
@@ -299,7 +299,6 @@ ToolPanelCoordinator::ToolPanelCoordinator (bool batch, bool benchmark) : ipc (n
     toolPanelNotebook->append_page (*transformPanelSW, *toiT);
     toolPanelNotebook->append_page (*rawPanelSW,       *toiR);
     toolPanelNotebook->append_page (*metadata,    *toiM);
-    toolPanelNotebook->append_page (*favoritePanelSW,  *toiF);
     toolPanelNotebook->append_page (*usefulPanelSW,    *toiU);
     toolPanelNotebook->append_page (*trashPanelSW,     *toiP);
 
@@ -314,10 +313,8 @@ ToolPanelCoordinator::ToolPanelCoordinator (bool batch, bool benchmark) : ipc (n
 //    if( options.rtSettings.verbose )
       printf("Panel deployment finished\n");
 
-    for (auto toolPanel : toolPanels) {
+    for (auto toolPanel : toolPanels) 
         toolPanel->setListener (this);
-    }
-
     whitebalance->setWBProvider (this);
     whitebalance->setSpotWBListener (this);
     darkframe->setDFProvider (this);
@@ -335,7 +332,7 @@ ToolPanelCoordinator::ToolPanelCoordinator (bool batch, bool benchmark) : ipc (n
 
 void ToolPanelCoordinator::addPanel (Gtk::Box* where, FoldableToolPanel* panel, int level)
 {
-    env->registerPanel (where,panel, level);
+    env->registerPanel (where, panel, level);
 }
 
 
@@ -495,9 +492,8 @@ void ToolPanelCoordinator::panelChanged(const rtengine::ProcEvent& event, const 
 
     ProcParams* params = ipc->beginUpdateParams ();
 
-    for (auto toolPanel : toolPanels) {
+    for (auto toolPanel : toolPanels) 
         toolPanel->write (params);
-    }
 
     // Compensate rotation on flip
     if (event == rtengine::EvCTHFlip || event == rtengine::EvCTVFlip) {
@@ -641,11 +637,9 @@ void ToolPanelCoordinator::profileChange(
 
 void ToolPanelCoordinator::setDefaults(const ProcParams* defparams)
 {
-    if (defparams) {
-        for (auto toolPanel : toolPanels) {
+    if (defparams)
+       for (auto toolPanel : toolPanels) 
             toolPanel->setDefaults(defparams);
-        }
-    }
 }
 
 CropGUIListener* ToolPanelCoordinator::getCropGUIListener ()
