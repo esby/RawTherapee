@@ -571,9 +571,6 @@ void MyExpander::init()
     closedPBuf = Gdk::Pixbuf::create_from_file(rtengine::findIconAbsolutePath("expander-closed-small.png"));
 }
 
-ToolPanel*  MyExpander::getPanel() {
-  return panel;
-};
 //todo: check if ToolPanelAncestor should exist or not
 MyExpander::MyExpander(bool useEnabled, Gtk::Widget* titleWidget, ToolPanel* _panel) :
     enabled(false), inconsistent(false), flushEvent(false), expBox(nullptr),
@@ -720,6 +717,10 @@ MyExpander::MyExpander(bool useEnabled, Glib::ustring titleLabel, ToolPanel* _pa
     titleEvBox->signal_enter_notify_event().connect( sigc::mem_fun(this, & MyExpander::on_enter_leave_title), false);
     titleEvBox->signal_leave_notify_event().connect( sigc::mem_fun(this, & MyExpander::on_enter_leave_title), false);
 }
+
+ToolPanel*  MyExpander::getPanel() {
+  return panel;
+};
 
 bool MyExpander::on_enter_leave_title (GdkEventCrossing* event)
 {

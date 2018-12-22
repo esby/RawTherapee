@@ -844,7 +844,6 @@ void ProfilePanel::writeOptions()
     options.filledProfile = fillMode->get_active();
 }
 
-
 void ProfilePanel::changeProfile(Glib::ustring profilename)
 {
    profiles->setActiveRowFromFullPath(profilename);

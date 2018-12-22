@@ -1465,7 +1465,7 @@ Gtk::Widget* Preferences::getSoundsPanel ()
     Gtk::Button* btnSndBatchQueueDone =  Gtk::manage (new Gtk::Button(M("PREFERENCES_SND_TEST_BATCHQUEUEDONE")));
     pBatchQueueDone->pack_end (*btnSndBatchQueueDone, Gtk::PACK_SHRINK, 4);
 
-    txtSndBatchQueueDone =  Gtk::manage (new Gtk::Entry());
+    txtSndBatchQueueDone = Gtk::manage (new Gtk::Entry());
     pBatchQueueDone->pack_end (*txtSndBatchQueueDone, Gtk::PACK_EXPAND_WIDGET, 4);
 
     vbSounds->pack_start (*pBatchQueueDone, Gtk::PACK_SHRINK, 4);
@@ -1603,7 +1603,6 @@ Gtk::Widget* Preferences::getTTPanel ()
 
   return pTTP;
 }
-
 
 void Preferences::parseDir (Glib::ustring dirname, std::vector<Glib::ustring>& items, Glib::ustring ext)
 {
