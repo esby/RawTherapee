@@ -24,7 +24,7 @@ using namespace rtengine::procparams;
 
 int nbEnv = 0;
 
-Environment::Environment()
+Environment::Environment(std::vector<ToolPanel*>& _toolPanels) :toolPanels(_toolPanels)
 {
   envId = nbEnv;
   nbEnv++;
@@ -88,7 +88,6 @@ size_t Environment::countPanel()
 {
   return toolPanels.size();
 }
-
 
 void  Environment::panelPushBack(ToolPanel* p)
 {

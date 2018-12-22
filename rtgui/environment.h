@@ -51,7 +51,7 @@
 
 class Environment {
   protected:
-     std::vector<ToolPanel*> toolPanels;
+     std::vector<ToolPanel*>& toolPanels;
      std::vector<MyExpander*> expList;
      std::vector<ToolVBox*> boxList;
      ToolVBox* favoritePanel;
@@ -71,18 +71,13 @@ class Environment {
      bool disableSwitchPageReaction;
      bool metadataState;
 
-     Environment(); 
+     Environment(std::vector<ToolPanel*>& _toolPanels); 
 
      virtual ~Environment() ;
 
      MovableToolPanel*  getPanel(Glib::ustring name);
      ToolPanel*  getPanel(int pos);     
-     void setToolPanels(std::vector<ToolPanel*> _toolPanels) { toolPanels = _toolPanels; }
      std::vector<ToolPanel*> getToolPanels() { return toolPanels; }
-//     std::vector<ToolPanel*>::iterator panelBegin();
-//     std::vector<ToolPanel*>::iterator panelEnd();  
-//     void erasePanel(std::vector<ToolPanel*>::iterator it);
-//     void panelPushBack(ToolPanel* p);
      void setMetadataState(bool b) {metadataState = b;}
      bool getMetadataState() {return metadataState;}
      int getId() { return envId; }
