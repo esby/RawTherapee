@@ -56,7 +56,7 @@ void TTUDLRHider::deploy()
 {
    FoldableToolPanel::deploy();
    /*
-   for (size_t i=0; i< env->countPanel() ; i++)
+   for (size_t i=0; i< env->getToolPanels().size() ; i++)
    { 
       FoldableToolPanel* p = static_cast<FoldableToolPanel*> (env->getPanel(i));
       if ( (p != NULL)
@@ -94,7 +94,7 @@ void TTUDLRHider::react(FakeProcEvent ev)
 void TTUDLRHider::enabledChanged  () 
 {
    if (disableButtons) return;
-   for (size_t i=0; i< env->countPanel() ; i++)
+   for (size_t i=0; i< env->getToolPanels().size() ; i++)
    {
       FoldableToolPanel* p = static_cast<FoldableToolPanel*> (env->getPanel(i));
       if ( (p != NULL)

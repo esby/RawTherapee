@@ -149,11 +149,6 @@ FilePanel::FilePanel () : parent(nullptr), error(0)
     show_all ();
 }
 
-void FilePanel::doDeployLate()
-{
-  tpc->doDeployLate();
-}
-
 FilePanel::~FilePanel ()
 {
     idle_register.destroy();

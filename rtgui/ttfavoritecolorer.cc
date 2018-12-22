@@ -90,7 +90,7 @@ void TTFavoriteColorChooser::deploy()
 {
    FoldableToolPanel::deploy();
    screen = Gdk::Screen::get_default();
-   for (size_t i=0; i< env->countPanel() ; i++)
+   for (size_t i=0; i< env->getToolPanels().size() ; i++)
    { 
       FoldableToolPanel* p = static_cast<FoldableToolPanel*> (env->getPanel(i));
       if ( (p != nullptr)
@@ -128,7 +128,7 @@ void TTFavoriteColorChooser::enabledChanged()
 
    //  if (getEnabledButton()->get_active()) 
    if (getExpander()->getEnabled())
-   for (size_t i=0; i< env->countPanel() ; i++)
+   for (size_t i=0; i< env->getToolPanels().size() ; i++)
    {
       FoldableToolPanel* p = static_cast<FoldableToolPanel*> (env->getPanel(i));
       if ( (p != nullptr)
@@ -139,7 +139,7 @@ void TTFavoriteColorChooser::enabledChanged()
       }
   }
   else
-  for (size_t i=0; i< env->countPanel() ; i++)
+  for (size_t i=0; i< env->getToolPanels().size() ; i++)
   {
      FoldableToolPanel* p = static_cast<FoldableToolPanel*> (env->getPanel(i));
       if ( (p != nullptr)

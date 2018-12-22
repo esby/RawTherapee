@@ -166,7 +166,7 @@ void TTSaver::parseProfileFolder()
 
 void TTSaver::resetFavoriteAndTrashState() 
 {
-  std::vector<ToolPanel*> panels = env->getPanels();
+  std::vector<ToolPanel*> panels = env->getToolPanels();
   for (size_t i=0; i<panels.size(); i++)
   {
     if (!panels.at(i)->canBeIgnored())
@@ -208,9 +208,9 @@ void TTSaver::themeSplitter(std::ifstream& myfile)
           currentToken = token;
         }
       }
-      for (size_t i=0; i< env->countPanel() ; i++)
+      for (auto toolPanel : env->getToolPanels())
       {
-        FoldableToolPanel* p = static_cast<FoldableToolPanel*> (env->getPanel(i));
+        FoldableToolPanel* p = static_cast<FoldableToolPanel*> (toolPanel);
         if ( (p != nullptr)
         && (!(p->canBeIgnored())))
         {
@@ -232,7 +232,7 @@ void TTSaver::themeSplitter(std::ifstream& myfile)
 
 // activating enabled buttons for toolpanel of usefulPanel
 // because their configuration depends of reloading the button.
- for (size_t i=0; i< env->countPanel() ; i++)
+ for (size_t i=0; i< env->getToolPanels().size() ; i++)
       {
         FoldableToolPanel* p = static_cast<FoldableToolPanel*> (env->getPanel(i));
 
@@ -268,7 +268,7 @@ void TTSaver::save_profile(Glib::ustring filename)
   Glib::ustring lines = "";
 //  printf("parsing toolPanels \n");
 
-  std::vector<ToolPanel*> panels = env->getPanels();
+  std::vector<ToolPanel*> panels = env->getToolPanels();
   for (size_t i=0; i<panels.size(); i++)
   {
     FoldableToolPanel* p = static_cast<FoldableToolPanel*> (panels.at(i));
@@ -391,7 +391,7 @@ Glib::ustring TTSaver::themeExport()
   Glib::ustring oriSettings = getToolName() + ":"  + "original:";
   Glib::ustring traSettings = getToolName() + ":"  + "trash:";
 
-  std::vector<ToolPanel*> panels = env->getPanels();
+  std::vector<ToolPanel*> panels = env->getToolPanels();
 
   std::sort (panels.begin(), panels.end(), sortByFav);
 
@@ -489,7 +489,7 @@ void TTSaver::themeImport(std::ifstream& myfile)
 
 
   // putting the panels into a map 
-  std::vector<ToolPanel*> panels = env->getPanels();
+  std::vector<ToolPanel*> panels = env->getToolPanels();
   std::map<std::string,ToolPanel*> map;
   for (size_t i=0; i<panels.size(); i++)
   {
@@ -567,7 +567,7 @@ if (map[favoriteItems.at(i)]->getOriginalBox()->getBoxName() != "favoritePanel" 
 
   // getting panels that were not displayed at all. could be caused by loading an other ttp profile coupled with cleanBox call.
   
-  for (size_t i=0; i< env->countPanel() ; i++)
+  for (size_t i=0; i< env->getToolPanels().size() ; i++)
    {
       FoldableToolPanel* p = static_cast<FoldableToolPanel*> (env->getPanel(i));
       if ( (p != nullptr)

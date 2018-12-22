@@ -952,12 +952,7 @@ EditorPanel::~EditorPanel ()
     }
 }
 
-void EditorPanel::doDeployLate()
-{
-  tpc->doDeployLate();
-}
-
-void EditorPanel::leftPaneButtonReleased(GdkEventButton *event)
+void EditorPanel::leftPaneButtonReleased (GdkEventButton *event)
 {
     if (event->button == 1) {
         // Button 1 released : it's a resize
@@ -1397,20 +1392,13 @@ void EditorPanel::info_toggled ()
                                               Glib::ustring (idata->shutterToString (idata->getShutterSpeed(selectedFrame))),
                                               M ("QINFO_ISO"), idata->getISOSpeed(selectedFrame),
                                               Glib::ustring::format (std::setw (3), std::fixed, std::setprecision (2), idata->getFocalLen(selectedFrame)));
-       //todo add idata to rtvar?
-        Environment* env = tpc->getEnv();
-        env->setVar("Fname",openThm->getFileName());
- 
+
         // note: we will react later, on pp3 version tranmission
         printf("filename value transmitted by variables \n");
+        Environment* env = tpc->getEnv();
+        env->setVar("Fname",openThm->getFileName());
 
-        infoString = Glib::ustring::compose ("<span size=\"small\">f/</span><span size=\"large\">%1</span>  <span size=\"large\">%2</span><span size=\"small\">s</span>  <span size=\"small\">%3</span><span size=\"large\">%4</span>  <span size=\"large\">%5</span><span size=\"small\">mm</span>",
-                                              Glib::ustring(idata->apertureToString(idata->getFNumber())),
-                                              Glib::ustring(idata->shutterToString(idata->getShutterSpeed())),
-                                              M("QINFO_ISO"), idata->getISOSpeed(),
-                                              Glib::ustring::format(std::setw(3), std::fixed, std::setprecision(2), idata->getFocalLen()));
-
-        expcomp = Glib::ustring(idata->expcompToString(idata->getExpComp(), true)); // maskZeroexpcomp
+        expcomp = Glib::ustring (idata->expcompToString (idata->getExpComp(selectedFrame), true)); // maskZeroexpcomp
 
         if (!expcomp.empty ()) {
             infoString = Glib::ustring::compose ("%1  <span size=\"large\">%2</span><span size=\"small\">EV</span>",

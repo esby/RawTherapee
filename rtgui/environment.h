@@ -77,11 +77,12 @@ class Environment {
 
      MovableToolPanel*  getPanel(Glib::ustring name);
      ToolPanel*  getPanel(int pos);     
-     std::vector<ToolPanel*> getPanels() { return toolPanels; }
-     std::vector<ToolPanel*>::iterator panelBegin();
-     std::vector<ToolPanel*>::iterator panelEnd();  
-     void erasePanel(std::vector<ToolPanel*>::iterator it);
-     void panelPushBack(ToolPanel* p);
+     void setToolPanels(std::vector<ToolPanel*> _toolPanels) { toolPanels = _toolPanels; }
+     std::vector<ToolPanel*> getToolPanels() { return toolPanels; }
+//     std::vector<ToolPanel*>::iterator panelBegin();
+//     std::vector<ToolPanel*>::iterator panelEnd();  
+//     void erasePanel(std::vector<ToolPanel*>::iterator it);
+//     void panelPushBack(ToolPanel* p);
      void setMetadataState(bool b) {metadataState = b;}
      bool getMetadataState() {return metadataState;}
      int getId() { return envId; }
@@ -96,7 +97,7 @@ class Environment {
      void setToolPanelNotebook(Gtk::Notebook* _toolPanelNotebook) { toolPanelNotebook = _toolPanelNotebook;}
      Gtk::Notebook* getToolPanelNotebook() {return toolPanelNotebook; }
 
-     void registerPanel(Gtk::Box* where, ToolPanel* panel);
+     void registerPanel(Gtk::Box* where, ToolPanel* panel, int level);
      void addVBox(ToolVBox* box);
      std::vector<ToolVBox*> getVBoxList() { return boxList; }
     

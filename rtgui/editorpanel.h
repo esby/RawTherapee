@@ -89,10 +89,8 @@ public:
     void error(const Glib::ustring& descr) override;
 
     void error(const Glib::ustring& title, const Glib::ustring& descr);
-    void displayError(const Glib::ustring& title, const Glib::ustring& descr);  // this is called by error in the gtk threada
+    void displayError(const Glib::ustring& title, const Glib::ustring& descr);  // this is called by error in the gtk thread
     void refreshProcessingState (bool inProcessing); // this is called by setProcessingState in the gtk thread
-
-    void doReact(FakeProcEvent ev) { tpc->doReact(ev); }
 
     // PParamsChangeListener interface
     void procParamsChanged(
@@ -165,7 +163,8 @@ public:
     bool saveImmediately (const Glib::ustring &filename, const SaveFormat &sf);
 
     Gtk::Paned* catalogPane;
-    void doDeployLate();
+    void doReact(FakeProcEvent ev) { tpc->doReact(ev); }
+    void doDeployLate() { tpc->doDeployLate() ;}
 
 private:
     void close ();

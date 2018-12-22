@@ -113,8 +113,8 @@ class ToolPanelCoordinator :
     public rtengine::ImageTypeListener
 {
 protected:
-
     Environment* env;
+    bool isReaction;
 
     WhiteBalance* whitebalance;
     Vignetting* vignetting;
@@ -173,23 +173,20 @@ protected:
 
     rtengine::StagedImageProcessor* ipc;
 
-    bool isReaction;
-
-    //std::vector<ToolPanel*> toolPanels;
-    ToolVBox* favoritePanel;
+    std::vector<ToolPanel*> toolPanels;
     ToolVBox* exposurePanel;
     ToolVBox* detailsPanel;
     ToolVBox* colorPanel;
     ToolVBox* transformPanel;
     ToolVBox* rawPanel;
     ToolVBox* advancedPanel;
+    ToolVBox* favoritePanel;
     ToolVBox* trashPanel;
     ToolVBox* usefulPanel;
     Gtk::Notebook* metadataPanel;
 
     ToolBar* toolBar;
 
-    TextOrIcon* toiF;
     TextOrIcon* toiE;
     TextOrIcon* toiD;
     TextOrIcon* toiC;
@@ -197,6 +194,7 @@ protected:
     TextOrIcon* toiR;
     TextOrIcon* toiM;
     TextOrIcon* toiW;
+    TextOrIcon* toiF;
     TextOrIcon* toiP;
     TextOrIcon* toiU;
 
@@ -239,9 +237,10 @@ protected:
 
     bool hasChanged;
 
-    void handlePanel(Gtk::VBox* vbox, Gtk::ScrolledWindow* panelSW, int panelIterator, int spacing);
+    void addPanel (Gtk::Box* where, FoldableToolPanel* panel, int level = 1);
     void foldThemAll (GdkEventButton* event);
     void updateVScrollbars (bool hide);
+    void handlePanel(Gtk::VBox* vbox, Gtk::ScrolledWindow* panelSW, int panelIterator, int spacing);
 
 private:
     EditDataProvider *editDataProvider;
@@ -282,7 +281,6 @@ public:
     {
       env->setProfilePanel(pp);
     }
-
 
     void doDeploy();
     void doDeployLate();

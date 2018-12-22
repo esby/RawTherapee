@@ -94,7 +94,7 @@ void TTTweaker::deploy()
   FoldableToolPanel::deploy();
 
 
-  for (size_t i=0; i< env->countPanel() ; i++)
+  for (size_t i=0; i< env->getToolPanels().size() ; i++)
   {
     ToolPanel* p = static_cast<ToolPanel*> (env->getPanel(i));
     if ( (p != NULL))

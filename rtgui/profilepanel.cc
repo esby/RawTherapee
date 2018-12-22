@@ -672,6 +672,7 @@ void ProfilePanel::changeTo (const PartialProfile* newpp, Glib::ustring profname
 
 void ProfilePanel::selection_changed ()
 {
+
     if (isCustomSelected()) {
         if (!dontupdate) {
             changeTo (custom, Glib::ustring ("(" + M("PROFILEPANEL_PCUSTOM") + ")"));
@@ -847,5 +848,4 @@ void ProfilePanel::writeOptions()
 void ProfilePanel::changeProfile(Glib::ustring profilename)
 {
    profiles->setActiveRowFromFullPath(profilename);
-//  selection_changed();
 }

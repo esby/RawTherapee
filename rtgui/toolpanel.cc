@@ -59,21 +59,20 @@ FoldableToolPanel::FoldableToolPanel(Gtk::Box* content, Glib::ustring toolName, 
 //  exp->set_use_markup (true);
 
       if (need11) {
-         Gtk::HBox *titleHBox = Gtk::manage(new Gtk::HBox());
-         Gtk::Label *label = Gtk::manage(new Gtk::Label());
-         label->set_markup(Glib::ustring("<b>") + escapeHtmlChars(UILabel) + Glib::ustring("</b>"));
-         label->set_alignment(Gtk::ALIGN_START, Gtk::ALIGN_CENTER);
-         titleHBox->pack_start(*label, Gtk::PACK_EXPAND_WIDGET, 0);
+        Gtk::HBox *titleHBox = Gtk::manage(new Gtk::HBox());
+        Gtk::Label *label = Gtk::manage(new Gtk::Label());
+        label->set_markup(Glib::ustring("<b>") + escapeHtmlChars(UILabel) + Glib::ustring("</b>"));
+        label->set_alignment(Gtk::ALIGN_START, Gtk::ALIGN_CENTER);
+        titleHBox->pack_start(*label, Gtk::PACK_EXPAND_WIDGET, 0);
 
-         RTImage *image = Gtk::manage (new RTImage("one-to-one-small.png"));
-         image->set_tooltip_text(M("TP_GENERAL_11SCALE_TOOLTIP"));
-         titleHBox->pack_end(*image, Gtk::PACK_SHRINK, 0);
+        RTImage *image = Gtk::manage (new RTImage("one-to-one-small.png"));
+        image->set_tooltip_text(M("TP_GENERAL_11SCALE_TOOLTIP"));
+        titleHBox->pack_end(*image, Gtk::PACK_SHRINK, 0);
 
-          exp = Gtk::manage (new MyExpander (useEnabled, titleHBox, this ));
-      } else {
-         exp = Gtk::manage (new MyExpander (useEnabled, UILabel, this));
+        exp = Gtk::manage (new MyExpander (useEnabled, titleHBox, this ));
+    } else {
+        exp = Gtk::manage (new MyExpander (useEnabled, UILabel, this));
     }
-//    printf("expander created for %s\n", getToolName().c_str());
 
     labelBox = exp->getHeaderHBox();
     labelBox->pack_end(*labelInfo, false, false,0);

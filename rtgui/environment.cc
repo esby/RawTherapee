@@ -67,6 +67,7 @@ ToolPanel* Environment::getPanel(int pos)
   return nullptr;
 }
 
+/*
 std::vector<ToolPanel*>::iterator   Environment::panelBegin()
 {
   return toolPanels.begin();
@@ -88,10 +89,12 @@ size_t Environment::countPanel()
   return toolPanels.size();
 }
 
+
 void  Environment::panelPushBack(ToolPanel* p)
 {
   toolPanels.push_back(p);
 }
+*/
 
 MyExpander* Environment::getExpander(int pos)
 {
@@ -113,13 +116,14 @@ void Environment::setTrashPanel(ToolVBox* p)
   trashPanel = p;
 }
 
-void Environment::registerPanel(Gtk::Box* where, ToolPanel* panel)
+void Environment::registerPanel(Gtk::Box* where, ToolPanel* panel, int level)
 {
-  panel->setParent(where);
+  panel->setParent (where);
+  panel->setLevel (level);
   expList.push_back (panel->getExpander());
-  where->pack_start(*panel->getExpander(), false, false);
+  where->pack_start (*panel->getExpander(), false, false);
   panel->initVBox ((ToolVBox*)where, favoritePanel, trashPanel, this);
-  toolPanels.push_back(panel);
+  toolPanels.push_back (panel);
 }
 
 void Environment::addVBox(ToolVBox* box) 

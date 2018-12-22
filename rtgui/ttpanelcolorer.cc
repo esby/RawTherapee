@@ -67,7 +67,7 @@ void TTPanelColorChooser::test()
 void TTPanelColorChooser::deploy()
 {
    FoldableToolPanel::deploy();
-   for (size_t i=0; i< env->countPanel() ; i++)
+   for (size_t i=0; i< env->getToolPanels().size() ; i++)
    { 
       FoldableToolPanel* p = static_cast<FoldableToolPanel*> (env->getPanel(i));
       if ( (p != nullptr)
@@ -98,7 +98,7 @@ void TTPanelColorChooser::on_toggle_button()
 {
    if (getExpander()->getEnabled())
    // if (getEnabledButton()->get_active())
-   for (size_t i=0; i< env->countPanel() ; i++)
+   for (size_t i=0; i< env->getToolPanels().size() ; i++)
    {
       FoldableToolPanel* p = static_cast<FoldableToolPanel*> (env->getPanel(i));
       if ( (p != nullptr)
@@ -109,7 +109,7 @@ void TTPanelColorChooser::on_toggle_button()
       }
   }
   else
-  for (size_t i=0; i< env->countPanel() ; i++)
+  for (size_t i=0; i< env->getToolPanels().size() ; i++)
   {
      FoldableToolPanel* p = static_cast<FoldableToolPanel*> (env->getPanel(i));
       if ( (p != nullptr)
