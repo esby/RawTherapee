@@ -76,6 +76,7 @@ TTSaver::TTSaver () : FoldableToolPanel(this,"ttsaver",M("TP_THEMETOOL_LABEL"),f
 
 void TTSaver::deploy()
 {
+   printf("DEBUG: TTSaver::deploy\n");
   if (options.TTPAutoload)
   {
     auto it = std::find(entries.begin(), entries.end(), options.TTPAutoloadValue ) ;
@@ -94,7 +95,7 @@ void TTSaver::profileBoxChanged()
    int row = profilbox->get_active_row_number();
    Glib::ustring fname = entries[row];
 //   printf("preparing to load Filename : %s - %s\n", filename.c_str(), fname.c_str());
-   load_profile(fname);
+   load_ttp_profile(fname);
    if( options.rtSettings.verbose ) 
      printf("Loaded ttp profile : %s - %s\n", filename.c_str(), fname.c_str());
 }
@@ -251,7 +252,7 @@ void TTSaver::themeSplitter(std::ifstream& myfile)
 
 }
 
-void TTSaver::load_profile(Glib::ustring filename)
+void TTSaver::load_ttp_profile(Glib::ustring filename)
 {
   std::ifstream myfile (filename);
   if (myfile.is_open())
@@ -263,7 +264,7 @@ void TTSaver::load_profile(Glib::ustring filename)
   else printf("Unable to open file: %s ",filename.c_str());
 }
 
-void TTSaver::save_profile(Glib::ustring filename)
+void TTSaver::save_ttp_profile(Glib::ustring filename)
 {
   Glib::ustring lines = "";
 //  printf("parsing toolPanels \n");
@@ -366,7 +367,7 @@ void TTSaver::save_clicked (GdkEventButton* event)
         }
 
         Glib::ustring lastFilename = Glib::path_get_basename (fname);
-        save_profile(fname);
+        save_ttp_profile(fname);
 
         size_t lastdot = lastFilename.find_last_of ('.');
         Glib::ustring name = lastFilename.substr(0, lastdot);

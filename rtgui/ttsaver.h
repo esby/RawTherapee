@@ -56,8 +56,8 @@ public:
 
     TTSaver ();
     void themeSplitter(std::ifstream& myfile);
-    void load_profile(Glib::ustring filename);
-    void save_profile(Glib::ustring filename);
+    void load_ttp_profile(Glib::ustring filename);
+    void save_ttp_profile(Glib::ustring filename);
     void resetFavoriteAndTrashState();
     void save_clicked (GdkEventButton* event);
     void autoload_clicked (GdkEventButton* event);
