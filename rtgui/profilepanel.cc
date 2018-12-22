@@ -846,5 +846,11 @@ void ProfilePanel::writeOptions()
 
 void ProfilePanel::changeProfile(Glib::ustring profilename)
 {
+   // we need to paste in partial mode
+   // we preserve the partial state
+   bool previousMode = fillMode->get_active();
+   fillMode->set_active(false);
    profiles->setActiveRowFromFullPath(profilename);
+   fillMode->set_active(previousMode);
+
 }
