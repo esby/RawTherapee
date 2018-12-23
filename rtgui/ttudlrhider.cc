@@ -152,7 +152,7 @@ void  TTUDLRHider::actOnPanel(ToolPanel* panel)
     }
     else
     { 
-      printf("loading the config by default  \n");
+//      printf("loading the config by default  \n");
       panel->getMoveRButton()->show();
       panel->getMoveLButton()->show();
       panel->getMoveUButton()->show();
