@@ -344,6 +344,7 @@ ToolPanelCoordinator::~ToolPanelCoordinator ()
     env->disableSwitchPageReaction = true;
     delete toolPanelNotebook;
     delete toolBar;
+    delete env;
 }
 
 void ToolPanelCoordinator::doDeploy()
@@ -658,14 +659,17 @@ void parseDirectory(rtexif::TagDirectory* d, Glib::ustring prefix, Environment* 
        if (prefix=="")
          prefixedName = t->nameToString();
 
-       if (t->getCount() >0 )
+       printf("trying to parse tag name=%s:%s \n",prefixedName.c_str(), t->nameToString().c_str());
+
+       if (t->getDirectory())
        {
+//         printf("parsing directory= %s \n",prefixedName.c_str());
          parseDirectory(t->getDirectory(),prefixedName,env);
        }
        else
        {
-         printf("trying to parse tag name=%s:%s \n",prefixedName.c_str(), t->nameToString().c_str());
-         env->setVar(prefixedName, t->valueToString());
+//         env->setVar(prefixedName, t->valueToString());
+         printf("... value=%s \n",t->valueToString().c_str());
        }
    }
 }

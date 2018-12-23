@@ -82,8 +82,6 @@ TTFavoriteColorChooser::TTFavoriteColorChooser () : FoldableToolPanel(this,"ttfa
 
  // css will be handled in deploy
 
-
-
 }
 
 void TTFavoriteColorChooser::deploy()

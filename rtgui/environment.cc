@@ -40,6 +40,15 @@ Environment::Environment(std::vector<ToolPanel*>& _toolPanels) :toolPanels(_tool
 
 Environment::~Environment()
 {
+  //todo: free rt variable
+  
+  printf("deleting rt variables due to the environment destruction \n");
+  while (varList.size()>0)
+  {
+   delete (varList[0]);
+   varList.erase(varList.begin());;
+  }
+
 }
 
 // Environment implementation
