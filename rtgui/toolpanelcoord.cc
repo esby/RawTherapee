@@ -335,7 +335,6 @@ void ToolPanelCoordinator::addPanel (Gtk::Box* where, FoldableToolPanel* panel, 
     env->registerPanel (where, panel, level);
 }
 
-
 ToolPanelCoordinator::~ToolPanelCoordinator ()
 {
     idle_register.destroy();
@@ -654,16 +653,19 @@ void parseDirectory(rtexif::TagDirectory* d, Glib::ustring prefix, Environment* 
     for (int i = 0; i < d->getCount(); ++i)
     {
        rtexif::Tag* t = d->getTagByIndex (i);
+
+       Glib::ustring prefixedName = prefix + ':' + t->nameToString();
+       if (prefix=="")
+         prefixedName = t->nameToString();
+
        if (t->getCount() >0 )
        {
-         Glib::ustring prefixedName = prefix + ':' + t->nameToString();
-         if (prefix=="")
-           prefixedName = t->nameToString();
-        
          parseDirectory(t->getDirectory(),prefixedName,env);
-
+       }
+       else
+       {
+         printf("trying to parse tag name=%s:%s \n",prefixedName.c_str(), t->nameToString().c_str());
          env->setVar(prefixedName, t->valueToString());
-//         printf("tag name=%s:%s value=%s \n",prefixedName.c_str(), t->nameToString().c_str(), t->valueToString().c_str());
        }
    }
 }
