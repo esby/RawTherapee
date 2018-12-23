@@ -29,7 +29,7 @@ using namespace rtengine;
 using namespace rtengine::procparams;
 
 
-TTSaver::TTSaver () : FoldableToolPanel(this,"ttsaver",M("TP_THEMETOOL_LABEL"),false,false)
+TTSaver::TTSaver () : FoldableToolPanel(this,"ttsaver",M("TP_SAVER_LABEL"),false,false)
 {
 	themeBox1 = Gtk::manage(new Gtk::HBox());
 	themeBox1->set_spacing(4);
