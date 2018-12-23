@@ -668,8 +668,8 @@ void parseDirectory(rtexif::TagDirectory* d, Glib::ustring prefix, Environment* 
        }
        else
        {
-//         env->setVar(prefixedName, t->valueToString());
-         printf("... value=%s \n",t->valueToString().c_str());
+//         printf("... value=%s \n",t->valueToString().c_str());
+         env->setVar(prefixedName, t->valueToString());
        }
    }
 }
