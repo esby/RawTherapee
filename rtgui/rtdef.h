@@ -48,7 +48,6 @@ class Environment;
 class MovableToolPanel;
 class ToolPanel;
 class FoldableToolPanel;
-class DummyToolPanel;
 class ToolVBox;
 class RtVariable;
 class RtVariableOperator;

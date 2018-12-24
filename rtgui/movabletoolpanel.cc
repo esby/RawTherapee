@@ -18,7 +18,6 @@
  */
 #include "movabletoolpanel.h"
 #include "toolpanelcoord.h"
-#include "dummytoolpanel.h"
 
 
 using namespace rtengine::procparams;
@@ -66,10 +65,6 @@ void MovableToolPanel::initVBox(ToolVBox* _originalBox, ToolVBox* _favoriteBox, 
      env = _env;   
      buttonBox = getExpander()->getButtonHBox();
      buttonBox->pack_start(*fudlrBox); //, Gtk::PACK_EXPAND_WIDGET, true, 0); 
-
-
-     originalDummy = Gtk::manage (new DummyToolPanel("normal_PosSaver_of_" + this->getToolName(), env));
-     favoriteDummy = Gtk::manage (new DummyToolPanel("favorite_PosSaver_of_" + this->getToolName(), env));
 
      originalBox = _originalBox;
      favoriteBox = _favoriteBox;
@@ -257,8 +252,6 @@ void MovableToolPanel::moveRight() {
 
 void MovableToolPanel::cleanBox() {
   location = -1;
-  favoriteBox->remPanel(favoriteDummy);
-  originalBox->remPanel(originalDummy);
   favoriteBox->remPanel(this);
   originalBox->remPanel(this);
   trashBox->remPanel(this);
@@ -269,7 +262,7 @@ void MovableToolPanel::moveToFavorite(int posFav, int posOri)
   if (location != 0)
   {
     cleanBox();
-    originalBox->addPanel(originalDummy,posOri);
+    fPosOri = posOri;
     favoriteBox->addPanel(this, posFav);
     location = 0;
   }
@@ -281,7 +274,7 @@ void MovableToolPanel::moveToOriginal(int posFav, int posOri)
   {
     cleanBox();
     if (posFav > -1)
-      favoriteBox->addPanel(favoriteDummy,posFav);
+       fPosFav = posFav;
     originalBox->addPanel(this, posOri);
     location = 1;
   }
@@ -293,8 +286,8 @@ void MovableToolPanel::moveToTrash(int posFav, int posOri)
   {
     cleanBox();
     if (posFav>-1)
-      favoriteBox->addPanel(favoriteDummy,posFav);
-    originalBox->addPanel(originalDummy,posOri);
+      fPosFav = posFav;
+    fPosOri = posOri;      
     trashBox->addPanel(this, -1); // there is no pos saved for this one
     location =2;
   }
@@ -305,7 +298,7 @@ int  MovableToolPanel::getPosOri()
   if (originalBox == nullptr)
     return -1;
   int posOri = originalBox->getPos(this);
-  if (posOri == -1) posOri = originalBox->getPos(originalDummy);
+  if (posOri == -1) posOri = fPosOri;
   if (posOri == -1) posOri = originalBox->size()-2;
   return posOri;
 }
@@ -315,7 +308,7 @@ int  MovableToolPanel::getPosFav()
   if (favoriteBox == nullptr)
     return -1;
   int posFav = favoriteBox->getPos(this);
-  if (posFav == -1) posFav = favoriteBox->getPos(favoriteDummy);
+  if (posFav == -1) posFav = fPosFav;
   return posFav;
 }
 

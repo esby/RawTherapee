@@ -52,8 +52,8 @@ class MovableToolPanel
     ToolVBox* originalBox;
     ToolVBox* favoriteBox;
     ToolVBox* trashBox;
-    ToolPanel* originalDummy;
-    ToolPanel* favoriteDummy;
+    int fPosFav;
+    int fPosOri;
 
     Glib::ustring uilabel;
 
@@ -99,8 +99,8 @@ class MovableToolPanel
     Gtk::Button*         getMoveLButton() { return moveLButton; }
     Gtk::Button*         getMoveRButton() { return moveRButton; }
     void                 setOriginalBox(ToolVBox* tc) {originalBox = tc; }
-    ToolPanel*      getFavoriteDummy() { return favoriteDummy; }
-    ToolPanel*      getOriginalDummy() { return originalDummy; }
+//    ToolPanel*      getFavoriteDummy() { return favoriteDummy; }
+//    ToolPanel*      getOriginalDummy() { return originalDummy; }
 //    ToolVBoxDef*         getOriginalBox() { return originalBox; }
     ToolVBox*         getOriginalBox() { return originalBox; }
     ToolVBox*            getFavoriteBox() { return favoriteBox;}

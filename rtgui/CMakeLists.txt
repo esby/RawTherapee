@@ -144,7 +144,6 @@ set(NONCLISOURCEFILES
     tonecurve.cc
     toolbar.cc
     toolpanel.cc
-    dummytoolpanel.cc
     movabletoolpanel.cc
     toolpanelcoord.cc
     vibrance.cc
