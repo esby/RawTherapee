@@ -246,8 +246,8 @@ ToolPanelCoordinator::ToolPanelCoordinator (bool batch, bool benchmark) : ipc (n
       // I really don't want to know how modulo negative number is h@ndled 
       // so i am adding nbPanel to the values
       // -- esby
-      ToolVBox* box1 =  (ToolVBox*) vbPanel[PANEL_SWITCHABLE_START + ((i+modOp-2) % (modOp))];
-      ToolVBox* box2 =  (ToolVBox*) vbPanel[i];
+      ToolVBox* box1 =  static_cast<ToolVBox*> (vbPanel[PANEL_SWITCHABLE_START + ((i+modOp-2) % (modOp))]);
+      ToolVBox* box2 =  static_cast<ToolVBox*> (vbPanel[i]);
       box2->setPrevBox(box1);
       box1->setNextBox(box2);
       env->addVBox(box1);
@@ -399,7 +399,7 @@ void ToolPanelCoordinator::handlePanel(Gtk::VBox* vbox, Gtk::ScrolledWindow* pan
    vbox->pack_start (*hsPanelEnd[panelIterator], Gtk::PACK_SHRINK,0);
    vbox->pack_start (*vbPanelEnd[panelIterator], Gtk::PACK_SHRINK,spacing);
    vbPanel[panelIterator] = vbox;
-   ToolVBox* box =  (ToolVBox*)vbox;
+   ToolVBox* box =  static_cast<ToolVBox*>(vbox);
    box->setParent(toolPanelNotebook);
    box->setParentSW(panelSW);
 }
