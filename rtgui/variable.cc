@@ -86,6 +86,12 @@ RtVariable::RtVariable(Glib::ustring _name, Environment* _env)
   name = _name;
   env = _env;
 }
+
+RtVariable::~RtVariable() 
+{
+  if (value != nullptr)
+    delete value;
+}
 Environment* RtVariable::getEnv() 
 {
   return env;
@@ -183,12 +189,12 @@ Glib::ustring RtVariable::toString()
   if (type == RT_VARIABLE_TYPE_STRING) return getAsString();
   if (type == RT_VARIABLE_TYPE_INT)
   {  
- return g_strdup_printf("%i", getAsInt());
+ return std::to_string(getAsInt());//g_strdup_printf("%i", getAsInt());
   }
 
   if (type == RT_VARIABLE_TYPE_DOUBLE)
   {
- return g_strdup_printf("%f", getAsDouble());
+ return std::to_string(getAsDouble());//g_strdup_printf("%f", getAsDouble());
   }
 
   if (type == RT_VARIABLE_TYPE_BOOL)

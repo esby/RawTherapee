@@ -97,7 +97,7 @@ class RtVariable
 
   public:
     RtVariable(Glib::ustring _name, Environment* _env);
-    ~RtVariable(){}
+    ~RtVariable() ;
 
     Environment* getEnv();
 
