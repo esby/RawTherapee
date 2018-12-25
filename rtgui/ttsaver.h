@@ -55,6 +55,7 @@ protected:
 public:
 
     TTSaver ();
+    ~TTSaver() override;
     void themeSplitter(std::ifstream& myfile);
     void load_ttp_profile(Glib::ustring filename);
     void save_ttp_profile(Glib::ustring filename);

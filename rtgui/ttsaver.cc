@@ -74,6 +74,11 @@ TTSaver::TTSaver () : FoldableToolPanel(this,"ttsaver",M("TP_SAVER_LABEL"),false
 
 }
 
+TTSaver::~TTSaver()
+{
+    entries.clear();
+}
+
 void TTSaver::deploy()
 {
    printf("DEBUG: TTSaver::deploy\n");
