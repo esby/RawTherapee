@@ -659,7 +659,7 @@ void parseDirectory(rtexif::TagDirectory* d, Glib::ustring prefix, Environment* 
        if (prefix=="")
          prefixedName = t->nameToString();
 
-       printf("trying to parse tag name=%s:%s \n",prefixedName.c_str(), t->nameToString().c_str());
+//       printf("trying to parse tag name=%s:%s \n",prefixedName.c_str(), t->nameToString().c_str());
 
        if (t->getDirectory())
        {
