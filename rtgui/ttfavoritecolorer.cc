@@ -75,6 +75,7 @@ TTFavoriteColorChooser::TTFavoriteColorChooser () : FoldableToolPanel(this,"ttfa
   Glib::ustring data = "#FavoriteButtonChecked {background-color: blue; background: blue; } \
                         #TrashButtonChecked {background-color: red; background: red; } \
 ";
+//todo check that there is no need to delete css provider...
   css = Gtk::CssProvider::create();
   if(not css->load_from_data(data)) {
            printf("failed to load css for Favorite and Trash Button\n");
