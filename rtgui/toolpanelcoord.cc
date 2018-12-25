@@ -52,7 +52,7 @@ ToolPanelCoordinator::ToolPanelCoordinator (bool batch, bool benchmark) : ipc (n
     trashPanel->setBoxName(PANEL_NAME_TRASH);
     usefulPanel->setBoxName(PANEL_NAME_USEFUL);
 
-    env =  new Environment(toolPanels);
+    env =  new Environment(toolPanels, expList);
     isReaction = false;
     printf("environment created: #%i \n",env->getEnvRef());
     if (benchmark)
@@ -255,7 +255,7 @@ ToolPanelCoordinator::ToolPanelCoordinator (bool batch, bool benchmark) : ipc (n
 
   //allowing those filters to be extracted from their entity
 
-    ToolVBox* box =  (ToolVBox*) lensgeom->getPackBox();
+    ToolVBox* box =  static_cast<ToolVBox*> (lensgeom->getPackBox());
 
     box->setBoxName("lensgeom");
     box->setNextBox(transformPanel);
@@ -273,19 +273,19 @@ ToolPanelCoordinator::ToolPanelCoordinator (bool batch, bool benchmark) : ipc (n
     toiP = Gtk::manage (new TextOrIcon ("trash.png"    , M ("MAIN_TAB_TRASH") ,    M ("MAIN_TAB_TRASH_TOOLTIP") ));
     toiU = Gtk::manage (new TextOrIcon ("useful.png"   , M ("MAIN_TAB_USEFUL") ,   M ("MAIN_TAB_USEFUL_TOOLTIP") ));
 
-    box =  (ToolVBox*) sensorbayer->getPackBox();
+    box =  static_cast<ToolVBox*>(sensorbayer->getPackBox());
     box->setBoxName("sensorbayer");
     box->setPrevBox(rawPanel);
     box->setNextBox(rawPanel);
     env->addVBox(box);
 
-    box =  (ToolVBox*) sensorxtrans->getPackBox();
+    box =  static_cast<ToolVBox*>(sensorxtrans->getPackBox());
     box->setBoxName("sensorxtrans");
     box->setPrevBox(rawPanel);
     box->setNextBox(rawPanel);
     env->addVBox(box);
 
-    box =  (ToolVBox*) resize->getPackBox();
+    box =  static_cast<ToolVBox*>(resize->getPackBox());
     box->setBoxName("resize");
     box->setPrevBox(transformPanel);
     box->setNextBox(transformPanel);
@@ -1227,7 +1227,7 @@ void ToolPanelCoordinator::on_notebook_switch_page(Gtk::Widget* /* page */, guin
     //putting the ending panels and separator to the end
     for (int i=0; i< NB_PANEL; i++){
       int pos = toolPanels.size()-1;
-      Gtk::Widget* w = (Gtk::Widget*)vbPanelEnd[i];
+      Gtk::Widget* w = static_cast<Gtk::Widget*>(vbPanelEnd[i]);
       vbPanel[i]->reorder_child (*w, pos);
       w = (Gtk::Widget*)hsPanelEnd[i];
       vbPanel[i]->reorder_child (*w, pos-1);
