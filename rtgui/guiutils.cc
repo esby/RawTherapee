@@ -571,7 +571,6 @@ void MyExpander::init()
     closedPBuf = Gdk::Pixbuf::create_from_file(rtengine::findIconAbsolutePath("expander-closed-small.png"));
 }
 
-//todo: check if ToolPanelAncestor should exist or not
 MyExpander::MyExpander(bool useEnabled, Gtk::Widget* titleWidget, ToolPanel* _panel) :
     enabled(false), inconsistent(false), flushEvent(false), expBox(nullptr),
     child(nullptr), headerWidget(nullptr), statusImage(nullptr),
