@@ -1444,7 +1444,7 @@ Gtk::Widget* Preferences::getSoundsPanel ()
     swSounds = Gtk::manage(new Gtk::ScrolledWindow());
     swSounds->set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
 
-    Gtk::VBox* vbSounds = new Gtk::VBox ();
+    Gtk::VBox* vbSounds = Gtk::manage(new Gtk::VBox ());
 
     ckbSndEnable = Gtk::manage ( new Gtk::CheckButton (M ("GENERAL_ENABLE")));
     sndEnableConn = ckbSndEnable->signal_toggled().connect (sigc::mem_fun (*this, &Preferences::sndEnableToggled));
@@ -1519,7 +1519,7 @@ void  Preferences::btn_test_lngedit_clicked (GdkEventButton* event)
 
 Gtk::Widget* Preferences::getTTPanel ()
 {
-  Gtk::VBox* pTTP = new Gtk::VBox ();
+  Gtk::VBox* pTTP = Gtk::manage(new Gtk::VBox ());
 
   themeBox1 = Gtk::manage(new Gtk::HBox());
   themeBox1->set_spacing(4);
