@@ -24,7 +24,8 @@ using namespace rtengine::procparams;
 
 int nbEnv = 0;
 
-Environment::Environment(std::vector<ToolPanel*>& _toolPanels) :toolPanels(_toolPanels)
+Environment::Environment(std::vector<ToolPanel*>& _toolPanels,  std::vector<MyExpander*>& _expList) 
+: toolPanels( _toolPanels), expList( _expList)
 {
   envId = nbEnv;
   nbEnv++;

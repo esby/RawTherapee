@@ -52,8 +52,8 @@
 class Environment {
   protected:
      std::vector<ToolPanel*>& toolPanels;
-     std::vector<MyExpander*> expList;
-     std::vector<ToolVBox*> boxList;
+     std::vector<MyExpander*>& expList;
+     std::vector<ToolVBox*> boxList; // this is used only by ttsaver
      ToolVBox* favoritePanel;
      ToolVBox* trashPanel;
      Gtk::Notebook* toolPanelNotebook;
@@ -71,7 +71,7 @@ class Environment {
      bool disableSwitchPageReaction;
      bool metadataState;
 
-     Environment(std::vector<ToolPanel*>& _toolPanels); 
+     Environment(std::vector<ToolPanel*>& _toolPanels,  std::vector<MyExpander*>& _expList); 
 
      virtual ~Environment() ;
 
