@@ -14,7 +14,7 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "imagearea.h"
 #include <ctime>
@@ -23,12 +23,13 @@
 #include "multilangmgr.h"
 #include "cropwindow.h"
 #include "../rtengine/refreshmap.h"
+#include "../rtengine/procparams.h"
 #include "options.h"
+#include "rtscalable.h"
 
 ImageArea::ImageArea (ImageAreaPanel* p) : parent(p), fullImageWidth(0), fullImageHeight(0)
 {
 
-    infotext = "";
     cropgl = nullptr;
     pmlistener = nullptr;
     pmhlistener = nullptr;
@@ -147,7 +148,7 @@ void ImageArea::on_style_updated ()
 void ImageArea::setInfoText (Glib::ustring text)
 {
 
-    infotext = text;
+    infotext = std::move(text);
 
     Glib::RefPtr<Pango::Context> context = get_pango_context () ;
     Pango::FontDescription fontd(get_style_context()->get_font());
@@ -159,7 +160,7 @@ void ImageArea::setInfoText (Glib::ustring text)
 
     // create text layout
     Glib::RefPtr<Pango::Layout> ilayout = create_pango_layout("");
-    ilayout->set_markup(text);
+    ilayout->set_markup(infotext);
 
     // get size of the text block
     int iw, ih;
@@ -246,7 +247,7 @@ bool ImageArea::on_draw(const ::Cairo::RefPtr< Cairo::Context> &cr)
         (*i)->expose (cr);
     }
 
-    if (options.showInfo && infotext != "") {
+    if (options.showInfo && !infotext.empty()) {
         iBackBuffer.copySurface(cr);
     }
 
@@ -403,6 +404,34 @@ void ImageArea::getImageSize (int &w, int&h)
     if (ipc) {
         w = ipc->getFullWidth();
         h = ipc->getFullHeight();
+    } else {
+        w = h = 0;
+    }
+}
+
+void ImageArea::getPreviewCenterPos(int &x, int &y)
+{
+    if (mainCropWindow) {
+        // Getting crop window size
+        int cW, cH;
+        mainCropWindow->getSize(cW, cH);
+
+        // Converting center coord of crop window to image coord
+        const int cX = cW / 2;
+        const int cY = cH / 2;
+        mainCropWindow->screenCoordToImage(cX, cY, x, y);
+    } else {
+        x = y = 0;
+    }
+}
+
+void ImageArea::getPreviewSize(int &w, int &h)
+{
+    if (mainCropWindow) {
+        int tmpW, tmpH;
+        mainCropWindow->getSize(tmpW, tmpH);
+        w = mainCropWindow->scaleValueToImage(tmpW);
+        h = mainCropWindow->scaleValueToImage(tmpH);
     } else {
         w = h = 0;
     }
@@ -659,7 +688,7 @@ void ImageArea::initialImageArrived ()
             } else {
                 mainCropWindow->zoomFit();
             }
-        } else if ((options.cropAutoFit || options.bgcolor != 0) && mainCropWindow->cropHandler.cropParams.enabled) {
+        } else if ((options.cropAutoFit || options.bgcolor != 0) && mainCropWindow->cropHandler.cropParams->enabled) {
             mainCropWindow->zoomFitCrop();
         }
         fullImageWidth = w;
@@ -759,14 +788,14 @@ Gtk::SizeRequestMode ImageArea::get_request_mode_vfunc () const
 
 void ImageArea::get_preferred_height_vfunc (int &minimum_height, int &natural_height) const
 {
-    minimum_height= 50;
-    natural_height = 300;
+    minimum_height= 50 * RTScalable::getScale();
+    natural_height = 300 * RTScalable::getScale();
 }
 
 void ImageArea::get_preferred_width_vfunc (int &minimum_width, int &natural_width) const
 {
-    minimum_width = 100;
-    natural_width = 400;
+    minimum_width = 100 * RTScalable::getScale();
+    natural_width = 400 * RTScalable::getScale();
 }
 
 void ImageArea::get_preferred_height_for_width_vfunc (int width, int &minimum_height, int &natural_height) const

@@ -14,24 +14,25 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "lwbutton.h"
 #include "guiutils.h"
+#include "rtsurface.h"
 
-LWButton::LWButton (Cairo::RefPtr<Cairo::ImageSurface> i, int aCode, void* aData, Alignment ha, Alignment va, Glib::ustring tooltip)
+LWButton::LWButton (Cairo::RefPtr<RTSurface> i, int aCode, void* aData, Alignment ha, Alignment va, Glib::ustring* tooltip)
     : xpos(0), ypos(0), halign(ha), valign(va), icon(i), bgr(0.0), bgg(0.0), bgb(0.0), fgr(0.0), fgg(0.0), fgb(0.0), state(Normal), listener(nullptr), actionCode(aCode), actionData(aData), toolTip(tooltip)
 {
 
     if (i)  {
-        w = i->get_width () + 2;
-        h = i->get_height () + 2;
+        w = i->getWidth () + 2;
+        h = i->getHeight () + 2;
     } else {
         w = h = 2;
     }
 }
 
-void LWButton::getSize (int& minw, int& minh)
+void LWButton::getSize (int& minw, int& minh) const 
 {
 
     minw = w;
@@ -45,27 +46,33 @@ void LWButton::setPosition (int x, int y)
     ypos = y;
 }
 
-void LWButton::getPosition (int& x, int& y)
+void LWButton::addPosition (int x, int y)
+{
+    xpos += x;
+    ypos += y;
+}
+
+void LWButton::getPosition (int& x, int& y) const
 {
 
     x = xpos;
     y = ypos;
 }
 
-void LWButton::setIcon (Cairo::RefPtr<Cairo::ImageSurface> i)
+void LWButton::setIcon (Cairo::RefPtr<RTSurface> i)
 {
 
     icon = i;
 
     if (i)  {
-        w = i->get_width () + 2;
-        h = i->get_height () + 2;
+        w = i->getWidth () + 2;
+        h = i->getHeight () + 2;
     } else {
         w = h = 2;
     }
 }
 
-Cairo::RefPtr<Cairo::ImageSurface> LWButton::getIcon ()
+Cairo::RefPtr<RTSurface> LWButton::getIcon () const
 {
 
     return icon;
@@ -82,7 +89,7 @@ void LWButton::setColors (const Gdk::RGBA& bg, const Gdk::RGBA& fg)
     fgb = fg.get_blue ();
 }
 
-bool LWButton::inside (int x, int y)
+bool LWButton::inside (int x, int y) const
 {
 
     return x > xpos && x < xpos + w && y > ypos && y < ypos + h;
@@ -146,7 +153,7 @@ bool LWButton::releaseNotify (int x, int y)
 {
 
     bool in = inside (x, y);
-    State nstate = state;
+    State nstate;
     bool action = false;
 
     if (in && (state == Pressed_In || state == Pressed_Out)) {
@@ -205,29 +212,28 @@ void LWButton::redraw (Cairo::RefPtr<Cairo::Context> context)
     }
 
     if (icon) {
-        context->set_source (icon, xpos + dilat, ypos + dilat);
+        context->set_source (icon->get(), xpos + dilat, ypos + dilat);
         context->paint ();
     }
 }
 
-void LWButton::getAlignment (Alignment& ha, Alignment& va)
+void LWButton::getAlignment (Alignment& ha, Alignment& va) const
 {
 
     ha = halign;
     va = valign;
 }
 
-Glib::ustring LWButton::getToolTip (int x, int y)
+Glib::ustring LWButton::getToolTip (int x, int y) const
 {
-
-    if (inside (x, y)) {
-        return toolTip;
+    if (inside(x, y) && toolTip) {
+        return *toolTip;
     } else {
-        return "";
+        return {};
     }
 }
 
-void LWButton::setToolTip (const Glib::ustring& tooltip)
+void LWButton::setToolTip (Glib::ustring* tooltip)
 {
 
     toolTip = tooltip;

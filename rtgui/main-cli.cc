@@ -14,7 +14,7 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #ifdef __GNUC__
@@ -28,16 +28,18 @@
 #include <giomm.h>
 #include <iostream>
 #include <tiffio.h>
-#include "rtwindow.h"
 #include <cstring>
 #include <cstdlib>
 #include <locale.h>
+#include "../rtengine/procparams.h"
+#include "../rtengine/profilestore.h"
+#include "../rtengine/rtengine.h"
 #include "options.h"
-#include "../rtengine/icons.h"
 #include "soundman.h"
 #include "rtimage.h"
 #include "version.h"
 #include "extprog.h"
+#include "pathutils.h"
 
 #ifndef WIN32
 #include <glibmm/fileutils.h>
@@ -45,14 +47,14 @@
 #include <glib/gstdio.h>
 #include <glibmm/threads.h>
 #else
+#include <windows.h>
+#include <shlobj.h>
 #include <glibmm/thread.h>
 #include "conio.h"
 #endif
 
 // Set this to 1 to make RT work when started with Eclipse and arguments, at least on Windows platform
 #define ECLIPSE_ARGS 0
-
-extern Options options;
 
 // stores path to data files
 Glib::ustring argv0;
@@ -195,8 +197,6 @@ int main (int argc, char **argv)
         options.defProfImg = DEFPROFILE_INTERNAL;
     }
 
-    rtengine::setPaths();
-
     TIFFSetWarningHandler (nullptr);   // avoid annoying message boxes
 
 #ifndef WIN32
@@ -255,7 +255,7 @@ int processLineParams ( int argc, char **argv )
 {
     rtengine::procparams::PartialProfile *rawParams = nullptr, *imgParams = nullptr;
     std::vector<Glib::ustring> inputFiles;
-    Glib::ustring outputPath = "";
+    Glib::ustring outputPath;
     std::vector<rtengine::procparams::PartialProfile*> processingParams;
     bool outputDirectory = false;
     bool leaveUntouched = false;
@@ -270,7 +270,7 @@ int processLineParams ( int argc, char **argv )
     int subsampling = 3;
     int bits = -1;
     bool isFloat = false;
-    std::string outputType = "";
+    std::string outputType;
     unsigned errors = 0;
 
     for ( int iArg = 1; iArg < argc; iArg++) {
@@ -284,6 +284,10 @@ int processLineParams ( int argc, char **argv )
 
         if ( currParam.at (0) == '-' && currParam.size() > 1) {
             switch ( currParam.at (1) ) {
+                case '-':
+                    // GTK --argument, we're skipping it
+                    break;
+
                 case 'O':
                     copyParamsFile = true;
 
@@ -828,7 +832,7 @@ int processLineParams ( int argc, char **argv )
         }
 
         ii->decreaseRef();
-        resultImage->free();
+        delete resultImage;
     }
 
     if (imgParams) {

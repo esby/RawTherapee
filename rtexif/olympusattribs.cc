@@ -14,10 +14,8 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef _OLYMPUSATTRIBS_
-#define _OLYMPUSATTRIBS_
 
 #include <string>
 #include <cmath>
@@ -33,7 +31,7 @@ class OLOnOffInterpreter : public Interpreter
 {
 public:
     OLOnOffInterpreter () {}
-    std::string toString (Tag* t) override
+    std::string toString (const Tag* t) const override
     {
         if (t->toInt() == 0) {
             return "Off";
@@ -48,7 +46,7 @@ class OLYesNoInterpreter : public Interpreter
 {
 public:
     OLYesNoInterpreter () {}
-    std::string toString (Tag* t) override
+    std::string toString (const Tag* t) const override
     {
         if (t->toInt() == 0) {
             return "No";
@@ -63,7 +61,7 @@ class OLApertureInterpreter : public Interpreter
 {
 public:
     OLApertureInterpreter () {}
-    std::string toString (Tag* t) override
+    std::string toString (const Tag* t) const override
     {
         std::ostringstream str;
         str.precision (2);
@@ -130,8 +128,10 @@ public:
         lenses["00 30 10"] = "Olympus M.Zuiko Digital ED 45mm f/1.2 Pro";
         lenses["00 31 00"] = "Olympus Zuiko Digital ED 12-60mm f/2.8-4.0 SWD";
         lenses["00 32 00"] = "Olympus Zuiko Digital ED 14-35mm f/2.0 SWD";
+        lenses["00 32 10"] = "Olympus M.Zuiko Digital ED 12-200mm f/3.5-6.3";
         lenses["00 33 00"] = "Olympus Zuiko Digital 25mm f/2.8";
         lenses["00 34 00"] = "Olympus Zuiko Digital ED 9-18mm f/4.0-5.6";
+        lenses["00 34 10"] = "Olympus M.Zuiko Digital ED 12-45mm f/4.0 Pro";
         lenses["00 35 00"] = "Olympus Zuiko Digital 14-54mm f/2.8-3.5 II";
         lenses["01 01 00"] = "Sigma 18-50mm f/3.5-5.6 DC";
         lenses["01 01 10"] = "Sigma 30mm f/2.8 EX DN";
@@ -190,11 +190,22 @@ public:
         lenses["02 26 10"] = "Lumix G 25mm f/1.7 Asph.";
         lenses["02 27 10"] = "Leica DG Vario-Elmar 100-400mm f/4.0-6.3 Asph. Power OIS";
         lenses["02 28 10"] = "Lumix G Vario 12-60mm f/3.5-5.6 Asph. Power OIS";
+        lenses["02 29 10"] = "Leica DG Summilux 12mm f/1.4 Asph.";
+        lenses["02 30 10"] = "Leica DG Vario-Elmarit 12-60mm f/2.8-4 Asph. Power OIS";
+        lenses["02 31 10"] = "Lumix G Vario 45-200mm f/4.0-5.6 II";
+        lenses["02 32 10"] = "Lumix G Vario 100-300mm f/4.0-5.6 II";
+        lenses["02 33 10"] = "Lumix G X Vario 12-35mm f/2.8 II Asph. Power OIS";
+        lenses["02 34 10"] = "Lumix G Vario 35-100mm f/2.8 II";
+        lenses["02 35 10"] = "Leica DG Vario-Elmarit 8-18mm f/2.8-4 Asph.";
+        lenses["02 36 10"] = "Leica DG Elmarit 200mm f/2.8 Power OIS";
+        lenses["02 37 10"] = "Leica DG Vario-Elmarit 50-200mm f/2.8-4 Asph. Power OIS";
+        lenses["02 38 10"] = "Leica DG Vario-Summilux 10-25mm f/1.7 Asph.";
         lenses["03 01 00"] = "Leica D Vario Elmarit 14-50mm f/2.8-3.5 Asph.";
         lenses["03 02 00"] = "Leica D Summilux 25mm f/1.4 Asph.";
         lenses["05 01 10"] = "Tamron 14-150mm f/3.5-5.8 Di III";
+        lenses["024 01 10"] = "Venus Optics Laowa 50mm f/2.8 2x Macro";
     }
-    std::string toString (Tag* t) override
+    std::string toString (const Tag* t) const override
     {
         std::ostringstream lid;
         lid.setf (std::ios_base::hex, std::ios_base::basefield);
@@ -203,7 +214,7 @@ public:
         lid << std::setw (2) << std::setfill ('0') << t->toInt (2) << ' '; //model
         lid << std::setw (2) << std::setfill ('0') << t->toInt (3); // submodel
 
-        std::map<std::string, std::string>::iterator r = lenses.find (lid.str());
+        std::map<std::string, std::string>::const_iterator r = lenses.find (lid.str());
 
         if (r != lenses.end()) {
             return r->second;
@@ -214,7 +225,7 @@ public:
 };
 OLLensTypeInterpreter olLensTypeInterpreter;
 
-class OLFlashTypeInterpreter : public ChoiceInterpreter
+class OLFlashTypeInterpreter : public ChoiceInterpreter<>
 {
 public:
     OLFlashTypeInterpreter ()
@@ -226,7 +237,7 @@ public:
 };
 OLFlashTypeInterpreter olFlashTypeInterpreter;
 
-class OLExposureModeInterpreter : public ChoiceInterpreter
+class OLExposureModeInterpreter : public ChoiceInterpreter<>
 {
 public:
     OLExposureModeInterpreter ()
@@ -240,7 +251,7 @@ public:
 };
 OLExposureModeInterpreter olExposureModeInterpreter;
 
-class OLMeteringModeInterpreter : public ChoiceInterpreter
+class OLMeteringModeInterpreter : public ChoiceInterpreter<>
 {
 public:
     OLMeteringModeInterpreter ()
@@ -255,7 +266,7 @@ public:
 };
 OLMeteringModeInterpreter olMeteringModeInterpreter;
 
-class OLFocusModeInterpreter : public ChoiceInterpreter
+class OLFocusModeInterpreter : public ChoiceInterpreter<>
 {
 public:
     OLFocusModeInterpreter ()
@@ -270,7 +281,7 @@ public:
 };
 OLFocusModeInterpreter olFocusModeInterpreter;
 
-class OLWhitebalance2Interpreter : public ChoiceInterpreter
+class OLWhitebalance2Interpreter : public ChoiceInterpreter<>
 {
 public:
     OLWhitebalance2Interpreter ()
@@ -302,7 +313,7 @@ public:
 };
 OLWhitebalance2Interpreter olWhitebalance2Interpreter;
 
-class OLSceneModeInterpreter : public ChoiceInterpreter
+class OLSceneModeInterpreter : public ChoiceInterpreter<>
 {
 public:
     OLSceneModeInterpreter ()
@@ -331,7 +342,7 @@ public:
         choices[26] = "Museum";
         choices[27] = "Shoot & Select";
         choices[28] = "Beach & Snow";
-        choices[29] = "Self Protrait+Timer";
+        choices[29] = "Self Portrait+Timer";
         choices[30] = "Candle";
         choices[31] = "Available Light";
         choices[32] = "Behind Glass";
@@ -368,7 +379,7 @@ public:
 };
 OLSceneModeInterpreter olSceneModeInterpreter;
 
-class OLPictureModeBWFilterInterpreter : public ChoiceInterpreter
+class OLPictureModeBWFilterInterpreter : public ChoiceInterpreter<>
 {
 public:
     OLPictureModeBWFilterInterpreter ()
@@ -383,7 +394,7 @@ public:
 };
 OLPictureModeBWFilterInterpreter olPictureModeBWFilterInterpreter;
 
-class OLPictureModeToneInterpreter : public ChoiceInterpreter
+class OLPictureModeToneInterpreter : public ChoiceInterpreter<>
 {
 public:
     OLPictureModeToneInterpreter ()
@@ -398,7 +409,7 @@ public:
 };
 OLPictureModeToneInterpreter olPictureModeToneInterpreter;
 
-class OLImageQuality2Interpreter : public ChoiceInterpreter
+class OLImageQuality2Interpreter : public ChoiceInterpreter<>
 {
 public:
     OLImageQuality2Interpreter ()
@@ -412,7 +423,7 @@ public:
 };
 OLImageQuality2Interpreter olImageQuality2Interpreter;
 
-class OLDevEngineInterpreter : public ChoiceInterpreter
+class OLDevEngineInterpreter : public ChoiceInterpreter<>
 {
 public:
     // RawDevEngine
@@ -426,7 +437,7 @@ public:
 };
 OLDevEngineInterpreter olDevEngineInterpreter;
 
-class OLPictureModeInterpreter : public ChoiceInterpreter
+class OLPictureModeInterpreter : public ChoiceInterpreter<>
 {
 public:
     OLPictureModeInterpreter ()
@@ -449,7 +460,7 @@ public:
 };
 OLPictureModeInterpreter olPictureModeInterpreter;
 
-class OLColorSpaceInterpreter : public ChoiceInterpreter
+class OLColorSpaceInterpreter : public ChoiceInterpreter<>
 {
 public:
     OLColorSpaceInterpreter ()
@@ -465,7 +476,7 @@ class OLNoiseFilterInterpreter : public Interpreter
 {
 public:
     OLNoiseFilterInterpreter () {}
-    std::string toString (Tag* t) override
+    std::string toString (const Tag* t) const override
     {
         int a = t->toInt (0);
         int b = t->toInt (2);
@@ -490,7 +501,7 @@ class OLFlashModeInterpreter : public Interpreter
 {
 public:
     OLFlashModeInterpreter () {}
-    std::string toString (Tag* t) override
+    std::string toString (const Tag* t) const override
     {
         std::ostringstream str;
         int a = t->toInt ();
@@ -509,7 +520,7 @@ class OLNoiseReductionInterpreter : public Interpreter
 {
 public:
     OLNoiseReductionInterpreter () {}
-    std::string toString (Tag* t) override
+    std::string toString (const Tag* t) const override
     {
         std::ostringstream str;
         int a = t->toInt ();
@@ -522,7 +533,7 @@ public:
 };
 OLNoiseReductionInterpreter olNoiseReductionInterpreter;
 
-class OLFlashModelInterpreter : public ChoiceInterpreter
+class OLFlashModelInterpreter : public ChoiceInterpreter<>
 {
 public:
     OLFlashModelInterpreter ()
@@ -842,5 +853,3 @@ const TagAttrib olympusAttribs[] = {
     { -1, AC_DONTWRITE, 0,  nullptr, 0, AUTO, "", nullptr}
 };
 }
-#endif
-

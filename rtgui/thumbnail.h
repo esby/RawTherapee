@@ -14,22 +14,35 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef _THUMBNAIL_
-#define _THUMBNAIL_
+#pragma once
 
+#include <memory>
 #include <string>
-#include <glibmm.h>
-#include "cachemanager.h"
-#include "options.h"
-#include "../rtengine/rtengine.h"
-#include "../rtengine/rtthumbnail.h"
-#include "cacheimagedata.h"
-#include "thumbnaillistener.h"
-#include "threadutils.h"
 
+#include <glibmm/ustring.h>
+
+#include "cacheimagedata.h"
+#include "threadutils.h"
+#include "thumbnaillistener.h"
+
+namespace rtengine
+{
+class Thumbnail;
+
+namespace procparams
+{
+
+class ProcParams;
+
+}
+
+}
 class CacheManager;
+
+struct ParamsEdited;
+
 class Thumbnail
 {
 
@@ -45,17 +58,17 @@ class Thumbnail
     rtengine::Thumbnail* tpp;
     int             tw, th;             // dimensions of timgdata (it stores tpp->width and tpp->height in processed mode for simplicity)
     float           imgRatio;           // hack to avoid rounding error
-//        double          scale;            // portion of the sizes of the processed thumbnail image and the full scale image
+//  double          scale;              // portion of the sizes of the processed thumbnail image and the full scale image
 
-    rtengine::procparams::ProcParams      pparams;
+    const std::unique_ptr<rtengine::procparams::ProcParams>      pparams;
     bool            pparamsValid;
     bool            imageLoading;
 
     // these are the data of the result image of the last getthumbnailimage  call (for caching purposes)
-    unsigned char*  lastImg;
-    int             lastW;
-    int             lastH;
-    double          lastScale;
+    unsigned char*  lastImg;            // pointer to the processed and scaled base ImageIO image
+    int             lastW;              // non rotated width of the cached ImageIO image
+    int             lastH;              // non rotated height of the cached ImageIO image
+    double          lastScale;          // scale of the cached ImageIO image
 
     // exif & date/time strings
     Glib::ustring   exifString;
@@ -70,7 +83,6 @@ class Thumbnail
     void            _saveThumbnail ();
     void            _generateThumbnailImage ();
     int             infoFromImage (const Glib::ustring& fname, std::unique_ptr<rtengine::RawMetaDataLocation> rml = nullptr);
-    void            loadThumbnail (bool firstTrial = true);
     void            generateExifDateTimeStrings ();
 
     Glib::ustring    getCacheFileName (const Glib::ustring& subdir, const Glib::ustring& fext) const;
@@ -93,14 +105,8 @@ public:
 
     void              notifylisterners_procParamsChanged(int whoChangedIt);
 
-    bool              isQuick() const
-    {
-        return cfs.thumbImgType == CacheImageData::QUICK_THUMBNAIL;
-    }
-    bool              isPParamsValid() const
-    {
-        return pparamsValid;
-    }
+    bool              isQuick() const;
+    bool              isPParamsValid() const;
     bool              isRecentlySaved () const;
     void              imageDeveloped ();
     void              imageEnqueued ();
@@ -114,87 +120,35 @@ public:
     rtengine::IImage8* upgradeThumbImage    (const rtengine::procparams::ProcParams& pparams, int h, double& scale);
     void            getThumbnailSize        (int &w, int &h, const rtengine::procparams::ProcParams *pparams = nullptr);
     void            getFinalSize            (const rtengine::procparams::ProcParams& pparams, int& w, int& h);
-    void            getOriginalSize         (int& w, int& h);
+    void            getOriginalSize         (int& w, int& h) const;
 
     const Glib::ustring&  getExifString () const;
     const Glib::ustring&  getDateTimeString () const;
-    void                  getCamWB  (double& temp, double& green) const
-    {
-        if (tpp) {
-            tpp->getCamWB  (temp, green);
-        } else {
-            temp = green = -1.0;
-        }
-    }
+    void                  getCamWB  (double& temp, double& green) const;
     void                  getAutoWB (double& temp, double& green, double equal, double tempBias);
-    void                  getSpotWB (int x, int y, int rect, double& temp, double& green)
-    {
-        if (tpp) {
-            tpp->getSpotWB (getProcParams(), x, y, rect, temp, green);
-        } else {
-            temp = green = -1.0;
-        }
-    }
-    void                  applyAutoExp (rtengine::procparams::ProcParams& pparams)
-    {
-        if (tpp) {
-            tpp->applyAutoExp (pparams);
-        }
-    }
+    void                  getSpotWB (int x, int y, int rect, double& temp, double& green);
+    void                  applyAutoExp (rtengine::procparams::ProcParams& pparams);
 
-    ThFileType      getType ();
+    ThFileType      getType () const;
     Glib::ustring   getFileName () const
     {
         return fname;
     }
     void            setFileName (const Glib::ustring &fn);
 
-    bool            isSupported ();
+    bool            isSupported () const;
 
-    const CacheImageData* getCacheImageData()
-    {
-        return &cfs;
-    }
-    std::string     getMD5   () const
-    {
-        return cfs.md5;
-    }
+    const CacheImageData* getCacheImageData() const;
+    std::string     getMD5   () const;
 
-    int             getRank  () const
-    {
-        return pparams.rank;
-    }
-    void            setRank  (int rank)
-    {
-        if (pparams.rank != rank) {
-            pparams.rank = rank;
-            pparamsValid = true;
-        }
-    }
+    int             getRank  () const;
+    void            setRank  (int rank);
 
-    int             getColorLabel  () const
-    {
-        return pparams.colorlabel;
-    }
-    void            setColorLabel  (int colorlabel)
-    {
-        if (pparams.colorlabel != colorlabel) {
-            pparams.colorlabel = colorlabel;
-            pparamsValid = true;
-        }
-    }
+    int             getColorLabel  () const;
+    void            setColorLabel  (int colorlabel);
 
-    int             getStage () const
-    {
-        return pparams.inTrash;
-    }
-    void            setStage (bool stage)
-    {
-        if (pparams.inTrash != stage) {
-            pparams.inTrash = stage;
-            pparamsValid = true;
-        }
-    }
+    int             getStage () const;
+    void            setStage (bool stage);
 
     void            addThumbnailListener (ThumbnailListener* tnl);
     void            removeThumbnailListener (ThumbnailListener* tnl);
@@ -209,7 +163,3 @@ public:
     bool            imageLoad(bool loading);
     int             getpp3version();
 };
-
-
-#endif
-

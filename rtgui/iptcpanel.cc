@@ -14,18 +14,24 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "iptcpanel.h"
 #include "clipboard.h"
 #include "rtimage.h"
 
+#include "../rtengine/procparams.h"
+
 using namespace rtengine;
 using namespace rtengine::procparams;
 
-IPTCPanel::IPTCPanel ()
+IPTCPanel::IPTCPanel () :
+    changeList(new rtengine::procparams::IPTCPairs),
+    defChangeList(new rtengine::procparams::IPTCPairs),
+    embeddedData(new rtengine::procparams::IPTCPairs)
 {
 
+    set_orientation(Gtk::ORIENTATION_VERTICAL);
     set_spacing (4);
 
     Gtk::Grid* iptc = Gtk::manage( new Gtk::Grid () );
@@ -85,7 +91,7 @@ IPTCPanel::IPTCPanel ()
 
     // --------------------------
 
-    Gtk::HSeparator* hsep1 = Gtk::manage( new Gtk::HSeparator () );
+    Gtk::Separator* hsep1 = Gtk::manage( new Gtk::Separator(Gtk::ORIENTATION_HORIZONTAL) );
     setExpandAlignProperties(hsep1, true, false, Gtk::ALIGN_FILL, Gtk::ALIGN_CENTER);
     iptc->attach (*hsep1, 0, row++, 2, 1);
 
@@ -129,7 +135,7 @@ IPTCPanel::IPTCPanel ()
     iptc->attach (*scrolledWindowkw, 0, row++, 2, 1);
     // --------------------------
 
-    Gtk::HSeparator* hsep2 = Gtk::manage( new Gtk::HSeparator () );
+    Gtk::Separator* hsep2 = Gtk::manage( new Gtk::Separator(Gtk::ORIENTATION_HORIZONTAL) );
     setExpandAlignProperties(hsep2, true, false, Gtk::ALIGN_FILL, Gtk::ALIGN_CENTER);
     iptc->attach (*hsep2, 0, row++, 2, 1);
     // --------------------------
@@ -182,7 +188,7 @@ IPTCPanel::IPTCPanel ()
     iptc->attach (*scrolledWindowsc, 0, row++, 2, 1);
     // --------------------------
 
-    Gtk::HSeparator* hsep3 = Gtk::manage( new Gtk::HSeparator () );
+    Gtk::Separator* hsep3 = Gtk::manage( new Gtk::Separator(Gtk::ORIENTATION_HORIZONTAL) );
     setExpandAlignProperties(hsep3, true, false, Gtk::ALIGN_FILL, Gtk::ALIGN_CENTER);
     iptc->attach (*hsep3, 0, row++, 2, 1);
     // --------------------------
@@ -242,7 +248,7 @@ IPTCPanel::IPTCPanel ()
 
     // --------------------------
 
-    Gtk::HSeparator* hsep4 = Gtk::manage( new Gtk::HSeparator () );
+    Gtk::Separator* hsep4 = Gtk::manage( new Gtk::Separator(Gtk::ORIENTATION_HORIZONTAL) );
     setExpandAlignProperties(hsep4, true, false, Gtk::ALIGN_FILL, Gtk::ALIGN_CENTER);
     iptc->attach (*hsep4, 0, row++, 2, 1);
 
@@ -410,12 +416,12 @@ void IPTCPanel::read (const ProcParams* pp, const ParamsEdited* pedited)
 {
 
     disableListener ();
-    changeList.clear();
+    changeList->clear();
 
     if (!pp->iptc.empty()) {
-        changeList = pp->iptc;
+        *changeList = pp->iptc;
     } else {
-        changeList = embeddedData;
+        *changeList = *embeddedData;
     }
 
     applyChangeList ();
@@ -425,25 +431,25 @@ void IPTCPanel::read (const ProcParams* pp, const ParamsEdited* pedited)
 void IPTCPanel::write (ProcParams* pp, ParamsEdited* pedited)
 {
 
-    pp->iptc = changeList;
+    pp->iptc = *changeList;
 }
 
 void IPTCPanel::setDefaults (const ProcParams* defParams, const ParamsEdited* pedited)
 {
 
-    defChangeList = defParams->iptc;
+    *defChangeList = defParams->iptc;
 }
 
 void IPTCPanel::setImageData (const FramesMetaData* id)
 {
 
     if (id) {
-        embeddedData = id->getIPTCData ();
+        *embeddedData = id->getIPTCData ();
     } else {
-        embeddedData.clear ();
+        embeddedData->clear ();
     }
 
-    file->set_sensitive (!embeddedData.empty());
+    file->set_sensitive (!embeddedData->empty());
 }
 
 void IPTCPanel::notifyListener ()
@@ -564,33 +570,33 @@ void IPTCPanel::delSuppCategory ()
 void IPTCPanel::updateChangeList ()
 {
 
-    changeList.clear ();
-    changeList["Caption"        ].push_back (captionText->get_text ());
-    changeList["CaptionWriter"  ].push_back (captionWriter->get_text ());
-    changeList["Headline"       ].push_back (headline->get_text ());
-    changeList["Instructions"   ].push_back (instructions->get_text ());
+    changeList->clear ();
+    (*changeList)["Caption"        ].push_back (captionText->get_text ());
+    (*changeList)["CaptionWriter"  ].push_back (captionWriter->get_text ());
+    (*changeList)["Headline"       ].push_back (headline->get_text ());
+    (*changeList)["Instructions"   ].push_back (instructions->get_text ());
 
     for (unsigned int i = 0; i < keywords->size(); i++) {
-        changeList["Keywords"       ].push_back (keywords->get_text (i));
+        (*changeList)["Keywords"       ].push_back (keywords->get_text (i));
     }
 
-    changeList["Category"       ].push_back (category->get_entry()->get_text ());
+    (*changeList)["Category"       ].push_back (category->get_entry()->get_text ());
 
     for (unsigned int i = 0; i < suppCategories->size(); i++) {
-        changeList["SupplementalCategories"].push_back (suppCategories->get_text (i));
+        (*changeList)["SupplementalCategories"].push_back (suppCategories->get_text (i));
     }
 
-    changeList["Creator"        ].push_back (creator->get_text ());
-    changeList["CreatorJobTitle"].push_back (creatorJobTitle->get_text ());
-    changeList["Credit"         ].push_back (credit->get_text ());
-    changeList["Source"         ].push_back (source->get_text ());
-    changeList["Copyright"      ].push_back (copyright->get_text ());
-    changeList["City"           ].push_back (city->get_text ());
-    changeList["Province"       ].push_back (province->get_text ());
-    changeList["Country"        ].push_back (country->get_text ());
-    changeList["Title"          ].push_back (title->get_text ());
-    changeList["DateCreated"    ].push_back (dateCreated->get_text ());
-    changeList["TransReference" ].push_back (transReference->get_text ());
+    (*changeList)["Creator"        ].push_back (creator->get_text ());
+    (*changeList)["CreatorJobTitle"].push_back (creatorJobTitle->get_text ());
+    (*changeList)["Credit"         ].push_back (credit->get_text ());
+    (*changeList)["Source"         ].push_back (source->get_text ());
+    (*changeList)["Copyright"      ].push_back (copyright->get_text ());
+    (*changeList)["City"           ].push_back (city->get_text ());
+    (*changeList)["Province"       ].push_back (province->get_text ());
+    (*changeList)["Country"        ].push_back (country->get_text ());
+    (*changeList)["Title"          ].push_back (title->get_text ());
+    (*changeList)["DateCreated"    ].push_back (dateCreated->get_text ());
+    (*changeList)["TransReference" ].push_back (transReference->get_text ());
 
     notifyListener ();
 }
@@ -623,7 +629,7 @@ void IPTCPanel::applyChangeList ()
     keyword->get_entry()->set_text ("");
     suppCategory->get_entry()->set_text ("");
 
-    for (rtengine::procparams::IPTCPairs::iterator i = changeList.begin(); i != changeList.end(); ++i) {
+    for (rtengine::procparams::IPTCPairs::const_iterator i = changeList->begin(); i != changeList->end(); ++i) {
         if (i->first == "Caption" && !i->second.empty()) {
             captionText->set_text (i->second.at(0));
         } else if (i->first == "CaptionWriter" && !i->second.empty()) {
@@ -676,7 +682,7 @@ void IPTCPanel::resetClicked ()
 {
 
     disableListener ();
-    changeList = defChangeList;
+    *changeList = *defChangeList;
     applyChangeList ();
     enableListener ();
     notifyListener ();
@@ -686,7 +692,7 @@ void IPTCPanel::fileClicked ()
 {
 
     disableListener ();
-    changeList = embeddedData;
+    *changeList = *embeddedData;
     applyChangeList ();
     enableListener ();
     notifyListener ();
@@ -695,14 +701,14 @@ void IPTCPanel::fileClicked ()
 void IPTCPanel::copyClicked ()
 {
 
-    clipboard.setIPTC (changeList);
+    clipboard.setIPTC (*changeList);
 }
 
 void IPTCPanel::pasteClicked ()
 {
 
     disableListener ();
-    changeList = clipboard.getIPTC ();
+    *changeList = clipboard.getIPTC ();
     applyChangeList ();
     enableListener ();
     notifyListener ();

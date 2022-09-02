@@ -14,7 +14,7 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include "coordinateadjuster.h"
@@ -23,7 +23,7 @@
 #include "curveeditorgroup.h"
 
 Axis::Axis()
-    : label(""), decimal(5), increment(0.001), pageIncrement(0.01), rangeLowerBound(0.), rangeUpperBound(1.)
+    : decimal(5), increment(0.001), pageIncrement(0.01), rangeLowerBound(0.), rangeUpperBound(1.)
 {}
 
 Axis::Axis(Glib::ustring label, unsigned int decimal, double increment, double pageIncrement, double valMin = 0.0, double valMax = 1.0)
@@ -69,14 +69,14 @@ void CoordinateAdjuster::AxisAdjuster::setValue(double newValue)
 {
     float range = rangeUpperBound - rangeLowerBound;
     spinButtonConn.block(true);
-    spinButton->set_value(newValue * range + rangeLowerBound);
+    spinButton->set_value(static_cast<float>(newValue) * range + rangeLowerBound);
     spinButtonConn.block(false);
 }
 
 void CoordinateAdjuster::AxisAdjuster::valueChanged()
 {
     float range = rangeUpperBound - rangeLowerBound;
-    parent->updatePos(idx, (spinButton->get_value() - rangeLowerBound) / range);
+    parent->updatePos(idx, (static_cast<float>(spinButton->get_value()) - rangeLowerBound) / range);
 }
 
 CoordinateAdjuster::CoordinateAdjuster(CoordinateProvider *provider, CurveEditorSubGroup *parent, const std::vector<Axis> &axis)
@@ -171,7 +171,7 @@ void CoordinateAdjuster::startNumericalAdjustment(const std::vector<Boundaries> 
         Gtk::SpinButton *currSpinButton = axisAdjusters.at(i)->spinButton;
         currSpinButton->set_sensitive(true);
         float range = axisAdjusters.at(i)->rangeUpperBound - axisAdjusters.at(i)->rangeLowerBound;
-        currSpinButton->set_range(newBoundaries.at(i).minVal * range + axisAdjusters.at(i)->rangeLowerBound, newBoundaries.at(i).maxVal * range + axisAdjusters.at(i)->rangeLowerBound);
+        currSpinButton->set_range(newBoundaries.at(i).minVal * static_cast<double>(range) + static_cast<double>(axisAdjusters.at(i)->rangeLowerBound), newBoundaries.at(i).maxVal * static_cast<double>(range) + static_cast<double>(axisAdjusters.at(i)->rangeLowerBound));
     }
 
     axisAdjusters.at(0)->spinButton->grab_focus();
@@ -200,7 +200,7 @@ void CoordinateAdjuster::switchAdjustedPoint(std::vector<double> &pos, const std
 
         // ...narrow the range to the new interval
         float range = axisAdjusters.at(i)->rangeUpperBound - axisAdjusters.at(i)->rangeLowerBound;
-        currAxis->spinButton->set_range(newBoundaries.at(i).minVal * range + axisAdjusters.at(i)->rangeLowerBound, newBoundaries.at(i).maxVal * range + axisAdjusters.at(i)->rangeLowerBound);
+        currAxis->spinButton->set_range(newBoundaries.at(i).minVal * static_cast<double>(range) + static_cast<double>(axisAdjusters.at(i)->rangeLowerBound), newBoundaries.at(i).maxVal * static_cast<double>(range) + static_cast<double>(axisAdjusters.at(i)->rangeLowerBound));
 
         // enable events
         currAxis->spinButtonConn.block(false);

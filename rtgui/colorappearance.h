@@ -14,27 +14,29 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef _COLORAPPEARANCE_H_
-#define _COLORAPPEARANCE_H_
+#pragma once
 
 #include <gtkmm.h>
+
 #include "adjuster.h"
-#include "toolpanel.h"
-#include "curveeditor.h"
-#include "curveeditorgroup.h"
-#include "mycurve.h"
-#include "guiutils.h"
 #include "colorprovider.h"
+#include "curvelistener.h"
+#include "guiutils.h"
+#include "toolpanel.h"
+
+class DiagonalCurveEditor;
+class CurveEditorGroup;
+class CurveEditor;
 
 class ColorAppearance final :
-        public ToolParamBlock,
-        public AdjusterListener,
-        public FoldableToolPanel,
-        public rtengine::AutoCamListener,
-        public CurveListener,
-        public ColorProvider
+    public ToolParamBlock,
+    public AdjusterListener,
+    public FoldableToolPanel,
+    public rtengine::AutoCamListener,
+    public CurveListener,
+    public ColorProvider
 {
 public:
     ColorAppearance ();
@@ -45,12 +47,13 @@ public:
     void setDefaults    (const rtengine::procparams::ProcParams* defParams, const ParamsEdited* pedited = nullptr) override;
     void setBatchMode   (bool batchMode) override;
     void adjusterChanged     (Adjuster* a, double newval) override;
-    void adjusterAutoToggled (Adjuster* a, bool newval) override;
+    void adjusterAutoToggled (Adjuster* a) override;
 //    void adjusterAdapToggled (Adjuster* a, bool newval);
     void enabledChanged      () override;
     void surroundChanged     ();
     void surrsrcChanged     ();
     void wbmodelChanged      ();
+    void illumChanged      ();
     void algoChanged         ();
     void surrsource_toggled  ();
     void gamut_toggled       ();
@@ -61,10 +64,11 @@ public:
     void autoCamChanged (double ccam, double ccamout) override;
     bool autoCamComputed_ ();
     void adapCamChanged (double cadap) override;
+    void wbCamChanged(double tem, double tin) override;
     bool adapCamComputed_ ();
     void ybCamChanged (int yb) override;
     bool ybCamComputed_ ();
-
+    void presetcat02pressed ();
     void curveChanged        (CurveEditor* ce) override;
     void curveMode1Changed   ();
     bool curveMode1Changed_  ();
@@ -73,6 +77,11 @@ public:
     void curveMode3Changed   ();
     bool curveMode3Changed_  ();
     void neutral_pressed       ();
+    void complexmethodChanged();
+    void modelmethodChanged();
+    void catmethodChanged();
+    void convertParamToNormal();
+    void updateGUIToMode(int mode);
 
     void expandCurve         (bool isExpanded);
     bool isCurveExpanded     ();
@@ -97,6 +106,12 @@ public:
     void writeOptions (std::vector<int> &tpOpen);
 
 private:
+    rtengine::ProcEvent Evcatpreset;
+    rtengine::ProcEvent EvCATAutotempout;
+    rtengine::ProcEvent EvCATillum;
+    rtengine::ProcEvent EvCATcomplex;
+    rtengine::ProcEvent EvCATmodel;
+    rtengine::ProcEvent EvCATcat;
     bool bgTTipQuery (int x, int y, bool keyboard_tooltip, const Glib::RefPtr<Gtk::Tooltip>& tooltip);
     bool srTTipQuery (int x, int y, bool keyboard_tooltip, const Glib::RefPtr<Gtk::Tooltip>& tooltip);
     void foldAllButMe (GdkEventButton* event, MyExpander *expander);
@@ -132,6 +147,9 @@ private:
     MyComboBoxText* toneCurveMode;
     MyComboBoxText* toneCurveMode2;
     MyComboBoxText* toneCurveMode3;
+    MyComboBoxText* complexmethod;
+    MyComboBoxText* modelmethod;
+    MyComboBoxText* catmethod;
 
     //Adjuster* edge;
     Gtk::CheckButton* surrsource;
@@ -141,6 +159,9 @@ private:
     Gtk::CheckButton* tonecie;
     //  Gtk::CheckButton* sharpcie;
     Gtk::Button* neutral;
+    Gtk::CheckButton* presetcat02;
+    sigc::connection  presetcat02conn;
+
     MyComboBoxText* surrsrc;
     sigc::connection  surrsrcconn;
 
@@ -148,11 +169,17 @@ private:
     sigc::connection  surroundconn;
     MyComboBoxText*   wbmodel;
     sigc::connection  wbmodelconn;
+    MyComboBoxText*   illum;
+    sigc::connection  illumconn;
     MyComboBoxText*   algo;
     sigc::connection  algoconn;
     sigc::connection  surrconn;
     sigc::connection  gamutconn, datacieconn, tonecieconn /*,badpixconn , sharpcieconn*/;
     sigc::connection  tcmodeconn, tcmode2conn, tcmode3conn, neutralconn;
+    sigc::connection  complexmethodconn, modelmethodconn, catmethodconn;
+    Gtk::Box* alHBox;
+    Gtk::Box* wbmHBox;
+    Gtk::Box* illumHBox;
     CurveEditorGroup* curveEditorG;
     CurveEditorGroup* curveEditorG2;
     CurveEditorGroup* curveEditorG3;
@@ -166,12 +193,14 @@ private:
     bool lastAutoAdapscen;
     bool lastAutoDegreeout;
     bool lastAutoybscen;
+    bool lastAutotempout;
     bool lastsurr;
     bool lastgamut;
     bool lastdatacie;
     bool lasttonecie;
+    bool lastpresetcat02;
+    double nexttemp;
+    double nextgreen;
 
     IdleRegister idle_register;
 };
-
-#endif

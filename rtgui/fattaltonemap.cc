@@ -15,12 +15,18 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include "fattaltonemap.h"
-#include "eventmapper.h"
-#include <iomanip>
 #include <cmath>
+#include <iomanip>
+
+#include "fattaltonemap.h"
+
+#include "eventmapper.h"
+#include "rtimage.h"
+
+#include "../rtengine/procparams.h"
+
 
 using namespace rtengine;
 using namespace rtengine::procparams;
@@ -112,10 +118,6 @@ void FattalToneMapping::adjusterChanged(Adjuster* a, double newval)
             listener->panelChanged(EvTMFattalAnchor, a->getTextValue());
         }
     }
-}
-
-void FattalToneMapping::adjusterAutoToggled(Adjuster* a, bool newval)
-{
 }
 
 void FattalToneMapping::enabledChanged ()

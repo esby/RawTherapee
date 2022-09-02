@@ -14,17 +14,21 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "rawcacorrection.h"
+
 #include "eventmapper.h"
 #include "guiutils.h"
 #include "rtimage.h"
+#include "options.h"
+
+#include "../rtengine/procparams.h"
 
 using namespace rtengine;
 using namespace rtengine::procparams;
 
-RAWCACorr::RAWCACorr () : FoldableToolPanel(this, "rawcacorrection", M("TP_CHROMATABERR_LABEL"))
+RAWCACorr::RAWCACorr () : FoldableToolPanel(this, "rawcacorrection", M("TP_RAWCACORR_LABEL"))
 {
     auto m = ProcEventMapper::getInstance();
     EvPreProcessCAAutoiterations = m->newEvent(DARKFRAME, "HISTORY_MSG_RAWCACORR_AUTOIT");
@@ -43,24 +47,18 @@ RAWCACorr::RAWCACorr () : FoldableToolPanel(this, "rawcacorrection", M("TP_CHROM
     caAutoiterations->setAdjusterListener (this);
     caAutoiterations->set_tooltip_markup(M("TP_RAWCACORR_AUTOIT_TOOLTIP"));
 
-    if (caAutoiterations->delay < options.adjusterMaxDelay) {
-        caAutoiterations->delay = options.adjusterMaxDelay;
-    }
+    caAutoiterations->setDelay(std::max(options.adjusterMinDelay, options.adjusterMaxDelay));
 
     caRed = Gtk::manage(new Adjuster (M("TP_RAWCACORR_CARED"), -4.0, 4.0, 0.1, 0, icaredL, icaredR));
     caRed->setAdjusterListener (this);
 
-    if (caRed->delay < options.adjusterMaxDelay) {
-        caRed->delay = options.adjusterMaxDelay;
-    }
+    caRed->setDelay(std::max(options.adjusterMinDelay, options.adjusterMaxDelay));
 
     caRed->show();
     caBlue = Gtk::manage(new Adjuster (M("TP_RAWCACORR_CABLUE"), -8.0, 8.0, 0.1, 0, icablueL, icablueR));
     caBlue->setAdjusterListener (this);
 
-    if (caBlue->delay < options.adjusterMaxDelay) {
-        caBlue->delay = options.adjusterMaxDelay;
-    }
+    caBlue->setDelay(std::max(options.adjusterMinDelay, options.adjusterMaxDelay));
 
     caBlue->show();
 
@@ -138,10 +136,6 @@ void RAWCACorr::adjusterChanged(Adjuster* a, double newval)
             listener->panelChanged (EvPreProcessCABlue,  value );
         }
     }
-}
-
-void RAWCACorr::adjusterAutoToggled(Adjuster* a, bool newval)
-{
 }
 
 void RAWCACorr::checkBoxToggled (CheckBox* c, CheckValue newval)

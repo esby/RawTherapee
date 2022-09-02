@@ -14,25 +14,29 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include "dfmanager.h"
-#include "../rtgui/options.h"
-#include <giomm.h>
-#include "../rtgui/guiutils.h"
-#include "rawimage.h"
+
 #include <sstream>
 #include <iostream>
 #include <cstdio>
-#include "imagedata.h"
+#include <giomm.h>
 #include <glibmm/ustring.h>
+
+#include "dfmanager.h"
+#include "../rtgui/options.h"
+#include "rawimage.h"
+#include "imagedata.h"
+#include "utils.h"
 
 namespace rtengine
 {
 
-extern const Settings* settings;
-
 // *********************** class dfInfo **************************************
+dfInfo::~dfInfo()
+{
+    delete ri;
+}
 
 inline dfInfo& dfInfo::operator =(const dfInfo &o)
 {
@@ -219,10 +223,14 @@ void dfInfo::updateBadPixelList( RawImage *df )
     if( df->getSensorType() == ST_BAYER || df->getSensorType() == ST_FUJI_XTRANS ) {
         std::vector<badPix> badPixelsTemp;
 
+#ifdef _OPENMP
         #pragma omp parallel
+#endif
         {
             std::vector<badPix> badPixelsThread;
+#ifdef _OPENMP
             #pragma omp for nowait
+#endif
 
             for( int row = 2; row < df->get_height() - 2; row++)
                 for( int col = 2; col < df->get_width() - 2; col++) {
@@ -231,11 +239,13 @@ void dfInfo::updateBadPixelList( RawImage *df )
                                  df->data[row + 2][col - 2] + df->data[row + 2][col] + df->data[row + 2][col + 2]);
 
                     if( df->data[row][col] > m * threshold ) {
-                        badPixelsThread.push_back( badPix(col, row) );
+                        badPixelsThread.emplace_back(col, row);
                     }
                 }
 
+#ifdef _OPENMP
             #pragma omp critical
+#endif
             badPixelsTemp.insert(badPixelsTemp.end(), badPixelsThread.begin(), badPixelsThread.end());
         }
         badPixels.insert(badPixels.end(), badPixelsTemp.begin(), badPixelsTemp.end());
@@ -251,7 +261,7 @@ void dfInfo::updateBadPixelList( RawImage *df )
                 }
 
                 if( df->data[row][3 * col] > m[0]*threshold || df->data[row][3 * col + 1] > m[1]*threshold || df->data[row][3 * col + 2] > m[2]*threshold) {
-                    badPixels.push_back( badPix(col, row) );
+                    badPixels.emplace_back(col, row);
                 }
             }
     }
@@ -264,8 +274,11 @@ void dfInfo::updateBadPixelList( RawImage *df )
 
 // ************************* class DFManager *********************************
 
-void DFManager::init( Glib::ustring pathname )
+void DFManager::init(const Glib::ustring& pathname)
 {
+    if (pathname.empty()) {
+        return;
+    }
     std::vector<Glib::ustring> names;
 
     auto dir = Gio::File::create_for_path (pathname);
@@ -319,8 +332,8 @@ void DFManager::init( Glib::ustring pathname )
             } else {
                 printf( "%s: MEAN of \n    ", i.key().c_str());
 
-                for( std::list<Glib::ustring>::iterator iter = i.pathNames.begin(); iter != i.pathNames.end(); ++iter  ) {
-                    printf( "%s, ", iter->c_str() );
+                for(std::list<Glib::ustring>::iterator path = i.pathNames.begin(); path != i.pathNames.end(); ++path) {
+                    printf("%s, ", path->c_str());
                 }
 
                 printf("\n");
@@ -354,7 +367,7 @@ dfInfo* DFManager::addFileInfo (const Glib::ustring& filename, bool pool)
 
         auto info = file->query_info("standard::name,standard::type,standard::is-hidden");
 
-        if (!info && info->get_file_type() == Gio::FILE_TYPE_DIRECTORY) {
+        if (!info || info->get_file_type() == Gio::FILE_TYPE_DIRECTORY) {
             return nullptr;
         }
 
@@ -463,7 +476,7 @@ dfInfo* DFManager::find( const std::string &mak, const std::string &mod, int iso
             }
         }
 
-        return bestD != INFINITY ? &(bestMatch->second) : nullptr ;
+        return bestD != RT_INFINITY ? &(bestMatch->second) : nullptr ;
     }
 }
 
@@ -527,7 +540,7 @@ std::vector<badPix> *DFManager::getHotPixels ( const std::string &mak, const std
 
 int DFManager::scanBadPixelsFile( Glib::ustring filename )
 {
-    FILE *file = fopen( filename.c_str(), "r" );
+    FILE *file = ::fopen( filename.c_str(), "r" );
 
     if( !file ) {
         return false;
@@ -557,12 +570,12 @@ int DFManager::scanBadPixelsFile( Glib::ustring filename )
         if( numparms == 1 ) { // only one number in first line means, that this is the offset.
             offset = x;
         } else if(numparms == 2) {
-            bp.push_back( badPix(x + offset, y + offset) );
+            bp.emplace_back(x + offset, y + offset);
         }
 
         while( fgets(line, sizeof(line), file ) ) {
             if( sscanf(line, "%d %d", &x, &y) == 2 ) {
-                bp.push_back( badPix(x + offset, y + offset) );
+                bp.emplace_back(x + offset, y + offset);
             }
         }
     }
@@ -583,7 +596,7 @@ std::vector<badPix> *DFManager::getBadPixels ( const std::string &mak, const std
     bool found = false;
 
     if( !serial.empty() ) {
-        // search with sreial number first
+        // search with serial number first
         std::ostringstream s;
         s << mak << " " << mod << " " << serial;
         iter = bpList.find( s.str() );

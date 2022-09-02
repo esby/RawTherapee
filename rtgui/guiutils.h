@@ -14,40 +14,46 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef __GUI_UTILS_
-#define __GUI_UTILS_
+#pragma once
 
+#include <functional>
 #include <map>
 
 #include <gtkmm.h>
 
 #include <cairomm/cairomm.h>
 
+#include "threadutils.h"
+
 #include "../rtengine/coord.h"
 #include "../rtengine/noncopyable.h"
-#include "../rtengine/rtengine.h"
 
-#include "rtimage.h"
+namespace rtengine
+{
 
-// for convenience...
-#include "pathutils.h"
+namespace procparams
+{
 
-#include <sstream>
-#include <iostream>
-#include "rtdef.h"
+class ProcParams;
+
+struct CropParams;
+
+}
+
+}
 
 
 Glib::ustring escapeHtmlChars(const Glib::ustring &src);
 Glib::ustring getHtmlColor(Gdk::RGBA rgba);
 bool removeIfThere (Gtk::Container* cont, Gtk::Widget* w, bool increference = true);
-void thumbInterp (const unsigned char* src, int sw, int sh, unsigned char* dst, int dw, int dh);
 bool confirmOverwrite (Gtk::Window& parent, const std::string& filename);
 void writeFailed (Gtk::Window& parent, const std::string& filename);
 void drawCrop (Cairo::RefPtr<Cairo::Context> cr, int imx, int imy, int imw, int imh, int startx, int starty, double scale, const rtengine::procparams::CropParams& cparams, bool drawGuide = true, bool useBgColor = true, bool fullImageVisible = true);
 gboolean acquireGUI(void* data);
 void setExpandAlignProperties(Gtk::Widget *widget, bool hExpand, bool vExpand, enum Gtk::Align hAlign, enum Gtk::Align vAlign);
+Gtk::Border getPadding(const Glib::RefPtr<Gtk::StyleContext> style);
 
 class IdleRegister final :
     public rtengine::NonCopyable
@@ -55,14 +61,13 @@ class IdleRegister final :
 public:
     ~IdleRegister();
 
-    void add(GSourceFunc function, gpointer data, gint priority = G_PRIORITY_DEFAULT_IDLE);
+    void add(std::function<bool ()> function, gint priority = G_PRIORITY_DEFAULT_IDLE);
     void destroy();
 
 private:
     struct DataWrapper {
         IdleRegister* const self;
-        GSourceFunc function;
-        gpointer data;
+        std::function<bool ()> function;
     };
 
     std::map<const DataWrapper*, guint> ids;
@@ -87,7 +92,7 @@ private:
  *     }
  *   </code>
  */
-class GThreadLock
+class GThreadLock final
 {
 public:
     GThreadLock()
@@ -105,7 +110,7 @@ public:
  *
  * Will relock on destruction.
  */
-class GThreadUnLock
+class GThreadUnLock final
 {
 public:
     GThreadUnLock()
@@ -120,7 +125,7 @@ public:
 
 #pragma GCC diagnostic pop
 
-class ConnectionBlocker
+class ConnectionBlocker final
 {
 public:
     explicit ConnectionBlocker (Gtk::Widget *associatedWidget, sigc::connection& connection) : connection (associatedWidget ? &connection : nullptr), wasBlocked(false)
@@ -147,7 +152,7 @@ private:
 /**
  * @brief Glue box to control visibility of the MyExpender's content ; also handle the frame around it
  */
-class ExpanderBox: public Gtk::EventBox
+class ExpanderBox final : public Gtk::EventBox
 {
 private:
     Gtk::Container *pC;
@@ -180,17 +185,17 @@ public:
  *
  * Warning: once you've instantiated this class with a text label or a widget label, you won't be able to revert to the other solution.
  */
-class MyExpander : public Gtk::VBox
+class MyExpander final : public Gtk::Box
 {
 public:
     typedef sigc::signal<void> type_signal_enabled_toggled;
 private:
     type_signal_enabled_toggled message;
-    static Glib::RefPtr<Gdk::Pixbuf> inconsistentPBuf; /// "inconsistent" image, displayed when useEnabled is true ; in this case, nothing will tell that an expander is opened/closed
-    static Glib::RefPtr<Gdk::Pixbuf> enabledPBuf;      ///      "enabled" image, displayed when useEnabled is true ; in this case, nothing will tell that an expander is opened/closed
-    static Glib::RefPtr<Gdk::Pixbuf> disabledPBuf;     ///     "disabled" image, displayed when useEnabled is true ; in this case, nothing will tell that an expander is opened/closed
-    static Glib::RefPtr<Gdk::Pixbuf> openedPBuf;       ///       "opened" image, displayed when useEnabled is false
-    static Glib::RefPtr<Gdk::Pixbuf> closedPBuf;       ///       "closed" image, displayed when useEnabled is false
+    static Glib::RefPtr<RTImage> inconsistentImage; /// "inconsistent" image, displayed when useEnabled is true ; in this case, nothing will tell that an expander is opened/closed
+    static Glib::RefPtr<RTImage> enabledImage;      ///      "enabled" image, displayed when useEnabled is true ; in this case, nothing will tell that an expander is opened/closed
+    static Glib::RefPtr<RTImage> disabledImage;     ///     "disabled" image, displayed when useEnabled is true ; in this case, nothing will tell that an expander is opened/closed
+    static Glib::RefPtr<RTImage> openedImage;       ///       "opened" image, displayed when useEnabled is false
+    static Glib::RefPtr<RTImage> closedImage;       ///       "closed" image, displayed when useEnabled is false
     bool enabled;               /// Enabled feature (default to true)
     bool inconsistent;          /// True if the enabled button is inconsistent
     Gtk::EventBox *titleEvBox;  /// EventBox of the title, to get a connector from it
@@ -201,6 +206,8 @@ private:
     bool flushEvent;            /// Flag to control the weird event mechanism of Gtk (please prove me wrong!)
     ExpanderBox* expBox;        /// Frame that includes the child and control its visibility
     Gtk::EventBox *imageEvBox;  /// Enable/Disable or Open/Close arrow event box
+
+    using Gtk::Container::add;
 
     /// Triggered on opened/closed event
     bool on_toggle(GdkEventButton* event);
@@ -216,7 +223,7 @@ private:
 protected:
     Gtk::Container* child;      /// Gtk::Contained to display below the expander's title
     Gtk::Widget* headerWidget;  /// Widget to display in the header, next to the arrow image ; can be NULL if the "string" version of the ctor has been used
-    Gtk::Image* statusImage;    /// Image to display the opened/closed status (if useEnabled is false) of the enabled/disabled status (if useEnabled is true)
+    RTImage* statusImage;       /// Image to display the opened/closed status (if useEnabled is false) of the enabled/disabled status (if useEnabled is true)
     Gtk::Label* label;          /// Text to display in the header, next to the arrow image ; can be NULL if the "widget" version of the ctor has been used
     bool useEnabled;            /// Set whether to handle an enabled/disabled feature and display the appropriate images
 
@@ -230,7 +237,7 @@ public:
      */
     MyExpander(bool useEnabled, Glib::ustring titleLabel, ToolPanel* _panel);
 
-    /** Create a custom expander with a a custom - and responsive - widget
+    /** Create a custom expander with a custom - and responsive - widget
      * @param useEnabled Set whether to handle an enabled/disabled toggle button and display the appropriate image
      * @param titleWidget A widget to display in the header. Warning: you won't be able to switch to a string label.
      */
@@ -242,6 +249,7 @@ public:
     ToolPanel* getPanel();
     /// Initialize the class by loading the images
     static void init();
+    static void cleanup();
 
     Glib::SignalProxy1< bool, GdkEventButton* > signal_button_release_event()
     {
@@ -300,10 +308,11 @@ public:
 /**
  * @brief subclass of Gtk::ScrolledWindow in order to handle the scrollwheel
  */
-class MyScrolledWindow : public Gtk::ScrolledWindow
+class MyScrolledWindow final : public Gtk::ScrolledWindow
 {
 
     bool on_scroll_event (GdkEventScroll* event) override;
+    void get_preferred_width_vfunc (int& minimum_width, int& natural_width) const override;
     void get_preferred_height_vfunc (int& minimum_height, int& natural_height) const override;
     void get_preferred_height_for_width_vfunc (int width, int &minimum_height, int &natural_height) const override;
 
@@ -314,11 +323,11 @@ public:
 /**
  * @brief subclass of Gtk::ScrolledWindow in order to handle the large toolbars (wider than available space)
  */
-class MyScrolledToolbar : public Gtk::ScrolledWindow
+class MyScrolledToolbar final : public Gtk::ScrolledWindow
 {
 
     bool on_scroll_event (GdkEventScroll* event) override;
-    void get_preferred_height (int &minimumHeight, int &naturalHeight);
+    void get_preferred_height_vfunc (int& minimum_height, int& natural_height) const override;
 
 public:
     MyScrolledToolbar();
@@ -344,7 +353,7 @@ public:
 /**
  * @brief subclass of Gtk::ComboBoxText in order to handle the scrollwheel
  */
-class MyComboBoxText : public Gtk::ComboBoxText
+class MyComboBoxText final : public Gtk::ComboBoxText
 {
     int naturalWidth, minimumWidth;
     sigc::connection myConnection;
@@ -364,7 +373,7 @@ public:
 /**
  * @brief subclass of Gtk::SpinButton in order to handle the scrollwheel
  */
-class MySpinButton : public Gtk::SpinButton
+class MySpinButton final : public Gtk::SpinButton
 {
 
 protected:
@@ -377,25 +386,27 @@ public:
 };
 
 /**
- * @brief subclass of Gtk::HScale in order to handle the scrollwheel
+ * @brief subclass of Gtk::Scale in order to handle the scrollwheel
  */
-class MyHScale : public Gtk::HScale
+class MyHScale final : public Gtk::Scale
 {
 
+protected:
     bool on_scroll_event (GdkEventScroll* event) override;
     bool on_key_press_event (GdkEventKey* event) override;
+
 };
 
 /**
  * @brief subclass of Gtk::FileChooserButton in order to handle the scrollwheel
  */
-class MyFileChooserButton: public Gtk::Button {
+class MyFileChooserButton final : public Gtk::Button {
 private:
     void show_chooser();
 
     Glib::ustring title_;
     Gtk::FileChooserAction action_;
-    Gtk::HBox box_;
+    Gtk::Box box_;
     Gtk::Label lbl_;
     std::string filename_;
     std::string current_folder_;
@@ -413,11 +424,11 @@ protected:
     void set_none();
 
 public:
-    MyFileChooserButton(const Glib::ustring &title, Gtk::FileChooserAction action=Gtk::FILE_CHOOSER_ACTION_OPEN);
+    explicit MyFileChooserButton(const Glib::ustring &title, Gtk::FileChooserAction action=Gtk::FILE_CHOOSER_ACTION_OPEN);
 
     sigc::signal<void> &signal_selection_changed();
     sigc::signal<void> &signal_file_set();
-    
+
     std::string get_filename() const;
     bool set_filename(const std::string &filename);
 
@@ -425,7 +436,7 @@ public:
     void remove_filter(const Glib::RefPtr<Gtk::FileFilter> &filter);
     void set_filter(const Glib::RefPtr<Gtk::FileFilter> &filter);
     std::vector<Glib::RefPtr<Gtk::FileFilter>> list_filters();
-    
+
     bool set_current_folder(const std::string &filename);
     std::string get_current_folder() const;
 
@@ -477,14 +488,14 @@ typedef enum RTNav {
 /**
  * @brief Handle the switch between text and image to be displayed in the HBox (to be used in a button/toolpanel)
  */
-class TextOrIcon : public Gtk::HBox
+class TextOrIcon final : public Gtk::Box
 {
 
 public:
     TextOrIcon (const Glib::ustring &filename, const Glib::ustring &labelTx, const Glib::ustring &tooltipTx);
 };
 
-class MyImageMenuItem : public Gtk::MenuItem
+class MyImageMenuItem final : public Gtk::MenuItem
 {
 private:
     Gtk::Grid *box;
@@ -497,7 +508,7 @@ public:
     const Gtk::Label* getLabel () const;
 };
 
-class MyProgressBar : public Gtk::ProgressBar
+class MyProgressBar final : public Gtk::ProgressBar
 {
 private:
     int w;
@@ -516,7 +527,7 @@ public:
 /**
  * @brief Define a gradient milestone
  */
-class GradientMilestone
+class GradientMilestone final
 {
 public:
     double position;
@@ -657,5 +668,3 @@ inline Gtk::Window& getToplevelWindow (Gtk::Widget* widget)
 {
     return *static_cast<Gtk::Window*> (widget->get_toplevel ());
 }
-
-#endif

@@ -14,14 +14,11 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "sensorxtrans.h"
 #include "guiutils.h"
 #include "rtimage.h"
-
-using namespace rtengine;
-using namespace rtengine::procparams;
 
 SensorXTrans::SensorXTrans () : FoldableToolPanel(this, "sensorxtrans", M("TP_RAW_SENSOR_XTRANS_LABEL"))
 {

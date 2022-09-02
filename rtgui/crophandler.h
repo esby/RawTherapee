@@ -14,21 +14,22 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef __CROPHANDLER__
-#define __CROPHANDLER__
+#pragma once
 
 #include <atomic>
+#include <memory>
 #include <vector>
 
 #include <gtkmm.h>
 
-#include "../rtengine/rtengine.h"
-
-#include "edit.h"
 #include "lockablecolorpicker.h"
 #include "threadutils.h"
+
+#include "../rtengine/rtengine.h"
+
+class EditSubscriber;
 
 class CropDisplayHandler
 {
@@ -105,8 +106,8 @@ public:
     void    update  ();
 
 
-    rtengine::procparams::CropParams cropParams;
-    rtengine::procparams::ColorManagementParams colorParams;
+    const std::unique_ptr<rtengine::procparams::CropParams> cropParams;
+    const std::unique_ptr<rtengine::procparams::ColorManagementParams> colorParams;
     Glib::RefPtr<Gdk::Pixbuf> cropPixbuf;     // image displayed on monitor, using the monitor profile (i.e. lab to monitor profile)
     Glib::RefPtr<Gdk::Pixbuf> cropPixbuftrue; // internal image in output color space for analysis (i.e. lab to either Working profile or Output profile, depending on options.rtSettings.HistogramWorking)
 
@@ -136,5 +137,3 @@ private:
 
     IdleRegister idle_register;
 };
-
-#endif

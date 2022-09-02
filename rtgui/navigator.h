@@ -14,23 +14,28 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef _NAVIGATOR_
-#define _NAVIGATOR_
+#pragma once
 
 #include <gtkmm.h>
-#include "previewwindow.h"
-#include "pointermotionlistener.h"
-#include "options.h"
-#include "../rtengine/iccstore.h"
 
-class Navigator : public Gtk::Frame, public PointerMotionListener
+#include "delayed.h"
+#include "options.h"
+#include "pointermotionlistener.h"
+
+class PreviewWindow;
+
+class Navigator final :
+    public Gtk::Frame,
+    public PointerMotionListener
 {
 
     typedef const double (*TMatrix)[3];
 
 private:
+    DelayedCall<bool, Glib::ustring, Glib::ustring, int, int, int, int, int, bool> pointer_moved_delayed_call;
+
     Options::NavigatorUnit currentRGBUnit;
     Options::NavigatorUnit currentHSVUnit;
     void cycleUnitsRGB (GdkEventButton *event);
@@ -51,7 +56,8 @@ protected:
 public:
     PreviewWindow* previewWindow;
 
-    Navigator ();
+    Navigator();
+    ~Navigator() override;
 
     // pointermotionlistener interface
     //  void pointerMoved (bool validPos, int x, int y, int r, int g, int b);
@@ -63,5 +69,3 @@ public:
     void getLABText (float l, float a, float b, Glib::ustring &sL, Glib::ustring &sA, Glib::ustring &sB) override;
 
 };
-
-#endif

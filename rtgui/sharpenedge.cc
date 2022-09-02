@@ -14,12 +14,16 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include "sharpenedge.h"
-#include "guiutils.h"
-#include <sstream>
 #include <cmath>
+#include <sstream>
+
+#include "sharpenedge.h"
+
+#include "guiutils.h"
+#include "options.h"
+#include "../rtengine/procparams.h"
 
 using namespace rtengine;
 using namespace rtengine::procparams;
@@ -31,16 +35,12 @@ SharpenEdge::SharpenEdge () : FoldableToolPanel(this, "sharpenedge", M("TP_SHARP
     passes = Gtk::manage(new Adjuster (M("TP_SHARPENEDGE_PASSES"), 1, 4, 1, 2));
     passes->setAdjusterListener (this);
 
-    if (passes->delay < options.adjusterMaxDelay) {
-        passes->delay = options.adjusterMaxDelay;
-    }
+    passes->setDelay(std::max(options.adjusterMinDelay, options.adjusterMaxDelay));
 
     amount = Gtk::manage(new Adjuster (M("TP_SHARPENEDGE_AMOUNT"), 0, 100, 1, 50));
     amount->setAdjusterListener (this);
 
-    if (amount->delay < options.adjusterMaxDelay) {
-        amount->delay = options.adjusterMaxDelay;
-    }
+    amount->setDelay(std::max(options.adjusterMinDelay, options.adjusterMaxDelay));
 
     threechannels = Gtk::manage(new Gtk::CheckButton((M("TP_SHARPENEDGE_THREE"))));// L + a + b
     threechannels->set_active (false);
@@ -140,10 +140,6 @@ void SharpenEdge::adjusterChanged(Adjuster* a, double newval)
             listener->panelChanged (EvSharpenEdgeAmount, value );
         }
     }
-}
-
-void SharpenEdge::adjusterAutoToggled(Adjuster* a, bool newval)
-{
 }
 
 void SharpenEdge::setBatchMode(bool batchMode)

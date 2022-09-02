@@ -14,22 +14,28 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef __PREFERENCES_H__
-#define __PREFERENCES_H__
+#pragma once
+
+#include <vector>
 
 #include <gtkmm.h>
-#include "adjuster.h"
-#include "options.h"
-#include <vector>
-#include "rtwindow.h"
-#include "dynamicprofilepanel.h"
 
-class Preferences : public Gtk::Dialog, public ProfileStoreListener
+#include "dynamicprofilepanel.h"
+#include "options.h"
+#include "../rtengine/profilestore.h"
+
+class RTWindow;
+class Splash;
+
+class Preferences final :
+    public Gtk::Dialog,
+    public ProfileStoreListener
 {
 
-    class ExtensionColumns : public Gtk::TreeModel::ColumnRecord
+    class ExtensionColumns :
+        public Gtk::TreeModel::ColumnRecord
     {
     public:
         Gtk::TreeModelColumn<bool>  enabled;
@@ -95,6 +101,14 @@ class Preferences : public Gtk::Dialog, public ProfileStoreListener
     Gtk::RadioButton* edGimp;
     Gtk::RadioButton* edPS;
     Gtk::RadioButton* edOther;
+    
+    Gtk::RadioButton *editor_dir_temp;
+    Gtk::RadioButton *editor_dir_current;
+    Gtk::RadioButton *editor_dir_custom;
+    MyFileChooserButton *editor_dir_custom_path;
+    Gtk::CheckButton *editor_float32;
+    Gtk::CheckButton *editor_bypass_output_profile;
+    
     MyFileChooserButton* darkFrameDir;
     MyFileChooserButton* flatFieldDir;
     MyFileChooserButton* clutsDir;
@@ -111,6 +125,7 @@ class Preferences : public Gtk::Dialog, public ProfileStoreListener
     Gtk::CheckButton* prtBPC;
     Gtk::ComboBoxText* monProfile;
     Gtk::ComboBoxText* monIntent;
+    Gtk::CheckButton* mcie;
     Gtk::CheckButton* monBPC;
     Gtk::CheckButton* cbAutoMonProfile;
     //Gtk::CheckButton* cbAutocielab;
@@ -132,7 +147,7 @@ class Preferences : public Gtk::Dialog, public ProfileStoreListener
     Gtk::ComboBoxText* dnliss;
 
     Gtk::Frame* waveletFrame;
-    Gtk::HBox* waveletTileSizeHBox;
+    Gtk::Box* waveletTileSizeHBox;
     Gtk::Label* waveletTileSizeLabel;
     Gtk::ComboBoxText* waveletTileSizeCombo;
 
@@ -140,11 +155,18 @@ class Preferences : public Gtk::Dialog, public ProfileStoreListener
     Gtk::CheckButton* ctiffserialize;
     Gtk::ComboBoxText* curveBBoxPosC;
 
+    Gtk::ComboBoxText* complexitylocal;
+
+    Gtk::CheckButton* inspectorWindowCB;
+    Gtk::CheckButton* zoomOnScrollCB;
+
     Gtk::ComboBoxText* themeCBT;
     Gtk::FontButton* mainFontFB;
     Gtk::FontButton* colorPickerFontFB;
     Gtk::ColorButton* cropMaskColorCB;
     Gtk::ColorButton* navGuideColorCB;
+    Gtk::CheckButton* pseudoHiDPI;
+
 
     Gtk::SpinButton*   maxRecentFolders;
     Gtk::SpinButton*   maxThumbHeightSB;
@@ -161,6 +183,12 @@ class Preferences : public Gtk::Dialog, public ProfileStoreListener
 
     Gtk::SpinButton*  threadsSpinBtn;
     Gtk::SpinButton*  clutCacheSizeSB;
+    Gtk::CheckButton* measureCB;
+    Gtk::SpinButton*  chunkSizeAMSB;
+    Gtk::SpinButton*  chunkSizeCASB;
+    Gtk::SpinButton*  chunkSizeRCDSB;
+    Gtk::SpinButton*  chunkSizeRGBSB;
+    Gtk::SpinButton*  chunkSizeXTSB;
     Gtk::SpinButton*  maxInspectorBuffersSB;
     Gtk::ComboBoxText *thumbnailInspectorMode;
 
@@ -194,6 +222,7 @@ class Preferences : public Gtk::Dialog, public ProfileStoreListener
     Gtk::CheckButton* ckbFileBrowserToolbarSingleRow;
     Gtk::CheckButton* ckbShowFilmStripToolBar;
     Gtk::CheckButton* ckbHideTPVScrollbar;
+    Gtk::CheckButton* ckbshowtooltiplocallab;
 
     Gtk::CheckButton* ckbAutoSaveTpOpen;
     Gtk::Button* btnSaveTpOpenNow;
@@ -265,7 +294,7 @@ class Preferences : public Gtk::Dialog, public ProfileStoreListener
     void switchFontTo  (const Glib::ustring &newFontFamily, const int newFontSize);
     bool splashClosed (GdkEventAny* event);
 
-    int getThemeRowNumber (Glib::ustring& longThemeFName);
+    int getThemeRowNumber (const Glib::ustring& longThemeFName);
 
     void appendBehavList (Gtk::TreeModel::iterator& parent, Glib::ustring label, int id, bool set);
 
@@ -331,5 +360,3 @@ public:
 //    void selectICCProfileDir ();
 //    void selectMonitorProfile ();
 };
-
-#endif

@@ -14,16 +14,17 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef _HISTORY_
-#define _HISTORY_
+#pragma once
 
 #include <gtkmm.h>
-#include "../rtengine/rtengine.h"
+
+#include "paramsedited.h"
 #include "pparamschangelistener.h"
 #include "profilechangelistener.h"
-#include "paramsedited.h"
+
+#include "../rtengine/rtengine.h"
 
 class HistoryBeforeLineListener
 {
@@ -32,7 +33,7 @@ public:
     virtual void historyBeforeLineChanged(const rtengine::procparams::ProcParams& params) = 0;
 };
 
-class History : public Gtk::VBox, public PParamsChangeListener
+class History : public Gtk::Box, public PParamsChangeListener
 {
 
 public:
@@ -71,7 +72,7 @@ public:
     BookmarkColumns bookmarkColumns;
 
 protected:
-    Gtk::VPaned*            historyVPaned;
+    Gtk::Paned*            historyVPaned;
     Gtk::TreeView*          hTreeView;
     Glib::RefPtr<Gtk::ListStore> historyModel;
 
@@ -135,5 +136,3 @@ public:
         bmnum = 1;
     };
 };
-
-#endif

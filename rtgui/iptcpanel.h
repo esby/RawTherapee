@@ -14,22 +14,26 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef _IPTCPANEL_
-#define _IPTCPANEL_
+#pragma once
+
+#include <memory>
 
 #include <gtkmm.h>
-#include "toolpanel.h"
-#include "guiutils.h"
 
-class IPTCPanel : public Gtk::VBox, public ToolPanel
+#include "guiutils.h"
+#include "toolpanel.h"
+
+class IPTCPanel final :
+    public Gtk::Box,
+    public ToolPanel
 {
 
 private:
-    rtengine::procparams::IPTCPairs changeList;
-    rtengine::procparams::IPTCPairs defChangeList;
-    rtengine::procparams::IPTCPairs embeddedData;
+    const std::unique_ptr<rtengine::procparams::IPTCPairs> changeList;
+    const std::unique_ptr<rtengine::procparams::IPTCPairs> defChangeList;
+    const std::unique_ptr<rtengine::procparams::IPTCPairs> embeddedData;
 
     Gtk::TextView*  captionView;
     Glib::RefPtr<Gtk::TextBuffer> captionText;
@@ -89,5 +93,3 @@ public:
     void copyClicked    ();
     void pasteClicked   ();
 };
-
-#endif

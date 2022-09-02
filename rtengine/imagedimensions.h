@@ -14,7 +14,7 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #pragma once
@@ -29,6 +29,7 @@ public:
     int getWidth() const;
     int getHeight() const;
     int getSkip() const;
+    void set (int x, int y, int w, int h, int skip);
 
 private:
     int x;

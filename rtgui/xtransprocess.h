@@ -14,32 +14,40 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef _XTRANSPROCESS_H_
-#define _XTRANSPROCESS_H_
+#pragma once
 
 #include <gtkmm.h>
+
 #include "adjuster.h"
 #include "checkbox.h"
 #include "guiutils.h"
 #include "toolpanel.h"
 
-
-class XTransProcess : public ToolParamBlock, public AdjusterListener, public CheckBoxListener, public FoldableToolPanel, public rtengine::AutoContrastListener
+class XTransProcess final :
+    public ToolParamBlock,
+    public AdjusterListener,
+    public CheckBoxListener,
+    public FoldableToolPanel,
+    public rtengine::AutoContrastListener
 {
 
 protected:
 
     MyComboBoxText* method;
+    Gtk::Box* borderbox;
+    Adjuster* border;
     Adjuster* ccSteps;
-    Gtk::VBox *dualDemosaicOptions;
+    Gtk::Box* dualDemosaicOptions;
     Adjuster* dualDemosaicContrast;
     bool lastAutoContrast;
 
     int oldSelection;
     sigc::connection methodconn;
     IdleRegister idle_register;
+
+    rtengine::ProcEvent EvDemosaicBorder;
     rtengine::ProcEvent EvDemosaicAutoContrast;
     rtengine::ProcEvent EvDemosaicContrast;
 
@@ -58,7 +66,5 @@ public:
     void autoContrastChanged (double autoContrast) override;
     void adjusterChanged(Adjuster* a, double newval) override;
     void checkBoxToggled(CheckBox* c, CheckValue newval) override;
-    void adjusterAutoToggled(Adjuster* a, bool newval) override;
+    void adjusterAutoToggled(Adjuster* a) override;
 };
-
-#endif

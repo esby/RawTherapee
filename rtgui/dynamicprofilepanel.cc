@@ -14,7 +14,7 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include "dynamicprofilepanel.h"
@@ -22,6 +22,7 @@
 #include "../rtengine/profilestore.h"
 #include "../rtengine/rtengine.h"
 #include "../rtengine/dynamicprofile.h"
+#include "../rtengine/settings.h"
 #include <sstream>
 #include <iomanip>
 
@@ -34,7 +35,7 @@ DynamicProfilePanel::EditDialog::EditDialog (const Glib::ustring &title, Gtk::Wi
     Gtk::Dialog (title, parent)
 {
     profilepath_ = Gtk::manage (new ProfileStoreComboBox());
-    Gtk::HBox *hb = Gtk::manage (new Gtk::HBox());
+    Gtk::Box *hb = Gtk::manage (new Gtk::Box());
     hb->pack_start (*Gtk::manage (new Gtk::Label (M ("DYNPROFILEEDITOR_PROFILE"))), false, false, 4);
     hb->pack_start (*profilepath_, true, true, 2);
     get_content_area()->pack_start (*hb, Gtk::PACK_SHRINK, 4);
@@ -48,7 +49,7 @@ DynamicProfilePanel::EditDialog::EditDialog (const Glib::ustring &title, Gtk::Wi
     imagetype_->append(M("DYNPROFILEEDITOR_IMGTYPE_HDR"));
     imagetype_->append(M("DYNPROFILEEDITOR_IMGTYPE_PS"));
     imagetype_->set_active(0);
-    hb = Gtk::manage (new Gtk::HBox());
+    hb = Gtk::manage (new Gtk::Box());
     hb->pack_start (*Gtk::manage (new Gtk::Label (M ("EXIFFILTER_IMAGETYPE"))), false, false, 4);
     hb->pack_start (*imagetype_, true, true, 2);
     get_content_area()->pack_start (*hb, Gtk::PACK_SHRINK, 4);
@@ -194,7 +195,7 @@ void DynamicProfilePanel::EditDialog::set_ranges()
 void DynamicProfilePanel::EditDialog::add_range (const Glib::ustring &name,
         Gtk::SpinButton *&from, Gtk::SpinButton *&to)
 {
-    Gtk::HBox *hb = Gtk::manage (new Gtk::HBox());
+    Gtk::Box *hb = Gtk::manage (new Gtk::Box());
     hb->pack_start (*Gtk::manage (new Gtk::Label (name)), false, false, 4);
     from = Gtk::manage (new Gtk::SpinButton());
     to = Gtk::manage (new Gtk::SpinButton());
@@ -209,7 +210,7 @@ void DynamicProfilePanel::EditDialog::add_range (const Glib::ustring &name,
 void DynamicProfilePanel::EditDialog::add_optional (const Glib::ustring &name, Gtk::CheckButton *&check, Gtk::Entry *&field)
 {
     check = Gtk::manage (new Gtk::CheckButton (name));
-    Gtk::HBox *hb = Gtk::manage (new Gtk::HBox());
+    Gtk::Box *hb = Gtk::manage (new Gtk::Box());
     hb->pack_start (*check, Gtk::PACK_SHRINK, 4);
     field = Gtk::manage (new Gtk::Entry());
     hb->pack_start (*field, true, true, 2);
@@ -230,10 +231,13 @@ DynamicProfilePanel::DynamicProfilePanel():
     button_edit_ (M ("DYNPROFILEEDITOR_EDIT")),
     button_delete_ (M ("DYNPROFILEEDITOR_DELETE"))
 {
+    set_orientation(Gtk::ORIENTATION_VERTICAL);
+    
     add (vbox_);
 
     treeview_.set_grid_lines (Gtk::TREE_VIEW_GRID_LINES_VERTICAL);
     scrolledwindow_.add (treeview_);
+    scrolledwindow_.set_vexpand();
 
     scrolledwindow_.set_policy (Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
 
@@ -615,7 +619,7 @@ void DynamicProfilePanel::save()
 
     if (!ProfileStore::getInstance()->storeRules()) {
         printf ("Error in saving dynamic profile rules\n");
-    } else if (options.rtSettings.verbose) {
+    } else if (rtengine::settings->verbose) {
         printf ("Saved %d dynamic profile rules\n", int (rules.size()));
     }
 }

@@ -14,10 +14,12 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include <set>
+#include "cachemanager.h"
+#include "filebrowserentry.h"
 #include "previewloader.h"
 #include "guiutils.h"
 #include "threadutils.h"
@@ -59,7 +61,7 @@ public:
         };
     */
     struct JobCompare {
-        bool operator()(const Job& lhs, const Job& rhs)
+        bool operator()(const Job& lhs, const Job& rhs) const
         {
             if ( lhs.dir_id_ == rhs.dir_id_ ) {
                 return lhs.dir_entry_ < rhs.dir_entry_;

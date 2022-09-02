@@ -14,15 +14,22 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef _MYFILE_
-#define _MYFILE_
+#pragma once
 
-#include <glib/gstdio.h>
 #include <cstdio>
 #include <cstring>
-#include "rtengine.h"
+
+#include <glib/gstdio.h>
+
+#include "opthelper.h"
+
+namespace rtengine
+{
+
+class ProgressListener;
+
 struct IMFILE {
     int fd;
     ssize_t pos;
@@ -47,28 +54,26 @@ IMFILE* fopen (const char* fname);
 IMFILE* gfopen (const char* fname);
 IMFILE* fopen (unsigned* buf, int size);
 void fclose (IMFILE* f);
-inline int ftell (IMFILE* f)
+inline long ftell (IMFILE* f)
 {
-
     return f->pos;
 }
 
 inline int feof (IMFILE* f)
 {
-
     return f->eof;
 }
 
-inline void fseek (IMFILE* f, int p, int how)
+inline void fseek (IMFILE* f, long p, int how)
 {
-    int fpos = f->pos;
+    ssize_t fpos = f->pos;
 
     if (how == SEEK_SET) {
         f->pos = p;
     } else if (how == SEEK_CUR) {
         f->pos += p;
     } else if (how == SEEK_END) {
-        if(p <= 0 && -p <= f->size) {
+        if (p <= 0 && -p <= f->size) {
             f->pos = f->size + p;
         }
         return;
@@ -100,13 +105,13 @@ inline int getc (IMFILE* f)
     return fgetc(f);
 }
 
-inline int fread (void* dst, int es, int count, IMFILE* f)
+inline int fread (void* dst, size_t es, size_t count, IMFILE* f)
 {
 
-    int s = es * count;
-    int avail = f->size - f->pos;
+    size_t s = es * count;
+    size_t avail = static_cast<size_t>(f->size) - static_cast<size_t>(f->pos);
 
-    if (s <= avail) {
+    if (static_cast<ssize_t>(s) <= static_cast<ssize_t>(avail)) {
         memcpy (dst, f->data + f->pos, s);
         f->pos += s;
 
@@ -135,5 +140,4 @@ inline unsigned char* fdata(int offset, IMFILE* f)
 int fscanf (IMFILE* f, const char* s ...);
 char* fgets (char* s, int n, IMFILE* f);
 
-#endif
-
+}

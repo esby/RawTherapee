@@ -14,7 +14,7 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "splash.h"
 
@@ -27,17 +27,15 @@ extern Glib::ustring creditsPath;
 extern Glib::ustring licensePath;
 extern Glib::ustring versionString;
 
-SplashImage::SplashImage ()
+SplashImage::SplashImage () : surface(RTImage::createImgSurfFromFile("splash.png"))
 {
-    pixbuf = RTImage::createFromFile ("splash.png");
 }
 
 bool SplashImage::on_draw(const ::Cairo::RefPtr< Cairo::Context> &cr)
 {
 
-    Glib::RefPtr<Gdk::Window> window = get_window();
-    Gdk::Cairo::set_source_pixbuf(cr, pixbuf);
-    cr->rectangle(0, 0, pixbuf->get_width(), pixbuf->get_height());
+    cr->set_source(surface, 0., 0.);
+    cr->rectangle(0, 0, surface->get_width(), surface->get_height());
     cr->fill();
 
     Cairo::FontOptions cfo;
@@ -58,7 +56,7 @@ bool SplashImage::on_draw(const ::Cairo::RefPtr< Cairo::Context> &cr)
     cr->set_source_rgb (0., 0., 0.);
     cr->set_line_width(3.);
     cr->set_line_join(Cairo::LINE_JOIN_ROUND);
-    cr->move_to (pixbuf->get_width() - w - 32, pixbuf->get_height() - h - 20);
+    cr->move_to (surface->get_width() - w - 32, surface->get_height() - h - 20);
     version->add_to_cairo_context (cr);
     cr->stroke_preserve();
     cr->set_source_rgb (1., 1., 1.);
@@ -76,12 +74,12 @@ Gtk::SizeRequestMode SplashImage::get_request_mode_vfunc () const
 
 void SplashImage::get_preferred_height_vfunc (int &minimum_height, int &natural_height) const
 {
-    minimum_height = natural_height = pixbuf ? pixbuf->get_height() : 100;
+    minimum_height = natural_height = surface ? surface->get_height() : 100 * RTScalable::getScale();
 }
 
 void SplashImage::get_preferred_width_vfunc (int &minimum_width, int &natural_width) const
 {
-    minimum_width = natural_width = pixbuf ? pixbuf->get_width() : 100;
+    minimum_width = natural_width = surface ? surface->get_width() : 100 * RTScalable::getScale();
 }
 
 void SplashImage::get_preferred_height_for_width_vfunc (int width, int &minimum_height, int &natural_height) const

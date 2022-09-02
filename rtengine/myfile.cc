@@ -14,12 +14,11 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "myfile.h"
 #include <cstdarg>
-#include <glibmm.h>
-
+#include "rtengine.h"
 // get mmap() sorted out
 #ifdef MYFILE_MMAP
 
@@ -71,7 +70,7 @@ int munmap(void *start, size_t length)
 
 #ifdef MYFILE_MMAP
 
-IMFILE* fopen (const char* fname)
+rtengine::IMFILE* rtengine::fopen (const char* fname)
 {
     int fd;
 
@@ -107,7 +106,7 @@ IMFILE* fopen (const char* fname)
     void* data = mmap(nullptr, stat_buffer.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
 
     if ( data == MAP_FAILED ) {
-        printf("no mmap\n");
+        printf("no mmap %s\n", fname);
         close(fd);
         return nullptr;
     }
@@ -124,13 +123,13 @@ IMFILE* fopen (const char* fname)
     return mf;
 }
 
-IMFILE* gfopen (const char* fname)
+rtengine::IMFILE* rtengine::gfopen (const char* fname)
 {
     return fopen(fname);
 }
 #else
 
-IMFILE* fopen (const char* fname)
+rtengine::IMFILE* rtengine::fopen (const char* fname)
 {
 
     FILE* f = g_fopen (fname, "rb");
@@ -153,7 +152,7 @@ IMFILE* fopen (const char* fname)
     return mf;
 }
 
-IMFILE* gfopen (const char* fname)
+rtengine::IMFILE* rtengine::gfopen (const char* fname)
 {
 
     FILE* f = g_fopen (fname, "rb");
@@ -177,7 +176,7 @@ IMFILE* gfopen (const char* fname)
 }
 #endif //MYFILE_MMAP
 
-IMFILE* fopen (unsigned* buf, int size)
+rtengine::IMFILE* rtengine::fopen (unsigned* buf, int size)
 {
 
     IMFILE* mf = new IMFILE;
@@ -191,7 +190,7 @@ IMFILE* fopen (unsigned* buf, int size)
     return mf;
 }
 
-void fclose (IMFILE* f)
+void rtengine::fclose (IMFILE* f)
 {
 #ifdef MYFILE_MMAP
 
@@ -208,7 +207,7 @@ void fclose (IMFILE* f)
     delete f;
 }
 
-int fscanf (IMFILE* f, const char* s ...)
+int rtengine::fscanf (IMFILE* f, const char* s ...)
 {
     // fscanf not easily wrapped since we have no terminating \0 at end
     // of file data and vsscanf() won't tell us how many characters that
@@ -254,7 +253,7 @@ int fscanf (IMFILE* f, const char* s ...)
 }
 
 
-char* fgets (char* s, int n, IMFILE* f)
+char* rtengine::fgets (char* s, int n, IMFILE* f)
 {
 
     if (f->pos >= f->size) {
@@ -271,7 +270,7 @@ char* fgets (char* s, int n, IMFILE* f)
     return s;
 }
 
-void imfile_set_plistener(IMFILE *f, rtengine::ProgressListener *plistener, double progress_range)
+void rtengine::imfile_set_plistener(IMFILE *f, rtengine::ProgressListener *plistener, double progress_range)
 {
     f->plistener = plistener;
     f->progress_range = progress_range;
@@ -279,7 +278,7 @@ void imfile_set_plistener(IMFILE *f, rtengine::ProgressListener *plistener, doub
     f->progress_current = 0;
 }
 
-void imfile_update_progress(IMFILE *f)
+void rtengine::imfile_update_progress(IMFILE *f)
 {
     if (!f->plistener || f->progress_current < f->progress_next) {
         return;

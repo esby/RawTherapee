@@ -14,10 +14,13 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "chmixer.h"
+
 #include "rtimage.h"
+
+#include "../rtengine/procparams.h"
 
 using namespace rtengine;
 using namespace rtengine::procparams;
@@ -44,7 +47,7 @@ ChMixer::ChMixer (): FoldableToolPanel(this, "chmixer", M("TP_CHMIXER_LABEL"), f
     red[1] = Gtk::manage (new Adjuster ("", -RANGE, RANGE, 0.1, 0, imgIcon[1]));
     red[2] = Gtk::manage (new Adjuster ("",  -RANGE, RANGE, 0.1, 0, imgIcon[2]));
 
-    Gtk::HSeparator* rsep = Gtk::manage (new Gtk::HSeparator ());
+    Gtk::Separator* rsep = Gtk::manage (new Gtk::Separator(Gtk::ORIENTATION_HORIZONTAL));
 
     pack_start (*rlabel);
 
@@ -63,7 +66,7 @@ ChMixer::ChMixer (): FoldableToolPanel(this, "chmixer", M("TP_CHMIXER_LABEL"), f
     green[1] = Gtk::manage (new Adjuster ("", -RANGE, RANGE, 0.1, 100, imgIcon[4]));
     green[2] = Gtk::manage (new Adjuster ("",  -RANGE, RANGE, 0.1, 0, imgIcon[5]));
 
-    Gtk::HSeparator* gsep = Gtk::manage (new Gtk::HSeparator ());
+    Gtk::Separator* gsep = Gtk::manage (new Gtk::Separator(Gtk::ORIENTATION_HORIZONTAL));
 
     pack_start (*glabel);
 
@@ -177,10 +180,6 @@ void ChMixer::adjusterChanged(Adjuster* a, double newval)
                               blue[0]->getValue(), blue[1]->getValue(), blue[2]->getValue());
         listener->panelChanged (EvChMixer, descr);
     }
-}
-
-void ChMixer::adjusterAutoToggled(Adjuster* a, bool newval)
-{
 }
 
 void ChMixer::enabledChanged()

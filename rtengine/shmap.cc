@@ -14,23 +14,54 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "shmap.h"
 #include "gauss.h"
+#include "imagefloat.h"
 #include "rtengine.h"
 #include "rt_math.h"
 #include "rawimagesource.h"
+#include "sleef.h"
 #include "jaggedarray.h"
 #undef THREAD_PRIORITY_NORMAL
 #include "opthelper.h"
 
+namespace {
+
+void fillLuminance(rtengine::Imagefloat* img, float** luminance, const float lumi[3], int W, int H) // fill with luminance
+{
+
+#ifdef _OPENMP
+    #pragma omp parallel for
+#endif
+
+    for (int i = 0; i < H; i++)
+        for (int j = 0; j < W; j++) {
+            luminance[i][j] = lumi[0] * std::max(img->r(i, j), 0.f) + lumi[1] * std::max(img->g(i, j), 0.f) + lumi[2] * std::max(img->b(i, j), 0.f);
+        }
+
+}
+
+void fillLuminanceL(float** L, float** luminance, int W, int H) // fill with luminance
+{
+
+#ifdef _OPENMP
+    #pragma omp parallel for
+#endif
+
+    for (int i = 0; i < H; i++)
+        for (int j = 0; j < W; j++) {
+            luminance[i][j] = std::max(L[i][j], 0.f) ;//we can put here some enhancements Gamma, compression data,...
+        }
+
+}
+
+}
 namespace rtengine
 {
 
-extern const Settings* settings;
-
-SHMap::SHMap (int w, int h, bool multiThread) : max_f(0.f), min_f(0.f), avg(0.f), W(w), H(h), multiThread(multiThread)
+SHMap::SHMap (int w, int h) : max_f(0.f), min_f(0.f), avg(0.f), W(w), H(h)
 {
 
     map = new float*[H];
@@ -51,62 +82,29 @@ SHMap::~SHMap ()
     delete [] map;
 }
 
-void SHMap::fillLuminance( Imagefloat * img, float **luminance, double lumi[3] ) // fill with luminance
-{
-
-#ifdef _OPENMP
-    #pragma omp parallel for
-#endif
-
-    for (int i = 0; i < H; i++)
-        for (int j = 0; j < W; j++) {
-            luminance[i][j] = lumi[0] * std::max(img->r(i, j), 0.f) + lumi[1] * std::max(img->g(i, j), 0.f) + lumi[2] * std::max(img->b(i, j), 0.f);
-        }
-
-}
-
-void SHMap::fillLuminanceL( float ** L, float **luminance) // fill with luminance
-{
-
-#ifdef _OPENMP
-    #pragma omp parallel for
-#endif
-
-    for (int i = 0; i < H; i++)
-        for (int j = 0; j < W; j++) {
-            luminance[i][j] = std::max(L[i][j], 0.f) ;//we can put here some enhancements Gamma, compression data,...
-        }
-
-}
-
 void SHMap::update (Imagefloat* img, double radius, double lumi[3], bool hq, int skip)
 {
 
+    const float lumif[3] = { static_cast<float>(lumi[0]), static_cast<float>(lumi[1]), static_cast<float>(lumi[2]) };
+
     if (!hq) {
-        fillLuminance( img, map, lumi);
+        fillLuminance(img, map, lumif, W, H);
 
-        float *buffer = nullptr;
-
-        if(radius > 40.) {
-            // When we pass another buffer to gaussianBlur, it will use iterated boxblur which is less prone to artifacts
-            buffer = new float[W * H];
-        }
+        const bool useBoxBlur = radius > 40.0; // boxblur is less prone to artifacts for large radi
 
 #ifdef _OPENMP
-        #pragma omp parallel
+        #pragma omp parallel if (!useBoxBlur)
 #endif
         {
-            gaussianBlur (map, map, W, H, radius, buffer);
+            gaussianBlur(map, map, W, H, radius, useBoxBlur);
         }
-
-        delete [] buffer;
     }
 
     else {
         //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         //experimental dirpyr shmap
 
-        float thresh = (100.f * radius); //1000;
+        float thresh = 100.0 * radius; //1000;
 
         // set up range function
         // calculate size of Lookup table. That's possible because from a value k for all i>=k rangefn[i] will be exp(-10)
@@ -149,7 +147,7 @@ void SHMap::update (Imagefloat* img, double radius, double lumi[3], bool hq, int
             dirpyrlo[1] = buffer;
         }
 
-        fillLuminance( img, dirpyrlo[0], lumi);
+        fillLuminance(img, dirpyrlo[0], lumif, W, H);
 
         scale = 1;
         int level = 0;
@@ -188,28 +186,18 @@ void SHMap::update (Imagefloat* img, double radius, double lumi[3], bool hq, int
             for (int j = 0; j < W; j++) {
                 _val = map[i][j];
 
-                if (_val < _min_f) {
-                    _min_f = _val;
-                }
+                _min_f = std::min(_min_f, _val);
+                _max_f = std::max(_max_f, _val);
 
-                if (_val > _max_f) {
-                    _max_f = _val;
-                }
-
-                _avg += _val;
+                _avg += static_cast<double>(_val);
             }
 
 #ifdef _OPENMP
         #pragma omp critical
 #endif
         {
-            if(_min_f < min_f ) {
-                min_f = _min_f;
-            }
-
-            if(_max_f > max_f ) {
-                max_f = _max_f;
-            }
+            min_f = std::min(min_f, _min_f);
+            max_f = std::max(max_f, _max_f);
         }
     }
     _avg /= ((H) * (W));
@@ -221,7 +209,7 @@ void SHMap::updateL (float** L, double radius, bool hq, int skip)
 {
 
     if (!hq) {
-        fillLuminanceL( L, map);
+        fillLuminanceL(L, map, W, H);
 #ifdef _OPENMP
         #pragma omp parallel
 #endif
@@ -235,7 +223,7 @@ void SHMap::updateL (float** L, double radius, bool hq, int skip)
     {
         //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         //experimental dirpyr shmap
-        float thresh = (100.f * radius); //1000;
+        float thresh = 100.0 * radius; //1000;
         int levrad; // = 16;
         levrad = 2; //for retinex - otherwise levrad = 16
         // set up range function
@@ -281,7 +269,7 @@ void SHMap::updateL (float** L, double radius, bool hq, int skip)
             dirpyrlo[1] = buffer;
         }
 
-        fillLuminanceL( L, dirpyrlo[0]);
+        fillLuminanceL(L, dirpyrlo[0], W, H);
 
         scale = 1;
         int level = 0;
@@ -320,28 +308,18 @@ void SHMap::updateL (float** L, double radius, bool hq, int skip)
             for (int j = 0; j < W; j++) {
                 _val = map[i][j];
 
-                if (_val < _min_f) {
-                    _min_f = _val;
-                }
+                _min_f = std::min(_min_f, _val);
+                _max_f = std::max(_max_f, _val);
 
-                if (_val > _max_f) {
-                    _max_f = _val;
-                }
-
-                _avg += _val;
+                _avg += static_cast<double>(_val);
             }
 
 #ifdef _OPENMP
         #pragma omp critical
 #endif
         {
-            if(_min_f < min_f ) {
-                min_f = _min_f;
-            }
-
-            if(_max_f > max_f ) {
-                max_f = _max_f;
-            }
+            min_f = std::min(min_f, _min_f);
+            max_f = std::max(max_f, _max_f);
         }
     }
     _avg /= ((H) * (W));
@@ -358,7 +336,7 @@ void SHMap::forceStat (float max_, float min_, float avg_)
     avg = avg_;
 }
 
-void SHMap::dirpyr_shmap(float ** data_fine, float ** data_coarse, int width, int height, LUTf & rangefn, int level, int scale)
+void SHMap::dirpyr_shmap(float ** data_fine, float ** data_coarse, int width, int height, const LUTf& rangefn, int level, int scale)
 {
     //scale is spacing of directional averaging weights
 

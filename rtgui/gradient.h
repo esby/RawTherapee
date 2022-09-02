@@ -1,23 +1,27 @@
 /*
  *  This file is part of RawTherapee.
  */
-#ifndef _GRADIENT_H_
-#define _GRADIENT_H_
+#pragma once
 
 #include <gtkmm.h>
-#include "adjuster.h"
-#include "toolpanel.h"
-#include "edit.h"
-#include "guiutils.h"
 
-class Gradient : public ToolParamBlock, public AdjusterListener, public FoldableToolPanel, public EditSubscriber
+#include "adjuster.h"
+#include "editcallbacks.h"
+#include "guiutils.h"
+#include "toolpanel.h"
+
+class Gradient final :
+    public ToolParamBlock,
+    public AdjusterListener,
+    public FoldableToolPanel,
+    public EditSubscriber
 {
 
 private:
     int lastObject;
 
 protected:
-    Gtk::HBox *editHBox;
+    Gtk::Box *editHBox;
     Gtk::ToggleButton* edit;
     Adjuster* degree;
     Adjuster* feather;
@@ -31,6 +35,7 @@ protected:
     sigc::connection editConn;
 
     void editToggled ();
+    void releaseEdit();
 
 public:
 
@@ -43,7 +48,6 @@ public:
     void setBatchMode   (bool batchMode) override;
 
     void adjusterChanged (Adjuster* a, double newval) override;
-    void adjusterAutoToggled(Adjuster* a, bool newval) override;
     void enabledChanged  () override;
     void setAdjusterBehavior (bool degreeadd, bool featheradd, bool strengthadd, bool centeradd);
     void trimValues          (rtengine::procparams::ProcParams* pp) override;
@@ -52,12 +56,10 @@ public:
     void setEditProvider (EditDataProvider* provider) override;
 
     // EditSubscriber interface
-    CursorShape getCursor(const int objectID) override;
-    bool mouseOver(const int modifierKey) override;
-    bool button1Pressed(const int modifierKey) override;
+    CursorShape getCursor(int objectID, int xPos, int yPos) const override;
+    bool mouseOver(int modifierKey) override;
+    bool button1Pressed(int modifierKey) override;
     bool button1Released() override;
-    bool drag1(const int modifierKey) override;
+    bool drag1(int modifierKey) override;
     void switchOffEditMode () override;
 };
-
-#endif

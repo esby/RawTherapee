@@ -4,8 +4,8 @@
 #ifdef _OPENMP
 #include <omp.h>
 #endif
-#include "sleef.c"
-#include "opthelper.h"
+#include "rt_algo.h"
+#include "sleef.h"
 
 #define DIAGONALS 5
 #define DIAGONALSP1 6
@@ -43,21 +43,13 @@ float *SparseConjugateGradient(void Ax(float *Product, float *x, void *Pass), fl
 
     //s is preconditionment of r. Without, direct to r.
     float *s = r;
-    double rs = 0.0; // use double precision for large summations
 
     if(Preconditioner != nullptr) {
         s = new float[n];
-
         Preconditioner(s, r, Pass);
     }
 
-#ifdef _OPENMP
-    #pragma omp parallel for reduction(+:rs)  // removed schedule(dynamic,10)
-#endif
-
-    for(int ii = 0; ii < n; ii++) {
-        rs += r[ii] * s[ii];
-    }
+    double rs = rtengine::accumulateProduct(r, s, n);
 
     //Search direction d.
     float *d = (buffer + n + 32);
@@ -78,22 +70,15 @@ float *SparseConjugateGradient(void Ax(float *Product, float *x, void *Pass), fl
 
     for(iterate = 0; iterate < MaximumIterates; iterate++) {
         //Get step size alpha, store ax while at it.
-        double ab = 0.0; // use double precision for large summations
         Ax(ax, d, Pass);
-#ifdef _OPENMP
-        #pragma omp parallel for reduction(+:ab)
-#endif
 
-        for(int ii = 0; ii < n; ii++) {
-            ab += d[ii] * ax[ii];
-        }
-
-        if(ab == 0.0f) {
+        double ab = rtengine::accumulateProduct(d, ax, n);
+        if(ab == 0.0) {
             break;    //So unlikely. It means perfectly converged or singular, stop either way.
         }
 
         ab = rs / ab;
-
+        float abf = ab;
         //Update x and r with this step size.
         double rms = 0.0; // use double precision for large summations
 #ifdef _OPENMP
@@ -101,15 +86,15 @@ float *SparseConjugateGradient(void Ax(float *Product, float *x, void *Pass), fl
 #endif
 
         for(int ii = 0; ii < n; ii++) {
-            x[ii] += ab * d[ii];
-            r[ii] -= ab * ax[ii]; //"Fast recursive formula", use explicit r = b - Ax occasionally?
-            rms += r[ii] * r[ii];
+            x[ii] += abf * d[ii];
+            r[ii] -= abf * ax[ii]; //"Fast recursive formula", use explicit r = b - Ax occasionally?
+            rms += rtengine::SQR<double>(r[ii]);
         }
 
         rms = sqrtf(rms / n);
 
         //Quit? This probably isn't the best stopping condition, but ok.
-        if(rms < RMSResidual) {
+        if(rms < static_cast<double>(RMSResidual)) {
             break;
         }
 
@@ -119,31 +104,16 @@ float *SparseConjugateGradient(void Ax(float *Product, float *x, void *Pass), fl
 
         //Get beta.
         ab = rs;
-        rs = 0.0f;
-
-#ifdef _OPENMP
-        #pragma omp parallel
-#endif
-        {
-#ifdef _OPENMP
-            #pragma omp for reduction(+:rs)
-#endif
-
-            for(int ii = 0; ii < n; ii++) {
-                rs += r[ii] * s[ii];
-            }
-
-        }
-
+        rs = rtengine::accumulateProduct(r, s, n);
         ab = rs / ab;
-
+        abf = ab;
         //Update search direction p.
 #ifdef _OPENMP
         #pragma omp parallel for
 #endif
 
         for(int ii = 0; ii < n; ii++) {
-            d[ii] = s[ii] + ab * d[ii];
+            d[ii] = s[ii] + abf * d[ii];
         }
 
 
@@ -238,7 +208,7 @@ bool MultiDiagonalSymmetricMatrix::CreateDiagonal(int index, int StartRow)
     return true;
 }
 
-inline int MultiDiagonalSymmetricMatrix::FindIndex(int StartRow)
+inline int MultiDiagonalSymmetricMatrix::FindIndex(int StartRow) const
 {
     //There's GOT to be a better way to do this. "Bidirectional map?"
     // Issue 1895 : Changed start of loop from zero to one
@@ -324,7 +294,9 @@ void MultiDiagonalSymmetricMatrix::VectorProduct(float* RESTRICT Product, float*
         }
 
 #endif
+#ifdef _OPENMP
         #pragma omp single
+#endif
         {
 #ifdef __SSE2__
 
@@ -399,13 +371,10 @@ bool MultiDiagonalSymmetricMatrix::CreateIncompleteCholeskyFactorization(int Max
 
     //How many diagonals in the decomposition?
     MaxFillAbove++; //Conceptually, now "fill" includes an existing diagonal. Simpler in the math that follows.
-    int j, mic, fp;
-    mic = 1;
-    fp = 1;
+    int mic = 1;
 
     for(int ii = 1; ii < m; ii++) {
-        fp = rtengine::min(StartRows[ii] - StartRows[ii - 1], MaxFillAbove);    //Guarunteed positive since StartRows must be created in increasing order.
-        mic = mic + fp;
+        mic += rtengine::min(StartRows[ii] - StartRows[ii - 1], MaxFillAbove);    //Guaranteed positive since StartRows must be created in increasing order.
     }
 
     //Initialize the decomposition - setup memory, start rows, etc.
@@ -419,7 +388,7 @@ bool MultiDiagonalSymmetricMatrix::CreateIncompleteCholeskyFactorization(int Max
 
     for(int ii = 1; ii < m; ii++) {
         //Set j to the number of diagonals to be created corresponding to a diagonal on this source matrix...
-        j = rtengine::min(StartRows[ii] - StartRows[ii - 1], MaxFillAbove);
+        int j = rtengine::min(StartRows[ii] - StartRows[ii - 1], MaxFillAbove);
 
         //...and create those diagonals. I want to take a moment to tell you about how much I love minimalistic loops: very much.
         while(j-- != 0)
@@ -489,7 +458,7 @@ bool MultiDiagonalSymmetricMatrix::CreateIncompleteCholeskyFactorization(int Max
         findmap[j] = FindIndex( icStartRows[j]);
     }
 
-    for(j = 0; j < n; j++) {
+    for(int j = 0; j < n; j++) {
         //Calculate d for this column.
         d[j] = Diagonals[0][j];
 
@@ -555,12 +524,11 @@ void MultiDiagonalSymmetricMatrix::CholeskyBackSolve(float* RESTRICT x, float* R
     float* RESTRICT  *d = IncompleteCholeskyFactorization->Diagonals;
     int* RESTRICT s = IncompleteCholeskyFactorization->StartRows;
     int M = IncompleteCholeskyFactorization->m, N = IncompleteCholeskyFactorization->n;
-    int i, j;
 
     if(M != DIAGONALSP1) {                  // can happen in theory
-        for(j = 0; j < N; j++) {
+        for(int j = 0; j < N; j++) {
             float sub = b[j];                   // using local var to reduce memory writes, gave a big speedup
-            i = 1;
+            int i = 1;
             int c = j - s[i];
 
             while(c >= 0) {
@@ -572,9 +540,9 @@ void MultiDiagonalSymmetricMatrix::CholeskyBackSolve(float* RESTRICT x, float* R
             x[j] = sub;                         // only one memory-write per j
         }
     } else {                               // that's the case almost every time
-        for(j = 0; j <= s[M - 1]; j++) {
+        for(int j = 0; j <= s[M - 1]; j++) {
             float sub = b[j];                   // using local var to reduce memory writes, gave a big speedup
-            i = 1;
+            int i = 1;
             int c = j - s[1];
 
             while(c >= 0) {
@@ -586,7 +554,7 @@ void MultiDiagonalSymmetricMatrix::CholeskyBackSolve(float* RESTRICT x, float* R
             x[j] = sub;                         // only one memory-write per j
         }
 
-        for(j = s[M - 1] + 1; j < N; j++) {
+        for(int j = s[M - 1] + 1; j < N; j++) {
             float sub = b[j];                   // using local var to reduce memory writes, gave a big speedup
 
             for(int i = DIAGONALSP1 - 1; i > 0; i--) { // using a constant upperbound allows the compiler to unroll this loop (gives a good speedup)
@@ -603,14 +571,15 @@ void MultiDiagonalSymmetricMatrix::CholeskyBackSolve(float* RESTRICT x, float* R
     #pragma omp parallel for
 #endif
 
-    for(j = 0; j < N; j++) {
+    for(int j = 0; j < N; j++) {
         x[j] = x[j] / d[0][j];
     }
 
     if(M != DIAGONALSP1) {                  // can happen in theory
+        int j = N;
         while(j-- > 0) {
             float sub = x[j];                   // using local var to reduce memory writes, gave a big speedup
-            i = 1;
+            int i = 1;
             int c = j + s[1];
 
             while(c < N) {
@@ -622,9 +591,9 @@ void MultiDiagonalSymmetricMatrix::CholeskyBackSolve(float* RESTRICT x, float* R
             x[j] = sub;                         // only one memory-write per j
         }
     } else {                                // that's the case almost every time
-        for(j = N - 1; j >= (N - 1) - s[M - 1]; j--) {
+        for(int j = N - 1; j >= (N - 1) - s[M - 1]; j--) {
             float sub = x[j];                   // using local var to reduce memory writes, gave a big speedup
-            i = 1;
+            int i = 1;
             int c = j + s[1];
 
             while(c < N) {
@@ -636,7 +605,7 @@ void MultiDiagonalSymmetricMatrix::CholeskyBackSolve(float* RESTRICT x, float* R
             x[j] = sub;                         // only one memory-write per j
         }
 
-        for(j = (N - 2) - s[M - 1]; j >= 0; j--) {
+        for(int j = (N - 2) - s[M - 1]; j >= 0; j--) {
             float sub = x[j];                   // using local var to reduce memory writes, gave a big speedup
 
             for(int i = DIAGONALSP1 - 1; i > 0; i--) { // using a constant upperbound allows the compiler to unroll this loop (gives a good speedup)
@@ -892,12 +861,12 @@ void EdgePreservingDecomposition::CompressDynamicRange(float *Source, float Scal
 #endif
 
         for(int ii = 0; ii < n - 3; ii += 4) {
-            _mm_storeu_ps( &Source[ii], xlogf(LVFU(Source[ii]) + epsv));
+            _mm_storeu_ps( &Source[ii], xlogf(vmaxf(LVFU(Source[ii]), ZEROV) + epsv));
         }
     }
 
     for(int ii = n - (n % 4); ii < n; ii++) {
-        Source[ii] = xlogf(Source[ii] + eps);
+        Source[ii] = xlogf(std::max(Source[ii], 0.f) + eps);
     }
 
 #else
@@ -906,7 +875,7 @@ void EdgePreservingDecomposition::CompressDynamicRange(float *Source, float Scal
 #endif
 
     for(int ii = 0; ii < n; ii++) {
-        Source[ii] = xlogf(Source[ii] + eps);
+        Source[ii] = xlogf(std::max(Source[ii], 0.f) + eps);
     }
 
 #endif
@@ -918,7 +887,7 @@ void EdgePreservingDecomposition::CompressDynamicRange(float *Source, float Scal
     float temp;
 
     if(DetailBoost > 0.f) {
-        float betemp = expf(-(2.f - DetailBoost + 0.694f)) - 1.f; //0.694 = log(2)
+        float betemp = expf(-(2.f - DetailBoost + 0.693147f)) - 1.f; //0.694 = log(2)
         temp = 1.2f * xlogf( -betemp);
     } else {
         temp = CompressionExponent - 1.0f;
@@ -941,7 +910,7 @@ void EdgePreservingDecomposition::CompressDynamicRange(float *Source, float Scal
             cev = xexpf(LVFU(Source[i]) + LVFU(u[i]) * (tempv)) - epsv;
             uev = xexpf(LVFU(u[i])) - epsv;
             sourcev = xexpf(LVFU(Source[i])) - epsv;
-            _mm_storeu_ps( &Source[i], cev + DetailBoostv * (sourcev - uev) );
+            _mm_storeu_ps( &Source[i], cev + DetailBoostv * (sourcev - uev));
         }
     }
 

@@ -14,19 +14,28 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef _LABCURVE_H_
-#define _LABCURVE_H_
+#pragma once
 
 #include <gtkmm.h>
-#include "adjuster.h"
-#include "toolpanel.h"
-#include "curveeditor.h"
-#include "curveeditorgroup.h"
-#include "colorprovider.h"
 
-class LCurve : public ToolParamBlock, public AdjusterListener, public FoldableToolPanel, public CurveListener, public ColorProvider
+#include "adjuster.h"
+#include "colorprovider.h"
+#include "curvelistener.h"
+#include "toolpanel.h"
+
+class CurveEditorGroup;
+class DiagonalCurveEditor;
+class EditDataProvider;
+class FlatCurveEditor;
+
+class LCurve final :
+    public ToolParamBlock,
+    public AdjusterListener,
+    public FoldableToolPanel,
+    public CurveListener,
+    public ColorProvider
 {
 
 protected:
@@ -44,7 +53,7 @@ protected:
     FlatCurveEditor*   lhshape;
     FlatCurveEditor*   hhshape;
     Gtk::Label* labmdh;
-    Gtk::HBox* dhbox;
+    Gtk::Box* dhbox;
 
     DiagonalCurveEditor* clshape;
     DiagonalCurveEditor* cdshape;
@@ -75,7 +84,6 @@ public:
 
     void curveChanged (CurveEditor* ce) override;
     void adjusterChanged (Adjuster* a, double newval) override;
-    void adjusterAutoToggled(Adjuster* a, bool newval) override;
     void avoidcolorshift_toggled ();
     void lcredsk_toggled();
 
@@ -96,5 +104,3 @@ public:
 
     void enabledChanged() override;
 };
-
-#endif

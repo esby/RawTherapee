@@ -14,7 +14,7 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include "clipboard.h"
@@ -32,6 +32,8 @@
 #include "curveeditor.h"
 #include "flatcurveeditorsubgroup.h"
 #include "rtimage.h"
+#include "options.h"
+#include "popuptogglebutton.h"
 
 #include "../rtengine/curves.h"
 
@@ -554,6 +556,13 @@ void FlatCurveEditorSubGroup::restoreDisplayedHistogram()
 
 }
 
+void FlatCurveEditorSubGroup::restoreLocallabBackground()
+{
+    if (parent->displayedCurve) {
+        CPointsCurve->updateLocallabBackground(parent->displayedCurve->locallabRef);
+    }
+}
+
 void FlatCurveEditorSubGroup::storeCurveValues (CurveEditor* ce, const std::vector<double>& p)
 {
     if (!p.empty()) {
@@ -625,6 +634,13 @@ bool FlatCurveEditorSubGroup::curveReset(CurveEditor *ce)
     }
 
     return true;
+}
+
+void FlatCurveEditorSubGroup::updateLocallabBackground(CurveEditor* ce)
+{
+    if (ce == parent->displayedCurve) {
+        CPointsCurve->updateLocallabBackground(ce->locallabRef);
+    }
 }
 
 /*void FlatCurveEditorSubGroup::updateBackgroundHistogram (CurveEditor* ce) {

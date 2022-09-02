@@ -1,18 +1,24 @@
 /*
  *  This file is part of RawTherapee.
  */
-#ifndef _COLORTONING_H_
-#define _COLORTONING_H_
+#pragma once
 
 #include <gtkmm.h>
+
 #include "adjuster.h"
-#include "toolpanel.h"
-#include "guiutils.h"
-#include "curveeditor.h"
-#include "curveeditorgroup.h"
-#include "thresholdadjuster.h"
 #include "colorprovider.h"
-#include "labgrid.h"
+#include "curvelistener.h"
+#include "guiutils.h"
+#include "thresholdadjuster.h"
+#include "toolpanel.h"
+
+#include "../rtengine/procparams.h"
+
+class CurveEditor;
+class CurveEditorGroup;
+class DiagonalCurveEditor;
+class FlatCurveEditor;
+class LabGrid;
 
 class ColorToning final :
     public ToolParamBlock,
@@ -32,7 +38,6 @@ public:
     void setDefaults           (const rtengine::procparams::ProcParams* defParams, const ParamsEdited* pedited = nullptr) override;
     void trimValues            (rtengine::procparams::ProcParams* pp) override;
     void adjusterChanged       (Adjuster* a, double newval) override;
-    void adjusterAutoToggled   (Adjuster* a, bool newval) override;
     void setAdjusterBehavior   (bool splitAdd, bool satThresholdAdd, bool satOpacityAdd, bool strprotectAdd, bool balanceAdd);
     void neutral_pressed       ();
     //void neutralCurves_pressed ();
@@ -74,8 +79,8 @@ private:
     void labRegionShow(int idx, bool list_only=false);
     void labRegionGet(int idx);
 
-    //Gtk::HSeparator* satLimiterSep;
-    Gtk::HSeparator* colorSep;
+    //Gtk::Separator* satLimiterSep;
+    Gtk::Separator* colorSep;
     CurveEditorGroup* colorCurveEditorG;
     CurveEditorGroup* opacityCurveEditorG;
     CurveEditorGroup* clCurveEditorG;
@@ -84,10 +89,10 @@ private:
     FlatCurveEditor* colorShape;
     DiagonalCurveEditor* clshape;
     DiagonalCurveEditor* cl2shape;
-    Gtk::HBox* ctbox;
+    Gtk::Box* ctbox;
     Gtk::Frame *p1Frame;
 
-    Gtk::VBox* chanMixerBox;
+    Gtk::Box* chanMixerBox;
     MyComboBoxText* method;
     sigc::connection methodconn;
     MyComboBoxText* twocolor;
@@ -111,7 +116,7 @@ private:
     Gtk::Image* irg;
 
     Gtk::Button* neutral;
-    Gtk::HBox* neutrHBox;
+    Gtk::Box* neutrHBox;
     int nextbw;
     int nextsatth;
     int nextsatpr;
@@ -142,7 +147,7 @@ private:
     rtengine::ProcEvent EvLabRegionShowMask;
     rtengine::ProcEvent EvLabRegionChannel;
 
-    Gtk::VBox *labRegionBox;
+    Gtk::Box* labRegionBox;
     Gtk::ListViewText *labRegionList;
     Gtk::Button *labRegionAdd;
     Gtk::Button *labRegionRemove;
@@ -160,11 +165,9 @@ private:
     FlatCurveEditor *labRegionLightnessMask;
     Adjuster *labRegionMaskBlur;
     Gtk::CheckButton *labRegionShowMask;
-    std::vector<rtengine::ColorToningParams::LabCorrectionRegion> labRegionData;
+    std::vector<rtengine::procparams::ColorToningParams::LabCorrectionRegion> labRegionData;
     int labRegionSelected;
     sigc::connection labRegionSelectionConn;
 
     IdleRegister idle_register;
 };
-
-#endif

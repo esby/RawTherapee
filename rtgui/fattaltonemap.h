@@ -15,7 +15,7 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
 
@@ -23,7 +23,7 @@
 #include "adjuster.h"
 #include "toolpanel.h"
 
-class FattalToneMapping: public ToolParamBlock, public AdjusterListener, public FoldableToolPanel
+class FattalToneMapping final : public ToolParamBlock, public AdjusterListener, public FoldableToolPanel
 {
 protected:
     Adjuster *threshold;
@@ -42,7 +42,6 @@ public:
     void setBatchMode   (bool batchMode) override;
 
     void adjusterChanged (Adjuster* a, double newval) override;
-    void adjusterAutoToggled(Adjuster* a, bool newval) override;
     void enabledChanged  () override;
     void setAdjusterBehavior(bool amountAdd, bool thresholdAdd, bool anchorAdd);
 };

@@ -14,12 +14,16 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "previewwindow.h"
 #include "guiutils.h"
 #include "imagearea.h"
 #include "cursormanager.h"
+#include "options.h"
+#include "rtscalable.h"
+
+#include "../rtengine/procparams.h"
 
 PreviewWindow::PreviewWindow () : previewHandler(nullptr), mainCropWin(nullptr), imageArea(nullptr), imgX(0), imgY(0), imgW(0), imgH(0),
     zoom(0.0), press_x(0), press_y(0), isMoving(false), needsUpdate(false), cursor_type(CSUndefined)
@@ -86,13 +90,13 @@ void PreviewWindow::updatePreviewImage ()
             cc->fill();
 
             if (previewHandler->getCropParams().enabled) {
-                rtengine::CropParams cparams = previewHandler->getCropParams();
+                rtengine::procparams::CropParams cparams = previewHandler->getCropParams();
                 switch (options.cropGuides) {
                 case Options::CROP_GUIDE_NONE:
-                    cparams.guide = "None";
+                    cparams.guide = rtengine::procparams::CropParams::Guide::NONE;
                     break;
                 case Options::CROP_GUIDE_FRAME:
-                    cparams.guide = "Frame";
+                    cparams.guide = rtengine::procparams::CropParams::Guide::FRAME;
                     break;
                 default:
                     break;
@@ -152,6 +156,7 @@ bool PreviewWindow::on_draw(const ::Cairo::RefPtr< Cairo::Context> &cr)
         int x, y, w, h;
         getObservedFrameArea (x, y, w, h);
         if (x>imgX || y>imgY || w < imgW || h < imgH) {
+            double s = RTScalable::getScale();
             double rectX = x + 0.5;
             double rectY = y + 0.5;
             double rectW = std::min(w, (int)(imgW - (x - imgX) - 1));
@@ -159,9 +164,9 @@ bool PreviewWindow::on_draw(const ::Cairo::RefPtr< Cairo::Context> &cr)
 
             // draw a black "shadow" line
             cr->set_source_rgba (0.0, 0.0, 0.0, 0.65);
-            cr->set_line_width (1.);
+            cr->set_line_width (1. * s);
             cr->set_line_join(Cairo::LINE_JOIN_MITER);
-            cr->rectangle (rectX + 1., rectY + 1, rectW, rectH);
+            cr->rectangle (rectX + 1. * s, rectY + 1. * s, rectW - 2. * s, rectH - 2. * s);
             cr->stroke ();
 
             // draw a "frame" line. Color of frame line can be set in preferences
@@ -225,7 +230,7 @@ bool PreviewWindow::on_motion_notify_event (GdkEventMotion* event)
     if (x>imgX || y>imgY || w < imgW || h < imgH) {
         bool inside =     event->x > x - 6 && event->x < x + w - 1 + 6 && event->y > y - 6 && event->y < y + h - 1 + 6;
 
-        CursorShape newType = cursor_type;
+        CursorShape newType;
 
         if (isMoving) {
             mainCropWin->remoteMove ((event->x - press_x) / zoom, (event->y - press_y) / zoom);
@@ -302,14 +307,14 @@ Gtk::SizeRequestMode PreviewWindow::get_request_mode_vfunc () const
 
 void PreviewWindow::get_preferred_height_vfunc (int &minimum_height, int &natural_height) const
 {
-    minimum_height= 50;
-    natural_height = 100;
+    minimum_height= 50 * RTScalable::getScale();
+    natural_height = 100 * RTScalable::getScale();
 }
 
 void PreviewWindow::get_preferred_width_vfunc (int &minimum_width, int &natural_width) const
 {
-    minimum_width = 80;
-    natural_width = 120;
+    minimum_width = 80 * RTScalable::getScale();
+    natural_width = 120 * RTScalable::getScale();
 }
 
 void PreviewWindow::get_preferred_height_for_width_vfunc (int width, int &minimum_height, int &natural_height) const

@@ -14,10 +14,18 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef _LENSGEOMLISTENER_H_
-#define _LENSGEOMLISTENER_H_
+#pragma once
+
+#include <cstddef>
+#include <vector>
+
+namespace rtengine
+{
+class ControlLine;
+class ProcEvent;
+}
 
 class LensGeomListener
 {
@@ -26,6 +34,5 @@ public:
     virtual void straightenRequested () = 0;
     virtual void autoCropRequested   () = 0;
     virtual double autoDistorRequested () = 0;
+    virtual void autoPerspRequested (bool corr_pitch, bool corr_yaw, double& rot, double& pitch, double& yaw, const std::vector<rtengine::ControlLine> *lines = nullptr) = 0;
 };
-
-#endif

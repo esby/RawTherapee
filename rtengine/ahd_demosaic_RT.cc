@@ -14,7 +14,7 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 //
@@ -32,6 +32,12 @@
 //#define BENCHMARK
 #include "StopWatch.h"
 
+namespace
+{
+unsigned fc(const unsigned int cfa[2][2], int r, int c) {
+    return cfa[r & 1][c & 1];
+}
+}
 namespace rtengine
 {
 #define TS 144
@@ -39,24 +45,26 @@ void RawImageSource::ahd_demosaic()
 {
     BENCHFUN
 
-    constexpr int dir[4] = { -1, 1, -TS, TS };
+    const unsigned int cfa[2][2] = {{FC(0,0), FC(0,1)}, {FC(1,0), FC(1,1)}};
+    constexpr int dirs[4] = { -1, 1, -TS, TS };
     float xyz_cam[3][3];
     LUTf cbrt(65536);
 
     int width = W, height = H;
 
-    constexpr double xyz_rgb[3][3] = {        /* XYZ from RGB */
-        { 0.412453, 0.357580, 0.180423 },
-        { 0.212671, 0.715160, 0.072169 },
-        { 0.019334, 0.119193, 0.950227 }
+    constexpr float xyz_rgb[3][3] = {        /* XYZ from RGB */
+        { 0.412453f, 0.357580f, 0.180423f },
+        { 0.212671f, 0.715160f, 0.072169f },
+        { 0.019334f, 0.119193f, 0.950227f }
     };
 
-    constexpr float d65_white[3] = { 0.950456, 1, 1.088754 };
+    constexpr float d65_white[3] = { 0.950456f, 1.f, 1.088754f };
 
     double progress = 0.0;
+
     if (plistener) {
-        plistener->setProgressStr (Glib::ustring::compose(M("TP_RAW_DMETHOD_PROGRESSBAR"), RAWParams::BayerSensor::getMethodString(RAWParams::BayerSensor::Method::AHD)));
-        plistener->setProgress (0.0);
+        plistener->setProgressStr (Glib::ustring::compose(M("TP_RAW_DMETHOD_PROGRESSBAR"), M("TP_RAW_AHD")));
+        plistener->setProgress (progress);
     }
 
     for (int i = 0; i < 65536; i++) {
@@ -64,15 +72,16 @@ void RawImageSource::ahd_demosaic()
         cbrt[i] = r > 0.008856 ? std::cbrt(r) : 7.787 * r + 16 / 116.0;
     }
 
-    for (int i = 0; i < 3; i++)
+    for (int i = 0; i < 3; i++) {
         for (unsigned int j = 0; j < 3; j++) {
             xyz_cam[i][j] = 0;
             for (int k = 0; k < 3; k++) {
-                xyz_cam[i][j] += xyz_rgb[i][k] * imatrices.rgb_cam[k][j] / d65_white[i];
+                xyz_cam[i][j] += xyz_rgb[i][k] * static_cast<float>(imatrices.rgb_cam[k][j]) / d65_white[i];
             }
         }
+    }
+    border_interpolate(W, H, 5, rawData, red, green, blue);
 
-    border_interpolate2(W, H, 5, rawData, red, green, blue);
 
 #ifdef _OPENMP
 #pragma omp parallel
@@ -91,7 +100,7 @@ void RawImageSource::ahd_demosaic()
         for (int left = 2; left < width - 5; left += TS - 6) {
             //  Interpolate green horizontally and vertically:
             for (int row = top; row < top + TS && row < height - 2; row++) {
-                for (int col = left + (FC(row, left) & 1); col < std::min(left + TS, width - 2); col += 2) {
+                for (int col = left + (fc(cfa, row, left) & 1); col < std::min(left + TS, width - 2); col += 2) {
                     auto pix = &rawData[row][col];
                     float val0 = 0.25f * ((pix[-1] + pix[0] + pix[1]) * 2
                                   - pix[-2] - pix[2]) ;
@@ -105,12 +114,12 @@ void RawImageSource::ahd_demosaic()
             //  Interpolate red and blue, and convert to CIELab:
             for (int d = 0; d < 2; d++)
                 for (int row = top + 1; row < top + TS - 1 && row < height - 3; row++) {
-                    int cng = FC(row + 1, FC(row + 1, 0) & 1);
+                    int cng = fc(cfa, row + 1, fc(cfa, row + 1, 0) & 1);
                     for (int col = left + 1; col < std::min(left + TS - 1, width - 3); col++) {
                         auto pix = &rawData[row][col];
                         auto rix = &rgb[d][row - top][col - left];
                         auto lix = lab[d][row - top][col - left];
-                        if (FC(row, col) == 1) {
+                        if (fc(cfa, row, col) == 1) {
                             rix[0][2 - cng] = CLIP(pix[0] + (0.5f * (pix[-1] + pix[1]
                                                        - rix[-1][1] - rix[1][1] ) ));
                             rix[0][cng] = CLIP(pix[0] + (0.5f * (pix[-width] + pix[width]
@@ -152,9 +161,9 @@ void RawImageSource::ahd_demosaic()
                         auto lix = &lab[d][tr][tc];
 
                         for (int i = 0; i < 4; i++) {
-                            ldiff[d][i] = std::fabs(lix[0][0] - lix[dir[i]][0]);
-                            abdiff[d][i] = SQR(lix[0][1] - lix[dir[i]][1])
-                                           + SQR(lix[0][2] - lix[dir[i]][2]);
+                            ldiff[d][i] = std::fabs(lix[0][0] - lix[dirs[i]][0]);
+                            abdiff[d][i] = SQR(lix[0][1] - lix[dirs[i]][1])
+                                           + SQR(lix[0][2] - lix[dirs[i]][2]);
                         }
                     }
 
@@ -172,7 +181,7 @@ void RawImageSource::ahd_demosaic()
                 }
             }
 
-            //  Combine the most homogenous pixels for the final result:
+            //  Combine the most homogeneous pixels for the final result:
             for (int row = top + 3; row < top + TS - 3 && row < height - 5; row++) {
                 int tr = row - top;
 

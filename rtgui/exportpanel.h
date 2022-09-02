@@ -15,14 +15,13 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef _EXPORTPANEL_
-#define _EXPORTPANEL_
+#pragma once
 
 #include <gtkmm.h>
+
 #include "guiutils.h"
-#include "adjuster.h"
 
 class ExportPanelListener
 {
@@ -32,12 +31,12 @@ public:
     virtual void exportRequested() = 0;
 };
 
-class ExportPanel : public Gtk::VBox
+class ExportPanel : public Gtk::Box
 {
 
 protected:
 
-    Gtk::VBox *bypass_box;
+    Gtk::Box* bypass_box;
     //Gtk::CheckButton* enabled;
     Gtk::RadioButton* use_fast_pipeline;
     Gtk::RadioButton* use_normal_pipeline;
@@ -122,5 +121,3 @@ public:
         listener = l;
     }
 };
-
-#endif

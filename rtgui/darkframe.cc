@@ -14,20 +14,25 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include "darkframe.h"
-#include "options.h"
-#include "guiutils.h"
 #include <sstream>
+
+#include "darkframe.h"
+
+#include "guiutils.h"
+#include "options.h"
 #include "rtimage.h"
+
+#include "../rtengine/procparams.h"
+#include "../rtengine/rawimage.h"
 
 using namespace rtengine;
 using namespace rtengine::procparams;
 
 DarkFrame::DarkFrame () : FoldableToolPanel(this, "darkframe", M("TP_DARKFRAME_LABEL")), dfChanged(false), lastDFauto(false), dfp(nullptr), israw(true)
 {
-    hbdf = Gtk::manage(new Gtk::HBox());
+    hbdf = Gtk::manage(new Gtk::Box());
     hbdf->set_spacing(4);
     darkFrameFile = Gtk::manage(new MyFileChooserButton(M("TP_DARKFRAME_LABEL"), Gtk::FILE_CHOOSER_ACTION_OPEN));
     bindCurrentFolder (*darkFrameFile, options.lastDarkframeDir);
@@ -121,7 +126,7 @@ void DarkFrame::read(const rtengine::procparams::ProcParams* pp, const ParamsEdi
         Glib::ustring fname = Glib::path_get_basename(dfp->GetCurrentImageFilePath());
         Glib::ustring filetype;
 
-        if (fname != "") {
+        if (!fname.empty()) {
             // get image filetype, set filter to the same as current image's filetype
             std::string::size_type idx;
             idx = fname.rfind('.');

@@ -14,35 +14,52 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef _IMAGEIO_
-#define _IMAGEIO_
+#pragma once
 
-#define IMIO_SUCCESS               0
-#define IMIO_CANNOTREADFILE        1
-#define IMIO_INVALIDHEADER         2
-#define IMIO_HEADERERROR           3
-#define IMIO_READERROR             4
-#define IMIO_VARIANTNOTSUPPORTED   5
-#define IMIO_FILETYPENOTSUPPORTED  6
-#define IMIO_CANNOTWRITEFILE       7
+#include <memory>
 
-#include <glibmm.h>
+#include <glibmm/ustring.h>
+
 #include <libiptcdata/iptc-data.h>
-#include "rtengine.h"
-#include "imageformat.h"
-#include "procparams.h"
-#include "../rtexif/rtexif.h"
-#include "imagedimensions.h"
+
 #include "iimage.h"
-#include "colortemp.h"
+#include "imagedimensions.h"
+#include "imageformat.h"
+#include "rtengine.h"
+
+enum {
+    IMIO_SUCCESS,
+    IMIO_CANNOTREADFILE,
+    IMIO_INVALIDHEADER,
+    IMIO_HEADERERROR,
+    IMIO_READERROR,
+    IMIO_VARIANTNOTSUPPORTED,
+    IMIO_FILETYPENOTSUPPORTED,
+    IMIO_CANNOTWRITEFILE
+};
+
+namespace rtexif
+{
+
+class TagDirectory;
+
+}
 
 namespace rtengine
 {
 
+class ColorTemp;
 class ProgressListener;
 class Imagefloat;
+
+namespace procparams
+{
+
+class ExifPairs;
+
+}
 
 class ImageIO : virtual public ImageDatas
 {
@@ -53,9 +70,8 @@ protected:
     char* profileData;
     int profileLength;
     char* loadedProfileData;
-    bool loadedProfileDataJpg;
     int loadedProfileLength;
-    procparams::ExifPairs exifChange;
+    const std::unique_ptr<procparams::ExifPairs> exifChange;
     IptcData* iptc;
     const rtexif::TagDirectory* exifRoot;
     MyMutex imutex;
@@ -68,11 +84,8 @@ private:
 public:
     static Glib::ustring errorMsg[6];
 
-    ImageIO () : pl (nullptr), embProfile(nullptr), profileData(nullptr), profileLength(0), loadedProfileData(nullptr), loadedProfileDataJpg(false),
-        loadedProfileLength(0), iptc(nullptr), exifRoot (nullptr), sampleFormat(IIOSF_UNKNOWN),
-        sampleArrangement(IIOSA_UNKNOWN) {}
-
-    ~ImageIO () override;
+    ImageIO();
+    ~ImageIO() override;
 
     void setProgressListener (ProgressListener* l);
     void setSampleFormat(IIOSampleFormat sFormat);
@@ -80,10 +93,10 @@ public:
     void setSampleArrangement(IIOSampleArrangement sArrangement);
     IIOSampleArrangement getSampleArrangement() const;
 
-    virtual void getStdImage (const ColorTemp &ctemp, int tran, Imagefloat* image, PreviewProps pp) const = 0;
+    virtual void getStdImage (const ColorTemp &ctemp, int tran, Imagefloat* image, const PreviewProps &pp) const = 0;
     virtual int getBPS () const = 0;
     virtual void getScanline (int row, unsigned char* buffer, int bps, bool isFloat = false) const = 0;
-    virtual void setScanline (int row, unsigned char* buffer, int bps, unsigned int numSamples = 3) = 0;
+    virtual void setScanline (int row, const unsigned char* buffer, int bps, unsigned int numSamples = 3) = 0;
     virtual const char* getType () const = 0;
 
     int load (const Glib::ustring &fname);
@@ -113,4 +126,3 @@ public:
 };
 
 }
-#endif

@@ -14,16 +14,17 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "imageareapanel.h"
 
 ImageAreaPanel::ImageAreaPanel () : before(nullptr), after(nullptr)
 {
+    set_orientation(Gtk::ORIENTATION_VERTICAL);
 
     imageArea = new ImageArea (this);
 
-    Gtk::HBox*  hb1   = Gtk::manage (new Gtk::HBox ());
+    Gtk::Box*  hb1   = Gtk::manage (new Gtk::Box ());
     Gtk::Frame* frame = Gtk::manage (new Gtk::Frame ());
 
     frame->add (*imageArea);

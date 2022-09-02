@@ -14,19 +14,22 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef _BLACKWHITE_H_
-#define _BLACKWHITE_H_
+#pragma once
 
 #include <gtkmm.h>
+
 #include "adjuster.h"
-#include "toolpanel.h"
-#include "guiutils.h"
-#include "curveeditor.h"
-#include "curveeditorgroup.h"
-#include "mycurve.h"
 #include "colorprovider.h"
+#include "curvelistener.h"
+#include "guiutils.h"
+#include "toolpanel.h"
+
+class DiagonalCurveEditor;
+class CurveEditorGroup;
+class EditDataProvider;
+class FlatCurveEditor;
 
 class BlackWhite final :
     public ToolParamBlock,
@@ -53,7 +56,6 @@ public:
 
     void updateRGBLabel      ();
     void adjusterChanged     (Adjuster* a, double newval) override;
-    void adjusterAutoToggled (Adjuster* a, bool newval) override;
     void setAdjusterBehavior (bool bwadd, bool bwgadd);
     void trimValues          (rtengine::procparams::ProcParams* pp) override;
     void enabledcc_toggled   ();
@@ -88,7 +90,7 @@ private:
     void hideGamma();
 
     FlatCurveEditor*     luminanceCurve;
-    Gtk::HSeparator*     luminanceSep;
+    Gtk::Separator*     luminanceSep;
     CurveEditorGroup*    luminanceCEG;
     CurveEditorGroup*    beforeCurveCEG;
     DiagonalCurveEditor* beforeCurve;
@@ -97,13 +99,13 @@ private:
     DiagonalCurveEditor* afterCurve;
     MyComboBoxText*      afterCurveMode;
     Gtk::ToggleButton*   autoch;
-    Gtk::HBox*           autoHBox;
+    Gtk::Box*            autoHBox;
     Gtk::Button*         neutral;
     Gtk::Label*          RGBLabels;
     MyComboBoxText*      algo;
     sigc::connection     algoconn;
     Gtk::Label*          alLabel;
-    Gtk::HBox*           algoHBox;
+    Gtk::Box*            algoHBox;
 
     Adjuster *mixerRed;
     Adjuster *mixerGreen;
@@ -118,20 +120,20 @@ private:
     Adjuster *mixerPurple;
     MyComboBoxText*   method;
     sigc::connection  methodconn;
-    Gtk::HBox*        filterHBox;
-    Gtk::HSeparator*  filterSep, *filterSep2;
+    Gtk::Box*         filterHBox;
+    Gtk::Separator*  filterSep, *filterSep2;
     MyComboBoxText*   filter;
     sigc::connection  filterconn;
-    Gtk::HBox*        settingHBox;
+    Gtk::Box*         settingHBox;
     MyComboBoxText*   setting;
     sigc::connection  settingconn;
     Gtk::Frame* mixerFrame;
-    Gtk::VBox * mixerVBox;
+    Gtk::Box*  mixerVBox;
     Gtk::Frame* gammaFrame;
 
     Gtk::Image *imgIcon[11];
 
-    Gtk::HSeparator* enabledccSep;
+    Gtk::Separator* enabledccSep;
     Gtk::CheckButton* enabledcc;
     bool lastEnabledcc, lastAuto;
     sigc::connection enaccconn, tcmodeconn, tcmodeconn2, autoconn, neutralconn;
@@ -143,5 +145,3 @@ private:
 
     IdleRegister idle_register;
 };
-
-#endif

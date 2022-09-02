@@ -14,16 +14,17 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef _CROP_H_
-#define _CROP_H_
+#pragma once
+
+#include <memory>
 
 #include <gtkmm.h>
+
 #include "cropguilistener.h"
-#include "toolpanel.h"
 #include "guiutils.h"
-#include <vector>
+#include "toolpanel.h"
 
 class CropPanelListener
 {
@@ -90,15 +91,12 @@ public:
     void rotateCrop         (int deg, bool hflip, bool vflip);
 
 private:
-    struct CropRatio {
-        Glib::ustring label;
-        double value;
-    };
-
-    std::vector<CropRatio> crop_ratios;
+    class CropRatios;
 
     void adjustCropToRatio();
     void updateCurrentRatio();
+
+    const std::unique_ptr<CropRatios> crop_ratios;
 
     Gtk::CheckButton* fixr;
     MyComboBoxText* ratio;
@@ -129,5 +127,3 @@ private:
 
     IdleRegister idle_register;
 };
-
-#endif

@@ -14,24 +14,34 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef _CROPWINDOW_
-#define _CROPWINDOW_
+#pragma once
 
-#include "../rtengine/rtengine.h"
+#include <list>
+
 #include <gtkmm.h>
+
+#include "cropguilistener.h"
+#include "crophandler.h"
+#include "cursormanager.h"
+#include "editbuffer.h"
+#include "editcoordsys.h"
+#include "editenums.h"
 #include "lwbutton.h"
 #include "lwbuttonset.h"
-#include "editenums.h"
-#include "crophandler.h"
-#include <list>
-#include "cropguilistener.h"
-#include "pointermotionlistener.h"
-#include "cursormanager.h"
-#include "edit.h"
+
+#include "../rtengine/noncopyable.h"
+
+namespace rtengine
+{
+
+struct Coord;
+
+}
 
 class CropWindow;
+class PointerMotionListener;
 
 class CropWindowListener
 {
@@ -44,8 +54,14 @@ public:
 };
 
 class ImageArea;
-class CropWindow : public LWButtonListener, public CropDisplayHandler, public EditCoordSystem, public ObjectMOBuffer
+class CropWindow final : public LWButtonListener, public CropDisplayHandler, public EditCoordSystem, public ObjectMOBuffer, public rtengine::NonCopyable
 {
+    static bool initialized;
+
+    static Glib::ustring zoomOuttt;
+    static Glib::ustring zoomIntt;
+    static Glib::ustring zoom100tt;
+    static Glib::ustring closett;
 
     // state management
     ImgEditState state;                  // current state of user (see enum State)
@@ -94,6 +110,7 @@ class CropWindow : public LWButtonListener, public CropDisplayHandler, public Ed
     PointerMotionListener* pmlistener;
     PointerMotionListener* pmhlistener;
     std::list<CropWindowListener*> listeners;
+    double scrollAccum;
 
     CropWindow* observedCropWin;  // Pointer to the currently active detail CropWindow
 
@@ -207,7 +224,7 @@ public:
     void centerCrop            (bool update = true);
     void getCropSize           (int& w, int& h);
     void getCropAnchorPosition (int& w, int& h);
-    void setCropAnchorPosition (int& w, int& h);
+    void setCropAnchorPosition (int w, int h);
 
     // listeners
     void setCropGUIListener       (CropGUIListener* cgl);
@@ -230,5 +247,3 @@ public:
 
     ImageArea* getImageArea();
 };
-
-#endif

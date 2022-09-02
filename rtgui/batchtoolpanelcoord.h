@@ -14,20 +14,21 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef __BATCHTOOLPANELCCORD__
-#define __BATCHTOOLPANELCCORD__
+#pragma once
 
-#include "thumbnail.h"
-#include "toolpanelcoord.h"
 #include "fileselectionchangelistener.h"
-#include "../rtengine/rtengine.h"
 #include "paramsedited.h"
 #include "thumbnaillistener.h"
+#include "toolpanelcoord.h"
+
+#include "../rtengine/procevents.h"
+#include "../rtengine/procparams.h"
 
 class FilePanel;
-class BatchToolPanelCoordinator :
+class Thumbnail;
+class BatchToolPanelCoordinator final :
     public ToolPanelCoordinator,
     public FileSelectionChangeListener,
     public BatchPParamsChangeListener,
@@ -55,6 +56,8 @@ public:
 
     // toolpanellistener interface
     void panelChanged(const rtengine::ProcEvent& event, const Glib::ustring& descr) override;
+    void setTweakOperator (rtengine::TweakOperator *tOperator) override;
+    void unsetTweakOperator (rtengine::TweakOperator *tOperator) override;
 
     // profilechangelistener interface
     void profileChange(
@@ -84,5 +87,3 @@ public:
 
     void optionsChanged ();
 };
-
-#endif

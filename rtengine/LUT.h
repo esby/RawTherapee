@@ -15,7 +15,7 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 /*
@@ -56,21 +56,20 @@
  *          LUTuc stands for LUT<unsigned char>
  */
 
-#ifndef LUT_H_
-#define LUT_H_
+#pragma once
 
+#include <algorithm>
 #include <cstring>
 #include <cstdint>
 #include <cassert>
+#include <vector>
 
 #ifndef NDEBUG
-#include <glibmm.h>
 #include <fstream>
 #endif
 
 #include "opthelper.h"
 #include "rt_math.h"
-#include "noncopyable.h"
 
 // Bit representations of flags
 enum {
@@ -111,7 +110,7 @@ public:
     /// The user have to handle it itself, even if some method can (re)initialize it
     bool dirty;
 
-    LUT(int s, int flags = LUT_CLIP_BELOW | LUT_CLIP_ABOVE, bool initZero = false)
+    explicit LUT(int s, int flags = LUT_CLIP_BELOW | LUT_CLIP_ABOVE, bool initZero = false)
     {
 #ifndef NDEBUG
 
@@ -141,6 +140,33 @@ public:
             clear();
         }
     }
+
+    explicit LUT(const std::vector<T>& input, int flags = LUT_CLIP_BELOW | LUT_CLIP_ABOVE) :
+        maxs(input.size() - 2),
+        maxsf(maxs),
+        data(new T[input.size() + 3]), // Add a few extra elements so [](vfloat) won't access out-of-bounds memory.
+        clip(flags),
+        size(input.size()),
+        upperBound(size - 1),
+        owner(1),
+#ifdef __SSE2__
+        maxsv(F2V(maxs)),
+        sizev(F2V(size - 1)),
+        sizeiv(_mm_set1_epi32(size - 1)),
+#endif
+        dirty(true)
+    {
+#ifndef NDEBUG
+
+        if (input.empty()) {
+            printf("s=0!\n");
+        }
+
+        assert(!input.empty());
+#endif
+        std::copy_n(input.begin(), input.size(), data);
+    }
+
     void operator ()(int s, int flags = LUT_CLIP_BELOW | LUT_CLIP_ABOVE, bool initZero = false)
     {
 #ifndef NDEBUG
@@ -226,7 +252,7 @@ public:
         return size > 0 ? upperBound : 0;
     }
 
-    LUT<T> & operator=(const LUT<T>& rhs)
+    LUT<T>& operator=(const LUT<T>& rhs)
     {
         if (this != &rhs) {
             if (rhs.size > this->size) {
@@ -257,8 +283,7 @@ public:
     }
 
     // handy to sum up per thread histograms. #pragma omp simd speeds up the loop by about factor 3 for LUTu (uint32_t).
-    template<typename U = T, typename = typename std::enable_if<std::is_same<U, std::uint32_t>::value>::type>
-    LUT<T> & operator+=(const LUT<T>& rhs)
+    LUT<T>& operator+=(const LUT<T>& rhs)
     {
         if (rhs.size == this->size) {
 #ifdef _OPENMP
@@ -275,7 +300,7 @@ public:
 
     // multiply all elements of LUT<float> with a constant float value
     template<typename U = T, typename = typename std::enable_if<std::is_same<U, float>::value>::type>
-    LUT<float> & operator*=(float factor)
+    LUT<float>& operator*=(float factor)
     {
 #ifdef _OPENMP
         #pragma omp simd
@@ -290,7 +315,7 @@ public:
 
     // divide all elements of LUT<float> by a constant float value
     template<typename U = T, typename = typename std::enable_if<std::is_same<U, float>::value>::type>
-    LUT<float> & operator/=(float divisor)
+    LUT<float>& operator/=(float divisor)
     {
 #ifdef _OPENMP
         #pragma omp simd
@@ -337,11 +362,11 @@ public:
         // of [values[0][0] ... values[3][0]] and the second [values[0][1] ... values[3][1]].
         __m128i temp0 = _mm_unpacklo_epi32(values[0], values[1]);
         __m128i temp1 = _mm_unpacklo_epi32(values[2], values[3]);
-        vfloat lower = _mm_castsi128_ps(_mm_unpacklo_epi64(temp0, temp1));
-        vfloat upper = _mm_castsi128_ps(_mm_unpackhi_epi64(temp0, temp1));
+        vfloat lowerVal = _mm_castsi128_ps(_mm_unpacklo_epi64(temp0, temp1));
+        vfloat upperVal = _mm_castsi128_ps(_mm_unpackhi_epi64(temp0, temp1));
 
         vfloat diff = vmaxf(ZEROV, indexv) - _mm_cvtepi32_ps(indexes);
-        return vintpf(diff, upper, lower);
+        return vintpf(diff, upperVal, lowerVal);
     }
 
     // NOTE: This version requires LUTs which clip at upper and lower bounds
@@ -369,11 +394,11 @@ public:
         // of [values[0][0] ... values[3][0]] and the second [values[0][1] ... values[3][1]].
         __m128i temp0 = _mm_unpacklo_epi32(values[0], values[1]);
         __m128i temp1 = _mm_unpacklo_epi32(values[2], values[3]);
-        vfloat lower = _mm_castsi128_ps(_mm_unpacklo_epi64(temp0, temp1));
-        vfloat upper = _mm_castsi128_ps(_mm_unpackhi_epi64(temp0, temp1));
+        vfloat lowerVal = _mm_castsi128_ps(_mm_unpacklo_epi64(temp0, temp1));
+        vfloat upperVal = _mm_castsi128_ps(_mm_unpackhi_epi64(temp0, temp1));
 
         vfloat diff = vclampf(indexv, ZEROV, sizev) - _mm_cvtepi32_ps(indexes); // this automagically uses ZEROV in case indexv is NaN
-        return vintpf(diff, upper, lower);
+        return vintpf(diff, upperVal, lowerVal);
     }
 
     // NOTE: This version requires LUTs which do not clip at upper and lower bounds
@@ -400,11 +425,11 @@ public:
         // of [values[0][0] ... values[3][0]] and the second [values[0][1] ... values[3][1]].
         __m128i temp0 = _mm_unpacklo_epi32(values[0], values[1]);
         __m128i temp1 = _mm_unpacklo_epi32(values[2], values[3]);
-        vfloat lower = _mm_castsi128_ps(_mm_unpacklo_epi64(temp0, temp1));
-        vfloat upper = _mm_castsi128_ps(_mm_unpackhi_epi64(temp0, temp1));
+        vfloat lowerVal = _mm_castsi128_ps(_mm_unpacklo_epi64(temp0, temp1));
+        vfloat upperVal = _mm_castsi128_ps(_mm_unpackhi_epi64(temp0, temp1));
 
         vfloat diff = indexv - _mm_cvtepi32_ps(indexes);
-        return vintpf(diff, upper, lower);
+        return vintpf(diff, upperVal, lowerVal);
     }
 
     // vectorized LUT access with integer indices. Clips at lower and upper bounds
@@ -444,7 +469,7 @@ public:
             }
 
             idx = 0;
-        } else if (idx > maxs) {
+        } else if (index > maxsf) {
             if (clip & LUT_CLIP_ABOVE) {
                 return data[upperBound];
             }
@@ -460,7 +485,7 @@ public:
 
     // Return the value for "index" that is in the [0-1] range.
     template<typename U = T, typename = typename std::enable_if<std::is_same<U, float>::value>::type>
-    T getVal01 (float index) const
+    T getVal01(float index) const
     {
         index *= (float)upperBound;
         int idx = (int)index;  // don't use floor! The difference in negative space is no problems here
@@ -485,39 +510,19 @@ public:
         return (p1 + p2 * diff);
     }
 
-#ifndef NDEBUG
-    // Debug facility ; dump the content of the LUT in a file. No control of the filename is done
-    void dump(Glib::ustring fname)
-    {
-        if (size) {
-            Glib::ustring fname_ = fname + ".xyz"; // TopSolid'Design "plot" file format
-            std::ofstream f (fname_.c_str());
-            f << "$" << std::endl;
-
-            for (unsigned int iter = 0; iter < size; iter++) {
-                f << iter << ", " << data[iter] << ", 0." << std::endl;
-            }
-
-            f << "$" << std::endl;
-            f.close ();
-        }
-    }
-#endif
-
-
-    operator bool (void) const
+    operator bool() const // FIXME: Should be explicit
     {
         return size > 0;
     }
 
-    void clear(void)
+    void clear()
     {
         if (data && size) {
             memset(data, 0, size * sizeof(T));
         }
     }
 
-    void reset(void)
+    void reset()
     {
         if (data) {
             delete[] data;
@@ -563,7 +568,7 @@ public:
         }
     }
 
-    // compress a LUT<uint32_t> with size y into a LUT<uint32_t> with size x (y>x) by using the passTrough LUT to calculate indexes
+    // compress a LUT<uint32_t> with size y into a LUT<uint32_t> with size x (y>x) by using the passThrough LUT to calculate indexes
     template<typename U = T, typename = typename std::enable_if<std::is_same<U, std::uint32_t>::value>::type>
     void compressTo(LUT<T> &dest, unsigned int numVals, const LUT<float> &passThrough) const
     {
@@ -649,5 +654,3 @@ public:
 
 
 };
-
-#endif /* LUT_H_ */

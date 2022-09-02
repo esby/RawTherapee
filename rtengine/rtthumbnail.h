@@ -14,19 +14,26 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef _THUMBPROCESSINGPARAMETERS_
-#define _THUMBPROCESSINGPARAMETERS_
+#pragma once
 
-#include "rawmetadatalocation.h"
-#include "procparams.h"
-#include <glibmm.h>
 #include <lcms2.h>
-#include "image8.h"
+
 #include "image16.h"
+#include "image8.h"
 #include "imagefloat.h"
+#include "LUT.h"
+#include "rawmetadatalocation.h"
+
 #include "../rtgui/threadutils.h"
+
+namespace Glib
+{
+
+class ustring;
+
+}
 
 namespace rtengine
 {
@@ -68,6 +75,10 @@ class Thumbnail
     int scaleForSave;
     bool gammaCorrected;
     double colorMatrix[3][3];
+    double scaleGain;
+
+    void processFilmNegative(const procparams::ProcParams& params, const Imagefloat* baseImg, int rwidth, int rheight);
+    void processFilmNegativeV2(const procparams::ProcParams& params, const Imagefloat* baseImg, int rwidth, int rheight);
 
 public:
 
@@ -104,10 +115,6 @@ public:
     bool readEmbProfile  (const Glib::ustring& fname);
     bool writeEmbProfile (const Glib::ustring& fname);
 
-    bool readAEHistogram  (const Glib::ustring& fname);
-    bool writeAEHistogram (const Glib::ustring& fname);
-
-    bool isAeValid() { return aeValid; };
     unsigned char* getImage8Data();  // accessor to the 8bit image if it is one, which should be the case for the "Inspector" mode.
 
     // Hombre: ... let's hope that proper template can make this cleaner
@@ -159,6 +166,3 @@ public:
     }
 };
 }
-
-#endif
-

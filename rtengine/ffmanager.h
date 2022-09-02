@@ -14,18 +14,22 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include <string>
-#include <glibmm/ustring.h>
-#include <map>
+#pragma once
+
 #include <cmath>
-#include "rawimage.h"
+#include <list>
+#include <map>
+#include <string>
+
+#include <glibmm/ustring.h>
 
 namespace rtengine
 {
 
-class ffInfo
+class RawImage;
+class ffInfo final
 {
 public:
 
@@ -44,13 +48,8 @@ public:
 
     ffInfo( const ffInfo &o)
         : pathname(o.pathname), maker(o.maker), model(o.model), lens(o.lens), aperture(o.aperture), focallength(o.focallength), timestamp(o.timestamp), ri(nullptr) {}
-    ~ffInfo()
-    {
-        if( ri ) {
-            delete ri;
-        }
-    }
 
+    ~ffInfo();
 
     ffInfo &operator =(const ffInfo &o);
     bool operator <(const ffInfo &e2) const;
@@ -72,10 +71,10 @@ protected:
     void updateRawImage();
 };
 
-class FFManager
+class FFManager final
 {
 public:
-    void init( Glib::ustring pathname );
+    void init(const Glib::ustring &pathname);
     Glib::ustring getPathname()
     {
         return currentPath;
@@ -86,7 +85,6 @@ public:
 
 protected:
     typedef std::multimap<std::string, ffInfo> ffList_t;
-    typedef std::map<std::string, std::list<badPix> > bpList_t;
     ffList_t ffList;
     bool initialized;
     Glib::ustring currentPath;

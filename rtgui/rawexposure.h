@@ -14,25 +14,24 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef _RAWEXPOSURE_H_
-#define _RAWEXPOSURE_H_
+#pragma once
 
 #include <gtkmm.h>
+
 #include "adjuster.h"
 #include "toolpanel.h"
-#include "../rtengine/rawimage.h"
 
-class RAWExposure : public ToolParamBlock, public AdjusterListener, public FoldableToolPanel
+class RAWExposure final:
+    public ToolParamBlock,
+    public AdjusterListener,
+    public FoldableToolPanel
 {
 
 protected:
     Adjuster* PexPos;
-    Adjuster* PexPreser;
 
-private:
-//  Gtk::CheckButton*  PextwoGreen;
 public:
 
     RAWExposure ();
@@ -42,9 +41,6 @@ public:
     void setBatchMode   (bool batchMode) override;
     void setDefaults    (const rtengine::procparams::ProcParams* defParams, const ParamsEdited* pedited = nullptr) override;
     void adjusterChanged     (Adjuster* a, double newval) override;
-    void adjusterAutoToggled (Adjuster* a, bool newval) override;
-    void setAdjusterBehavior (bool pexposadd, bool pexpreseradd);
+    void setAdjusterBehavior (bool pexposadd);
     void trimValues          (rtengine::procparams::ProcParams* pp) override;
 };
-
-#endif

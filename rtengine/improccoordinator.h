@@ -14,20 +14,27 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef _IMPROCCOORDINATOR_H_
-#define _IMPROCCOORDINATOR_H_
+#pragma once
 
-#include "rtengine.h"
-#include "improcfun.h"
-#include "image8.h"
-#include "image16.h"
-#include "imagesource.h"
-#include "procevents.h"
+#include <memory>
+
+#include "array2D.h"
+#include "colortemp.h"
+#include "curves.h"
 #include "dcrop.h"
+#include "imagesource.h"
+#include "improcfun.h"
 #include "LUT.h"
+#include "rtengine.h"
+
 #include "../rtgui/threadutils.h"
+
+namespace Glib
+{
+class Thread;
+}
 
 namespace rtengine
 {
@@ -35,6 +42,7 @@ namespace rtengine
 using namespace procparams;
 
 class Crop;
+class TweakOperator;
 
 /** @brief Manages the image processing, espc. of the preview windows
   *
@@ -47,7 +55,7 @@ class Crop;
   * but using this class' LUT and other precomputed parameters. The main preview area is displaying a non framed Crop object,
   * while detail windows are framed Crop objects.
   */
-class ImProcCoordinator : public StagedImageProcessor
+class ImProcCoordinator final : public StagedImageProcessor, public HistogramObservable
 {
 
     friend class Crop;
@@ -55,6 +63,7 @@ class ImProcCoordinator : public StagedImageProcessor
 protected:
     Imagefloat *orig_prev;
     Imagefloat *oprevi;
+    Imagefloat *spotprev;
     LabImage *oprevl;
     LabImage *nprevl;
     Imagefloat *fattal_11_dcrop_cache; // global cache for ToneMapFattal02 used in 1:1 detail windows (except when denoise is active)
@@ -66,24 +75,26 @@ protected:
 
     ColorTemp currWB;
     ColorTemp autoWB;
+    ColorTemp currWBloc;
+    ColorTemp autoWBloc;
+    ColorTemp currWBitc;
 
     double lastAwbEqual;
     double lastAwbTempBias;
-
-    ImProcFunctions ipf;
+    Glib::ustring lastAwbauto;
 
     Glib::ustring monitorProfile;
     RenderingIntent monitorIntent;
     bool softProof;
     bool gamutCheck;
     bool sharpMask;
-
+    bool sharpMaskChanged;
     int scale;
     bool highDetailPreprocessComputed;
     bool highDetailRawComputed;
     bool allocated;
 
-    void freeAll ();
+    void freeAll();
 
     // Precomputed values used by DetailedCrop ----------------------------------------------
 
@@ -117,6 +128,16 @@ protected:
     LUTu histBlue, histBlueRaw;
     LUTu histLuma, histToneCurve, histToneCurveBW, histLCurve, histCCurve;
     LUTu histLLCurve, histLCAM, histCCAM, histClad, bcabhist, histChroma, histLRETI;
+    bool hist_lrgb_dirty;
+    /// Used to simulate a lazy update of the raw histogram.
+    bool hist_raw_dirty;
+    int vectorscopeScale;
+    bool vectorscope_hc_dirty, vectorscope_hs_dirty;
+    array2D<int> vectorscope_hc, vectorscope_hs;
+    /// Waveform's intensity. Same as height of reference image.
+    int waveformScale;
+    bool waveform_dirty;
+    array2D<int> waveformRed, waveformGreen, waveformBlue, waveformLuma;
 
     LUTf CAMBrightCurveJ, CAMBrightCurveQ;
 
@@ -130,7 +151,11 @@ protected:
     NoiseCurve noiseLCurve;
     NoiseCurve noiseCCurve;
     WavCurve wavCLVCurve;
+    WavCurve wavdenoise;
+    WavCurve wavdenoiseh;
+    Wavblcurve wavblcurve;
     WavOpacityCurveRG waOpacityCurveRG;
+    WavOpacityCurveSH waOpacityCurveSH;
     WavOpacityCurveBY waOpacityCurveBY;
     WavOpacityCurveW waOpacityCurveW;
     WavOpacityCurveWL waOpacityCurveWL;
@@ -161,14 +186,19 @@ protected:
     FlatFieldAutoClipListener *flatFieldAutoClipListener;
     AutoContrastListener *bayerAutoContrastListener;
     AutoContrastListener *xtransAutoContrastListener;
+    AutoContrastListener *pdSharpenAutoContrastListener;
+    AutoRadiusListener *pdSharpenAutoRadiusListener;
     FrameCountListener *frameCountListener;
     ImageTypeListener *imageTypeListener;
-
+    FilmNegListener *filmNegListener;
     AutoColorTonListener* actListener;
+    AutoprimListener* primListener;
     AutoChromaListener* adnListener;
     WaveletListener* awavListener;
     RetinexListener* dehaListener;
+//    LocallabListener* locallListener;
 
+    
     HistogramListener* hListener;
     std::vector<SizeListener*> sizeListeners;
 
@@ -178,14 +208,26 @@ protected:
 
     MyMutex minit;  // to gain mutually exclusive access to ... to what exactly?
 
-    void progress (Glib::ustring str, int pr);
-    void reallocAll ();
-    void updateLRGBHistograms ();
-    void setScale (int prevscale);
+    void backupParams();
+    void restoreParams();
+    void allocCache (Imagefloat* &imgfloat);
+    void notifyHistogramChanged();
+    void reallocAll();
+    /// Updates L, R, G, and B histograms. Returns true unless not updated.
+    bool updateLRGBHistograms();
+    /// Updates the H-C vectorscope. Returns true unless not updated.
+    bool updateVectorscopeHC();
+    /// Updates the H-S vectorscope. Returns true unless not updated.
+    bool updateVectorscopeHS();
+    /// Updates all waveforms. Returns true unless not updated.
+    bool updateWaveforms();
+    void setScale(int prevscale);
     void updatePreviewImage (int todo, bool panningRelatedChange);
 
     MyMutex mProcessing;
-    ProcParams params;
+    const std::unique_ptr<ProcParams> params;  // used for the rendering, can be eventually tweaked
+    std::unique_ptr<ProcParams> paramsBackup;  // backup of the untweaked procparams
+    TweakOperator* tweakOperator;
 
     // for optimization purpose, the output profile, output rendering intent and
     // output BPC will trigger a regeneration of the profile on parameter change only
@@ -200,7 +242,7 @@ protected:
     MyMutex paramsUpdateMutex;
     int  changeSinceLast;
     bool updaterRunning;
-    ProcParams nextParams;
+    const std::unique_ptr<ProcParams> nextParams;
     bool destroying;
     bool utili;
     bool autili;
@@ -210,23 +252,145 @@ protected:
     bool clcutili;
     bool opautili;
     bool wavcontlutili;
-    void startProcessing ();
-    void process ();
+    void startProcessing();
+    void process();
     float colourToningSatLimit;
     float colourToningSatLimitOpacity;
     bool highQualityComputed;
     cmsHTRANSFORM customTransformIn;
     cmsHTRANSFORM customTransformOut;
+    ImProcFunctions ipf;
+    
+    //locallab
+    LocallabListener* locallListener;
+    LUTf lllocalcurve;
+    LUTf cllocalcurve;
+    LUTf lclocalcurve;
+    LUTf cclocalcurve;
+    LUTf rgblocalcurve;
+    LUTf exlocalcurve;
+    LUTf hltonecurveloc;
+    LUTf shtonecurveloc;
+    LUTf tonecurveloc;
+    LUTf lightCurveloc;
+    LUTf lmasklocalcurve;
+    LUTf lmaskexplocalcurve;
+    LUTf lmaskSHlocalcurve;
+    LUTf lmaskviblocalcurve;
+    LUTf lmasktmlocalcurve;
+    LUTf lmaskretilocalcurve;
+    LUTf lmaskcblocalcurve;
+    LUTf lmaskbllocalcurve;
+    LUTf lmasklclocalcurve;
+    LUTf lmaskloglocalcurve;
+    LUTf lmasklocal_curve;
+    LUTf lmaskcielocalcurve;
+    LUTf cielocalcurve;
+    LUTf cielocalcurve2;
+    LUTf jzlocalcurve;
+    LUTf czlocalcurve;
+    LUTf czjzlocalcurve;
+    
+    LocretigainCurve locRETgainCurve;
+    LocretitransCurve locRETtransCurve;
+    LocretigainCurverab locRETgainCurverab;
+    LocLHCurve loclhCurve;
+    LocHHCurve lochhCurve;
+    LocCHCurve locchCurve;
+    LocHHCurve lochhCurvejz;
+    LocCHCurve locchCurvejz;
+    LocLHCurve loclhCurvejz;
+    LocCCmaskCurve locccmasCurve;
+    LocLLmaskCurve locllmasCurve;
+    LocHHmaskCurve lochhmasCurve;
+    LocHHmaskCurve lochhhmasCurve;
+    LocCCmaskCurve locccmasexpCurve;
+    LocLLmaskCurve locllmasexpCurve;
+    LocHHmaskCurve lochhmasexpCurve;
+    LocCCmaskCurve locccmasSHCurve;
+    LocLLmaskCurve locllmasSHCurve;
+    LocHHmaskCurve lochhmasSHCurve;
+    LocCCmaskCurve locccmasvibCurve;
+    LocLLmaskCurve locllmasvibCurve;
+    LocHHmaskCurve lochhmasvibCurve;
+    LocCCmaskCurve locccmaslcCurve;
+    LocLLmaskCurve locllmaslcCurve;
+    LocHHmaskCurve lochhmaslcCurve;
+    LocCCmaskCurve locccmascbCurve;
+    LocLLmaskCurve locllmascbCurve;
+    LocHHmaskCurve lochhmascbCurve;
+    LocCCmaskCurve locccmasretiCurve;
+    LocLLmaskCurve locllmasretiCurve;
+    LocHHmaskCurve lochhmasretiCurve;
+    LocCCmaskCurve locccmastmCurve;
+    LocLLmaskCurve locllmastmCurve;
+    LocHHmaskCurve lochhmastmCurve;
+    LocCCmaskCurve locccmasblCurve;
+    LocLLmaskCurve locllmasblCurve;
+    LocHHmaskCurve lochhmasblCurve;
+    LocCCmaskCurve locccmas_Curve;
+    LocLLmaskCurve locllmas_Curve;
+    LocHHmaskCurve lochhmas_Curve;
+    LocHHmaskCurve lochhhmas_Curve;
+    LocCCmaskCurve locccmaslogCurve;
+    LocLLmaskCurve locllmaslogCurve;
+    LocHHmaskCurve lochhmaslogCurve;
+    LocCCmaskCurve locccmascieCurve;
+    LocLLmaskCurve locllmascieCurve;
+    LocHHmaskCurve lochhmascieCurve;
+    
+    LocwavCurve locwavCurve;
+    LocwavCurve loclmasCurveblwav;
+    LocwavCurve loclmasCurvecolwav;
+    LocwavCurve loclevwavCurve;
+    LocwavCurve locconwavCurve;
+    LocwavCurve loccompwavCurve;
+    LocwavCurve loccomprewavCurve;
+    LocwavCurve locwavCurveden;
+    LocwavCurve locedgwavCurve;
+    LocwavCurve loclmasCurve_wav;
+    LocwavCurve locwavCurvehue;
+    LocwavCurve locwavCurvejz;
+
+    std::vector<float> huerefs;
+    std::vector<float> huerefblurs;
+    std::vector<float> chromarefblurs;
+    std::vector<float> lumarefblurs;
+    std::vector<float> chromarefs;
+    std::vector<float> lumarefs;
+    std::vector<float> sobelrefs;
+    std::vector<float> avgs;
+    std::vector<float> meantms;
+    std::vector<float> stdtms;
+    std::vector<float> meanretis;
+    std::vector<float> stdretis;
+    bool lastspotdup;
+    bool previewDeltaE;
+    int locallColorMask;
+    int locallColorMaskinv;
+    int locallExpMask;
+    int locallExpMaskinv;
+    int locallSHMask;
+    int locallSHMaskinv;
+    int locallvibMask;
+    int localllcMask;
+    int locallcbMask;
+    int locallretiMask;
+    int locallsoftMask;
+    int localltmMask;
+    int locallblMask;
+    int locallsharMask;
+    int localllogMask;
+    int locall_Mask;
+    int locallcieMask;
+
 public:
 
     ImProcCoordinator ();
     ~ImProcCoordinator () override;
     void assign     (ImageSource* imgsrc);
 
-    void        getParams (procparams::ProcParams* dst) override
-    {
-        *dst = params;
-    }
+    void        getParams (procparams::ProcParams* dst, bool tweaked=false) override;
 
     void        startProcessing (int changeCode) override;
     ProcParams* beginUpdateParams () override;
@@ -234,10 +398,11 @@ public:
     void        endUpdateParams (int changeFlags) override;
     void        stopProcessing () override;
 
+    std::string *retistrsav;
 
     void setPreviewScale    (int scale) override
     {
-        setScale (scale);
+        setScale(scale);
     }
     int  getPreviewScale    () override
     {
@@ -266,9 +431,12 @@ public:
 
     DetailedCrop* createCrop  (::EditDataProvider *editDataProvider, bool isDetailWindow) override;
 
+    void setTweakOperator (TweakOperator *tOperator) override;
+    void unsetTweakOperator (TweakOperator *tOperator) override;
     bool getAutoWB   (double& temp, double& green, double equal, double tempBias) override;
     void getCamWB    (double& temp, double& green) override;
     void getSpotWB   (int x, int y, int rectSize, double& temp, double& green) override;
+    bool getFilmNegativeSpot(int x, int y, int spotSize, FilmNegativeParams::RGB &refInput, FilmNegativeParams::RGB &refOutput) override;
     void getAutoCrop (double ratio, int &x, int &y, int &w, int &h) override;
     bool getHighQualComputed() override;
     void setHighQualComputed() override;
@@ -276,7 +444,7 @@ public:
     void getMonitorProfile (Glib::ustring& profile, RenderingIntent& intent) const override;
     void setSoftProofing   (bool softProof, bool gamutCheck) override;
     void getSoftProofing   (bool &softProof, bool &gamutCheck) override;
-    void setSharpMask      (bool sharpMask) override;
+    ProcEvent setSharpMask (bool sharpMask) override;
     bool updateTryLock () override
     {
         return updaterThreadStart.trylock();
@@ -284,6 +452,28 @@ public:
     void updateUnLock () override
     {
         updaterThreadStart.unlock();
+    }
+
+    void setLocallabMaskVisibility(bool previewDeltaE, int locallColorMask, int locallColorMaskinv, int locallExpMask, int locallExpMaskinv, int locallSHMask, int locallSHMaskinv, int locallvibMask, int locallsoftMask, int locallblMask, int localltmMask, int locallretiMask, int locallsharMask, int localllcMask, int locallcbMask, int localllogMask, int locall_Mask, int locallcieMask) override
+    {
+        this->previewDeltaE = previewDeltaE;
+        this->locallColorMask = locallColorMask;
+        this->locallColorMaskinv = locallColorMaskinv;
+        this->locallExpMask = locallExpMask;
+        this->locallExpMaskinv = locallExpMaskinv;
+        this->locallSHMask = locallSHMask;
+        this->locallSHMaskinv = locallSHMaskinv;
+        this->locallvibMask = locallvibMask;
+        this->locallsoftMask = locallsoftMask;
+        this->locallblMask = locallblMask;
+        this->localltmMask = localltmMask;
+        this->locallretiMask = locallretiMask;
+        this->locallsharMask = locallsharMask;
+        this->localllcMask = localllcMask;
+        this->locallcbMask = locallcbMask;
+        this->localllogMask = localllogMask;
+        this->locall_Mask = locall_Mask;
+        this->locallcieMask = locallcieMask;
     }
 
     void setProgressListener (ProgressListener* pl) override
@@ -296,14 +486,14 @@ public:
     }
     void setSizeListener     (SizeListener* il) override
     {
-        sizeListeners.push_back (il);
+        sizeListeners.push_back(il);
     }
     void delSizeListener     (SizeListener* il) override
     {
-        std::vector<SizeListener*>::iterator it = std::find (sizeListeners.begin(), sizeListeners.end(), il);
+        std::vector<SizeListener*>::iterator it = std::find(sizeListeners.begin(), sizeListeners.end(), il);
 
         if (it != sizeListeners.end()) {
-            sizeListeners.erase (it);
+            sizeListeners.erase(it);
         }
     }
     void setAutoExpListener  (AutoExpListener* ael) override
@@ -312,7 +502,13 @@ public:
     }
     void setHistogramListener (HistogramListener *h) override
     {
+        if (hListener) {
+            hListener->setObservable(nullptr);
+        }
         hListener = h;
+        if (h) {
+            h->setObservable(this);
+        }
     }
     void setAutoCamListener  (AutoCamListener* acl) override
     {
@@ -330,6 +526,10 @@ public:
     {
         actListener = bwct;
     }
+    void setAutoprimListener   (AutoprimListener* pri) override
+    {
+        primListener = pri;
+    }
     void setAutoChromaListener  (AutoChromaListener* adn) override
     {
         adnListener = adn;
@@ -337,6 +537,10 @@ public:
     void setRetinexListener  (RetinexListener* adh) override
     {
         dehaListener = adh;
+    }
+    void setLocallabListener  (LocallabListener* lla) override
+    {
+        locallListener = lla;
     }
     void setWaveletListener  (WaveletListener* awa) override
     {
@@ -362,9 +566,24 @@ public:
         xtransAutoContrastListener = acl;
     }
 
+    void setpdSharpenAutoRadiusListener  (AutoRadiusListener* acl) override
+    {
+        pdSharpenAutoRadiusListener = acl;
+    }
+
+    void setpdSharpenAutoContrastListener  (AutoContrastListener* acl) override
+    {
+        pdSharpenAutoContrastListener = acl;
+    }
+
     void setImageTypeListener  (ImageTypeListener* itl) override
     {
         imageTypeListener = itl;
+    }
+
+    void setFilmNegListener  (FilmNegListener* fnl) override
+    {
+        filmNegListener = fnl;
     }
 
     void saveInputICCReference (const Glib::ustring& fname, bool apply_wb) override;
@@ -385,7 +604,7 @@ public:
     }
 
     struct DenoiseInfoStore {
-        DenoiseInfoStore () : chM (0), max_r{}, max_b{}, ch_M{}, valid (false)  {}
+        DenoiseInfoStore() : chM(0), max_r{}, max_b{}, ch_M{}, valid(false)  {}
         float chM;
         float max_r[9];
         float max_b[9];
@@ -394,6 +613,11 @@ public:
 
     } denoiseInfoStore;
 
+    void requestUpdateHistogram() override;
+    void requestUpdateHistogramRaw() override;
+    void requestUpdateVectorscopeHC() override;
+    void requestUpdateVectorscopeHS() override;
+    void requestUpdateWaveform() override;
 };
+
 }
-#endif

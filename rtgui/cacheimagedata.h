@@ -14,19 +14,20 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef _CACHEIMAGEDATA_
-#define _CACHEIMAGEDATA_
+#pragma once
 
-#include <glibmm.h>
+#include <glibmm/ustring.h>
+
 #include "options.h"
-#include "../rtengine/rtengine.h"
+
 #include "../rtengine/imageformat.h"
+#include "../rtengine/rtengine.h"
 
-class CacheImageData: public rtengine::FramesMetaData
+class CacheImageData :
+    public rtengine::FramesMetaData
 {
-
 public:
 
     // basic information
@@ -54,6 +55,7 @@ public:
     double focalLen, focalLen35mm;
     float focusDist;
     unsigned iso;
+    int rating;
     bool isHDR;
     bool isPixelShift;
     int sensortype;
@@ -94,7 +96,7 @@ public:
     rtexif::TagDirectory* getFrameExifData (unsigned int frame = 0) const override { return nullptr; }
     rtexif::TagDirectory* getBestExifData (rtengine::ImageSource *imgSource, rtengine::procparams::RAWParams *rawParams) const override { return nullptr; }
     bool hasIPTC (unsigned int frame = 0) const override { return false; }
-    rtengine::procparams::IPTCPairs getIPTCData (unsigned int frame = 0) const override { return rtengine::procparams::IPTCPairs(); }
+    rtengine::procparams::IPTCPairs getIPTCData (unsigned int frame = 0) const override;
     tm getDateTime (unsigned int frame = 0) const override { return tm{}; }
     time_t getDateTimeAsTS(unsigned int frame = 0) const override { return time_t(-1); }
     int getISOSpeed (unsigned int frame = 0) const override { return iso; }
@@ -108,9 +110,9 @@ public:
     std::string getModel    (unsigned int frame = 0) const override { return camModel; }
     std::string getLens     (unsigned int frame = 0) const override { return lens; }
     std::string getOrientation (unsigned int frame = 0) const override { return ""; } // TODO
+    int getRating (unsigned int frame = 0) const override { return rating; } // FIXME-piotr : missing rating
     bool getPixelShift () const override { return isPixelShift; }
     bool getHDR (unsigned int frame = 0) const override { return isHDR; }
     std::string getImageType (unsigned int frame) const override { return isPixelShift ? "PS" : isHDR ? "HDR" : "STD"; }
     rtengine::IIOSampleFormat getSampleFormat (unsigned int frame = 0) const override { return sampleFormat; }
 };
-#endif

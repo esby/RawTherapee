@@ -14,22 +14,20 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
 //
 // A class representing a 8 bit rgb image without alpha channel
 //
-#ifndef _IMAGE8_
-#define _IMAGE8_
+#pragma once
 
 #include "imageio.h"
-#include "rtengine.h"
-#include "imagefloat.h"
 
 namespace rtengine
 {
+class Imagefloat;
 
-class Image8 : public IImage8, public ImageIO
+class Image8 final : public IImage8, public ImageIO
 {
 
 public:
@@ -40,7 +38,7 @@ public:
 
     Image8* copy () const;
 
-    void getStdImage (const ColorTemp &ctemp, int tran, Imagefloat* image, PreviewProps pp) const override;
+    void getStdImage (const ColorTemp &ctemp, int tran, Imagefloat* image, const PreviewProps &pp) const override;
 
     const char* getType () const override
     {
@@ -53,7 +51,7 @@ public:
     }
 
     void getScanline (int row, unsigned char* buffer, int bps, bool isFloat = false) const override;
-    void setScanline (int row, unsigned char* buffer, int bps, unsigned int numSamples) override;
+    void setScanline (int row, const unsigned char* buffer, int bps, unsigned int numSamples) override;
 
     // functions inherited from IImage*:
     MyMutex& getMutex () override
@@ -64,11 +62,6 @@ public:
     cmsHPROFILE getProfile () const override
     {
         return getEmbeddedProfile ();
-    }
-
-    int getBitsPerPixel () const override
-    {
-        return 8 * sizeof(unsigned char);
     }
 
     int saveToFile (const Glib::ustring &fname) const override
@@ -96,12 +89,6 @@ public:
         setProgressListener (pl);
     }
 
-    void free () override
-    {
-        delete this;
-    }
-
 };
 
 }
-#endif

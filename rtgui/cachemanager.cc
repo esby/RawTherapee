@@ -14,30 +14,32 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include "cachemanager.h"
 
 #include <memory>
 #include <iostream>
 
-#include <glib/gstdio.h>
+#include <dirent.h>
 #include <giomm.h>
+#include <glib/gstdio.h>
 
 #ifdef WIN32
-#include <windows.h>
+#include <fileapi.h>
 #endif
+
+#include "cachemanager.h"
 
 #include "guiutils.h"
 #include "options.h"
-#include "procparamchangers.h"
 #include "thumbnail.h"
+#include "procparamchangers.h"
 
 namespace
 {
 
 constexpr int cacheDirMode = 0777;
-constexpr const char* cacheDirs[] = { "profiles", "images", "aehistograms", "embprofiles", "data" };
+constexpr const char* cacheDirs[] = { "profiles", "images", "embprofiles", "data" };
 
 }
 
@@ -57,12 +59,10 @@ void CacheManager::init ()
     auto error = g_mkdir_with_parents (baseDir.c_str(), cacheDirMode);
 
     for (const auto& cacheDir : cacheDirs) {
-        if (strncmp(cacheDir, "aehistograms", 12)) {  // don't create aehistograms folder.
-            error |= g_mkdir_with_parents (Glib::build_filename (baseDir, cacheDir).c_str(), cacheDirMode);
-        }
+        error |= g_mkdir_with_parents (Glib::build_filename (baseDir, cacheDir).c_str(), cacheDirMode);
     }
 
-    if (error != 0 && options.rtSettings.verbose) {
+    if (error != 0 && rtengine::settings->verbose) {
         std::cerr << "Failed to create all cache directories: " << g_strerror(errno) << std::endl;
     }
 }
@@ -79,6 +79,7 @@ Thumbnail* CacheManager::getEntry (const Glib::ustring& fname)
 
         // if it is open, return it
         const auto iterator = openEntries.find (fname);
+
         if (iterator != openEntries.end ()) {
 
             auto cachedThumbnail = iterator->second;
@@ -102,9 +103,11 @@ Thumbnail* CacheManager::getEntry (const Glib::ustring& fname)
         CacheImageData imageData;
 
         const auto error = imageData.load (cacheName);
+
         if (error == 0 && imageData.supported) {
 
             thumbnail.reset (new Thumbnail (this, fname, &imageData));
+
             if (!thumbnail->isSupported ()) {
                 thumbnail.reset ();
             }
@@ -115,6 +118,7 @@ Thumbnail* CacheManager::getEntry (const Glib::ustring& fname)
     if (!thumbnail) {
 
         thumbnail.reset (new Thumbnail (this, fname, md5));
+
         if (!thumbnail->isSupported ()) {
             thumbnail.reset ();
         }
@@ -126,6 +130,7 @@ Thumbnail* CacheManager::getEntry (const Glib::ustring& fname)
         MyMutex::MyLock lock (mutex);
 
         const auto iterator = openEntries.find (fname);
+
         if (iterator != openEntries.end ()) {
 
             auto cachedThumbnail = iterator->second;
@@ -148,6 +153,7 @@ void CacheManager::deleteEntry (const Glib::ustring& fname)
 
     // check if it is opened
     auto iterator = openEntries.find (fname);
+
     if (iterator == openEntries.end ()) {
         deleteFiles (fname, getMD5 (fname), true, true);
         return;
@@ -185,17 +191,17 @@ void CacheManager::renameEntry (const std::string& oldfilename, const std::strin
 
     auto error = g_rename (getCacheFileName ("profiles", oldfilename, paramFileExtension, oldmd5).c_str (), getCacheFileName ("profiles", newfilename, paramFileExtension, newmd5).c_str ());
     error |= g_rename (getCacheFileName ("images", oldfilename, ".rtti", oldmd5).c_str (), getCacheFileName ("images", newfilename, ".rtti", newmd5).c_str ());
-    error |= g_rename (getCacheFileName ("aehistograms", oldfilename, "", oldmd5).c_str (), getCacheFileName ("aehistograms", newfilename, "", newmd5).c_str ());
     error |= g_rename (getCacheFileName ("embprofiles", oldfilename, ".icc", oldmd5).c_str (), getCacheFileName ("embprofiles", newfilename, ".icc", newmd5).c_str ());
     error |= g_rename (getCacheFileName ("data", oldfilename, ".txt", oldmd5).c_str (), getCacheFileName ("data", newfilename, ".txt", newmd5).c_str ());
 
-    if (error != 0 && options.rtSettings.verbose) {
+    if (error != 0 && rtengine::settings->verbose) {
         std::cerr << "Failed to rename all files for cache entry '" << oldfilename << "': " << g_strerror(errno) << std::endl;
     }
 
     // check if it is opened
     // if it is open, update md5
     const auto iterator = openEntries.find (oldfilename);
+
     if (iterator == openEntries.end ()) {
         return;
     }
@@ -239,7 +245,6 @@ void CacheManager::clearImages () const
 
     deleteDir ("data");
     deleteDir ("images");
-    deleteDir ("aehistograms");
     deleteDir ("embprofiles");
 }
 
@@ -248,7 +253,9 @@ void CacheManager::clearProfiles () const
     MyMutex::MyLock lock (mutex);
 
     deleteDir ("profiles");
+
 }
+
 
 void CacheManager::deleteDir (const Glib::ustring& dirName) const
 {
@@ -257,11 +264,12 @@ void CacheManager::deleteDir (const Glib::ustring& dirName) const
         Glib::Dir dir (Glib::build_filename (baseDir, dirName));
 
         auto error = 0;
+
         for (auto entry = dir.begin (); entry != dir.end (); ++entry) {
             error |= g_remove (Glib::build_filename (baseDir, dirName, *entry).c_str ());
         }
 
-        if (error != 0 && options.rtSettings.verbose) {
+        if (error != 0 && rtengine::settings->verbose) {
             std::cerr << "Failed to delete all entries in cache directory '" << dirName << "': " << g_strerror(errno) << std::endl;
         }
 
@@ -275,7 +283,6 @@ void CacheManager::deleteFiles (const Glib::ustring& fname, const std::string& m
     }
 
     auto error = g_remove (getCacheFileName ("images", fname, ".rtti", md5).c_str ());
-    error |= g_remove (getCacheFileName ("aehistograms", fname, "", md5).c_str ());
     error |= g_remove (getCacheFileName ("embprofiles", fname, ".icc", md5).c_str ());
 
     if (purgeData) {
@@ -286,7 +293,7 @@ void CacheManager::deleteFiles (const Glib::ustring& fname, const std::string& m
         error |= g_remove (getCacheFileName ("profiles", fname, paramFileExtension, md5).c_str ());
     }
 
-    if (error != 0 && options.rtSettings.verbose) {
+    if (error != 0 && rtengine::settings->verbose) {
         std::cerr << "Failed to delete all files for cache entry '" << fname << "': " << g_strerror(errno) << std::endl;
     }
 }
@@ -328,9 +335,9 @@ std::string CacheManager::getMD5 (const Glib::ustring& fname)
 }
 
 Glib::ustring CacheManager::getCacheFileName (const Glib::ustring& subDir,
-                                              const Glib::ustring& fname,
-                                              const Glib::ustring& fext,
-                                              const Glib::ustring& md5) const
+        const Glib::ustring& fname,
+        const Glib::ustring& fext,
+        const Glib::ustring& md5) const
 {
     const auto dirName = Glib::build_filename (baseDir, subDir);
     const auto baseName = Glib::path_get_basename (fname) + "." + md5;
@@ -339,48 +346,70 @@ Glib::ustring CacheManager::getCacheFileName (const Glib::ustring& subDir,
 
 void CacheManager::applyCacheSizeLimitation () const
 {
+    // first count files without fetching file name and timestamp.
+    auto cachedir = opendir(Glib::build_filename(baseDir, "data").c_str());
+    if (!cachedir) {
+        return;
+    }
+
+    std::size_t numFiles = 0;
+    while (readdir(cachedir)) {
+        ++numFiles;
+    }
+
+    closedir(cachedir);
+    if (numFiles > 2) {
+        numFiles -= 2; // because . and .. are counted
+    }
+
+    if (numFiles <= options.maxCacheEntries) {
+        return;
+    }
+
     using FNameMTime = std::pair<Glib::ustring, Glib::TimeVal>;
+
     std::vector<FNameMTime> files;
+    files.reserve(numFiles);
 
+    constexpr std::size_t md5_size = 32;
+    // get filenames and timestamps
     try {
+        const auto dir = Gio::File::create_for_path(Glib::build_filename(baseDir, "data"));
+        const auto enumerator = dir->enumerate_children("standard::name,time::modified");
 
-        const auto dirName = Glib::build_filename (baseDir, "data");
-        const auto dir = Gio::File::create_for_path (dirName);
-
-        auto enumerator = dir->enumerate_children ("standard::name,time::modified");
-
-        while (auto file = enumerator->next_file ()) {
-            files.emplace_back (file->get_name (), file->modification_time ());
+        while (const auto file = enumerator->next_file()) {
+            const auto name = file->get_name();
+            if (name.size() >= md5_size + 5) {
+                files.emplace_back(name, file->modification_time());
+            }
         }
 
     } catch (Glib::Exception&) {}
 
-    if (files.size () <= options.maxCacheEntries) {
+    if (files.size() <= options.maxCacheEntries) {
+        // limit not reached
         return;
     }
 
-    std::sort (files.begin (), files.end (), [] (const FNameMTime& lhs, const FNameMTime& rhs)
-    {
-        return lhs.second < rhs.second;
-    });
+    const std::size_t toDelete = files.size() - options.maxCacheEntries + options.maxCacheEntries * 5 / 100; // reserve 5% free cache space
 
-    auto cacheEntries = files.size ();
-
-    for (auto entry = files.begin (); cacheEntries-- > options.maxCacheEntries; ++entry) {
-
-        const auto& name = entry->first;
-
-        constexpr auto md5_size = 32;
-        const auto name_size = name.size();
-
-        if (name_size < md5_size + 5) {
-            continue;
+    std::nth_element(
+        files.begin(),
+        files.begin() + toDelete,
+        files.end(),
+        [](const FNameMTime& lhs, const FNameMTime& rhs) -> bool
+        {
+            return lhs.second < rhs.second;
         }
+    );
 
-        const auto fname = name.substr (0, name_size - md5_size - 5);
-        const auto md5 = name.substr (name_size - md5_size - 4, md5_size);
+    for (std::vector<FNameMTime>::const_iterator entry = files.begin(), end = files.begin() + toDelete; entry != end; ++entry) {
+        const auto& name = entry->first;
+        const auto name_size = name.size() - md5_size;
+        const auto fname = name.substr(0, name_size - 5);
+        const auto md5 = name.substr(name_size - 4, md5_size);
 
-        deleteFiles (fname, md5, true, false);
+        deleteFiles(fname, md5, true, false);
     }
 }
 

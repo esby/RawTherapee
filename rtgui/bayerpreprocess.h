@@ -14,17 +14,16 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef _BAYERPREPROCESS_H_
-#define _BAYERPREPROCESS_H_
+#pragma once
 
 #include <gtkmm.h>
+
 #include "adjuster.h"
 #include "toolpanel.h"
-#include "../rtengine/rawimage.h"
 
-class BayerPreProcess : public ToolParamBlock, public AdjusterListener, public FoldableToolPanel
+class BayerPreProcess final : public ToolParamBlock, public AdjusterListener, public FoldableToolPanel
 {
 
 protected:
@@ -47,7 +46,6 @@ public:
     void setDefaults    (const rtengine::procparams::ProcParams* defParams, const ParamsEdited* pedited = nullptr) override;
 
     void adjusterChanged(Adjuster* a, double newval) override;
-    void adjusterAutoToggled(Adjuster* a, bool newval) override;
 
     void hotDeadPixelChanged();
     void setAdjusterBehavior (bool linedenoiseadd, bool greenequiladd);
@@ -55,5 +53,3 @@ public:
     void lineDenoiseDirectionChanged();
     void pdafLinesFilterChanged();
 };
-
-#endif

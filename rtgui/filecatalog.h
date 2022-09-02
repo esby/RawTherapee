@@ -14,44 +14,48 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef _FILECATALOG_
-#define _FILECATALOG_
+#pragma once
 
-#include "filebrowser.h"
-#include "exiffiltersettings.h"
-#include <giomm.h>
-#include "fileselectionlistener.h"
 #include <set>
-#include "fileselectionchangelistener.h"
-#include "coarsepanel.h"
-#include "toolbar.h"
-#include "filterpanel.h"
+
+#include <giomm.h>
+
+#include "exiffiltersettings.h"
 #include "exportpanel.h"
+#include "filebrowser.h"
+#include "fileselectionchangelistener.h"
+#include "fileselectionlistener.h"
+#include "filterpanel.h"
 #include "previewloader.h"
-#include "multilangmgr.h"
 #include "threadutils.h"
 
+#include "../rtengine/noncopyable.h"
+
 class FilePanel;
+class CoarsePanel;
+class ToolBar;
+
 /*
  * Class:
  *   - handling the list of file (add/remove them)
  *   - handling the thumbnail toolbar,
  *   - monitoring the directory (for any change)
  */
-class FileCatalog : public Gtk::VBox,
+class FileCatalog final : public Gtk::Box,
     public PreviewLoaderListener,
     public FilterPanelListener,
     public FileBrowserListener,
-    public ExportPanelListener
+    public ExportPanelListener,
+    public rtengine::NonCopyable
 {
 public:
     typedef sigc::slot<void, const Glib::ustring&> DirSelectionSlot;
 
 private:
     FilePanel* filepanel;
-    Gtk::HBox* hBox;
+    Gtk::Box* hBox;
     Glib::ustring selectedDirectory;
     int selectedDirectoryId;
     bool enabled;
@@ -65,19 +69,19 @@ private:
     ImageAreaToolListener* iatlistener;
     DirSelectionSlot selectDir;
 
-    Gtk::HBox* buttonBar;
-    Gtk::HBox* hbToolBar1;
+    Gtk::Box* buttonBar;
+    Gtk::Box* hbToolBar1;
     MyScrolledToolbar* hbToolBar1STB;
 
-    Gtk::HBox* fltrRankbox;
-    Gtk::HBox* fltrLabelbox;
-    Gtk::VBox* fltrVbox1;
+    Gtk::Box* fltrRankbox;
+    Gtk::Box* fltrLabelbox;
+    Gtk::Box* fltrVbox1;
 
-    Gtk::HBox* fltrEditedBox;
-    Gtk::HBox* fltrRecentlySavedBox;
-    Gtk::VBox* fltrVbox2;
+    Gtk::Box* fltrEditedBox;
+    Gtk::Box* fltrRecentlySavedBox;
+    Gtk::Box* fltrVbox2;
 
-    Gtk::VSeparator* vSepiLeftPanel;
+    Gtk::Separator* vSepiLeftPanel;
 
     Gtk::ToggleButton* tbLeftPanel_1;
     Gtk::ToggleButton* tbRightPanel_1;
@@ -115,10 +119,13 @@ private:
     double vScrollPos[18];
     int lastScrollPos;
 
-    Gtk::VBox* trashButtonBox;
+    Gtk::Box* trashButtonBox;
 
     Gtk::Button* zoomInButton;
     Gtk::Button* zoomOutButton;
+
+    RTImage* progressImage;
+    Gtk::Label* progressLabel;
 
     MyMutex dirEFSMutex;
     ExifFilterSettings dirEFS;
@@ -141,7 +148,7 @@ private:
     IdleRegister idle_register;
 
     void addAndOpenFile (const Glib::ustring& fname);
-    void checkAndAddFile (Glib::RefPtr<Gio::File> info);
+    void addFile (const Glib::ustring& fName);
     std::vector<Glib::ustring> getFileList ();
     BrowserFilter getFilter ();
     void trashChanged ();
@@ -204,7 +211,7 @@ public:
 
     void filterApplied() override;
     void openRequested(const std::vector<Thumbnail*>& tbe) override;
-    void deleteRequested(const std::vector<FileBrowserEntry*>& tbe, bool inclBatchProcessed) override;
+    void deleteRequested(const std::vector<FileBrowserEntry*>& tbe, bool inclBatchProcessed, bool onlySelected) override;
     void copyMoveRequested(const std::vector<FileBrowserEntry*>& tbe, bool moveRequested) override;
     void developRequested(const std::vector<FileBrowserEntry*>& tbe, bool fastmode) override;
     void renameRequested(const std::vector<FileBrowserEntry*>& tbe) override;
@@ -239,7 +246,7 @@ public:
 
     void on_realize() override;
     void reparseDirectory ();
-    void _openImage (std::vector<Thumbnail*> tmb);
+    void _openImage (const std::vector<Thumbnail*>& tmb);
 
     void zoomIn ();
     void zoomOut ();
@@ -269,6 +276,7 @@ public:
     void openNextPreviousEditorImage (Glib::ustring fname, bool clearFilters, eRTNav nextPrevious);
 
     bool handleShortcutKey (GdkEventKey* event);
+    bool handleShortcutKeyRelease(GdkEventKey *event);
 
     bool CheckSidePanelsVisibility();
     void toggleSidePanels();
@@ -286,5 +294,3 @@ inline void FileCatalog::setDirSelector (const FileCatalog::DirSelectionSlot& se
 {
     this->selectDir = selectDir;
 }
-
-#endif

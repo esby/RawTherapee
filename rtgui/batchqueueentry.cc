@@ -14,7 +14,7 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "batchqueueentry.h"
 
@@ -25,23 +25,27 @@
 #include "rtimage.h"
 #include "multilangmgr.h"
 #include "thumbbrowserbase.h"
+#include "thumbnail.h"
+
+#include "../rtengine/procparams.h"
+#include "../rtengine/rtengine.h"
 
 bool BatchQueueEntry::iconsLoaded(false);
 Glib::RefPtr<Gdk::Pixbuf> BatchQueueEntry::savedAsIcon;
 
-BatchQueueEntry::BatchQueueEntry (rtengine::ProcessingJob* pjob, const rtengine::procparams::ProcParams& pparams, Glib::ustring fname, int prevw, int prevh, Thumbnail* thm) :
+BatchQueueEntry::BatchQueueEntry (rtengine::ProcessingJob* pjob, const rtengine::procparams::ProcParams& pparams, Glib::ustring fname, int prevw, int prevh, Thumbnail* thm, bool overwrite) :
     ThumbBrowserEntryBase(fname),
     opreview(nullptr),
     origpw(prevw),
     origph(prevh),
     opreviewDone(false),
     job(pjob),
-    params(pparams),
+    params(new rtengine::procparams::ProcParams(pparams)),
     progress(0),
-    outFileName(""),
     sequence(0),
     forceFormatOpts(false),
-    fast_pipeline(job->fastPipeline())
+    fast_pipeline(job->fastPipeline()),
+    overwriteFile(overwrite)
 {
 
     thumbnail = thm;
@@ -55,7 +59,7 @@ BatchQueueEntry::BatchQueueEntry (rtengine::ProcessingJob* pjob, const rtengine:
 #endif
 
     if (!iconsLoaded) {
-        savedAsIcon = RTImage::createFromFile ("save-small.png");
+        savedAsIcon = RTImage::createPixbufFromFile ("save-small.png");
         iconsLoaded = true;
     }
 
@@ -93,7 +97,7 @@ void BatchQueueEntry::refreshThumbnailImage ()
         // creating the image buffer first
         //if (!opreview) opreview = new guint8[(origpw+1) * origph * 3];
         // this will asynchronously compute the original preview and land at this.updateImage
-        batchQueueEntryUpdater.process (nullptr, origpw, origph, preh, this, &params, thumbnail);
+        batchQueueEntryUpdater.process (nullptr, origpw, origph, preh, this, params.get(), thumbnail);
     } else {
         // this will asynchronously land at this.updateImage
         batchQueueEntryUpdater.process (opreview, origpw, origph, preh, this);
@@ -102,8 +106,12 @@ void BatchQueueEntry::refreshThumbnailImage ()
 
 void BatchQueueEntry::calcThumbnailSize ()
 {
-
     prew = preh * origpw / origph;
+    if (prew > options.maxThumbnailWidth) {
+        const float s = static_cast<float>(options.maxThumbnailWidth) / prew;
+        prew = options.maxThumbnailWidth;
+        preh = std::max<int>(preh * s, 1);
+    }
 }
 
 
@@ -145,7 +153,7 @@ void BatchQueueEntry::removeButtonSet ()
     buttonSet = nullptr;
 }
 
-std::vector<Glib::RefPtr<Gdk::Pixbuf> > BatchQueueEntry::getIconsOnImageArea ()
+std::vector<Glib::RefPtr<Gdk::Pixbuf>> BatchQueueEntry::getIconsOnImageArea ()
 {
 
     std::vector<Glib::RefPtr<Gdk::Pixbuf> > ret;
@@ -157,7 +165,7 @@ std::vector<Glib::RefPtr<Gdk::Pixbuf> > BatchQueueEntry::getIconsOnImageArea ()
     return ret;
 }
 
-void BatchQueueEntry::getIconSize (int& w, int& h)
+void BatchQueueEntry::getIconSize (int& w, int& h) const
 {
 
     w = savedAsIcon->get_width ();
@@ -165,10 +173,12 @@ void BatchQueueEntry::getIconSize (int& w, int& h)
 }
 
 
-Glib::ustring BatchQueueEntry::getToolTip (int x, int y)
+std::tuple<Glib::ustring, bool> BatchQueueEntry::getToolTip (int x, int y) const
 {
     // get the parent class' tooltip first
-    Glib::ustring tooltip = ThumbBrowserEntryBase::getToolTip(x, y);
+    Glib::ustring tooltip;
+    bool useMarkup;
+    std::tie(tooltip, useMarkup) =  ThumbBrowserEntryBase::getToolTip(x, y);
 
     // add the saving param options
     if (!outFileName.empty()) {
@@ -195,7 +205,7 @@ Glib::ustring BatchQueueEntry::getToolTip (int x, int y)
         }
     }
 
-    return tooltip;
+    return std::make_tuple(std::move(tooltip), useMarkup);
 
 }
 
@@ -255,9 +265,8 @@ void BatchQueueEntry::_updateImage (guint8* img, int w, int h)
         MYWRITERLOCK(l, lockRW);
 
         prew = w;
-        assert (preview == nullptr);
-        preview = new guint8 [prew * preh * 3];
-        memcpy (preview, img, prew * preh * 3);
+        preview.resize(prew * preh * 3);
+        std::copy(img, img + preview.size(), preview.begin());
 
         if (parent) {
             parent->redrawNeeded (this);

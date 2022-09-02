@@ -14,18 +14,22 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef _PIPETTEBUFFER_H_
-#define _PIPETTEBUFFER_H_
+#pragma once
 
-#include "../rtgui/edit.h"
-#include "array2D.h"
 #include "iimage.h"
-#include "coord.h"
+
+class EditDataProvider;
+class EditSubscriber;
+
+enum EditUniqueID : int;
 
 namespace rtengine
 {
+
+class Imagefloat;
+class LabImage;
 
 /// @brief Structure that contains information about and pointers to the Edit buffer
 class PipetteBuffer
@@ -54,7 +58,7 @@ public:
     ~PipetteBuffer();
 
     /** @brief Getter to know if the pipette buffer is correctly filled */
-    bool isReady()
+    bool isReady() const
     {
         return ready;
     }
@@ -88,9 +92,7 @@ public:
     bool bufferCreated();
 
     // get the pipette values
-    void getPipetteData(float* v, int x, int y, int squareSize);
+    void getPipetteData(int x, int y, int squareSize);
 };
 
 }
-
-#endif

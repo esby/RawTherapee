@@ -13,7 +13,7 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "curveeditor.h"
 #include "curveeditorgroup.h"
@@ -21,9 +21,51 @@
 #include <string>
 #include "guiutils.h"
 #include "multilangmgr.h"
+#include "popuptogglebutton.h"
 #include "../rtengine/LUT.h"
 
 #include <cstring>
+
+namespace {
+
+class CurveTypePopUpButton: public PopUpToggleButton {
+public:
+    CurveTypePopUpButton(const Glib::ustring &label=""):
+        PopUpToggleButton(label) {}
+
+    void setPosIndexMap(const std::vector<int> &pmap)
+    {
+        posidxmap_ = pmap;
+    }
+
+protected:
+    int posToIndex(int pos) const override
+    {
+        if (pos < 0 || size_t(pos) >= posidxmap_.size()) {
+            return pos;
+        }
+        return posidxmap_[pos];
+    }
+
+    int indexToPos(int index) const override
+    {
+        if (index < 0 || size_t(index) >= posidxmap_.size()) {
+            return index;
+        }
+        for (int i = 0, n = int(posidxmap_.size()); i < n; ++i) {
+            if (posidxmap_[i] == index) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+private:
+    std::vector<int> posidxmap_;
+};
+
+} // namespace
+
 
 bool CurveEditor::reset()
 {
@@ -33,12 +75,14 @@ bool CurveEditor::reset()
 DiagonalCurveEditor::DiagonalCurveEditor (Glib::ustring text, CurveEditorGroup* ceGroup, CurveEditorSubGroup* ceSubGroup) : CurveEditor::CurveEditor(text, static_cast<CurveEditorGroup*>(ceGroup), ceSubGroup)
 {
 
-    // Order set in the same order than "enum DiagonalCurveType". Shouldn't change, for compatibility reason
     curveType->addEntry("curve-linear-small.png", M("CURVEEDITOR_LINEAR")); // 0 Linear
     curveType->addEntry("curve-spline-small.png", M("CURVEEDITOR_CUSTOM")); // 1 Spline
+    curveType->addEntry("curve-catmullrom-small.png", M("CURVEEDITOR_CATMULLROM")); // 4 CatmullRom
     curveType->addEntry("curve-parametric-small.png", M("CURVEEDITOR_PARAMETRIC")); // 2 Parametric
     curveType->addEntry("curve-nurbs-small.png", M("CURVEEDITOR_NURBS")); // 3 NURBS
+    static_cast<CurveTypePopUpButton *>(curveType)->setPosIndexMap({ 0, 1, 4, 2, 3 });
     curveType->setSelected(DCT_Linear);
+
     curveType->show();
 
     rangeLabels[0] = M("CURVEEDITOR_SHADOWS");
@@ -64,6 +108,9 @@ std::vector<double> DiagonalCurveEditor::getCurve ()
 
     case (DCT_NURBS):
         return curve = NURBSCurveEd;
+
+    case (DCT_CatumullRom):
+        return curve = catmullRomCurveEd;
 
     default:
         // returning Linear or Unchanged
@@ -92,6 +139,13 @@ void DiagonalCurveEditor::setResetCurve(DiagonalCurveType cType, const std::vect
     case (DCT_Spline):
         if (resetCurve.size() && DiagonalCurveType(resetCurve.at(0)) == cType) {
             customResetCurve = resetCurve;
+        }
+
+        break;
+
+    case (DCT_CatumullRom):
+        if (resetCurve.size() && DiagonalCurveType(resetCurve.at(0)) == cType) {
+            catmullRomResetCurve = resetCurve;
         }
 
         break;
@@ -194,6 +248,7 @@ CurveEditor::CurveEditor (Glib::ustring text, CurveEditorGroup* ceGroup, CurveEd
 {
 
     bgHistValid = false;
+    locallabRef = 0.0;
     remoteDrag = false;
     selected = DCT_Linear;
     bottomBarCP = nullptr;
@@ -209,9 +264,9 @@ CurveEditor::CurveEditor (Glib::ustring text, CurveEditorGroup* ceGroup, CurveEd
     subGroup = ceSubGroup;
 
     if (group && text.size()) {
-        curveType = new PopUpToggleButton(text + ":");
+        curveType = new CurveTypePopUpButton(text + ":");
     } else {
-        curveType = new PopUpToggleButton();
+        curveType = new CurveTypePopUpButton();
     }
 
     curveType->set_tooltip_text(M("CURVEEDITOR_TYPE"));
@@ -266,6 +321,18 @@ void CurveEditor::updateBackgroundHistogram(const LUTu& hist)
 
     // Then call the curve editor group to eventually update the histogram
     subGroup->updateBackgroundHistogram(this);
+}
+
+/*
+ * Update Locallab reference value displayed in the background
+ */
+void CurveEditor::updateLocallabBackground(double ref)
+{
+    // Copy Locallab reference value in the curve editor cache
+    locallabRef = ref;
+
+    // Then call the curve editor group to eventually update the histogram
+    subGroup->updateLocallabBackground(this);
 }
 
 // Open up the curve if it has modifications and it's not already opened
@@ -396,7 +463,7 @@ void CurveEditor::switchOffEditMode ()
     EditSubscriber::switchOffEditMode();  // disconnect
 }
 
-bool CurveEditor::mouseOver(const int modifierKey)
+bool CurveEditor::mouseOver(int modifierKey)
 {
     EditDataProvider* provider = getEditProvider();
     subGroup->pipetteMouseOver(provider, modifierKey);
@@ -404,16 +471,16 @@ bool CurveEditor::mouseOver(const int modifierKey)
     return true; // return true will ask the preview to be redrawn, for the cursor
 }
 
-bool CurveEditor::button1Pressed(const int modifierKey)
+bool CurveEditor::button1Pressed(int modifierKey)
 {
     EditDataProvider* provider = getEditProvider();
 
-    if (provider->object) {
+    if (provider->getObject()) {
         remoteDrag = subGroup->pipetteButton1Pressed(provider, modifierKey);
     }
 
     if (remoteDrag) {
-        action = ES_ACTION_DRAGGING;
+        action = EditSubscriber::Action::DRAGGING;
     }
 
     subGroup->refresh(this);
@@ -429,7 +496,7 @@ bool CurveEditor::button1Released()
     return true;
 }
 
-bool CurveEditor::drag1(const int modifierKey)
+bool CurveEditor::drag1(int modifierKey)
 {
     EditDataProvider* provider = getEditProvider();
     subGroup->pipetteDrag(provider, modifierKey);
@@ -437,7 +504,7 @@ bool CurveEditor::drag1(const int modifierKey)
     return false;
 }
 
-CursorShape CurveEditor::getCursor(const int objectID)
+CursorShape CurveEditor::getCursor(int objectID, int xPos, int yPos) const
 {
     if (remoteDrag) {
         return CSResizeHeight;

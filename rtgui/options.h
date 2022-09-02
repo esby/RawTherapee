@@ -14,13 +14,22 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef _OPTIONS_
-#define _OPTIONS_
+#pragma once
 
-#include <gtkmm.h>
-#include "../rtengine/rtengine.h"
+#include <set>
+#include <vector>
+#if defined __has_include
+#if __has_include(<gtkmm/enums.h>)
+#include <gtkmm/enums.h>
+#else
+#include <gtkmm-3.0/gtkmm/enums.h>
+#endif
+#else
+#include <gtkmm/enums.h>
+#endif
+#include "../rtengine/settings.h"
 #include <exception>
 
 #define STARTUPDIR_CURRENT 0
@@ -102,6 +111,13 @@ enum PPLoadLocation {PLL_Cache = 0, PLL_Input = 1};
 enum CPBKeyType {CPBKT_TID = 0, CPBKT_NAME = 1, CPBKT_TID_NAME = 2};
 enum prevdemo_t {PD_Sidecar = 1, PD_Fast = 0};
 
+namespace Glib
+{
+
+class KeyFile;
+
+}
+
 class Options
 {
 public:
@@ -152,13 +168,23 @@ private:
                      const Glib::ustring& entryName, Glib::ustring& destination);
 
 public:
-
     enum class NavigatorUnit {
         PERCENT,
         R0_255,
         R0_1,
         _COUNT
     };
+
+    enum class ScopeType {
+        NONE = -1,
+        HISTOGRAM,
+        HISTOGRAM_RAW,
+        PARADE,
+        VECTORSCOPE_HC,
+        VECTORSCOPE_HS,
+        WAVEFORM
+    };
+
     bool savesParamsAtExit;
     SaveFormat saveFormat, saveFormatBatch;
     Glib::ustring savePathTemplate;
@@ -174,6 +200,7 @@ public:
     Glib::ustring startupPath;
     Glib::ustring profilePath; // can be an absolute or relative path; depending on this value, bundled profiles may not be found
     bool useBundledProfiles;   // only used if multiUser == true
+    Glib::ustring lastCopyMovePath;
     Glib::ustring loadSaveProfilePath;
     Glib::ustring lastSaveAsPath;
     int saveAsDialogWidth;
@@ -194,7 +221,6 @@ public:
     bool windowMaximized;
     int windowMonitor;
     int meowMonitor;
-    bool meowFullScreen;
     bool meowMaximized;
     int meowWidth;
     int meowHeight;
@@ -214,6 +240,7 @@ public:
     int fontSize;                // RT's main font size (units: pt)
     Glib::ustring CPFontFamily;  // ColorPicker font family
     int CPFontSize;              // ColorPicker font size (units: pt)
+    bool pseudoHiDPISupport;
     bool fbOnlyRaw;
     bool fbShowDateTime;
     bool fbShowBasicExif;
@@ -271,23 +298,38 @@ public:
     bool hideTrash;  
     bool hideUseful;
     int editorToSendTo;
+    enum EditorOutDir {
+        EDITOR_OUT_DIR_TEMP,
+        EDITOR_OUT_DIR_CURRENT,
+        EDITOR_OUT_DIR_CUSTOM
+    };
+    EditorOutDir editor_out_dir; // output directory for "open in external editor"
+    Glib::ustring editor_custom_out_dir;
+    bool editor_float32;
+    bool editor_bypass_output_profile;
+    
     int maxThumbnailHeight;
+    int maxThumbnailWidth;
     std::size_t maxCacheEntries;
     int thumbInterp; // 0: nearest, 1: bilinear
     std::vector<Glib::ustring> parseExtensions;   // List containing all extensions type
     std::vector<int> parseExtensionsEnabled;      // List of bool to retain extension or not
     std::vector<Glib::ustring> parsedExtensions;  // List containing all retained extensions (lowercase)
+    std::set<std::string> parsedExtensionsSet;  // Set containing all retained extensions (lowercase)
     std::vector<int> tpOpen;
     bool autoSaveTpOpen;
     //std::vector<int> crvOpen;
     std::vector<int> baBehav;
     rtengine::Settings rtSettings;
-
+    bool showtooltip;
     std::vector<Glib::ustring> favoriteDirs;
     std::vector<Glib::ustring> renameTemplates;
     bool renameUseTemplates;
     bool internalThumbIfUntouched;
     bool overwriteOutputFile;
+    int complexity;
+    bool inspectorWindow; // open inspector in spearate window
+    bool zoomOnScroll;    // translate scroll events to zoom
 
     std::vector<double> thumbnailZoomRatios;
     bool overlayedFileNames;
@@ -307,10 +349,13 @@ public:
 
     int histogramPosition;  // 0=disabled, 1=left pane, 2=right pane
     bool histogramRed, histogramGreen, histogramBlue;
-    bool histogramLuma, histogramChroma, histogramRAW;
+    bool histogramLuma, histogramChroma;
     bool histogramBar;
     int histogramHeight;
     int histogramDrawMode;
+    ScopeType histogramScopeType;
+    bool histogramShowOptionButtons;
+    float histogramTraceBrightness;
     bool FileBrowserToolbarSingleRow;
     bool hideTPVScrollbar;
     int whiteBalanceSpotSize;
@@ -333,7 +378,12 @@ public:
     bool filledProfile;  // Used as reminder for the ProfilePanel "mode"
     prevdemo_t prevdemo; // Demosaicing method used for the <100% preview
     bool serializeTiffRead;
-
+    bool measure;
+    size_t chunkSizeAMAZE;
+    size_t chunkSizeCA;
+    size_t chunkSizeRCD;
+    size_t chunkSizeRGB;
+    size_t chunkSizeXT;
     bool menuGroupRank;
     bool menuGroupLabel;
     bool menuGroupFileOperations;
@@ -382,7 +432,7 @@ public:
     Glib::ustring fastexport_icm_input_profile;
     Glib::ustring fastexport_icm_working_profile;
     Glib::ustring fastexport_icm_output_profile;
-    rtengine::RenderingIntent fastexport_icm_outputIntent;
+    int fastexport_icm_outputIntent;
     bool          fastexport_icm_outputBPC;
     Glib::ustring fastexport_icm_custom_output_profile;
     bool          fastexport_resize_enabled;
@@ -392,8 +442,11 @@ public:
     int           fastexport_resize_dataspec;
     int           fastexport_resize_width;
     int           fastexport_resize_height;
+    int           fastexport_resize_longedge;
+    int           fastexport_resize_shortedge;
     bool fastexport_use_fast_pipeline;
 
+    std::vector<Glib::ustring> favorites;
     // Dialog settings
     Glib::ustring lastIccDir;
     Glib::ustring lastDarkframeDir;
@@ -403,6 +456,7 @@ public:
     Glib::ustring lastRetinexDir;
     Glib::ustring lastDenoiseCurvesDir;
     Glib::ustring lastWaveletCurvesDir;
+    Glib::ustring lastlocalCurvesDir;
     Glib::ustring lastPFCurvesDir;
     Glib::ustring lastHsvCurvesDir;
     Glib::ustring lastToneCurvesDir;
@@ -434,8 +488,9 @@ public:
     Glib::ustring getGlobalProfilePath();
     Glib::ustring findProfilePath (Glib::ustring &profName);
     bool is_parse_extention (Glib::ustring fname);
-    bool has_retained_extention (Glib::ustring fname);
-    bool is_extention_enabled (Glib::ustring ext);
+    bool has_retained_extention (const Glib::ustring& fname);
+    bool is_new_version();
+    bool is_extention_enabled (const Glib::ustring& ext);
     bool is_defProfRawMissing();
     bool is_bundledDefProfRawMissing();
     bool is_defProfImgMissing();
@@ -458,3 +513,4 @@ extern Glib::ustring paramFileExtension;
 extern Glib::ustring paramFileGuiExtension;
 
 #endif
+

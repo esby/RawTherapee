@@ -14,12 +14,12 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef _SHCSELECTOR_
-#define _SHCSELECTOR_
+#pragma once
 
 #include <gtkmm.h>
+
 #include "coloredbar.h"
 
 class SHCListener
@@ -29,7 +29,7 @@ public:
     virtual void shcChanged() = 0;
 };
 
-class SHCSelector : public Gtk::DrawingArea, BackBuffer
+class SHCSelector final : public Gtk::DrawingArea, BackBuffer
 {
 
 protected:
@@ -78,10 +78,7 @@ public:
     void setDefaults (double spos, double cpos, double hpos);
     void setPositions (double spos, double cpos, double hpos);
     void getPositions (double& spos, double& cpos, double& hpos);
-    void styleChanged (const Glib::RefPtr<Gtk::Style>& style);
+    void styleChanged (const Glib::RefPtr<Gtk::StyleContext>& style);
     bool reset ();
     void refresh();
 };
-
-#endif
-

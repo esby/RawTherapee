@@ -13,18 +13,23 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef _BATCHQUEUE_
-#define _BATCHQUEUE_
+#pragma once
+
+#include <set>
 
 #include <gtkmm.h>
-#include "threadutils.h"
-#include "batchqueueentry.h"
-#include "../rtengine/rtengine.h"
-#include "options.h"
+
+#include "lwbutton.h"
 #include "lwbuttonset.h"
+#include "threadutils.h"
 #include "thumbbrowserbase.h"
+
+#include "../rtengine/rtengine.h"
+#include "../rtengine/noncopyable.h"
+
+class BatchQueueEntry;
 
 class BatchQueueListener
 {
@@ -40,7 +45,8 @@ class FileCatalog;
 class BatchQueue final :
     public ThumbBrowserBase,
     public rtengine::BatchProcessingListener,
-    public LWButtonListener
+    public LWButtonListener,
+    public rtengine::NonCopyable
 {
 public:
     explicit BatchQueue (FileCatalog* aFileCatalog);
@@ -68,7 +74,7 @@ public:
     void error(const Glib::ustring& descr) override;
     rtengine::ProcessingJob* imageReady(rtengine::IImagefloat* img) override;
 
-    void rightClicked (ThumbBrowserEntryBase* entry) override;
+    void rightClicked () override;
     void doubleClicked (ThumbBrowserEntryBase* entry) override;
     bool keyPressed (GdkEventKey* event) override;
     void buttonPressed (LWButton* button, int actionCode, void* actionData) override;
@@ -85,7 +91,7 @@ public:
     static Glib::ustring calcAutoFileNameBase (const Glib::ustring& origFileName, int sequence = 0);
     static int calcMaxThumbnailHeight();
 
-protected:
+private:
     int getMaxThumbnailHeight() const override;
     void saveThumbnailHeight (int height) override;
     int  getThumbnailHeight () override;
@@ -94,6 +100,8 @@ protected:
     Glib::ustring getTempFilenameForParams( const Glib::ustring &filename );
     bool saveBatchQueue ();
     void notifyListener ();
+
+    using ThumbBrowserBase::redrawNeeded;
 
     BatchQueueEntry* processing;  // holds the currently processed image
     FileCatalog* fileCatalog;
@@ -111,7 +119,8 @@ protected:
 
     BatchQueueListener* listener;
 
+    std::set<BatchQueueEntry*> removable_batch_queue_entries;
+    MyMutex mutex_removable_batch_queue_entries;
+
     IdleRegister idle_register;
 };
-
-#endif

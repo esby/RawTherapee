@@ -13,16 +13,15 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include <cairomm/cairomm.h>
 #include "../rtengine/rt_math.h"
 
 #include "guiutils.h"
 #include "options.h"
-#include "../rtengine/rt_math.h"
 #include "../rtengine/utils.h"
-#include "../rtengine/icons.h"
+#include "../rtengine/procparams.h"
 #include "rtimage.h"
 #include "multilangmgr.h"
 
@@ -32,38 +31,39 @@
 
 using namespace std;
 
-Glib::RefPtr<Gdk::Pixbuf> MyExpander::inconsistentPBuf;
-Glib::RefPtr<Gdk::Pixbuf> MyExpander::enabledPBuf;
-Glib::RefPtr<Gdk::Pixbuf> MyExpander::disabledPBuf;
-Glib::RefPtr<Gdk::Pixbuf> MyExpander::openedPBuf;
-Glib::RefPtr<Gdk::Pixbuf> MyExpander::closedPBuf;
+Glib::RefPtr<RTImage> MyExpander::inconsistentImage;
+Glib::RefPtr<RTImage> MyExpander::enabledImage;
+Glib::RefPtr<RTImage> MyExpander::disabledImage;
+Glib::RefPtr<RTImage> MyExpander::openedImage;
+Glib::RefPtr<RTImage> MyExpander::closedImage;
 
 IdleRegister::~IdleRegister()
 {
     destroy();
 }
 
-void IdleRegister::add(GSourceFunc function, gpointer data, gint priority)
+void IdleRegister::add(std::function<bool ()> function, gint priority)
 {
-    const auto dispatch = [](gpointer data) -> gboolean {
-        DataWrapper* const data_wrapper = static_cast<DataWrapper*>(data);
+    const auto dispatch =
+        [](gpointer data) -> gboolean
+        {
+            DataWrapper* const data_wrapper = static_cast<DataWrapper*>(data);
 
-        if (!data_wrapper->function(data_wrapper->data)) {
-            data_wrapper->self->mutex.lock();
-            data_wrapper->self->ids.erase(data_wrapper);
-            data_wrapper->self->mutex.unlock();
+            if (!data_wrapper->function()) {
+                data_wrapper->self->mutex.lock();
+                data_wrapper->self->ids.erase(data_wrapper);
+                data_wrapper->self->mutex.unlock();
 
-            delete data_wrapper;
-            return FALSE;
-        }
+                delete data_wrapper;
+                return FALSE;
+            }
 
-        return TRUE;
-    };
+            return TRUE;
+        };
 
     DataWrapper* const data_wrapper = new DataWrapper{
         this,
-        function,
-        data
+        std::move(function)
     };
 
     mutex.lock();
@@ -188,6 +188,25 @@ void setExpandAlignProperties(Gtk::Widget *widget, bool hExpand, bool vExpand, e
     widget->set_valign(vAlign);
 }
 
+Gtk::Border getPadding(const Glib::RefPtr<Gtk::StyleContext> style)
+{
+    Gtk::Border padding;
+    if (!style) {
+        return padding;
+    }
+
+    int s = (double)RTScalable::getScale();
+    padding = style->get_padding();
+    if (s > 1) {
+        padding.set_left(padding.get_left() * s);
+        padding.set_right(padding.get_right() * s);
+        padding.set_top(padding.get_top() * s);
+        padding.set_bottom(padding.get_bottom() * s);
+    }
+
+    return padding;
+}
+
 bool removeIfThere (Gtk::Container* cont, Gtk::Widget* w, bool increference)
 {
 
@@ -208,22 +227,12 @@ bool removeIfThere (Gtk::Container* cont, Gtk::Widget* w, bool increference)
     }
 }
 
-void thumbInterp (const unsigned char* src, int sw, int sh, unsigned char* dst, int dw, int dh)
-{
-
-    if (options.thumbInterp == 0) {
-        rtengine::nearestInterp (src, sw, sh, dst, dw, dh);
-    } else if (options.thumbInterp == 1) {
-        rtengine::bilinearInterp (src, sw, sh, dst, dw, dh);
-    }
-}
-
 bool confirmOverwrite (Gtk::Window& parent, const std::string& filename)
 {
     bool safe = true;
 
     if (Glib::file_test (filename, Glib::FILE_TEST_EXISTS)) {
-        Glib::ustring msg_ = Glib::ustring ("<b>\"") + Glib::path_get_basename (filename) + "\": "
+        Glib::ustring msg_ = Glib::ustring ("<b>\"") + escapeHtmlChars(Glib::path_get_basename (filename)) + "\": "
                              + M("MAIN_MSG_ALREADYEXISTS") + "</b>\n" + M("MAIN_MSG_QOVERWRITE");
         Gtk::MessageDialog msgd (parent, msg_, true, Gtk::MESSAGE_WARNING, Gtk::BUTTONS_YES_NO, true);
         safe = (msgd.run () == Gtk::RESPONSE_YES);
@@ -234,7 +243,7 @@ bool confirmOverwrite (Gtk::Window& parent, const std::string& filename)
 
 void writeFailed (Gtk::Window& parent, const std::string& filename)
 {
-    Glib::ustring msg_ = Glib::ustring::compose(M("MAIN_MSG_WRITEFAILED"), filename);
+    Glib::ustring msg_ = Glib::ustring::compose(M("MAIN_MSG_WRITEFAILED"), escapeHtmlChars(filename));
     Gtk::MessageDialog msgd (parent, msg_, true, Gtk::MESSAGE_ERROR, Gtk::BUTTONS_OK, true);
     msgd.run ();
 }
@@ -269,7 +278,7 @@ void drawCrop (Cairo::RefPtr<Cairo::Context> cr, int imx, int imy, int imw, int 
     cr->fill ();
 
     // rectangle around the cropped area and guides
-    if (cparams.guide != "None" && drawGuide) {
+    if (cparams.guide != rtengine::procparams::CropParams::Guide::NONE && drawGuide) {
         double rectx1 = round(c1x) + imx + 0.5;
         double recty1 = round(c1y) + imy + 0.5;
         double rectx2 = round(c2x) + imx + 0.5;
@@ -289,72 +298,107 @@ void drawCrop (Cairo::RefPtr<Cairo::Context> cr, int imx, int imy, int imw, int 
         cr->line_to (rectx1, recty1);
         cr->stroke ();
         cr->set_source_rgba (0.0, 0.0, 0.0, 0.618);
-        std::valarray<double> ds (1);
-        ds[0] = 4;
-        cr->set_dash (ds, 0);
+        cr->set_dash (std::valarray<double>({4}), 0);
         cr->move_to (rectx1, recty1);
         cr->line_to (rectx2, recty1);
         cr->line_to (rectx2, recty2);
         cr->line_to (rectx1, recty2);
         cr->line_to (rectx1, recty1);
         cr->stroke ();
-        ds.resize (0);
-        cr->set_dash (ds, 0);
+        cr->set_dash (std::valarray<double>(), 0);
 
-        if (cparams.guide != "Rule of diagonals" && cparams.guide != "Golden Triangle 1" && cparams.guide != "Golden Triangle 2") {
+        if (
+            cparams.guide != rtengine::procparams::CropParams::Guide::RULE_OF_DIAGONALS
+            && cparams.guide != rtengine::procparams::CropParams::Guide::GOLDEN_TRIANGLE_1
+            && cparams.guide != rtengine::procparams::CropParams::Guide::GOLDEN_TRIANGLE_2
+        ) {
             // draw guide lines
             std::vector<double> horiz_ratios;
             std::vector<double> vert_ratios;
 
-            if (cparams.guide == "Rule of thirds") {
-                horiz_ratios.push_back (1.0 / 3.0);
-                horiz_ratios.push_back (2.0 / 3.0);
-                vert_ratios.push_back (1.0 / 3.0);
-                vert_ratios.push_back (2.0 / 3.0);
-            } else if (!strncmp(cparams.guide.data(), "Harmonic means", 14)) {
-                horiz_ratios.push_back (1.0 - 0.618);
-                horiz_ratios.push_back (0.618);
-                vert_ratios.push_back (0.618);
-                vert_ratios.push_back (1.0 - 0.618);
-            } else if (cparams.guide == "Grid") {
-                // To have even distribution, normalize it a bit
-                const int longSideNumLines = 10;
+            switch (cparams.guide) {
+                case rtengine::procparams::CropParams::Guide::NONE:
+                case rtengine::procparams::CropParams::Guide::FRAME:
+                case rtengine::procparams::CropParams::Guide::RULE_OF_DIAGONALS:
+                case rtengine::procparams::CropParams::Guide::GOLDEN_TRIANGLE_1:
+                case rtengine::procparams::CropParams::Guide::GOLDEN_TRIANGLE_2: {
+                    break;
+                }
 
-                int w = rectx2 - rectx1, h = recty2 - recty1;
+                case rtengine::procparams::CropParams::Guide::RULE_OF_THIRDS: {
+                    horiz_ratios.push_back (1.0 / 3.0);
+                    horiz_ratios.push_back (2.0 / 3.0);
+                    vert_ratios.push_back (1.0 / 3.0);
+                    vert_ratios.push_back (2.0 / 3.0);
+                    break;
+                }
 
-                if (w > longSideNumLines && h > longSideNumLines) {
-                    if (w > h) {
-                        for (int i = 1; i < longSideNumLines; i++) {
-                            vert_ratios.push_back ((double)i / longSideNumLines);
-                        }
+                case rtengine::procparams::CropParams::Guide::HARMONIC_MEANS: {
+                    horiz_ratios.push_back (1.0 - 0.618);
+                    horiz_ratios.push_back (0.618);
+                    vert_ratios.push_back (0.618);
+                    vert_ratios.push_back (1.0 - 0.618);
+                    break;
+                }
 
-                        int shortSideNumLines = (int)round(h * (double)longSideNumLines / w);
+                case rtengine::procparams::CropParams::Guide::GRID: {
+                    // To have even distribution, normalize it a bit
+                    const int longSideNumLines = 10;
 
-                        for (int i = 1; i < shortSideNumLines; i++) {
-                            horiz_ratios.push_back ((double)i / shortSideNumLines);
-                        }
-                    } else {
-                        for (int i = 1; i < longSideNumLines; i++) {
-                            horiz_ratios.push_back ((double)i / longSideNumLines);
-                        }
+                    int w = rectx2 - rectx1, h = recty2 - recty1;
 
-                        int shortSideNumLines = (int)round(w * (double)longSideNumLines / h);
+                    if (w > longSideNumLines && h > longSideNumLines) {
+                        if (w > h) {
+                            for (int i = 1; i < longSideNumLines; i++) {
+                                vert_ratios.push_back ((double)i / longSideNumLines);
+                            }
 
-                        for (int i = 1; i < shortSideNumLines; i++) {
-                            vert_ratios.push_back ((double)i / shortSideNumLines);
+                            int shortSideNumLines = (int)round(h * (double)longSideNumLines / w);
+
+                            for (int i = 1; i < shortSideNumLines; i++) {
+                                horiz_ratios.push_back ((double)i / shortSideNumLines);
+                            }
+                        } else {
+                            for (int i = 1; i < longSideNumLines; i++) {
+                                horiz_ratios.push_back ((double)i / longSideNumLines);
+                            }
+
+                            int shortSideNumLines = (int)round(w * (double)longSideNumLines / h);
+
+                            for (int i = 1; i < shortSideNumLines; i++) {
+                                vert_ratios.push_back ((double)i / shortSideNumLines);
+                            }
                         }
                     }
+                    break;
                 }
-            } else if (cparams.guide == "ePassport") {
-                /* Official measurements do not specify exact ratios, just min/max measurements within which the eyes and chin-crown distance must lie. I averaged those measurements to produce these guides.
-                 * The first horizontal guide is for the crown, the second is roughly for the nostrils, the third is for the chin.
-                 * http://www.homeoffice.gov.uk/agencies-public-bodies/ips/passports/information-photographers/
-                 * "(...) the measurement of the face from the bottom of the chin to the crown (ie the top of the head, not the top of the hair) is between 29mm and 34mm."
-                 */
-                horiz_ratios.push_back (7.0 / 45.0);
-                horiz_ratios.push_back (26.0 / 45.0);
-                horiz_ratios.push_back (37.0 / 45.0);
-                vert_ratios.push_back (0.5);
+
+                case rtengine::procparams::CropParams::Guide::EPASSPORT: {
+                    /* Official measurements do not specify exact ratios, just min/max measurements within which the eyes and chin-crown distance must lie. I averaged those measurements to produce these guides.
+                     * The first horizontal guide is for the crown, the second is roughly for the nostrils, the third is for the chin.
+                     * http://www.homeoffice.gov.uk/agencies-public-bodies/ips/passports/information-photographers/
+                     * "(...) the measurement of the face from the bottom of the chin to the crown (ie the top of the head, not the top of the hair) is between 29mm and 34mm."
+                     */
+                    horiz_ratios.push_back (7.0 / 45.0);
+                    horiz_ratios.push_back (26.0 / 45.0);
+                    horiz_ratios.push_back (37.0 / 45.0);
+                    vert_ratios.push_back (0.5);
+                    break;
+                }
+
+                case rtengine::procparams::CropParams::Guide::CENTERED_SQUARE: {
+                    const double w = rectx2 - rectx1, h = recty2 - recty1;
+                    double ratio = w / h;
+                    if (ratio < 1.0) {
+                        ratio = 1.0 / ratio;
+                        horiz_ratios.push_back((ratio - 1.0) / (2.0 * ratio));
+                        horiz_ratios.push_back(1.0 - (ratio - 1.0) / (2.0 * ratio));
+                    } else {
+                        vert_ratios.push_back((ratio - 1.0) / (2.0 * ratio));
+                        vert_ratios.push_back(1.0 - (ratio - 1.0) / (2.0 * ratio));
+                    }
+                    break;
+                }
             }
 
             // Horizontals
@@ -390,7 +434,7 @@ void drawCrop (Cairo::RefPtr<Cairo::Context> cr, int imx, int imy, int imw, int 
                 ds.resize (0);
                 cr->set_dash (ds, 0);
             }
-        } else if (cparams.guide == "Rule of diagonals") {
+        } else if (cparams.guide == rtengine::procparams::CropParams::Guide::RULE_OF_DIAGONALS) {
             double corners_from[4][2];
             double corners_to[4][2];
             int mindim = min(rectx2 - rectx1, recty2 - recty1);
@@ -426,9 +470,12 @@ void drawCrop (Cairo::RefPtr<Cairo::Context> cr, int imx, int imy, int imw, int 
                 ds.resize (0);
                 cr->set_dash (ds, 0);
             }
-        } else if (cparams.guide == "Golden Triangle 1" || cparams.guide == "Golden Triangle 2") {
+        } else if (
+            cparams.guide == rtengine::procparams::CropParams::Guide::GOLDEN_TRIANGLE_1
+            || cparams.guide == rtengine::procparams::CropParams::Guide::GOLDEN_TRIANGLE_2
+        ) {
             // main diagonal
-            if(cparams.guide == "Golden Triangle 2") {
+            if(cparams.guide == rtengine::procparams::CropParams::Guide::GOLDEN_TRIANGLE_2) {
                 std::swap(rectx1, rectx2);
             }
 
@@ -437,14 +484,11 @@ void drawCrop (Cairo::RefPtr<Cairo::Context> cr, int imx, int imy, int imw, int 
             cr->line_to (rectx2, recty2);
             cr->stroke ();
             cr->set_source_rgba (0.0, 0.0, 0.0, 0.618);
-            std::valarray<double> ds (1);
-            ds[0] = 4;
-            cr->set_dash (ds, 0);
+            cr->set_dash (std::valarray<double>({4}), 0);
             cr->move_to (rectx1, recty1);
             cr->line_to (rectx2, recty2);
             cr->stroke ();
-            ds.resize (0);
-            cr->set_dash (ds, 0);
+            cr->set_dash (std::valarray<double>(), 0);
 
             double height = recty2 - recty1;
             double width = rectx2 - rectx1;
@@ -461,14 +505,11 @@ void drawCrop (Cairo::RefPtr<Cairo::Context> cr, int imx, int imy, int imw, int 
             cr->line_to (rectx1 + x, recty1 + y);
             cr->stroke ();
             cr->set_source_rgba (0.0, 0.0, 0.0, 0.618);
-            ds.resize (1);
-            ds[0] = 4;
-            cr->set_dash (ds, 0);
+            cr->set_dash (std::valarray<double>({4}), 0);
             cr->move_to (rectx1, recty2);
             cr->line_to (rectx1 + x, recty1 + y);
             cr->stroke ();
-            ds.resize (0);
-            cr->set_dash (ds, 0);
+            cr->set_dash (std::valarray<double>(), 0);
 
             x = width - (a * b) / height;
             y = (b * (d - a)) / width;
@@ -477,14 +518,11 @@ void drawCrop (Cairo::RefPtr<Cairo::Context> cr, int imx, int imy, int imw, int 
             cr->line_to (rectx1 + x, recty1 + y);
             cr->stroke ();
             cr->set_source_rgba (0.0, 0.0, 0.0, 0.618);
-            ds.resize (1);
-            ds[0] = 4;
-            cr->set_dash (ds, 0);
+            cr->set_dash (std::valarray<double>({4}), 0);
             cr->move_to (rectx2, recty1);
             cr->line_to (rectx1 + x, recty1 + y);
             cr->stroke ();
-            ds.resize (0);
-            cr->set_dash (ds, 0);
+            cr->set_dash (std::valarray<double>(), 0);
         }
     }
 
@@ -564,11 +602,22 @@ void ExpanderBox::hideBox()
 
 void MyExpander::init()
 {
-    inconsistentPBuf = Gdk::Pixbuf::create_from_file(rtengine::findIconAbsolutePath("power-inconsistent-small.png"));
-    enabledPBuf = Gdk::Pixbuf::create_from_file(rtengine::findIconAbsolutePath("power-on-small.png"));
-    disabledPBuf = Gdk::Pixbuf::create_from_file(rtengine::findIconAbsolutePath("power-off-small.png"));
-    openedPBuf = Gdk::Pixbuf::create_from_file(rtengine::findIconAbsolutePath("expander-open-small.png"));
-    closedPBuf = Gdk::Pixbuf::create_from_file(rtengine::findIconAbsolutePath("expander-closed-small.png"));
+    if (!inconsistentImage) {  // if one is null, all are null
+        inconsistentImage = Glib::RefPtr<RTImage>(new RTImage("power-inconsistent-small.png"));
+        enabledImage = Glib::RefPtr<RTImage>(new RTImage("power-on-small.png"));
+        disabledImage = Glib::RefPtr<RTImage>(new RTImage("power-off-small.png"));
+        openedImage = Glib::RefPtr<RTImage>(new RTImage("expander-open-small.png"));
+        closedImage = Glib::RefPtr<RTImage>(new RTImage("expander-closed-small.png"));
+    }
+}
+
+void MyExpander::cleanup()
+{
+    inconsistentImage.reset();
+    enabledImage.reset();
+    disabledImage.reset();
+    openedImage.reset();
+    closedImage.reset();
 }
 
 MyExpander::MyExpander(bool useEnabled, Gtk::Widget* titleWidget, ToolPanel* _panel) :
@@ -576,13 +625,14 @@ MyExpander::MyExpander(bool useEnabled, Gtk::Widget* titleWidget, ToolPanel* _pa
     child(nullptr), headerWidget(nullptr), statusImage(nullptr),
     label(nullptr), useEnabled(useEnabled)
 {
+    set_orientation(Gtk::ORIENTATION_VERTICAL);
     set_spacing(0);
     set_name("MyExpander");
     set_can_focus(false);
 
     panel = _panel;
 
-    headerHBox = Gtk::manage( new Gtk::HBox());
+    headerHBox = Gtk::manage( new Gtk::Box());
     headerHBox->set_can_focus(false);
     setExpandAlignProperties(headerHBox, true, false, Gtk::ALIGN_FILL, Gtk::ALIGN_FILL);
 
@@ -590,8 +640,10 @@ MyExpander::MyExpander(bool useEnabled, Gtk::Widget* titleWidget, ToolPanel* _pa
     buttonHBox->set_can_focus(false);
 
     if (useEnabled) {
-        statusImage = Gtk::manage(new Gtk::Image(disabledPBuf));
+        get_style_context()->add_class("OnOff");
+        statusImage = Gtk::manage(new RTImage(disabledImage));
         imageEvBox = Gtk::manage(new Gtk::EventBox());
+        imageEvBox->set_name("MyExpanderStatus");
         imageEvBox->add(*statusImage);
         imageEvBox->set_above_child(true);
         imageEvBox->signal_button_release_event().connect( sigc::mem_fun(this, & MyExpander::on_enabled_change) );
@@ -599,7 +651,8 @@ MyExpander::MyExpander(bool useEnabled, Gtk::Widget* titleWidget, ToolPanel* _pa
         imageEvBox->signal_leave_notify_event().connect( sigc::mem_fun(this, & MyExpander::on_enter_leave_enable), false );
         headerHBox->pack_start(*imageEvBox, Gtk::PACK_SHRINK, 0);
     } else {
-        statusImage = Gtk::manage(new Gtk::Image(openedPBuf));
+        get_style_context()->add_class("Fold");
+        statusImage = Gtk::manage(new RTImage(openedImage));
         headerHBox->pack_start(*statusImage, Gtk::PACK_SHRINK, 0);
     }
 
@@ -613,7 +666,7 @@ MyExpander::MyExpander(bool useEnabled, Gtk::Widget* titleWidget, ToolPanel* _pa
 
     titleEvBox = Gtk::manage(new Gtk::EventBox());
     titleEvBox->set_name("MyExpanderTitle");
-    titleEvBox->set_border_width(2);
+    titleEvBox->set_border_width(0);
     titleEvBox->add(*headerHBox);
     titleEvBox->set_above_child(false);  // this is the key! By making it below the child, they will get the events first.
     titleEvBox->set_can_focus(false);
@@ -643,9 +696,10 @@ MyExpander::MyExpander(bool useEnabled, Gtk::Widget* titleWidget, ToolPanel* _pa
 
 MyExpander::MyExpander(bool useEnabled, Glib::ustring titleLabel, ToolPanel* _panel) :
     enabled(false), inconsistent(false), flushEvent(false), expBox(nullptr),
-    child(nullptr), headerWidget(nullptr), statusImage(nullptr),
+    child(nullptr), headerWidget(nullptr),
     label(nullptr), useEnabled(useEnabled)
 {
+    set_orientation(Gtk::ORIENTATION_VERTICAL);
     set_spacing(0);
     set_name("MyExpander");
     set_can_focus(false);
@@ -654,7 +708,7 @@ MyExpander::MyExpander(bool useEnabled, Glib::ustring titleLabel, ToolPanel* _pa
 
     setExpandAlignProperties(this, true, false, Gtk::ALIGN_FILL, Gtk::ALIGN_FILL);
 
-    headerHBox = Gtk::manage( new Gtk::HBox());
+    headerHBox = Gtk::manage( new Gtk::Box());
     headerHBox->set_can_focus(false);
     setExpandAlignProperties(headerHBox, true, false, Gtk::ALIGN_FILL, Gtk::ALIGN_FILL);
 
@@ -662,7 +716,8 @@ MyExpander::MyExpander(bool useEnabled, Glib::ustring titleLabel, ToolPanel* _pa
     buttonHBox->set_can_focus(false);
 
     if (useEnabled) {
-        statusImage = Gtk::manage(new Gtk::Image(disabledPBuf));
+        get_style_context()->add_class("OnOff");
+        statusImage = Gtk::manage(new RTImage(disabledImage));
         imageEvBox = Gtk::manage(new Gtk::EventBox());
         imageEvBox->set_name("MyExpanderStatus");
         imageEvBox->add(*statusImage);
@@ -672,26 +727,21 @@ MyExpander::MyExpander(bool useEnabled, Glib::ustring titleLabel, ToolPanel* _pa
         imageEvBox->signal_leave_notify_event().connect( sigc::mem_fun(this, & MyExpander::on_enter_leave_enable), false );
         headerHBox->pack_start(*imageEvBox, Gtk::PACK_SHRINK, 0);
     } else {
-        statusImage = Gtk::manage(new Gtk::Image(openedPBuf));
+        get_style_context()->add_class("Fold");
+        statusImage = Gtk::manage(new RTImage(openedImage));
         headerHBox->pack_start(*statusImage, Gtk::PACK_SHRINK, 0);
     }
 
     statusImage->set_can_focus(false);
 
-    Glib::ustring str("-");
-
-    if (!titleLabel.empty()) {
-        str = titleLabel;
-    }
-
     label = Gtk::manage(new Gtk::Label());
     setExpandAlignProperties(label, true, false, Gtk::ALIGN_START, Gtk::ALIGN_CENTER);
-    label->set_markup(Glib::ustring("<b>") + escapeHtmlChars(titleLabel) + Glib::ustring("</b>"));
+    label->set_markup(escapeHtmlChars(titleLabel));
     headerHBox->pack_start(*label, Gtk::PACK_EXPAND_WIDGET, 0);
 
     titleEvBox = Gtk::manage(new Gtk::EventBox());
     titleEvBox->set_name("MyExpanderTitle");
-    titleEvBox->set_border_width(2);
+    titleEvBox->set_border_width(0);
     titleEvBox->add(*headerHBox);
     titleEvBox->set_above_child(false);  // this is the key! By make it below the child, they will get the events first.
     titleEvBox->set_can_focus(false);
@@ -784,7 +834,7 @@ void MyExpander::setLevel (int level)
 void MyExpander::setLabel (Glib::ustring newLabel)
 {
     if (label) {
-        label->set_markup(Glib::ustring("<b>") + escapeHtmlChars(newLabel) + Glib::ustring("</b>"));
+        label->set_markup(escapeHtmlChars(newLabel));
     }
 }
 
@@ -809,12 +859,14 @@ void MyExpander::set_inconsistent(bool isInconsistent)
 
         if (useEnabled) {
             if (isInconsistent) {
-                statusImage->set(inconsistentPBuf);
+                statusImage->set(inconsistentImage->get_surface());
             } else {
                 if (enabled) {
-                    statusImage->set(enabledPBuf);
+                    statusImage->set(enabledImage->get_surface());
+                    get_style_context()->add_class("enabledTool");
                 } else {
-                    statusImage->set(disabledPBuf);
+                    statusImage->set(disabledImage->get_surface());
+                    get_style_context()->remove_class("enabledTool");
                 }
             }
         }
@@ -840,14 +892,16 @@ void MyExpander::setEnabled(bool isEnabled)
                 enabled = false;
 
                 if (!inconsistent) {
-                    statusImage->set(disabledPBuf);
+                    statusImage->set(disabledImage->get_surface());
+                    get_style_context()->remove_class("enabledTool");
                     message.emit();
                 }
             } else {
                 enabled = true;
 
                 if (!inconsistent) {
-                    statusImage->set(enabledPBuf);
+                    statusImage->set(enabledImage->get_surface());
+                    get_style_context()->add_class("enabledTool");
                     message.emit();
                 }
             }
@@ -875,17 +929,11 @@ void MyExpander::set_expanded( bool expanded )
         return;
     }
 
-    bool isVisible = expBox->is_visible();
-
-    if (isVisible == expanded) {
-        return;
-    }
-
     if (!useEnabled) {
         if (expanded ) {
-            statusImage->set(openedPBuf);
+            statusImage->set(openedImage->get_surface());
         } else {
-            statusImage->set(closedPBuf);
+            statusImage->set(closedImage->get_surface());
         }
     }
 
@@ -928,9 +976,9 @@ bool MyExpander::on_toggle(GdkEventButton* event)
 
     if (!useEnabled) {
         if (isVisible) {
-            statusImage->set(closedPBuf);
+            statusImage->set(closedImage->get_surface());
         } else {
-            statusImage->set(openedPBuf);
+            statusImage->set(openedImage->get_surface());
         }
     }
 
@@ -955,10 +1003,12 @@ bool MyExpander::on_enabled_change(GdkEventButton* event)
     if (event->button == 1) {
         if (enabled) {
             enabled = false;
-            statusImage->set(disabledPBuf);
+            statusImage->set(disabledImage->get_surface());
+            get_style_context()->remove_class("enabledTool");
         } else {
             enabled = true;
-            statusImage->set(enabledPBuf);
+            statusImage->set(enabledImage->get_surface());
+            get_style_context()->add_class("enabledTool");
         }
 
         message.emit();
@@ -990,39 +1040,26 @@ bool MyScrolledWindow::on_scroll_event (GdkEventScroll* event)
     Gtk::Scrollbar *scroll = get_vscrollbar();
 
     if (adjust && scroll) {
-        double upper = adjust->get_upper();
-        double lower = adjust->get_lower();
+        const double upperBound = adjust->get_upper();
+        const double lowerBound = adjust->get_lower();
         double value = adjust->get_value();
         double step  = adjust->get_step_increment();
-        double value2 = 0.;
-
-//        printf("MyScrolledwindow::on_scroll_event / delta_x=%.5f, delta_y=%.5f, direction=%d, type=%d, send_event=%d\n",
-//                event->delta_x, event->delta_y, (int)event->direction, (int)event->type, event->send_event);
 
         if (event->direction == GDK_SCROLL_DOWN) {
-            value2 = value + step;
-
-            if (value2 > upper) {
-                value2 = upper;
-            }
+            const double value2 = rtengine::min<double>(value + step, upperBound);
 
             if (value2 != value) {
                 scroll->set_value(value2);
             }
         } else if (event->direction == GDK_SCROLL_UP) {
-            value2 = value - step;
-
-            if (value2 < lower) {
-                value2 = lower;
-            }
+            const double value2 = rtengine::max<double>(value - step, lowerBound);
 
             if (value2 != value) {
                 scroll->set_value(value2);
             }
         } else if (event->direction == GDK_SCROLL_SMOOTH) {
-            if (abs(event->delta_y) > 0.1) {
-                value2 = rtengine::LIM<double>(value + (event->delta_y > 0 ? step : -step), lower, upper);
-            }
+            const double value2 = rtengine::LIM<double>(value + event->delta_y * step, lowerBound, upperBound);
+
             if (value2 != value) {
                 scroll->set_value(value2);
             }
@@ -1032,14 +1069,19 @@ bool MyScrolledWindow::on_scroll_event (GdkEventScroll* event)
     return true;
 }
 
+void MyScrolledWindow::get_preferred_width_vfunc (int &minimum_width, int &natural_width) const
+{
+    natural_width = minimum_width = 100 * RTScalable::getScale();
+}
+
 void MyScrolledWindow::get_preferred_height_vfunc (int &minimum_height, int &natural_height) const
 {
-    natural_height = minimum_height = 50;
+    natural_height = minimum_height = 50 * RTScalable::getScale();
 }
 
 void MyScrolledWindow::get_preferred_height_for_width_vfunc (int width, int &minimum_height, int &natural_height) const
 {
-    natural_height = minimum_height = 50;
+    natural_height = minimum_height = 50 * RTScalable::getScale();
 }
 
 /*
@@ -1054,7 +1096,7 @@ MyScrolledToolbar::MyScrolledToolbar ()
     set_policy (Gtk::POLICY_EXTERNAL, Gtk::POLICY_NEVER);
     get_style_context()->add_class("scrollableToolbar");
 
-    // Works fine with Gtk 3.22, but a a custom made get_preferred_height had to be created as a workaround
+    // Works fine with Gtk 3.22, but a custom made get_preferred_height had to be created as a workaround
     // taken from the official Gtk3.22 source code
     //set_propagate_natural_height(true);
 }
@@ -1065,8 +1107,8 @@ bool MyScrolledToolbar::on_scroll_event (GdkEventScroll* event)
     Gtk::Scrollbar *scroll = get_hscrollbar();
 
     if (adjust && scroll) {
-        double upper = adjust->get_upper();
-        double lower = adjust->get_lower();
+        const double upperBound = adjust->get_upper();
+        const double lowerBound = adjust->get_lower();
         double value = adjust->get_value();
         double step  = adjust->get_step_increment() * 2;
         double value2 = 0.;
@@ -1075,20 +1117,20 @@ bool MyScrolledToolbar::on_scroll_event (GdkEventScroll* event)
 //                event->delta_x, event->delta_y, (int)event->direction, (int)event->type, event->send_event);
 
         if (event->direction == GDK_SCROLL_DOWN) {
-            value2 = rtengine::min<double>(value + step, upper);
+            value2 = rtengine::min<double>(value + step, upperBound);
             if (value2 != value) {
                 scroll->set_value(value2);
             }
         } else if (event->direction == GDK_SCROLL_UP) {
-            value2 = rtengine::max<double>(value - step, lower);
+            value2 = rtengine::max<double>(value - step, lowerBound);
             if (value2 != value) {
                 scroll->set_value(value2);
             }
         } else if (event->direction == GDK_SCROLL_SMOOTH) {
             if (event->delta_x) {  // if the user use a pad, it can scroll horizontally
-                value2 = rtengine::LIM<double>(value + (event->delta_x > 0 ? 30 : -30), lower, upper);
+                value2 = rtengine::LIM<double>(value + (event->delta_x > 0 ? 30 : -30), lowerBound, upperBound);
             } else if (event->delta_y) {
-                value2 = rtengine::LIM<double>(value + (event->delta_y > 0 ? 30 : -30), lower, upper);
+                value2 = rtengine::LIM<double>(value + (event->delta_y > 0 ? 30 : -30), lowerBound, upperBound);
             }
             if (value2 != value) {
                 scroll->set_value(value2);
@@ -1099,11 +1141,11 @@ bool MyScrolledToolbar::on_scroll_event (GdkEventScroll* event)
     return true;
 }
 
-void MyScrolledToolbar::get_preferred_height (int &minimumHeight, int &naturalHeight)
+void MyScrolledToolbar::get_preferred_height_vfunc (int &minimumHeight, int &naturalHeight) const
 {
     int currMinHeight = 0;
     int currNatHeight = 0;
-    std::vector<Widget*> childs = get_children();
+    std::vector<const Widget*> childs = get_children();
     minimumHeight = naturalHeight = 0;
 
     for (auto child : childs)
@@ -1142,7 +1184,7 @@ bool MyComboBoxText::on_scroll_event (GdkEventScroll* event)
 void MyComboBoxText::setPreferredWidth (int minimum_width, int natural_width)
 {
     if (natural_width == -1 && minimum_width == -1) {
-        naturalWidth = minimumWidth = 70;
+        naturalWidth = minimumWidth = 70 * RTScalable::getScale();
     } else if (natural_width == -1) {
         naturalWidth =  minimumWidth = minimum_width;
     } else if (minimum_width == -1) {
@@ -1157,19 +1199,19 @@ void MyComboBoxText::setPreferredWidth (int minimum_width, int natural_width)
 
 void MyComboBoxText::get_preferred_width_vfunc (int &minimum_width, int &natural_width) const
 {
-    natural_width = rtengine::max(naturalWidth, 10);
-    minimum_width = rtengine::max(minimumWidth, 10);
+    natural_width = rtengine::max(naturalWidth, 10 * RTScalable::getScale());
+    minimum_width = rtengine::max(minimumWidth, 10 * RTScalable::getScale());
 }
 void MyComboBoxText::get_preferred_width_for_height_vfunc (int height, int &minimum_width, int &natural_width) const
 {
-    natural_width = rtengine::max(naturalWidth, 10);
-    minimum_width = rtengine::max(minimumWidth, 10);
+    natural_width = rtengine::max(naturalWidth, 10 * RTScalable::getScale());
+    minimum_width = rtengine::max(minimumWidth, 10 * RTScalable::getScale());
 }
 
 
 MyComboBox::MyComboBox ()
 {
-    minimumWidth = naturalWidth = 70;
+    minimumWidth = naturalWidth = 70 * RTScalable::getScale();
 }
 
 bool MyComboBox::on_scroll_event (GdkEventScroll* event)
@@ -1188,7 +1230,7 @@ bool MyComboBox::on_scroll_event (GdkEventScroll* event)
 void MyComboBox::setPreferredWidth (int minimum_width, int natural_width)
 {
     if (natural_width == -1 && minimum_width == -1) {
-        naturalWidth = minimumWidth = 70;
+        naturalWidth = minimumWidth = 70 * RTScalable::getScale();
     } else if (natural_width == -1) {
         naturalWidth =  minimumWidth = minimum_width;
     } else if (minimum_width == -1) {
@@ -1203,13 +1245,13 @@ void MyComboBox::setPreferredWidth (int minimum_width, int natural_width)
 
 void MyComboBox::get_preferred_width_vfunc (int &minimum_width, int &natural_width) const
 {
-    natural_width = rtengine::max(naturalWidth, 10);
-    minimum_width = rtengine::max(minimumWidth, 10);
+    natural_width = rtengine::max(naturalWidth, 10 * RTScalable::getScale());
+    minimum_width = rtengine::max(minimumWidth, 10 * RTScalable::getScale());
 }
 void MyComboBox::get_preferred_width_for_height_vfunc (int height, int &minimum_width, int &natural_width) const
 {
-    natural_width = rtengine::max(naturalWidth, 10);
-    minimum_width = rtengine::max(minimumWidth, 10);
+    natural_width = rtengine::max(naturalWidth, 10 * RTScalable::getScale());
+    minimum_width = rtengine::max(minimumWidth, 10 * RTScalable::getScale());
 }
 
 MySpinButton::MySpinButton ()
@@ -1223,6 +1265,7 @@ MySpinButton::MySpinButton ()
     set_numeric(true);
     set_wrap(false);
     set_alignment(Gtk::ALIGN_END);
+    set_update_policy(Gtk::SpinButtonUpdatePolicy::UPDATE_IF_VALID); // Avoid updating text if input is not a numeric
 }
 
 void MySpinButton::updateSize()
@@ -1255,19 +1298,19 @@ bool MySpinButton::on_key_press_event (GdkEventKey* event)
     double vMin, vMax;
     get_range(vMin, vMax);
 
-    if ( (event->string[0] >= 'a' && event->string[0] <= 'z')
-            || (event->string[0] >= 'A' && event->string[0] <= 'Z')
-            || event->string[0] == '+' || (event->string[0] == '-' && vMin >= 0)
-            || event->string[0] == '=' || event->string[0] == '_'
-       ) {
-        return false;
+    if ((event->keyval >= GDK_KEY_a && event->keyval <= GDK_KEY_z)
+            || (event->keyval >= GDK_KEY_A && event->keyval <= GDK_KEY_Z)
+            || event->keyval == GDK_KEY_equal || event->keyval == GDK_KEY_underscore
+            || event->keyval == GDK_KEY_plus || (event->keyval == GDK_KEY_minus && vMin >= 0)) {
+        return false; // Event is propagated further
     } else {
-        if(event->string[0] == ',') {
-            event->keyval = GDK_KEY_period;
-            event->string[0] = '.';
+        if (event->keyval == GDK_KEY_comma || event->keyval == GDK_KEY_KP_Decimal) {
+            set_text(get_text() + ".");
+            set_position(get_text().length()); // When setting text, cursor position is reset at text start. Avoiding this with this code
+            return true; // Event is not propagated further
         }
 
-        return Gtk::Widget::on_key_press_event(event);
+        return Gtk::SpinButton::on_key_press_event(event); // Event is propagated normally
     }
 }
 
@@ -1290,7 +1333,7 @@ bool MyHScale::on_scroll_event (GdkEventScroll* event)
 //            event->delta_x, event->delta_y, (int)event->direction, (int)event->type, event->send_event);
     // If Shift is pressed, the widget is modified
     if (event->state & GDK_SHIFT_MASK) {
-        Gtk::HScale::on_scroll_event(event);
+        Gtk::Scale::on_scroll_event(event);
         return true;
     }
 
@@ -1320,7 +1363,7 @@ MyFileChooserButton::MyFileChooserButton(const Glib::ustring &title, Gtk::FileCh
     box_.pack_start(lbl_, true, true);
     Gtk::Image *img = Gtk::manage(new Gtk::Image());
     img->set_from_icon_name("folder-open", Gtk::ICON_SIZE_BUTTON);
-    box_.pack_start(*Gtk::manage(new Gtk::VSeparator()), false, false, 5);
+    box_.pack_start(*Gtk::manage(new Gtk::Separator(Gtk::ORIENTATION_VERTICAL)), false, false, 5);
     box_.pack_start(*img, false, false);
     box_.show_all_children();
     add(box_);
@@ -1329,7 +1372,7 @@ MyFileChooserButton::MyFileChooserButton(const Glib::ustring &title, Gtk::FileCh
     if (GTK_MINOR_VERSION < 20) {
         set_border_width(2); // margin doesn't work on GTK < 3.20
     }
-    
+
     set_name("MyFileChooserButton");
 }
 
@@ -1419,7 +1462,7 @@ std::vector<Glib::RefPtr<Gtk::FileFilter>> MyFileChooserButton::list_filters()
     return file_filters_;
 }
 
-    
+
 bool MyFileChooserButton::set_current_folder(const std::string &filename)
 {
     current_folder_ = filename;
@@ -1494,11 +1537,11 @@ bool MyFileChooserButton::on_scroll_event (GdkEventScroll* event)
 
 void MyFileChooserButton::get_preferred_width_vfunc (int &minimum_width, int &natural_width) const
 {
-    minimum_width = natural_width = 35;
+    minimum_width = natural_width = 35 * RTScalable::getScale();
 }
 void MyFileChooserButton::get_preferred_width_for_height_vfunc (int height, int &minimum_width, int &natural_width) const
 {
-    minimum_width = natural_width = 35;
+    minimum_width = natural_width = 35 * RTScalable::getScale();
 }
 
 
@@ -1506,7 +1549,8 @@ void MyFileChooserButton::get_preferred_width_for_height_vfunc (int height, int 
 TextOrIcon::TextOrIcon (const Glib::ustring &fname, const Glib::ustring &labelTx, const Glib::ustring &tooltipTx)
 {
 
-    pack_start(*Gtk::manage(new RTImage(fname)), Gtk::PACK_SHRINK, 0);
+    RTImage *img = Gtk::manage(new RTImage(fname));
+    pack_start(*img, Gtk::PACK_SHRINK, 0);
     set_tooltip_markup("<span font_size=\"large\" font_weight=\"bold\">" + labelTx  + "</span>\n" + tooltipTx);
 
     set_name("TextOrIcon");
@@ -1543,18 +1587,18 @@ const Gtk::Label* MyImageMenuItem::getLabel () const
     return label;
 }
 
-MyProgressBar::MyProgressBar(int width) : w(rtengine::max(width, 10)) {}
-MyProgressBar::MyProgressBar() : w(200) {}
+MyProgressBar::MyProgressBar(int width) : w(rtengine::max(width, 10 * RTScalable::getScale())) {}
+MyProgressBar::MyProgressBar() : w(200 * RTScalable::getScale()) {}
 
 void MyProgressBar::setPreferredWidth(int width)
 {
-    w = rtengine::max(width, 10);
+    w = rtengine::max(width, 10 * RTScalable::getScale());
 }
 
 void MyProgressBar::get_preferred_width_vfunc (int &minimum_width, int &natural_width) const
 {
-    minimum_width = rtengine::max(w / 2, 50);
-    natural_width = rtengine::max(w, 50);
+    minimum_width = rtengine::max(w / 2, 50 * RTScalable::getScale());
+    natural_width = rtengine::max(w, 50 * RTScalable::getScale());
 }
 
 void MyProgressBar::get_preferred_width_for_height_vfunc (int height, int &minimum_width, int &natural_width) const
@@ -1618,7 +1662,7 @@ bool BackBuffer::setDrawRectangle(Glib::RefPtr<Gdk::Window> window, int newX, in
 
     x = newX;
     y = newY;
-    if (newH > 0) {
+    if (newW > 0) {
         w = newW;
     }
     if (newH > 0) {
@@ -1651,7 +1695,7 @@ bool BackBuffer::setDrawRectangle(Cairo::Format format, int newX, int newY, int 
 
     x = newX;
     y = newY;
-    if (newH > 0) {
+    if (newW > 0) {
         w = newW;
     }
     if (newH > 0) {

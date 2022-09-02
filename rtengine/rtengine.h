@@ -14,41 +14,74 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef _RTENGINE_
-#define _RTENGINE_
+#pragma once
 
-#include "imageformat.h"
-#include "rt_math.h"
-#include "procparams.h"
-#include "procevents.h"
-#include <lcms2.h>
-#include <string>
-#include <glibmm.h>
+#include <array>
 #include <ctime>
-#include "../rtexif/rtexif.h"
-#include "rawmetadatalocation.h"
+#include <string>
+#include <memory>
+
+#include <glibmm/ustring.h>
+
+#include <lcms2.h>
+
 #include "iimage.h"
-#include "utils.h"
-#include "../rtgui/threadutils.h"
+#include "imageformat.h"
+#include "procevents.h"
+#include "rawmetadatalocation.h"
 #include "settings.h"
-#include "LUT.h"
+
+#include "../rtgui/threadutils.h"
+
+
 /**
  * @file
  * This file contains the main functionality of the RawTherapee engine.
  *
  */
 
+template<typename T>
+class array2D;
+
+template<typename T>
+class LUT;
+
+using LUTu = LUT<uint32_t>;
+
 class EditDataProvider;
+namespace rtexif
+{
+
+class TagDirectory;
+
+}
 
 namespace rtengine
 {
+
+enum RenderingIntent : int;
+
+namespace procparams
+{
+
+class ProcParams;
+class IPTCPairs;
+
+struct RAWParams;
+struct ColorManagementParams;
+struct CropParams;
+
+enum class ToneCurveMode : int;
+
+}
 
 class IImage8;
 class IImage16;
 class IImagefloat;
 class ImageSource;
+class TweakOperator;
 
 /**
   * This class provides functions to obtain exif and IPTC metadata information
@@ -118,6 +151,8 @@ public:
     virtual std::string getLens     (unsigned int frame = 0) const = 0;
     /** @return the orientation of the image */
     virtual std::string getOrientation (unsigned int frame = 0) const = 0;
+    /** @return the rating of the image */
+    virtual int getRating (unsigned int frame = 0) const = 0;
 
     /** @return true if the file is a PixelShift shot (Pentax and Sony bodies) */
     virtual bool getPixelShift () const = 0;
@@ -271,6 +306,8 @@ public:
     virtual void sizeChanged(int w, int h, int ow, int oh) = 0;
 };
 
+class HistogramObservable;
+
 /** This listener is used when the histogram of the final image has changed. */
 class HistogramListener
 {
@@ -296,8 +333,43 @@ public:
         const LUTu& histGreenRaw,
         const LUTu& histBlueRaw,
         const LUTu& histChroma,
-        const LUTu& histLRETI
+        const LUTu& histLRETI,
+        int vectorscopeScale,
+        const array2D<int>& vectorscopeHC,
+        const array2D<int>& vectorscopeHS,
+        int waveformScale,
+        const array2D<int>& waveformRed,
+        const array2D<int>& waveformGreen,
+        const array2D<int>& waveformBlue,
+        const array2D<int>& waveformLuma
     ) = 0;
+    /** Tells which observable is notifying the listener. */
+    virtual void setObservable(HistogramObservable* observable) = 0;
+    /** Returns if the listener wants the histogram to be updated. */
+    virtual bool updateHistogram(void) const = 0;
+    /** Returns if the listener wants the raw histogram to be updated. */
+    virtual bool updateHistogramRaw(void) const = 0;
+    /** Returns if the listener wants the H-C vectorscope to be updated. */
+    virtual bool updateVectorscopeHC(void) const = 0;
+    /** Returns if the listener wants the H-S vectorscope to be updated. */
+    virtual bool updateVectorscopeHS(void) const = 0;
+    /** Returns if the listener wants the waveform to be updated. */
+    virtual bool updateWaveform(void) const  = 0;
+};
+
+class HistogramObservable
+{
+public:
+    /** Tells the observable to update the histogram data. */
+    virtual void requestUpdateHistogram() = 0;
+    /** Tells the observable to update the raw histogram data. */
+    virtual void requestUpdateHistogramRaw() = 0;
+    /** Tells the observable to update the H-C vectorscope data. */
+    virtual void requestUpdateVectorscopeHC() = 0;
+    /** Tells the observable to update the H-S vectorscope data. */
+    virtual void requestUpdateVectorscopeHS() = 0;
+    /** Tells the observable to update the waveform data. */
+    virtual void requestUpdateWaveform() = 0;
 };
 
 /** This listener is used when the auto exposure has been recomputed (e.g. when the clipping ratio changed). */
@@ -315,7 +387,7 @@ public:
       * @param hlrecons set to true if HighLight Reconstruction is enabled */
     virtual void autoExpChanged(double brightness, int bright, int contrast, int black, int hlcompr, int hlcomprthresh, bool hlrecons) = 0;
 
-    virtual void autoMatchedToneCurveChanged(procparams::ToneCurveParams::TcMode curveMode, const std::vector<double>& curve) = 0;
+    virtual void autoMatchedToneCurveChanged(procparams::ToneCurveMode curveMode, const std::vector<double>& curve) = 0;
 };
 
 class AutoCamListener
@@ -325,6 +397,8 @@ public :
     virtual void autoCamChanged(double ccam, double ccamout) = 0;
     virtual void adapCamChanged(double cadap) = 0;
     virtual void ybCamChanged(int yb) = 0;
+    virtual void wbCamChanged(double tem, double tin) = 0;
+    
 };
 
 class AutoChromaListener
@@ -343,12 +417,49 @@ public:
     virtual void minmaxChanged(double cdma, double cdmin, double mini, double maxi, double Tmean, double Tsigma, double Tmin, double Tmax) = 0;
 };
 
+class LocallabListener
+{
+public:
+    struct locallabRef {
+        double huer;
+        double lumar;
+        double chromar;
+        float fab;
+    };
+
+    struct locallabRetiMinMax {
+        double cdma;
+        double cdmin;
+        double mini;
+        double maxi;
+        double Tmean;
+        double Tsigma;
+        double Tmin;
+        double Tmax;
+    };
+
+    virtual ~LocallabListener() = default;
+//    virtual void refChanged(const std::vector<locallabRef> &ref, int selspot) = 0;
+    virtual void minmaxChanged(const std::vector<locallabRetiMinMax> &minmax, int selspot) = 0;
+    virtual void logencodChanged(const float blackev, const float whiteev, const float sourceg, const float sourceab, const float targetg, const bool autocomput, const bool autocie, const float jz1) = 0;
+    virtual void refChanged2(float *huerefp, float *chromarefp, float *lumarefp, float *fabrefp, int selspot) = 0;
+};
+
 class AutoColorTonListener
 {
 public:
     virtual ~AutoColorTonListener() = default;
     virtual void autoColorTonChanged(int bwct, int satthres, int satprot) = 0;
 };
+
+class AutoprimListener
+{
+public:
+    virtual ~AutoprimListener() = default;
+    virtual void primChanged(float rx, float ry, float bx, float by, float gx, float gy) = 0;
+    virtual void iprimChanged(float r_x, float r_y, float b_x, float b_y, float g_x, float g_y, float w_x, float w_y) = 0;
+};
+
 
 class AutoBWListener
 {
@@ -361,7 +472,7 @@ class AutoWBListener
 {
 public:
     virtual ~AutoWBListener() = default;
-    virtual void WBChanged(double temp, double green) = 0;
+    virtual void WBChanged(double temp, double green, float studgood) = 0;
 };
 
 class FrameCountListener
@@ -392,12 +503,26 @@ public :
     virtual void autoContrastChanged (double autoContrast) = 0;
 };
 
+class AutoRadiusListener
+{
+public :
+    virtual ~AutoRadiusListener() = default;
+    virtual void autoRadiusChanged (double autoRadius) = 0;
+};
+
 class WaveletListener
 {
 public:
     virtual ~WaveletListener() = default;
     virtual void wavChanged(double nlevel) = 0;
 
+};
+
+class FilmNegListener
+{
+public:
+    virtual ~FilmNegListener() = default;
+    virtual void filmRefValuesChanged(const procparams::FilmNegativeParams::RGB &refInput, const procparams::FilmNegativeParams::RGB &refOutput) = 0;
 };
 
 /** This class represents a detailed part of the image (looking through a kind of window).
@@ -431,9 +556,20 @@ public:
     /** Returns the initial image corresponding to the image processor.
       * @return the initial image corresponding to the image processor */
     virtual InitialImage* getInitialImage () = 0;
+    /** Set the TweakOperator
+      * @param tOperator is a pointer to the object that will alter the ProcParams for the rendering */
+    virtual void        setTweakOperator (TweakOperator *tOperator) = 0;
+    /** Unset the TweakOperator
+      * @param tOperator is a pointer to the object that were altering the ProcParams for the rendering
+      *        It will only unset the tweak operator if tOperator is the same than the currently set operator.
+      *        If it doesn't match, the currently set TweakOperator will remain set. */
+    virtual void        unsetTweakOperator (TweakOperator *tOperator) = 0;
     /** Returns the current processing parameters.
-      * @param dst is the location where the image processing parameters are copied (it is assumed that the memory is allocated by the caller) */
-    virtual void        getParams (procparams::ProcParams* dst) = 0;
+      * Since the ProcParams can be tweaked by a GUI to operate on the image at a specific stage or with disabled tool,
+      * you'll have to specify if you want the tweaked version for the current special mode, or the untweaked one.
+      * @param dst is the location where the image processing parameters are copied (it is assumed that the memory is allocated by the caller)
+      * @param tweaked is used to choose between the tweaked ProcParams (if there is one) or the untweaked one */
+    virtual void        getParams (procparams::ProcParams* dst, bool tweaked=false) = 0;
     /** An essential member function. Call this when a setting has been changed. This function returns a pointer to the
       * processing parameters, that you have to update to reflect the changed situation. When ready, call the paramsUpdateReady
       * function to start the image update.
@@ -476,6 +612,8 @@ public:
 
     virtual void        updateUnLock() = 0;
 
+    virtual void        setLocallabMaskVisibility(bool previewDeltaE, int locallColorMask, int locallColorMaskinv, int locallExpMask, int locallExpMaskinv, int locallSHMask, int locallSHMaskinv, int locallvibMask, int locallsoftMask, int locallblMask, int localltmMask, int locallretiMask, int locallsharMask, int localllcMask, int locallcbMask, int localllogMask, int locall_Mask, int locallcieMask) = 0;
+
     /** Creates and returns a Crop instance that acts as a window on the image
       * @param editDataProvider pointer to the EditDataProvider that communicates with the EditSubscriber
       * @return a pointer to the Crop object that handles the image data trough its own pipeline */
@@ -484,6 +622,8 @@ public:
     virtual bool        getAutoWB   (double& temp, double& green, double equal, double tempBias) = 0;
     virtual void        getCamWB    (double& temp, double& green) = 0;
     virtual void        getSpotWB  (int x, int y, int rectSize, double& temp, double& green) = 0;
+    virtual bool        getFilmNegativeSpot(int x, int y, int spotSize, procparams::FilmNegativeParams::RGB &refInput, procparams::FilmNegativeParams::RGB &refOutput) = 0;
+    
     virtual void        getAutoCrop (double ratio, int &x, int &y, int &w, int &h) = 0;
 
     virtual void        saveInputICCReference (const Glib::ustring& fname, bool apply_wb) = 0;
@@ -499,19 +639,25 @@ public:
     virtual void        setFrameCountListener   (FrameCountListener* l) = 0;
     virtual void        setBayerAutoContrastListener (AutoContrastListener* l) = 0;
     virtual void        setXtransAutoContrastListener (AutoContrastListener* l) = 0;
+    virtual void        setpdSharpenAutoContrastListener (AutoContrastListener* l) = 0;
+    virtual void        setpdSharpenAutoRadiusListener (AutoRadiusListener* l) = 0;
     virtual void        setAutoBWListener       (AutoBWListener* l) = 0;
     virtual void        setAutoWBListener       (AutoWBListener* l) = 0;
     virtual void        setAutoColorTonListener (AutoColorTonListener* l) = 0;
+    virtual void        setAutoprimListener     (AutoprimListener* l) = 0;
+
     virtual void        setAutoChromaListener   (AutoChromaListener* l) = 0;
     virtual void        setRetinexListener      (RetinexListener* l) = 0;
     virtual void        setWaveletListener      (WaveletListener* l) = 0;
     virtual void        setImageTypeListener    (ImageTypeListener* l) = 0;
+    virtual void        setLocallabListener     (LocallabListener* l) = 0;
+    virtual void        setFilmNegListener      (FilmNegListener* l) = 0;
 
     virtual void        setMonitorProfile       (const Glib::ustring& monitorProfile, RenderingIntent intent) = 0;
     virtual void        getMonitorProfile       (Glib::ustring& monitorProfile, RenderingIntent& intent) const = 0;
     virtual void        setSoftProofing         (bool softProof, bool gamutCheck) = 0;
     virtual void        getSoftProofing         (bool &softProof, bool &gamutCheck) = 0;
-    virtual void        setSharpMask            (bool sharpMask) = 0;
+    virtual ProcEvent   setSharpMask            (bool sharpMask) = 0;
 
     virtual ~StagedImageProcessor () {}
 
@@ -529,7 +675,7 @@ public:
   * @param baseDir base directory of RT's installation dir
   * @param userSettingsDir RT's base directory in the user's settings dir
   * @param loadAll if false, don't load the various dependencies (profiles, HALDClut files, ...), they'll be loaded from disk each time they'll be used (launching time improvement) */
-int init (const Settings* s, Glib::ustring baseDir, Glib::ustring userSettingsDir, bool loadAll = true);
+int init (const Settings* s, const Glib::ustring& baseDir, const Glib::ustring& userSettingsDir, bool loadAll = true);
 
 /** Cleanup the RT engine (static variables) */
 void cleanup ();
@@ -597,6 +743,3 @@ void startBatchProcessing (ProcessingJob* job, BatchProcessingListener* bpl);
 
 extern MyMutex* lcmsMutex;
 }
-
-#endif
-

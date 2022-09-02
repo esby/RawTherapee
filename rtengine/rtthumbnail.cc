@@ -14,32 +14,39 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
+#include <clocale>
+
+#include <lcms2.h>
+
+#include <glib/gstdio.h>
+
+#include <glibmm/ustring.h>
+#include <glibmm/fileutils.h>
+#include <glibmm/keyfile.h>
+
+#include "cieimage.h"
+#include "color.h"
+#include "colortemp.h"
+#include "curves.h"
+#include "dcp.h"
+#include "iccmatrices.h"
+#include "iccstore.h"
+#include "image8.h"
+#include "improcfun.h"
+#include "jpeg.h"
+#include "labimage.h"
+#include "median.h"
+#include "procparams.h"
+#include "rawimage.h"
+#include "rawimagesource.h"
 #include "rtengine.h"
 #include "rtthumbnail.h"
-#include "../rtgui/options.h"
-#include "image8.h"
-#include <lcms2.h>
-#include "curves.h"
-#include <glibmm.h>
-#include "improcfun.h"
-#include "colortemp.h"
-#include "mytime.h"
-#include "utils.h"
-#include "iccstore.h"
-#include "iccmatrices.h"
-#include "rawimagesource.h"
-#include "stdimagesource.h"
-#include <glib/gstdio.h>
-#include "rawimage.h"
-#include "jpeg.h"
-#include "../rtgui/ppversion.h"
-#include "improccoordinator.h"
 #include "settings.h"
-#include <locale.h>
+#include "stdimagesource.h"
 #include "StopWatch.h"
-#include "median.h"
+#include "utils.h"
 
 namespace
 {
@@ -182,12 +189,8 @@ void scale_colors (rtengine::RawImage *ri, float scale_mul[4], float cblack[4], 
 
 }
 
-extern Options options;
-
 namespace rtengine
 {
-
-extern const Settings *settings;
 
 using namespace procparams;
 
@@ -202,11 +205,6 @@ Thumbnail* Thumbnail::loadFromImage (const Glib::ustring& fname, int &w, int &h,
 
     ImageIO* img = imgSrc.getImageIO();
 
-    // agriggio -- hotfix for #3794, to be revised once a proper solution is implemented
-    if (std::max(img->getWidth(), img->getHeight()) / std::min(img->getWidth(), img->getHeight()) >= 10) {
-        return nullptr;
-    }
-    
     Thumbnail* tpp = new Thumbnail ();
 
     unsigned char* data;
@@ -232,14 +230,28 @@ Thumbnail* Thumbnail::loadFromImage (const Glib::ustring& fname, int &w, int &h,
         h = img->getHeight();
         tpp->scale = 1.;
     } else {
-        if (fixwh == 1) {
+        if (fixwh < 0 && w > 0 && h > 0) {
+            const int ww = h * img->getWidth() / img->getHeight();
+            const int hh = w * img->getHeight() / img->getWidth();
+            if (ww <= w) {
+                w = ww;
+                tpp->scale = static_cast<double>(img->getHeight()) / h;
+            } else {
+                h = hh;
+                tpp->scale = static_cast<double>(img->getWidth()) / w;
+            }
+        } else if (fixwh == 1) {
             w = h * img->getWidth() / img->getHeight();
-            tpp->scale = (double)img->getHeight() / h;
+            tpp->scale = static_cast<double>(img->getHeight()) / h;
         } else {
             h = w * img->getHeight() / img->getWidth();
-            tpp->scale = (double)img->getWidth() / w;
+            tpp->scale = static_cast<double>(img->getWidth()) / w;
         }
     }
+
+    // Precaution to prevent division by zero later on
+    if (h < 1) h = 1;
+    if (w < 1) w = 1;
 
     // bilinear interpolation
     if (tpp->thumbImg) {
@@ -328,7 +340,7 @@ Image8 *load_inspector_mode(const Glib::ustring &fname, RawMetaDataLocation &rml
     neutral.raw.bayersensor.method = RAWParams::BayerSensor::getMethodString(RAWParams::BayerSensor::Method::FAST);
     neutral.raw.xtranssensor.method = RAWParams::XTransSensor::getMethodString(RAWParams::XTransSensor::Method::FAST);
     neutral.icm.inputProfile = "(camera)";
-    neutral.icm.workingProfile = options.rtSettings.srgb;
+    neutral.icm.workingProfile = settings->srgb;
 
     src.preprocess(neutral.raw, neutral.lensProf, neutral.coarse, false);
     double thresholdDummy = 0.f;
@@ -427,7 +439,7 @@ Thumbnail* Thumbnail::loadQuickFromRaw (const Glib::ustring& fname, RawMetaDataL
 
     // did we succeed?
     if ( err ) {
-        if (options.rtSettings.verbose) {
+        if (settings->verbose) {
             std::cout << "Could not extract thumb from " << fname.c_str() << std::endl;
         }
         delete tpp;
@@ -509,8 +521,6 @@ Thumbnail* Thumbnail::loadQuickFromRaw (const Glib::ustring& fname, RawMetaDataL
     ((filter >> ((((row) << 1 & 14) + ((col) & 1)) << 1) & 3)==0 || !filter)
 #define FISGREEN(filter,row,col) \
     ((filter >> ((((row) << 1 & 14) + ((col) & 1)) << 1) & 3)==1 || !filter)
-#define FISBLUE(filter,row,col) \
-    ((filter >> ((((row) << 1 & 14) + ((col) & 1)) << 1) & 3)==2 || !filter)
 
 RawMetaDataLocation Thumbnail::loadMetaDataFromRaw (const Glib::ustring& fname)
 {
@@ -546,6 +556,17 @@ Thumbnail* Thumbnail::loadFromRaw (const Glib::ustring& fname, RawMetaDataLocati
         return nullptr;
     }
 
+    if (ri->getFrameCount() == 7) {
+        // special case for Hasselblad H6D-100cMS pixelshift files
+        // first frame is not bayer, load second frame
+        int r = ri->loadRaw (1, 1, 0);
+
+        if ( r ) {
+            delete ri;
+            sensorType = ST_NONE;
+            return nullptr;
+        }
+    }
     sensorType = ri->getSensorType();
 
     int width = ri->get_width();
@@ -581,6 +602,8 @@ Thumbnail* Thumbnail::loadFromRaw (const Glib::ustring& fname, RawMetaDataLocati
     //tpp->defGain = 1.0 / min(ri->get_pre_mul(0), ri->get_pre_mul(1), ri->get_pre_mul(2));
     tpp->defGain = max (scale_mul[0], scale_mul[1], scale_mul[2], scale_mul[3]) / min (scale_mul[0], scale_mul[1], scale_mul[2], scale_mul[3]);
     tpp->defGain *= std::pow(2, ri->getBaselineExposure());
+
+    tpp->scaleGain = scale_mul[0] / pre_mul[0]; // can be used to reconstruct scale_mul later in processing
 
     tpp->gammaCorrected = true;
 
@@ -713,7 +736,7 @@ Thumbnail* Thumbnail::loadFromRaw (const Glib::ustring& fname, RawMetaDataLocati
             int wmax = tmpw;
             int hmax = tmph;
 
-            if (ri->get_maker() == "Sigma" && ri->DNGVERSION()) { // Hack to prevent sigma dng files from crashing
+            if ((ri->get_maker() == "Sigma" || ri->get_maker() == "Pentax" || ri->get_maker() == "Sony") && ri->DNGVERSION()) { // Hack to prevent sigma dng files from crashing
                 wmax = (width - 2 - left_margin) / hskip;
                 hmax = (height - 2 - top_margin) / vskip;
             }
@@ -1030,6 +1053,7 @@ Thumbnail::Thumbnail () :
     scaleForSave (8192),
     gammaCorrected (false),
     colorMatrix{},
+    scaleGain (1.0),
     isRaw (true)
 {
 }
@@ -1118,7 +1142,7 @@ IImage8* Thumbnail::processImage (const procparams::ProcParams& params, eSensorT
         double cam_g = colorMatrix[1][0] * camwbRed + colorMatrix[1][1] * camwbGreen + colorMatrix[1][2] * camwbBlue;
         double cam_b = colorMatrix[2][0] * camwbRed + colorMatrix[2][1] * camwbGreen + colorMatrix[2][2] * camwbBlue;
         currWB = ColorTemp (cam_r, cam_g, cam_b, params.wb.equal);
-    } else if (params.wb.method == "Auto") {
+    } else if (params.wb.method == "autold") {
         currWB = ColorTemp (autoWBTemp, autoWBGreen, wbEqual, "Custom");
     }
 
@@ -1163,8 +1187,19 @@ IImage8* Thumbnail::processImage (const procparams::ProcParams& params, eSensorT
         rwidth = int (size_t (thumbImg->getWidth()) * size_t (rheight) / size_t (thumbImg->getHeight()));
     }
 
+    if (rwidth < 1) rwidth = 1;
+    if (rheight < 1) rheight = 1;
 
     Imagefloat* baseImg = resizeTo<Imagefloat> (rwidth, rheight, interp, thumbImg);
+
+    // Film negative legacy mode, for backwards compatibility RT v5.8
+    if (params.filmNegative.enabled) {
+        if (params.filmNegative.backCompat == FilmNegativeParams::BackCompat::V1) {
+            processFilmNegative(params, baseImg, rwidth, rheight);
+        } else if (params.filmNegative.backCompat == FilmNegativeParams::BackCompat::V2) {
+            processFilmNegativeV2(params, baseImg, rwidth, rheight);
+        }
+    }
 
     if (params.coarse.rotate) {
         baseImg->rotate (params.coarse.rotate);
@@ -1205,6 +1240,19 @@ IImage8* Thumbnail::processImage (const procparams::ProcParams& params, eSensorT
 
     // if luma denoise has to be done for thumbnails, it should be right here
 
+    int fw = baseImg->getWidth();
+    int fh = baseImg->getHeight();
+    //ColorTemp::CAT02 (baseImg, &params)   ;//perhaps not good!
+
+    ImProcFunctions ipf (&params, forHistogramMatching); // enable multithreading when forHistogramMatching is true
+    ipf.setScale (sqrt (double (fw * fw + fh * fh)) / sqrt (double (thumbImg->getWidth() * thumbImg->getWidth() + thumbImg->getHeight() * thumbImg->getHeight()))*scale);
+    ipf.updateColorProfiles (ICCStore::getInstance()->getDefaultMonitorProfileName(), RenderingIntent(settings->monitorIntent), false, false);
+
+    // Process film negative BEFORE colorspace conversion, if needed
+    if (params.filmNegative.enabled && params.filmNegative.backCompat == FilmNegativeParams::BackCompat::CURRENT && params.filmNegative.colorSpace == FilmNegativeParams::ColorSpace::INPUT) {
+        ipf.filmNegativeProcess(baseImg, baseImg, params.filmNegative);
+    }
+
     // perform color space transformation
 
     if (isRaw) {
@@ -1214,28 +1262,25 @@ IImage8* Thumbnail::processImage (const procparams::ProcParams& params, eSensorT
         StdImageSource::colorSpaceConversion (baseImg, params.icm, embProfile, thumbImg->getSampleFormat());
     }
 
-    int fw = baseImg->getWidth();
-    int fh = baseImg->getHeight();
-    //ColorTemp::CAT02 (baseImg, &params)   ;//perhaps not good!
-
-    ImProcFunctions ipf (&params, forHistogramMatching); // enable multithreading when forHistogramMatching is true
-    ipf.setScale (sqrt (double (fw * fw + fh * fh)) / sqrt (double (thumbImg->getWidth() * thumbImg->getWidth() + thumbImg->getHeight() * thumbImg->getHeight()))*scale);
-    ipf.updateColorProfiles (ICCStore::getInstance()->getDefaultMonitorProfileName(), options.rtSettings.monitorIntent, false, false);
+    // Process film negative AFTER colorspace conversion, if needed
+    if (params.filmNegative.enabled && params.filmNegative.backCompat == FilmNegativeParams::BackCompat::CURRENT && params.filmNegative.colorSpace != FilmNegativeParams::ColorSpace::INPUT) {
+        ipf.filmNegativeProcess(baseImg, baseImg, params.filmNegative);
+    }
 
     LUTu hist16 (65536);
 
     ipf.firstAnalysis (baseImg, params, hist16);
 
-    ipf.dehaze(baseImg);
-    ipf.ToneMapFattal02(baseImg);
+    ipf.dehaze(baseImg, params.dehaze);
+    ipf.ToneMapFattal02(baseImg, params.fattal, 3, 0, nullptr, 0, 0, 0);
     
     // perform transform
-    if (ipf.needsTransform()) {
+    int origFW;
+    int origFH;
+    double tscale = 0.0;
+    getDimensions (origFW, origFH, tscale);
+    if (ipf.needsTransform(origFW * tscale + 0.5, origFH * tscale + 0.5, 0, metadata)) {
         Imagefloat* trImg = new Imagefloat (fw, fh);
-        int origFW;
-        int origFH;
-        double tscale = 0.0;
-        getDimensions (origFW, origFH, tscale);
         ipf.transform (baseImg, trImg, 0, 0, 0, 0, fw, fh, origFW * tscale + 0.5, origFH * tscale + 0.5, metadata, 0, true); // Raw rotate degree not detectable here
         delete baseImg;
         baseImg = trImg;
@@ -1308,10 +1353,10 @@ IImage8* Thumbnail::processImage (const procparams::ProcParams& params, eSensorT
         params.colorToning.getCurves (ctColorCurve, ctOpacityCurve, wp, opautili);
 
         clToningcurve (65536);
-        CurveFactory::curveToning (params.colorToning.clcurve, clToningcurve, scale == 1 ? 1 : 16);
+        CurveFactory::diagonalCurve2Lut (params.colorToning.clcurve, clToningcurve, scale == 1 ? 1 : 16);
 
         cl2Toningcurve (65536);
-        CurveFactory::curveToning (params.colorToning.cl2curve, cl2Toningcurve, scale == 1 ? 1 : 16);
+        CurveFactory::diagonalCurve2Lut (params.colorToning.cl2curve, cl2Toningcurve, scale == 1 ? 1 : 16);
     }
 
     if (params.blackwhite.enabled) {
@@ -1347,7 +1392,7 @@ IImage8* Thumbnail::processImage (const procparams::ProcParams& params, eSensorT
 
     LabImage* labView = new LabImage (fw, fh);
     DCPProfile *dcpProf = nullptr;
-    DCPProfile::ApplyState as;
+    DCPProfileApplyState as;
 
     if (isRaw) {
         cmsHPROFILE dummy;
@@ -1387,23 +1432,37 @@ IImage8* Thumbnail::processImage (const procparams::ProcParams& params, eSensorT
     CurveFactory::complexLCurve (params.labCurve.brightness, params.labCurve.contrast, params.labCurve.lcurve,
                                  hist16, lumacurve, dummy, 16, utili);
 
-    bool clcutili;
-    CurveFactory::curveCL (clcutili, params.labCurve.clcurve, clcurve, 16);
+    const bool clcutili = CurveFactory::diagonalCurve2Lut(params.labCurve.clcurve, clcurve, 16);
 
     bool autili, butili, ccutili, cclutili;
     CurveFactory::complexsgnCurve (autili, butili, ccutili, cclutili, params.labCurve.acurve, params.labCurve.bcurve, params.labCurve.cccurve,
                                    params.labCurve.lccurve, curve1, curve2, satcurve, lhskcurve, 16);
 
+
+    if (params.colorToning.enabled && params.colorToning.method == "LabGrid") {
+        ipf.colorToningLabGrid(labView, 0,labView->W , 0, labView->H, false);
+    }
+
+    ipf.shadowsHighlights(labView, params.sh.enabled, params.sh.lab,params.sh.highlights ,params.sh.shadows, params.sh.radius, 16, params.sh.htonalwidth, params.sh.stonalwidth);
+
+    if (params.localContrast.enabled) {
+        // Alberto's local contrast
+        ipf.localContrast(labView, labView->L, params.localContrast, false, 16);
+    }
     ipf.chromiLuminanceCurve (nullptr, 1, labView, labView, curve1, curve2, satcurve, lhskcurve, clcurve, lumacurve, utili, autili, butili, ccutili, cclutili, clcutili, dummy, dummy);
 
-    ipf.vibrance (labView);
+    ipf.vibrance (labView, params.vibrance, params.toneCurve.hrenabled, params.icm.workingProfile);
     ipf.labColorCorrectionRegions(labView);
+
+
+
 
     if ((params.colorappearance.enabled && !params.colorappearance.tonecie) || !params.colorappearance.enabled) {
         ipf.EPDToneMap (labView, 5, 6);
     }
 
-    ipf.softLight(labView);
+    ipf.softLight(labView, params.softlight);
+
 
     if (params.colorappearance.enabled) {
         CurveFactory::curveLightBrightColor (
@@ -1430,10 +1489,11 @@ IImage8* Thumbnail::processImage (const procparams::ProcParams& params, eSensorT
             adap = 2000.f;
         } else {
             float E_V = fcomp + log2 ((fnum * fnum) / fspeed / (fiso / 100.f));
-            float expo2 = params.toneCurve.expcomp; // exposure compensation in tonecurve ==> direct EV
+            double kexp = 0.;
+            float expo2 = kexp * params.toneCurve.expcomp; // exposure compensation in tonecurve ==> direct EV
             E_V += expo2;
             float expo1;//exposure raw white point
-            expo1 = log2 (params.raw.expos); //log2 ==>linear to EV
+            expo1 = 0.5 * log2 (params.raw.expos); //log2 ==>linear to EV
             E_V += expo1;
             adap = powf (2.f, E_V - 3.f); //cd / m2
             //end calculation adaptation scene luminosity
@@ -1452,7 +1512,8 @@ IImage8* Thumbnail::processImage (const procparams::ProcParams& params, eSensorT
         ipf.ciecam_02float (cieView, adap, 1, 2, labView, &params, customColCurve1, customColCurve2, customColCurve3, dummy, dummy, CAMBrightCurveJ, CAMBrightCurveQ, CAMMean, 5, sk, execsharp, d, dj, yb, rtt);
         delete cieView;
     }
-    
+
+
     // color processing
     //ipf.colorCurve (labView, labView);
 
@@ -1475,19 +1536,22 @@ IImage8* Thumbnail::processImage (const procparams::ProcParams& params, eSensorT
     }
 
     myscale = 1.0 / myscale;
-    /*    // apply crop
-        if (params.crop.enabled) {
-            int ix = 0;
-            for (int i=0; i<fh; i++)
-                for (int j=0; j<fw; j++)
-                    if (i<params.crop.y/myscale || i>(params.crop.y+params.crop.h)/myscale || j<params.crop.x/myscale || j>(params.crop.x+params.crop.w)/myscale) {
-                        readyImg->data[ix++] /= 3;
-                        readyImg->data[ix++] /= 3;
-                        readyImg->data[ix++] /= 3;
-                    }
-                    else
-                        ix += 3;
-        }*/
+    // apply crop
+    if (params.crop.enabled) {
+        int ix = 0;
+        for (int i = 0; i < fh; ++i) {
+            for (int j = 0; j < fw; ++j) {
+                if (i < params.crop.y * myscale || i > (params.crop.y + params.crop.h) * myscale || j < params.crop.x * myscale || j > (params.crop.x + params.crop.w) * myscale) {
+                    readyImg->data[ix++] /= 3;
+                    readyImg->data[ix++] /= 3;
+                    readyImg->data[ix++] /= 3;
+                } else {
+                    ix += 3;
+                }
+            }
+        }
+    }
+
 
     return readyImg;
 }
@@ -1902,7 +1966,7 @@ bool Thumbnail::writeImage (const Glib::ustring& fname)
 
     Glib::ustring fullFName = fname + ".rtti";
 
-    FILE* f = g_fopen (fullFName.c_str (), "wb");
+    FILE* f = ::g_fopen (fullFName.c_str (), "wb");
 
     if (!f) {
         return false;
@@ -1945,7 +2009,7 @@ bool Thumbnail::readImage (const Glib::ustring& fname)
         return false;
     }
 
-    FILE* f = g_fopen(fullFName.c_str (), "rb");
+    FILE* f = ::g_fopen(fullFName.c_str (), "rb");
 
     if (!f) {
         return false;
@@ -2103,15 +2167,19 @@ bool Thumbnail::readData  (const Glib::ustring& fname)
                         colorMatrix[i][j] = cm[ix++];
                     }
             }
+            
+            if (keyFile.has_key ("LiveThumbData", "ScaleGain")) {
+                scaleGain           = keyFile.get_double ("LiveThumbData", "ScaleGain");
+            }
         }
 
         return true;
     } catch (Glib::Error &err) {
-        if (options.rtSettings.verbose) {
+        if (settings->verbose) {
             printf ("Thumbnail::readData / Error code %d while reading values from \"%s\":\n%s\n", err.code(), fname.c_str(), err.what().c_str());
         }
     } catch (...) {
-        if (options.rtSettings.verbose) {
+        if (settings->verbose) {
             printf ("Thumbnail::readData / Unknown exception while trying to load \"%s\"!\n", fname.c_str());
         }
     }
@@ -2154,15 +2222,16 @@ bool Thumbnail::writeData  (const Glib::ustring& fname)
         keyFile.set_boolean ("LiveThumbData", "GammaCorrected", gammaCorrected);
         Glib::ArrayHandle<double> cm ((double*)colorMatrix, 9, Glib::OWNERSHIP_NONE);
         keyFile.set_double_list ("LiveThumbData", "ColorMatrix", cm);
+        keyFile.set_double  ("LiveThumbData", "ScaleGain", scaleGain);
 
         keyData = keyFile.to_data ();
 
     } catch (Glib::Error& err) {
-        if (options.rtSettings.verbose) {
+        if (settings->verbose) {
             printf ("Thumbnail::writeData / Error code %d while reading values from \"%s\":\n%s\n", err.code(), fname.c_str(), err.what().c_str());
         }
     } catch (...) {
-        if (options.rtSettings.verbose) {
+        if (settings->verbose) {
             printf ("Thumbnail::writeData / Unknown exception while trying to save \"%s\"!\n", fname.c_str());
         }
     }
@@ -2171,10 +2240,10 @@ bool Thumbnail::writeData  (const Glib::ustring& fname)
         return false;
     }
 
-    FILE *f = g_fopen (fname.c_str (), "wt");
+    FILE *f = ::g_fopen (fname.c_str (), "wt");
 
     if (!f) {
-        if (options.rtSettings.verbose) {
+        if (settings->verbose) {
             printf ("Thumbnail::writeData / Error: unable to open file \"%s\" with write access!\n", fname.c_str());
         }
 
@@ -2194,7 +2263,7 @@ bool Thumbnail::readEmbProfile  (const Glib::ustring& fname)
     embProfile = nullptr;
     embProfileLength = 0;
 
-    FILE* f = g_fopen (fname.c_str (), "rb");
+    FILE* f = ::g_fopen (fname.c_str (), "rb");
 
     if (f) {
         if (!fseek (f, 0, SEEK_END)) {
@@ -2222,48 +2291,10 @@ bool Thumbnail::writeEmbProfile (const Glib::ustring& fname)
 {
 
     if (embProfileData) {
-        FILE* f = g_fopen (fname.c_str (), "wb");
+        FILE* f = ::g_fopen (fname.c_str (), "wb");
 
         if (f) {
             fwrite (embProfileData, 1, embProfileLength, f);
-            fclose (f);
-            return true;
-        }
-    }
-
-    return false;
-}
-
-bool Thumbnail::readAEHistogram  (const Glib::ustring& fname)
-{
-
-    FILE* f = g_fopen(fname.c_str(), "rb");
-
-    if (!f) {
-        aeHistogram.reset();
-    } else {
-        aeHistogram(65536 >> aeHistCompression);
-        const size_t histoBytes = (65536 >> aeHistCompression) * sizeof(aeHistogram[0]);
-        const size_t bytesRead = fread(&aeHistogram[0], 1, histoBytes, f);
-        fclose (f);
-        if (bytesRead != histoBytes) {
-            aeHistogram.reset();
-            return false;
-        }
-        return true;
-    }
-
-    return false;
-}
-
-bool Thumbnail::writeAEHistogram (const Glib::ustring& fname)
-{
-
-    if (aeHistogram) {
-        FILE* f = g_fopen (fname.c_str (), "wb");
-
-        if (f) {
-            fwrite (&aeHistogram[0], 1, (65536 >> aeHistCompression)*sizeof (aeHistogram[0]), f);
             fclose (f);
             return true;
         }

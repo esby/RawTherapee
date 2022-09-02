@@ -14,16 +14,23 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "options.h"
 #include <cstdio>
 #include <glib/gstdio.h>
+#include <glibmm/keyfile.h>
+#include <iostream>
 #include <sstream>
 #include "multilangmgr.h"
 #include "addsetids.h"
 #include "guiutils.h"
+#include "pathutils.h"
 #include "version.h"
+
+#include "../rtengine/procparams.h"
+#include "../rtengine/rtengine.h"
+#include "../rtengine/utils.h"
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -42,7 +49,7 @@
 
 // User's settings directory, including images' profiles if used
 Glib::ustring Options::rtdir;
-// User's cached datas' directory
+// User's cached data directory
 Glib::ustring Options::cacheBaseDir;
 
 Options options;
@@ -171,6 +178,10 @@ void Options::updatePaths()
         lastWaveletCurvesDir = preferredPath;
     }
 
+    if (lastlocalCurvesDir.empty() || !Glib::file_test(lastlocalCurvesDir, Glib::FILE_TEST_EXISTS) || !Glib::file_test(lastlocalCurvesDir, Glib::FILE_TEST_IS_DIR)) {
+        lastlocalCurvesDir = preferredPath;
+    }
+
     if (lastPFCurvesDir.empty() || !Glib::file_test(lastPFCurvesDir, Glib::FILE_TEST_EXISTS) || !Glib::file_test(lastPFCurvesDir, Glib::FILE_TEST_IS_DIR)) {
         lastPFCurvesDir = preferredPath;
     }
@@ -219,7 +230,7 @@ Glib::ustring Options::getPreferredProfilePath()
   *
   *@param profName  path + filename of the procparam to look for. A filename without path can be provided for backward compatibility.
   *                 In this case, this parameter will be updated with the new format.
-  *@return Send back the absolute path of the given filename or "Neutral" if "Neutral" has been set to profName. Implementor will have
+  *@return Send back the absolute path of the given filename or "Neutral" if "Neutral" has been set to profName. Implementer will have
   *        to test for this particular value. If the absolute path is invalid (e.g. the file doesn't exist), it will return an empty string.
   */
 Glib::ustring Options::findProfilePath(Glib::ustring &profName)
@@ -288,7 +299,6 @@ void Options::setDefaults()
     windowMaximized = true;
     windowMonitor = 0;
     meowMonitor = -1;
-    meowFullScreen = false;
     meowMaximized = true;
     meowWidth = 1200;
     meowHeight = 680;
@@ -344,6 +354,7 @@ void Options::setDefaults()
     fontSize = 10;
     CPFontFamily = "default";
     CPFontSize = 8;
+    pseudoHiDPISupport = false;
     lastScale = 5;
     lastShowAllExif = false;
     panAccelFactor = 5;
@@ -353,13 +364,21 @@ void Options::setDefaults()
     fbShowDateTime = true;
     fbShowBasicExif = true;
     fbShowExpComp = false;
+#ifdef WIN32
+    // use windows setting for visibility of hidden files/folders
+    SHELLFLAGSTATE sft = { 0 };
+    SHGetSettings(&sft, SSF_SHOWALLOBJECTS);
+    fbShowHidden = sft.fShowAllObjects;
+#else
     fbShowHidden = false;
+#endif
     fbArrangement = 2;                  // was 0
     navRGBUnit = NavigatorUnit::PERCENT;
     navHSVUnit = NavigatorUnit::PERCENT;
     multiUser = true;
     profilePath = "profiles";
     loadSaveProfilePath = "";           // will be corrected in load as otherwise construction fails
+    lastCopyMovePath = "";
     version = "0.0.0.0";                // temporary value; will be correctly set in RTWindow::on_realize
     thumbSize = 160;
     thumbSizeTab = 160;
@@ -381,6 +400,7 @@ void Options::setDefaults()
     overwriteOutputFile = false;        // if TRUE, existing output JPGs/PNGs are overwritten, instead of adding ..-1.jpg, -2.jpg etc.
     theme = "RawTherapee";
     maxThumbnailHeight = 250;
+    maxThumbnailWidth = 800;
     maxCacheEntries = 20000;
     thumbInterp = 1;
     autoSuffix = true;
@@ -395,13 +415,19 @@ void Options::setDefaults()
     customEditorProg = "";
     CPBKeys = CPBKT_TID;
     editorToSendTo = 1;
+    editor_out_dir = EDITOR_OUT_DIR_TEMP;
+    editor_custom_out_dir = "";
+    editor_float32 = false;
+    editor_bypass_output_profile = false;
     favoriteDirs.clear();
     tpOpen.clear();
     autoSaveTpOpen = true;
     //crvOpen.clear ();
     parseExtensions.clear();
+    favorites.clear();
     parseExtensionsEnabled.clear();
     parsedExtensions.clear();
+    parsedExtensionsSet.clear();
     renameUseTemplates = false;
     renameTemplates.clear();
     thumbnailZoomRatios.clear();
@@ -425,12 +451,18 @@ void Options::setDefaults()
     histogramBlue = true;
     histogramLuma = false;
     histogramChroma = false;
-    histogramRAW = false;
     histogramBar = true;
     histogramHeight = 200;
     histogramDrawMode = 0;
+    histogramScopeType = ScopeType::HISTOGRAM;
+    histogramShowOptionButtons = false;
+    histogramTraceBrightness = 1;
     curvebboxpos = 1;
+    complexity = 2;
+    inspectorWindow = false;
+    zoomOnScroll = true;
     prevdemo = PD_Sidecar;
+
     rgbDenoiseThreadLimit = 0;
 #if defined( _OPENMP ) && defined( __x86_64__ )
     clutCacheSize = omp_get_num_procs();
@@ -441,7 +473,12 @@ void Options::setDefaults()
     maxInspectorBuffers = 2; //  a rather conservative value for low specced systems...
     inspectorDelay = 0;
     serializeTiffRead = true;
-
+    measure = false;
+    chunkSizeAMAZE = 2;
+    chunkSizeCA = 2;
+    chunkSizeRCD = 2;
+    chunkSizeRGB = 2;
+    chunkSizeXT = 2;
     FileBrowserToolbarSingleRow = false;
     hideTPVScrollbar = false;
     whiteBalanceSpotSize = 8;
@@ -451,6 +488,7 @@ void Options::setDefaults()
     menuGroupFileOperations = true;
     menuGroupProfileOperations = true;
     menuGroupExtProg = true;
+    showtooltip = false;
 
     ICCPC_primariesPreset = "sRGB",
     ICCPC_redPrimaryX = 0.6400;
@@ -501,6 +539,8 @@ void Options::setDefaults()
     fastexport_resize_dataspec           = 3;
     fastexport_resize_width              = 900;
     fastexport_resize_height             = 900;
+    fastexport_resize_longedge           = 900;
+    fastexport_resize_shortedge          = 900;
     fastexport_use_fast_pipeline         = true;
 
     clutsDir = "./cluts";
@@ -551,11 +591,13 @@ void Options::setDefaults()
     rtSettings.monitorProfile = Glib::ustring();
     rtSettings.monitorIntent = rtengine::RI_RELATIVE;
     rtSettings.monitorBPC = true;
+    rtSettings.autocielab = false;
     rtSettings.autoMonitorProfile = false;
     rtSettings.adobe = "RTv2_Medium"; // put the name of yours profiles (here windows)
     rtSettings.prophoto = "RTv2_Large"; // these names appear in the menu "output profile"
     rtSettings.widegamut = "RTv2_Wide";
-    rtSettings.srgb = "RTv2_sRGB";
+    rtSettings.DCIP3 = "RTv2_DCIP3";
+    rtSettings.srgb = "RTv4_sRGB";
     rtSettings.bruce = "RTv2_Bruce";
     rtSettings.beta = "RTv2_Beta";
     rtSettings.best = "RTv2_Best";
@@ -566,13 +608,39 @@ void Options::setDefaults()
     rtSettings.gamutICC = true;
     rtSettings.gamutLch = true;
     rtSettings.amchroma = 40;//between 20 and 140   low values increase effect..and also artifacts, high values reduces
+    rtSettings.amchromajz = 40;//between 5 and 100  low values increase effect..and also artifacts, high values reduces
     rtSettings.level0_cbdl = 0;
     rtSettings.level123_cbdl = 30;
+//locallab
+    rtSettings.cropsleep = 50;//generate a pause of 50 µs for dcrop (100%)to avoid crash when moving window, between 0 to ??
+    rtSettings.reduchigh = 0.85;//transition for luminance in scope
+    rtSettings.reduclow = 0.85;//transition for luminance out scope
+    rtSettings.detectshape = true;//experimental new detection shape
+    rtSettings.previewselection = 5;//between 1 to 40
+    rtSettings.cbdlsensi = 1.0;//between 0.001 to 1
+    rtSettings.fftwsigma = true; //choice between sigma^2 or empirical formula
+
+    rtSettings.itcwb_thres = 34;//between 10 to 55
+    rtSettings.itcwb_sort = false;
+    rtSettings.itcwb_greenrange = 0;//between 0 to 2
+    rtSettings.itcwb_greendeltatemp = 2;//between 0 and 4
+    rtSettings.itcwb_forceextra = true;
+    rtSettings.itcwb_sizereference = 3;//between 1 and 5
+    rtSettings.itcwb_delta = 1;//between 0 and 5
+    rtSettings.itcwb_stdobserver10 = true;
+    rtSettings.itcwb_precis = 5;//3  or 5 or 9
+// end locallab
+
+//wavelet
+    rtSettings.edghi = 3.0;//1.1 and 5.
+    rtSettings.edglo = 0.5;//0.1 and 0.95
+    rtSettings.limrad = 20.;//1 and 60
+    
 
     rtSettings.protectred = 60;
     rtSettings.protectredh = 0.3;
     rtSettings.CRI_color = 0;
-    rtSettings.autocielab = true;
+ //   rtSettings.autocielab = true;
     rtSettings.denoiselabgamma = 2;
     rtSettings.HistogramWorking = false;
 
@@ -607,6 +675,7 @@ void Options::setDefaults()
     lastRetinexDir = "";
     lastDenoiseCurvesDir = "";
     lastWaveletCurvesDir = "";
+    lastlocalCurvesDir = "";
     lastPFCurvesDir = "";
     lastHsvCurvesDir = "";
     lastToneCurvesDir = "";
@@ -633,10 +702,12 @@ Options* Options::copyFrom(Options* other)
 void Options::filterOutParsedExtensions()
 {
     parsedExtensions.clear();
+    parsedExtensionsSet.clear();
 
     for (unsigned int i = 0; i < parseExtensions.size(); i++)
         if (parseExtensionsEnabled[i]) {
             parsedExtensions.push_back(parseExtensions[i].lowercase());
+            parsedExtensionsSet.emplace(parseExtensions[i].lowercase());
         }
 }
 
@@ -724,6 +795,26 @@ void Options::readFromFile(Glib::ustring fname)
                 if (keyFile.has_key("General", "Verbose")) {
                     rtSettings.verbose = keyFile.get_boolean("General", "Verbose");
                 }
+
+                if (keyFile.has_key("General", "Detectshape")) {
+                    rtSettings.detectshape = keyFile.get_boolean("General", "Detectshape");
+                }
+
+                if (keyFile.has_key("General", "Fftwsigma")) {
+                    rtSettings.fftwsigma = keyFile.get_boolean("General", "Fftwsigma");
+                }
+
+                if (keyFile.has_key("General", "Cropsleep")) {
+                    rtSettings.cropsleep          = keyFile.get_integer("General", "Cropsleep");
+                }
+
+                if (keyFile.has_key("General", "Reduchigh")) {
+                    rtSettings.reduchigh          = keyFile.get_double("General", "Reduchigh");
+                }
+
+                if (keyFile.has_key("General", "Reduclow")) {
+                    rtSettings.reduclow          = keyFile.get_double("General", "Reduclow");
+                }
             }
 
             if (keyFile.has_group("External Editor")) {
@@ -742,6 +833,28 @@ void Options::readFromFile(Glib::ustring fname)
                 if (keyFile.has_key("External Editor", "CustomEditor")) {
                     customEditorProg = keyFile.get_string("External Editor", "CustomEditor");
                 }
+                
+                if (keyFile.has_key("External Editor", "OutputDir")) {
+                    int v = keyFile.get_integer("External Editor", "OutputDir");
+                    if (v < int(EDITOR_OUT_DIR_TEMP) || v > int(EDITOR_OUT_DIR_CUSTOM)) {
+                        editor_out_dir = EDITOR_OUT_DIR_TEMP;
+                    } else {
+                        editor_out_dir = EditorOutDir(v);
+                    }
+                }
+
+                if (keyFile.has_key("External Editor", "CustomOutputDir")) {
+                    editor_custom_out_dir = keyFile.get_string("External Editor", "CustomOutputDir");
+                }
+
+                if (keyFile.has_key("External Editor", "Float32")) {
+                    editor_float32 = keyFile.get_boolean("External Editor", "Float32");
+                }
+
+                if (keyFile.has_key("External Editor", "BypassOutputProfile")) {
+                    editor_bypass_output_profile = keyFile.get_boolean("External Editor", "BypassOutputProfile");
+                }
+                
             }
 
             if (keyFile.has_group("Output")) {
@@ -765,8 +878,8 @@ void Options::readFromFile(Glib::ustring fname)
                     saveFormat.tiffBits = keyFile.get_integer("Output", "TiffBps");
                 }
 
-                if (keyFile.has_key ("Output", "TiffFloat")) {
-                    saveFormat.tiffFloat = keyFile.get_boolean ("Output", "TiffFloat");
+                if (keyFile.has_key("Output", "TiffFloat")) {
+                    saveFormat.tiffFloat = keyFile.get_boolean("Output", "TiffFloat");
                 }
 
                 if (keyFile.has_key("Output", "TiffUncompressed")) {
@@ -798,8 +911,8 @@ void Options::readFromFile(Glib::ustring fname)
                     saveFormatBatch.tiffBits = keyFile.get_integer("Output", "TiffBpsBatch");
                 }
 
-                if (keyFile.has_key ("Output", "TiffFloatBatch")) {
-                    saveFormatBatch.tiffFloat = keyFile.get_boolean ("Output", "TiffFloatBatch");
+                if (keyFile.has_key("Output", "TiffFloatBatch")) {
+                    saveFormatBatch.tiffFloat = keyFile.get_boolean("Output", "TiffFloatBatch");
                 }
 
                 if (keyFile.has_key("Output", "TiffUncompressedBatch")) {
@@ -979,12 +1092,18 @@ void Options::readFromFile(Glib::ustring fname)
                     fbShowExpComp = keyFile.get_boolean("File Browser", "BrowserShowsExpComp");
                 }
 
+#ifndef WIN32
                 if (keyFile.has_key("File Browser", "BrowserShowsHidden")) {
                     fbShowHidden = keyFile.get_boolean("File Browser", "BrowserShowsHidden");
                 }
+#endif
 
                 if (keyFile.has_key("File Browser", "MaxPreviewHeight")) {
                     maxThumbnailHeight = keyFile.get_integer("File Browser", "MaxPreviewHeight");
+                }
+
+                if (keyFile.has_key("File Browser", "MaxPreviewWidth")) {
+                    maxThumbnailWidth = keyFile.get_integer("File Browser", "MaxPreviewWidth");
                 }
 
                 if (keyFile.has_key("File Browser", "MaxCacheEntries")) {
@@ -1119,12 +1238,40 @@ void Options::readFromFile(Glib::ustring fname)
                     serializeTiffRead = keyFile.get_boolean("Performance", "SerializeTiffRead");
                 }
 
+                if (keyFile.has_key("Performance", "Measure")) {
+                    measure = keyFile.get_boolean("Performance", "Measure");
+                }
+
+                if (keyFile.has_key("Performance", "ChunkSizeAMAZE")) {
+                    chunkSizeAMAZE = std::min(16, std::max(1, keyFile.get_integer("Performance", "ChunkSizeAMAZE")));
+                }
+
+                if (keyFile.has_key("Performance", "ChunkSizeCA")) {
+                    chunkSizeCA = std::min(16, std::max(1, keyFile.get_integer("Performance", "ChunkSizeCA")));
+                }
+
+                if (keyFile.has_key("Performance", "ChunkSizeRCD")) {
+                    chunkSizeRCD = std::min(16, std::max(1, keyFile.get_integer("Performance", "ChunkSizeRCD")));
+                }
+
+                if (keyFile.has_key("Performance", "ChunkSizeRGB")) {
+                    chunkSizeRGB = std::min(16, std::max(1, keyFile.get_integer("Performance", "ChunkSizeRGB")));
+                }
+
+                if (keyFile.has_key("Performance", "ChunkSizeXT")) {
+                    chunkSizeXT = std::min(16, std::max(1, keyFile.get_integer("Performance", "ChunkSizeXT")));
+                }
+
                 if (keyFile.has_key("Performance", "ThumbnailInspectorMode")) {
                     rtSettings.thumbnail_inspector_mode = static_cast<rtengine::Settings::ThumbnailInspectorMode>(keyFile.get_integer("Performance", "ThumbnailInspectorMode"));
                 }
             }
 
             if (keyFile.has_group("GUI")) {
+                if (keyFile.has_key("GUI", "Favorites")) {
+                    favorites = keyFile.get_string_list("GUI", "Favorites");
+                }
+
                 if (keyFile.has_key("GUI", "WindowWidth")) {
                     windowWidth = keyFile.get_integer("GUI", "WindowWidth");
                 }
@@ -1147,10 +1294,6 @@ void Options::readFromFile(Glib::ustring fname)
 
                 if (keyFile.has_key("GUI", "MeowMonitor")) {
                     meowMonitor = keyFile.get_integer("GUI", "MeowMonitor");
-                }
-
-                if (keyFile.has_key("GUI", "MeowFullScreen")) {
-                    meowFullScreen = keyFile.get_boolean("GUI", "MeowFullScreen");
                 }
 
                 if (keyFile.has_key("GUI", "MeowMaximized")) {
@@ -1257,6 +1400,10 @@ void Options::readFromFile(Glib::ustring fname)
                     CPFontSize = keyFile.get_integer("GUI", "CPFontSize");
                 }
 
+                if (keyFile.has_key("GUI", "PseudoHiDPISupport")) {
+                    pseudoHiDPISupport = keyFile.get_boolean("GUI", "PseudoHiDPISupport");
+                }
+
                 if (keyFile.has_key("GUI", "LastPreviewScale")) {
                     lastScale = keyFile.get_integer("GUI", "LastPreviewScale");
                 }
@@ -1333,41 +1480,56 @@ void Options::readFromFile(Glib::ustring fname)
                 if (keyFile.has_key("GUI", "HistogramPosition")) {
                     histogramPosition = keyFile.get_integer("GUI", "HistogramPosition");
                 }
-                
+
                 if (keyFile.has_key("GUI", "HistogramRed")) {
                     histogramRed = keyFile.get_boolean("GUI", "HistogramRed");
                 }
-                
+
                 if (keyFile.has_key("GUI", "HistogramGreen")) {
                     histogramGreen = keyFile.get_boolean("GUI", "HistogramGreen");
                 }
-                
+
                 if (keyFile.has_key("GUI", "HistogramBlue")) {
                     histogramBlue = keyFile.get_boolean("GUI", "HistogramBlue");
                 }
-                
+
                 if (keyFile.has_key("GUI", "HistogramLuma")) {
                     histogramLuma = keyFile.get_boolean("GUI", "HistogramLuma");
                 }
-                
+
                 if (keyFile.has_key("GUI", "HistogramChroma")) {
                     histogramChroma = keyFile.get_boolean("GUI", "HistogramChroma");
                 }
-                
+
                 if (keyFile.has_key("GUI", "HistogramRAW")) {
-                    histogramRAW = keyFile.get_boolean("GUI", "HistogramRAW");
+                    // Legacy option, replaced by HistogramScopeType.
+                    if (keyFile.get_boolean("GUI", "HistogramRAW")) {
+                        histogramScopeType = ScopeType::HISTOGRAM_RAW;
+                    }
                 }
 
                 if (keyFile.has_key("GUI", "HistogramBar")) {
                     histogramBar = keyFile.get_boolean("GUI", "HistogramBar");
                 }
-                
-                if (keyFile.has_key ("GUI", "HistogramHeight")) {
-                    histogramHeight = keyFile.get_integer ("GUI", "HistogramHeight");
+
+                if (keyFile.has_key("GUI", "HistogramHeight")) {
+                    histogramHeight = keyFile.get_integer("GUI", "HistogramHeight");
                 }
-                
-                if (keyFile.has_key ("GUI", "HistogramDrawMode")) {
-                    histogramDrawMode = keyFile.get_integer ("GUI", "HistogramDrawMode");
+
+                if (keyFile.has_key("GUI", "HistogramDrawMode")) {
+                    histogramDrawMode = keyFile.get_integer("GUI", "HistogramDrawMode");
+                }
+
+                if (keyFile.has_key("GUI", "HistogramScopeType")) {
+                    histogramScopeType = static_cast<ScopeType>(keyFile.get_integer("GUI", "HistogramScopeType"));
+                }
+
+                if (keyFile.has_key("GUI", "HistogramShowOptionButtons")) {
+                    histogramShowOptionButtons = keyFile.get_boolean("GUI", "HistogramShowOptionButtons");
+                }
+
+                if (keyFile.has_key("GUI", "HistogramTraceBrightness")) {
+                    histogramTraceBrightness = keyFile.get_double("GUI", "HistogramTraceBrightness");
                 }
 
                 if (keyFile.has_key("GUI", "NavigatorRGBUnit")) {
@@ -1378,8 +1540,13 @@ void Options::readFromFile(Glib::ustring fname)
                     navHSVUnit = (NavigatorUnit)keyFile.get_integer("GUI", "NavigatorHSVUnit");
                 }
 
+
                 if (keyFile.has_key("GUI", "ShowFilmStripToolBar")) {
                     showFilmStripToolBar = keyFile.get_boolean("GUI", "ShowFilmStripToolBar");
+                }
+
+                if (keyFile.has_key("GUI", "Showtooltip")) {//show tooltip in locallab
+                    showtooltip = keyFile.get_boolean("GUI", "Showtooltip");
                 }
 
                 if (keyFile.has_key("GUI", "FileBrowserToolbarSingleRow")) {
@@ -1396,6 +1563,18 @@ void Options::readFromFile(Glib::ustring fname)
 
                 if (keyFile.has_key("GUI", "CurveBBoxPosition")) {
                     curvebboxpos = keyFile.get_integer("GUI", "CurveBBoxPosition");
+                }
+                
+                if (keyFile.has_key("GUI", "Complexity")) {
+                    complexity = keyFile.get_integer("GUI", "Complexity");
+                }
+                
+                if (keyFile.has_key("GUI", "InspectorWindow")) {
+                    inspectorWindow = keyFile.get_boolean("GUI", "InspectorWindow");
+                }
+
+                if (keyFile.has_key("GUI", "ZoomOnScroll")) {
+                    zoomOnScroll = keyFile.get_boolean("GUI", "ZoomOnScroll");
                 }
             }
 
@@ -1438,9 +1617,6 @@ void Options::readFromFile(Glib::ustring fname)
                     rtSettings.autoMonitorProfile = keyFile.get_boolean("Color Management", "AutoMonitorProfile");
                 }
 
-                if (keyFile.has_key("Color Management", "Autocielab")) {
-                    rtSettings.autocielab = keyFile.get_boolean("Color Management", "Autocielab");
-                }
 
                 if (keyFile.has_key("Color Management", "RGBcurvesLumamode_Gamut")) {
                     rtSettings.rgbcurveslumamode_gamut = keyFile.get_boolean("Color Management", "RGBcurvesLumamode_Gamut");
@@ -1452,6 +1628,10 @@ void Options::readFromFile(Glib::ustring fname)
 
                 if (keyFile.has_key("Color Management", "MonitorBPC")) {
                     rtSettings.monitorBPC = keyFile.get_boolean("Color Management", "MonitorBPC");
+                }
+
+                if (keyFile.has_key("Color Management", "Autocielab")) {
+                    rtSettings.autocielab = keyFile.get_boolean("Color Management", "Autocielab");
                 }
 
                 if (keyFile.has_key("Color Management", "CRI")) {
@@ -1483,6 +1663,42 @@ void Options::readFromFile(Glib::ustring fname)
 
                 if (keyFile.has_key("Color Management", "CBDLlevel123")) {
                     rtSettings.level123_cbdl = keyFile.get_double("Color Management", "CBDLlevel123");
+                }
+
+                if (keyFile.has_key("Color Management", "Itcwb_thres")) {
+                    rtSettings.itcwb_thres = keyFile.get_integer("Color Management", "Itcwb_thres");
+                }
+
+                if (keyFile.has_key("Color Management", "Itcwb_sort")) {
+                    rtSettings.itcwb_sort = keyFile.get_boolean("Color Management", "Itcwb_sort");
+                }
+
+                if (keyFile.has_key("Color Management", "Itcwb_forceextra")) {
+                    rtSettings.itcwb_forceextra = keyFile.get_boolean("Color Management", "Itcwb_forceextra");
+                }
+
+                if (keyFile.has_key("Color Management", "Itcwb_stdobserver10")) {
+                    rtSettings.itcwb_stdobserver10 = keyFile.get_boolean("Color Management", "Itcwb_stdobserver10");
+                }
+
+                if (keyFile.has_key("Color Management", "Itcwb_greenrange")) {
+                    rtSettings.itcwb_greenrange = keyFile.get_integer("Color Management", "Itcwb_greenrange");
+                }
+
+                if (keyFile.has_key("Color Management", "Itcwb_greendeltatemp")) {
+                    rtSettings.itcwb_greendeltatemp = keyFile.get_integer("Color Management", "Itcwb_greendeltatemp");
+                }
+
+                if (keyFile.has_key("Color Management", "Itcwb_sizereference")) {
+                    rtSettings.itcwb_sizereference = keyFile.get_integer("Color Management", "Itcwb_sizereference");
+                }
+
+                if (keyFile.has_key("Color Management", "Itcwb_delta")) {
+                    rtSettings.itcwb_delta = keyFile.get_integer("Color Management", "Itcwb_delta");
+                }
+
+                if (keyFile.has_key("Color Management", "Itcwb_precis")) {
+                    rtSettings.itcwb_precis = keyFile.get_integer("Color Management", "Itcwb_precis");
                 }
 
                 //if (keyFile.has_key ("Color Management", "Colortoningab")) rtSettings.colortoningab = keyFile.get_double("Color Management", "Colortoningab");
@@ -1517,10 +1733,17 @@ void Options::readFromFile(Glib::ustring fname)
                     }
                 }
 
+                if (keyFile.has_key("Color Management", "DCIP3")) {
+                    rtSettings.DCIP3 = keyFile.get_string("Color Management", "DCIP3");
+                    if (rtSettings.DCIP3 == "RTv4_DCIP3") {
+                        rtSettings.DCIP3 = "RTv2_DCIP3";
+                    }
+                }
+
                 if (keyFile.has_key("Color Management", "sRGB")) {
                     rtSettings.srgb = keyFile.get_string("Color Management", "sRGB");
-                    if (rtSettings.srgb == "RT_sRGB"  || rtSettings.srgb == "RTv4_sRGB") {
-                        rtSettings.srgb = "RTv2_sRGB";
+                    if (rtSettings.srgb == "RT_sRGB"  || rtSettings.srgb == "RTv2_sRGB") {
+                        rtSettings.srgb = "RTv4_sRGB";
                     }
                 }
 
@@ -1557,7 +1780,7 @@ void Options::readFromFile(Glib::ustring fname)
                     if (rtSettings.ACESp0 == "RTv4_ACES-AP0") {
                         rtSettings.ACESp0 = "RTv2_ACES-AP0";
                     }
-                    
+
                 }
 
                 if (keyFile.has_key("Color Management", "ACES-AP1")) {
@@ -1565,7 +1788,7 @@ void Options::readFromFile(Glib::ustring fname)
                     if (rtSettings.ACESp1 == "RTv4_ACES-AP1") {
                         rtSettings.ACESp1 = "RTv2_ACES-AP1";
                     }
-                    
+
                 }
 
                 if (keyFile.has_key("Color Management", "GamutLch")) {
@@ -1584,57 +1807,101 @@ void Options::readFromFile(Glib::ustring fname)
                     rtSettings.amchroma = keyFile.get_integer("Color Management", "Amountchroma");
                 }
 
+                if (keyFile.has_key("Color Management", "JzAmountchroma")) {
+                    rtSettings.amchromajz = keyFile.get_integer("Color Management", "JzAmountchroma");
+                }
+
                 if (keyFile.has_key("Color Management", "ClutsDirectory")) {
                     clutsDir = keyFile.get_string("Color Management", "ClutsDirectory");
                 }
 
                 //if( keyFile.has_key ("Color Management", "Ciebadpixgauss")) rtSettings.ciebadpixgauss = keyFile.get_boolean("Color Management", "Ciebadpixgauss");
 
+                if (keyFile.has_key("Color Management", "Previewselection")) {//Intensity of preview selection deltaE
+                    rtSettings.previewselection = keyFile.get_integer("Color Management", "Previewselection");
+                }
+
+
+                if (keyFile.has_key("Color Management", "Cbdlsensi")) {//sensibility to crash for cbdl
+                    rtSettings.cbdlsensi = keyFile.get_double("Color Management", "Cbdlsensi");
+                }
+
+
             }
 
+            if (keyFile.has_group("Wavelet")) {
+                if (keyFile.has_key("Wavelet", "Edghi")) {
+                    rtSettings.edghi = keyFile.get_double("Wavelet", "Edghi");
+                }
+
+                if (keyFile.has_key("Wavelet", "Edglo")) {
+                    rtSettings.edglo = keyFile.get_double("Wavelet", "Edglo");
+                }
+
+                if (keyFile.has_key("Wavelet", "Limrad")) {
+                    rtSettings.limrad = keyFile.get_double("Wavelet", "Limrad");
+                }
+
+            }
+            
+            
             if (keyFile.has_group("ICC Profile Creator")) {
                 if (keyFile.has_key("ICC Profile Creator", "PimariesPreset")) {
                     ICCPC_primariesPreset = keyFile.get_string("ICC Profile Creator", "PimariesPreset");
                 }
+
                 if (keyFile.has_key("ICC Profile Creator", "RedPrimaryX")) {
                     ICCPC_redPrimaryX = keyFile.get_double("ICC Profile Creator", "RedPrimaryX");
                 }
+
                 if (keyFile.has_key("ICC Profile Creator", "RedPrimaryY")) {
                     ICCPC_redPrimaryY = keyFile.get_double("ICC Profile Creator", "RedPrimaryY");
                 }
+
                 if (keyFile.has_key("ICC Profile Creator", "GreenPrimaryX")) {
                     ICCPC_greenPrimaryX = keyFile.get_double("ICC Profile Creator", "GreenPrimaryX");
                 }
+
                 if (keyFile.has_key("ICC Profile Creator", "GreenPrimaryY")) {
                     ICCPC_greenPrimaryY = keyFile.get_double("ICC Profile Creator", "GreenPrimaryY");
                 }
+
                 if (keyFile.has_key("ICC Profile Creator", "BluePrimaryX")) {
                     ICCPC_bluePrimaryX = keyFile.get_double("ICC Profile Creator", "BluePrimaryX");
                 }
+
                 if (keyFile.has_key("ICC Profile Creator", "BluePrimaryY")) {
                     ICCPC_bluePrimaryY = keyFile.get_double("ICC Profile Creator", "BluePrimaryY");
                 }
+
                 if (keyFile.has_key("ICC Profile Creator", "GammaPreset")) {
                     ICCPC_gammaPreset = keyFile.get_string("ICC Profile Creator", "GammaPreset");
                 }
+
                 if (keyFile.has_key("ICC Profile Creator", "Gamma")) {
                     ICCPC_gamma = keyFile.get_double("ICC Profile Creator", "Gamma");
                 }
+
                 if (keyFile.has_key("ICC Profile Creator", "Slope")) {
                     ICCPC_slope = keyFile.get_double("ICC Profile Creator", "Slope");
                 }
+
                 if (keyFile.has_key("ICC Profile Creator", "ProfileVersion")) {
                     ICCPC_profileVersion = keyFile.get_string("ICC Profile Creator", "ProfileVersion");
                 }
+
                 if (keyFile.has_key("ICC Profile Creator", "Illuminant")) {
                     ICCPC_illuminant = keyFile.get_string("ICC Profile Creator", "Illuminant");
                 }
+
                 if (keyFile.has_key("ICC Profile Creator", "Description")) {
                     ICCPC_description = keyFile.get_string("ICC Profile Creator", "Description");
                 }
+
                 if (keyFile.has_key("ICC Profile Creator", "Copyright")) {
                     ICCPC_copyright = keyFile.get_string("ICC Profile Creator", "Copyright");
                 }
+
                 if (keyFile.has_key("ICC Profile Creator", "AppendParamsToDesc")) {
                     ICCPC_appendParamsToDesc = keyFile.get_boolean("ICC Profile Creator", "AppendParamsToDesc");
                 }
@@ -1643,6 +1910,7 @@ void Options::readFromFile(Glib::ustring fname)
             if (keyFile.has_group("Batch Processing")) {
                 if (keyFile.has_key("Batch Processing", "AdjusterBehavior")) {
                     baBehav = keyFile.get_integer_list("Batch Processing", "AdjusterBehavior");
+                    baBehav.resize(ADDSET_PARAM_NUM);
                 }
             }
 
@@ -1812,6 +2080,14 @@ void Options::readFromFile(Glib::ustring fname)
                     fastexport_resize_height = keyFile.get_integer("Fast Export", "fastexport_resize_height");
                 }
 
+                if (keyFile.has_key("Fast Export", "fastexport_resize_longedge")) {
+                    fastexport_resize_longedge = keyFile.get_integer("Fast Export", "fastexport_resize_longedge");
+                }
+
+                if (keyFile.has_key("Fast Export", "fastexport_resize_shortedge")) {
+                    fastexport_resize_shortedge = keyFile.get_integer("Fast Export", "fastexport_resize_shortedge");
+                }
+
                 if (keyFile.has_key("Fast Export", "fastexport_use_fast_pipeline")) {
                     fastexport_use_fast_pipeline = keyFile.get_integer("Fast Export", "fastexport_use_fast_pipeline");
                 }
@@ -1826,6 +2102,8 @@ void Options::readFromFile(Glib::ustring fname)
                 safeDirGet(keyFile, "Dialogs", "LastRetinexDir", lastRetinexDir);
                 safeDirGet(keyFile, "Dialogs", "LastDenoiseCurvesDir", lastDenoiseCurvesDir);
                 safeDirGet(keyFile, "Dialogs", "LastWaveletCurvesDir", lastWaveletCurvesDir);
+                safeDirGet(keyFile, "Dialogs", "LastlocalCurvesDir", lastlocalCurvesDir);
+
                 safeDirGet(keyFile, "Dialogs", "LastPFCurvesDir", lastPFCurvesDir);
                 safeDirGet(keyFile, "Dialogs", "LastHsvCurvesDir", lastHsvCurvesDir);
                 safeDirGet(keyFile, "Dialogs", "LastBWCurvesDir", lastBWCurvesDir);
@@ -1835,6 +2113,7 @@ void Options::readFromFile(Glib::ustring fname)
                 safeDirGet(keyFile, "Dialogs", "LastProfilingReferenceDir", lastProfilingReferenceDir);
                 safeDirGet(keyFile, "Dialogs", "LastLensProfileDir", lastLensProfileDir);
                 safeDirGet(keyFile, "Dialogs", "LastICCProfCreatorDir", lastICCProfCreatorDir);
+                safeDirGet(keyFile, "Dialogs", "LastCopyMovePath", lastCopyMovePath);
 
                 if (keyFile.has_key("Dialogs", "GimpPluginShowInfoDialog")) {
                     gimpPluginShowInfoDialog = keyFile.get_boolean("Dialogs", "GimpPluginShowInfoDialog");
@@ -1922,21 +2201,34 @@ void Options::saveToFile(Glib::ustring fname)
         keyFile.set_string("General", "DarkFramesPath", rtSettings.darkFramesPath);
         keyFile.set_string("General", "FlatFieldsPath", rtSettings.flatFieldsPath);
         keyFile.set_boolean("General", "Verbose", rtSettings.verbose);
+        keyFile.set_integer("General", "Cropsleep", rtSettings.cropsleep);
+        keyFile.set_double("General", "Reduchigh", rtSettings.reduchigh);
+        keyFile.set_double("General", "Reduclow", rtSettings.reduclow);
+        keyFile.set_boolean("General", "Detectshape", rtSettings.detectshape);
+        keyFile.set_boolean("General", "Fftwsigma", rtSettings.fftwsigma);
+
         keyFile.set_integer("External Editor", "EditorKind", editorToSendTo);
         keyFile.set_string("External Editor", "GimpDir", gimpDir);
         keyFile.set_string("External Editor", "PhotoshopDir", psDir);
         keyFile.set_string("External Editor", "CustomEditor", customEditorProg);
+        keyFile.set_integer("External Editor", "OutputDir", int(editor_out_dir));
+        keyFile.set_string("External Editor", "CustomOutputDir", editor_custom_out_dir);
+        keyFile.set_boolean("External Editor", "Float32", editor_float32);
+        keyFile.set_boolean("External Editor", "BypassOutputProfile", editor_bypass_output_profile);
 
         keyFile.set_boolean("File Browser", "BrowseOnlyRaw", fbOnlyRaw);
         keyFile.set_boolean("File Browser", "BrowserShowsDate", fbShowDateTime);
         keyFile.set_boolean("File Browser", "BrowserShowsExif", fbShowBasicExif);
         keyFile.set_boolean("File Browser", "BrowserShowsExpComp", fbShowExpComp);
+#ifndef WIN32
         keyFile.set_boolean("File Browser", "BrowserShowsHidden", fbShowHidden);
+#endif
         keyFile.set_integer("File Browser", "ThumbnailSize", thumbSize);
         keyFile.set_integer("File Browser", "ThumbnailSizeTab", thumbSizeTab);
         keyFile.set_integer("File Browser", "ThumbnailSizeQueue", thumbSizeQueue);
         keyFile.set_integer("File Browser", "SameThumbSize", sameThumbSize);
         keyFile.set_integer("File Browser", "MaxPreviewHeight", maxThumbnailHeight);
+        keyFile.set_integer("File Browser", "MaxPreviewWidth", maxThumbnailWidth);
         keyFile.set_integer("File Browser", "MaxCacheEntries", maxCacheEntries);
         Glib::ArrayHandle<Glib::ustring> pext = parseExtensions;
         keyFile.set_string_list("File Browser", "ParseExtensions", pext);
@@ -1982,7 +2274,14 @@ void Options::saveToFile(Glib::ustring fname)
         keyFile.set_integer("Performance", "InspectorDelay", inspectorDelay);
         keyFile.set_integer("Performance", "PreviewDemosaicFromSidecar", prevdemo);
         keyFile.set_boolean("Performance", "SerializeTiffRead", serializeTiffRead);
+        keyFile.set_integer("Performance", "Measure", measure);
+        keyFile.set_integer("Performance", "ChunkSizeAMAZE", chunkSizeAMAZE);
+        keyFile.set_integer("Performance", "ChunkSizeRCD", chunkSizeRCD);
+        keyFile.set_integer("Performance", "ChunkSizeRGB", chunkSizeRGB);
+        keyFile.set_integer("Performance", "ChunkSizeXT", chunkSizeXT);
+        keyFile.set_integer("Performance", "ChunkSizeCA", chunkSizeCA);
         keyFile.set_integer("Performance", "ThumbnailInspectorMode", int(rtSettings.thumbnail_inspector_mode));
+
 
         keyFile.set_string("Output", "Format", saveFormat.format);
         keyFile.set_integer("Output", "JpegQuality", saveFormat.jpegQuality);
@@ -2039,13 +2338,14 @@ void Options::saveToFile(Glib::ustring fname)
         keyFile.set_string  ("GUI", "Font", font);
         keyFile.set_string  ("GUI", "ColorPickerFont", colorPickerFont);
 
+        Glib::ArrayHandle<Glib::ustring> ahfavorites = favorites;
+        keyFile.set_string_list("GUI", "Favorites", ahfavorites);
         keyFile.set_integer("GUI", "WindowWidth", windowWidth);
         keyFile.set_integer("GUI", "WindowHeight", windowHeight);
         keyFile.set_integer("GUI", "WindowX", windowX);
         keyFile.set_integer("GUI", "WindowY", windowY);
         keyFile.set_integer("GUI", "WindowMonitor", windowMonitor);
         keyFile.set_integer("GUI", "MeowMonitor", meowMonitor);
-        keyFile.set_boolean("GUI", "MeowFullScreen", meowFullScreen);
         keyFile.set_boolean("GUI", "MeowMaximized", meowMaximized);
         keyFile.set_integer("GUI", "MeowWidth", meowWidth);
         keyFile.set_integer("GUI", "MeowHeight", meowHeight);
@@ -2072,6 +2372,7 @@ void Options::saveToFile(Glib::ustring fname)
         keyFile.set_integer("GUI", "FontSize", fontSize);
         keyFile.set_string("GUI", "CPFontFamily", CPFontFamily);
         keyFile.set_integer("GUI", "CPFontSize", CPFontSize);
+        keyFile.set_boolean("GUI", "PseudoHiDPISupport", pseudoHiDPISupport);
         keyFile.set_integer("GUI", "LastPreviewScale", lastScale);
         keyFile.set_boolean("GUI", "LastShowAllExif", lastShowAllExif);
         keyFile.set_integer("GUI", "PanAccelFactor", panAccelFactor);
@@ -2086,28 +2387,34 @@ void Options::saveToFile(Glib::ustring fname)
         keyFile.set_integer("GUI", "FrameColor", bgcolor);
         keyFile.set_boolean("GUI", "ProcessingQueueEnbled", procQueueEnabled);
         Glib::ArrayHandle<int> tpopen = tpOpen;
-        keyFile.set_integer_list ("GUI", "ToolPanelsExpanded", tpopen);
-        keyFile.set_boolean ("GUI", "ToolPanelsExpandedAutoSave", autoSaveTpOpen);
-        keyFile.set_integer ("GUI", "MultiDisplayMode", multiDisplayMode);
-        keyFile.set_double_list ("GUI", "CutOverlayBrush", cutOverlayBrush);
-        keyFile.set_double_list ("GUI", "NavGuideBrush", navGuideBrush);
-        keyFile.set_integer ("GUI", "HistogramPosition", histogramPosition);
-        keyFile.set_boolean ("GUI", "HistogramRed", histogramRed);
-        keyFile.set_boolean ("GUI", "HistogramGreen", histogramGreen);
-        keyFile.set_boolean ("GUI", "HistogramBlue", histogramBlue);
-        keyFile.set_boolean ("GUI", "HistogramLuma", histogramLuma);
-        keyFile.set_boolean ("GUI", "HistogramChroma", histogramChroma);
-        keyFile.set_boolean ("GUI", "HistogramRAW", histogramRAW);
-        keyFile.set_boolean ("GUI", "HistogramBar", histogramBar);
-        keyFile.set_integer ("GUI", "HistogramHeight", histogramHeight);
-        keyFile.set_integer ("GUI", "HistogramDrawMode", histogramDrawMode);
-        keyFile.set_integer ("GUI", "NavigatorRGBUnit", (int)navRGBUnit);
-        keyFile.set_integer ("GUI", "NavigatorHSVUnit", (int)navHSVUnit);
-        keyFile.set_boolean ("GUI", "ShowFilmStripToolBar", showFilmStripToolBar);
-        keyFile.set_boolean ("GUI", "FileBrowserToolbarSingleRow", FileBrowserToolbarSingleRow);
-        keyFile.set_boolean ("GUI", "HideTPVScrollbar", hideTPVScrollbar);
-        keyFile.set_boolean ("GUI", "HistogramWorking", rtSettings.HistogramWorking);
-        keyFile.set_integer ("GUI", "CurveBBoxPosition", curvebboxpos);
+        keyFile.set_integer_list("GUI", "ToolPanelsExpanded", tpopen);
+        keyFile.set_boolean("GUI", "ToolPanelsExpandedAutoSave", autoSaveTpOpen);
+        keyFile.set_integer("GUI", "MultiDisplayMode", multiDisplayMode);
+        keyFile.set_double_list("GUI", "CutOverlayBrush", cutOverlayBrush);
+        keyFile.set_double_list("GUI", "NavGuideBrush", navGuideBrush);
+        keyFile.set_integer("GUI", "HistogramPosition", histogramPosition);
+        keyFile.set_boolean("GUI", "HistogramRed", histogramRed);
+        keyFile.set_boolean("GUI", "HistogramGreen", histogramGreen);
+        keyFile.set_boolean("GUI", "HistogramBlue", histogramBlue);
+        keyFile.set_boolean("GUI", "HistogramLuma", histogramLuma);
+        keyFile.set_boolean("GUI", "HistogramChroma", histogramChroma);
+        keyFile.set_boolean("GUI", "HistogramBar", histogramBar);
+        keyFile.set_integer("GUI", "HistogramHeight", histogramHeight);
+        keyFile.set_integer("GUI", "HistogramDrawMode", histogramDrawMode);
+        keyFile.set_integer("GUI", "HistogramScopeType", rtengine::toUnderlying(histogramScopeType));
+        keyFile.set_boolean("GUI", "HistogramShowOptionButtons", histogramShowOptionButtons);
+        keyFile.set_double("GUI", "HistogramTraceBrightness", histogramTraceBrightness);
+        keyFile.set_integer("GUI", "NavigatorRGBUnit", (int)navRGBUnit);
+        keyFile.set_integer("GUI", "NavigatorHSVUnit", (int)navHSVUnit);
+        keyFile.set_boolean("GUI", "ShowFilmStripToolBar", showFilmStripToolBar);
+        keyFile.set_boolean("GUI", "FileBrowserToolbarSingleRow", FileBrowserToolbarSingleRow);
+        keyFile.set_boolean("GUI", "HideTPVScrollbar", hideTPVScrollbar);
+        keyFile.set_boolean("GUI", "HistogramWorking", rtSettings.HistogramWorking);
+        keyFile.set_integer("GUI", "CurveBBoxPosition", curvebboxpos);
+        keyFile.set_boolean("GUI", "Showtooltip", showtooltip);
+        keyFile.set_integer("GUI", "Complexity", complexity);
+        keyFile.set_boolean("GUI", "InspectorWindow", inspectorWindow);
+        keyFile.set_boolean("GUI", "ZoomOnScroll", zoomOnScroll);
 
         //Glib::ArrayHandle<int> crvopen = crvOpen;
         //keyFile.set_integer_list ("GUI", "CurvePanelsExpanded", crvopen);
@@ -2127,6 +2434,8 @@ void Options::saveToFile(Glib::ustring fname)
         keyFile.set_boolean("Color Management", "RGBcurvesLumamode_Gamut", rtSettings.rgbcurveslumamode_gamut);
         keyFile.set_integer("Color Management", "Intent", rtSettings.monitorIntent);
         keyFile.set_boolean("Color Management", "MonitorBPC", rtSettings.monitorBPC);
+
+
         //keyFile.set_integer ("Color Management", "view", rtSettings.viewingdevice);
         //keyFile.set_integer ("Color Management", "grey", rtSettings.viewingdevicegrey);
 //        keyFile.set_integer ("Color Management", "greySc", rtSettings.viewinggreySc);
@@ -2134,6 +2443,7 @@ void Options::saveToFile(Glib::ustring fname)
         keyFile.set_string("Color Management", "AdobeRGB", rtSettings.adobe);
         keyFile.set_string("Color Management", "ProPhoto", rtSettings.prophoto);
         keyFile.set_string("Color Management", "WideGamut", rtSettings.widegamut);
+        keyFile.set_string("Color Management", "DCIP3", rtSettings.DCIP3);
         keyFile.set_string("Color Management", "sRGB", rtSettings.srgb);
         keyFile.set_string("Color Management", "Beta", rtSettings.beta);
         keyFile.set_string("Color Management", "Best", rtSettings.best);
@@ -2146,15 +2456,33 @@ void Options::saveToFile(Glib::ustring fname)
         keyFile.set_boolean("Color Management", "GamutLch", rtSettings.gamutLch);
         keyFile.set_integer("Color Management", "ProtectRed", rtSettings.protectred);
         keyFile.set_integer("Color Management", "Amountchroma", rtSettings.amchroma);
+        keyFile.set_integer("Color Management", "JzAmountchroma", rtSettings.amchromajz);
         keyFile.set_double("Color Management", "ProtectRedH", rtSettings.protectredh);
         keyFile.set_integer("Color Management", "CRI", rtSettings.CRI_color);
         keyFile.set_integer("Color Management", "DenoiseLabgamma", rtSettings.denoiselabgamma);
         //keyFile.set_boolean ("Color Management", "Ciebadpixgauss", rtSettings.ciebadpixgauss);
         keyFile.set_double("Color Management", "CBDLlevel0", rtSettings.level0_cbdl);
         keyFile.set_double("Color Management", "CBDLlevel123", rtSettings.level123_cbdl);
+        keyFile.set_integer("Color Management", "Itcwb_thres", rtSettings.itcwb_thres);
+        keyFile.set_boolean("Color Management", "Itcwb_sort", rtSettings.itcwb_sort);
+        keyFile.set_integer("Color Management", "Itcwb_greenrange", rtSettings.itcwb_greenrange);
+        keyFile.set_integer("Color Management", "Itcwb_greendeltatemp", rtSettings.itcwb_greendeltatemp);
+        keyFile.set_boolean("Color Management", "Itcwb_forceextra", rtSettings.itcwb_forceextra);
+        keyFile.set_integer("Color Management", "Itcwb_sizereference", rtSettings.itcwb_sizereference);
+        keyFile.set_integer("Color Management", "Itcwb_delta", rtSettings.itcwb_delta);
+        keyFile.set_boolean("Color Management", "Itcwb_stdobserver10", rtSettings.itcwb_stdobserver10);
+        keyFile.set_integer("Color Management", "Itcwb_precis", rtSettings.itcwb_precis);
+
         //keyFile.set_double  ("Color Management", "Colortoningab", rtSettings.colortoningab);
         //keyFile.set_double  ("Color Management", "Decaction", rtSettings.decaction);
         keyFile.set_string("Color Management", "ClutsDirectory", clutsDir);
+        keyFile.set_integer("Color Management", "Previewselection", rtSettings.previewselection);
+        keyFile.set_double("Color Management", "Cbdlsensi", rtSettings.cbdlsensi);
+
+        keyFile.set_double("Wavelet", "Edghi", rtSettings.edghi);
+        keyFile.set_double("Wavelet", "Edglo", rtSettings.edglo);
+        keyFile.set_double("Wavelet", "Limrad", rtSettings.limrad);
+
 
         keyFile.set_string("ICC Profile Creator", "PimariesPreset", ICCPC_primariesPreset);
         keyFile.set_double("ICC Profile Creator", "RedPrimaryX", ICCPC_redPrimaryX);
@@ -2215,6 +2543,8 @@ void Options::saveToFile(Glib::ustring fname)
         keyFile.set_integer("Fast Export", "fastexport_resize_dataspec", fastexport_resize_dataspec);
         keyFile.set_integer("Fast Export", "fastexport_resize_width", fastexport_resize_width);
         keyFile.set_integer("Fast Export", "fastexport_resize_height", fastexport_resize_height);
+        keyFile.set_integer("Fast Export", "fastexport_resize_longedge", fastexport_resize_longedge);
+        keyFile.set_integer("Fast Export", "fastexport_resize_shortedge", fastexport_resize_shortedge);
         keyFile.set_integer("Fast Export", "fastexport_use_fast_pipeline", fastexport_use_fast_pipeline);
 
         keyFile.set_string("Dialogs", "LastIccDir", lastIccDir);
@@ -2225,6 +2555,7 @@ void Options::saveToFile(Glib::ustring fname)
         keyFile.set_string("Dialogs", "LastRetinexDir", lastRetinexDir);
         keyFile.set_string("Dialogs", "LastDenoiseCurvesDir", lastDenoiseCurvesDir);
         keyFile.set_string("Dialogs", "LastWaveletCurvesDir", lastWaveletCurvesDir);
+        keyFile.set_string("Dialogs", "LastlocalCurvesDir", lastlocalCurvesDir);
         keyFile.set_string("Dialogs", "LastPFCurvesDir", lastPFCurvesDir);
         keyFile.set_string("Dialogs", "LastHsvCurvesDir", lastHsvCurvesDir);
         keyFile.set_string("Dialogs", "LastBWCurvesDir", lastBWCurvesDir);
@@ -2233,6 +2564,7 @@ void Options::saveToFile(Glib::ustring fname)
         keyFile.set_string("Dialogs", "LastProfilingReferenceDir", lastProfilingReferenceDir);
         keyFile.set_string("Dialogs", "LastLensProfileDir", lastLensProfileDir);
         keyFile.set_string("Dialogs", "LastICCProfCreatorDir", lastICCProfCreatorDir);
+        keyFile.set_string("Dialogs", "LastCopyMovePath", lastCopyMovePath);
         keyFile.set_boolean("Dialogs", "GimpPluginShowInfoDialog", gimpPluginShowInfoDialog);
 
         keyFile.set_string("Lensfun", "DBDirectory", rtSettings.lensfunDbDirectory);
@@ -2273,6 +2605,7 @@ void Options::load(bool lightweight)
             throw Error(msg);
         }
     } else {
+
 #ifdef WIN32
         WCHAR pathW[MAX_PATH] = {0};
 
@@ -2283,7 +2616,11 @@ void Options::load(bool lightweight)
         }
 
 #else
+    #ifdef __APPLE__
+        rtdir = Glib::build_filename(Glib::ustring(g_get_home_dir()), "/Library/Application Support/", Glib::ustring(CACHEFOLDERNAME), "/config/");
+    #else
         rtdir = Glib::build_filename(Glib::ustring(g_get_user_config_dir()), Glib::ustring(CACHEFOLDERNAME));
+    #endif
 #endif
     }
 
@@ -2305,7 +2642,7 @@ void Options::load(bool lightweight)
         rtdir = Glib::build_filename(argv0, "mysettings");
     }
 
-    // Modify the path of the cache folder to the one provided in RT_CACHE environment variable
+    // Modify the path of the cache folder to the one provided in RT_CACHE environment variable.
     path = g_getenv("RT_CACHE");
 
     if (path != nullptr) {
@@ -2316,12 +2653,17 @@ void Options::load(bool lightweight)
             throw Error(msg);
         }
     }
+
     // No environment variable provided, so falling back to the multi user mode, if enabled
     else if (options.multiUser) {
 #ifdef WIN32
         cacheBaseDir = Glib::build_filename(rtdir, "cache");
 #else
+    #ifdef __APPLE__
+        cacheBaseDir = Glib::build_filename(Glib::ustring(g_get_home_dir()), "/Library/Application Support/", Glib::ustring(CACHEFOLDERNAME), "/cache/");
+    #else
         cacheBaseDir = Glib::build_filename(Glib::ustring(g_get_user_cache_dir()), Glib::ustring(CACHEFOLDERNAME));
+    #endif
 #endif
     }
 
@@ -2468,36 +2810,29 @@ bool Options::is_parse_extention(Glib::ustring fname)
 /*
  * return true if fname ends with one of the retained image file extensions
  */
-bool Options::has_retained_extention(Glib::ustring fname)
+bool Options::has_retained_extention(const Glib::ustring& fname)
 {
+    return parsedExtensionsSet.find(getExtension(fname).lowercase()) != parsedExtensionsSet.end();
+}
 
-    Glib::ustring ext = getExtension(fname).lowercase();
+// Pattern matches "5.1" from "5.1-23-g12345678", when comparing option.version to RTVERSION
+bool Options::is_new_version() {
+    const std::string vs[] = {versionString, version};
+    std::vector<std::string> vMajor;
 
-    if (!ext.empty()) {
-        // there is an extension to the filename
-
-        // look out if it has one of the retained extensions
-        for (unsigned int i = 0; i < parsedExtensions.size(); i++) {
-            if (ext == parsedExtensions[i]) {
-                return true;
-            }
-        }
+    for (const auto& v : vs) {
+        vMajor.emplace_back(v, 0, v.find_first_not_of("0123456789."));
     }
 
-    return false;
+    return vMajor.size() == 2 && vMajor[0] != vMajor[1];
 }
 
 /*
  * return true if ext is an enabled extension
  */
-bool Options::is_extention_enabled(Glib::ustring ext)
+bool Options::is_extention_enabled(const Glib::ustring& ext)
 {
-    for (int j = 0; j < (int)parseExtensions.size(); j++)
-        if (parseExtensions[j].casefold() == ext.casefold()) {
-            return j >= (int)parseExtensionsEnabled.size() || parseExtensionsEnabled[j];
-        }
-
-    return false;
+    return parsedExtensionsSet.find(ext.lowercase()) != parsedExtensionsSet.end();
 }
 
 Glib::ustring Options::getUserProfilePath()

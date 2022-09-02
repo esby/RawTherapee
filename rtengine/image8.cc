@@ -14,11 +14,14 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include <cstring>
 #include <cstdio>
+
+#include "colortemp.h"
 #include "image8.h"
+#include "imagefloat.h"
 #include "rtengine.h"
 
 using namespace rtengine;
@@ -55,7 +58,7 @@ void Image8::getScanline (int row, unsigned char* buffer, int bps, bool isFloat)
     }
 }
 
-void Image8::setScanline (int row, unsigned char* buffer, int bps, unsigned int numSamples)
+void Image8::setScanline (int row, const unsigned char* buffer, int bps, unsigned int numSamples)
 {
 
     if (data == nullptr) {
@@ -69,12 +72,12 @@ void Image8::setScanline (int row, unsigned char* buffer, int bps, unsigned int 
                 data[row * width * 3 + 3 * i] = data[row * width * 3 + 3 * i + 1] = data[row * width * 3 + 3 * i + 2] = buffer[i];
             }
         } else {
-            memcpy (data + row * width * 3u, buffer, width * 3);
+            memcpy (data + (uint64_t)row * (uint64_t)width * (uint64_t)3u, buffer, width * 3);
         }
         break;
 
     case (IIOSF_UNSIGNED_SHORT): {
-        unsigned short* sbuffer = (unsigned short*) buffer;
+        const unsigned short* sbuffer = (const unsigned short*) buffer;
 
         for (int i = 0, ix = row * width * 3; i < width * 3; ++i, ++ix) {
             data[ix] = uint16ToUint8Rounded(sbuffer[i]);
@@ -97,7 +100,7 @@ Image8* Image8::copy () const
     return cp;
 }
 
-void Image8::getStdImage (const ColorTemp &ctemp, int tran, Imagefloat* image, PreviewProps pp) const
+void Image8::getStdImage (const ColorTemp &ctemp, int tran, Imagefloat* image, const PreviewProps &pp) const
 {
     // compute channel multipliers
     float rm = 1.f, gm = 1.f, bm = 1.f;
@@ -108,10 +111,10 @@ void Image8::getStdImage (const ColorTemp &ctemp, int tran, Imagefloat* image, P
         gm = dgm;
         bm = dbm;
 
-        rm = 1.0 / rm;
-        gm = 1.0 / gm;
-        bm = 1.0 / bm;
-        float mul_lum = 0.299 * rm + 0.587 * gm + 0.114 * bm;
+        rm = 1.f / rm;
+        gm = 1.f / gm;
+        bm = 1.f / bm;
+        float mul_lum = 0.299f * rm + 0.587f * gm + 0.114f * bm;
         rm /= mul_lum;
         gm /= mul_lum;
         bm /= mul_lum;
@@ -147,8 +150,6 @@ void Image8::getStdImage (const ColorTemp &ctemp, int tran, Imagefloat* image, P
     rm /= area;
     gm /= area;
     bm /= area;
-
-#define GCLIP( x ) Color::gamma_srgb(CLIP(x))
 
 #ifdef _OPENMP
     #pragma omp parallel
@@ -230,10 +231,10 @@ void Image8::getStdImage (const ColorTemp &ctemp, int tran, Imagefloat* image, P
                         lineB[dst_x] = CLIP(bm * btot);
                     } else {
                         // computing a special factor for this incomplete sub-region
-                        float area = src_sub_width * src_sub_height;
-                        lineR[dst_x] = CLIP(rm2 * rtot / area);
-                        lineG[dst_x] = CLIP(gm2 * gtot / area);
-                        lineB[dst_x] = CLIP(bm2 * btot / area);
+                        float larea = src_sub_width * src_sub_height;
+                        lineR[dst_x] = CLIP(rm2 * rtot / larea);
+                        lineG[dst_x] = CLIP(gm2 * gtot / larea);
+                        lineB[dst_x] = CLIP(bm2 * btot / larea);
                     }
                 }
             }

@@ -14,21 +14,26 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "stdimagesource.h"
-#include "mytime.h"
-#include "iccstore.h"
-#include "imageio.h"
-#include "curves.h"
+
 #include "color.h"
+#include "iccstore.h"
+#include "image8.h"
+#include "image16.h"
+#include "imagefloat.h"
+#include "imageio.h"
+#include "mytime.h"
+#include "procparams.h"
+#include "utils.h"
 
 #undef THREAD_PRIORITY_NORMAL
 
 namespace rtengine
 {
-
-extern const Settings* settings;
+using namespace procparams;
+ProcParams* params;
 
 template<class T> void freeArray (T** a, int H)
 {
@@ -50,7 +55,6 @@ template<class T> T** allocArray (int W, int H)
     return t;
 }
 
-#define HR_SCALE 2
 StdImageSource::StdImageSource () : ImageSource(), img(nullptr), plistener(nullptr), full(false), max{}, rgbSourceModified(false)
 {
 
@@ -222,7 +226,7 @@ void StdImageSource::colorSpaceConversion (Imagefloat* im, const ColorManagement
     cmsHPROFILE in = nullptr;
     cmsHPROFILE out = ICCStore::getInstance()->workingSpace (cmp.workingProfile);
 
-    if (cmp.inputProfile == "(embedded)" || cmp.inputProfile == "" || cmp.inputProfile == "(camera)" || cmp.inputProfile == "(cameraICC)") {
+    if (cmp.inputProfile == "(embedded)" || cmp.inputProfile.empty() || cmp.inputProfile == "(camera)" || cmp.inputProfile == "(cameraICC)") {
         if (embedded) {
             in = embedded;
         } else {
@@ -307,6 +311,27 @@ void StdImageSource::getAutoExpHistogram (LUTu & histogram, int& histcompr)
     }
 }
 
+void StdImageSource::WBauto(double &tempref, double &greenref, array2D<float> &redloc, array2D<float> &greenloc, array2D<float> &blueloc, int bfw, int bfh, double &avg_rm, double &avg_gm, double &avg_bm, double &tempitc, double &greenitc, float &studgood, bool &twotimes, const WBParams & wbpar, int begx, int begy, int yEn, int xEn, int cx, int cy, const ColorManagementParams &cmp, const RAWParams &raw)
+{
+}
+
+void StdImageSource::getAutoWBMultipliersitc(double &tempref, double &greenref, double &tempitc, double &greenitc, float &studgood, int begx, int begy, int yEn, int xEn, int cx, int cy, int bf_h, int bf_w, double &rm, double &gm, double &bm, const WBParams & wbpar, const ColorManagementParams &cmp, const RAWParams &raw)
+{
+    if (redAWBMul != -1.) {
+        rm = redAWBMul;
+        gm = greenAWBMul;
+        bm = blueAWBMul;
+        return;
+    }
+
+    img->getAutoWBMultipliersitc(tempref, greenref, tempitc, greenitc,studgood, begx, begy, yEn, xEn, cx, cy, bf_h, bf_w, rm, gm, bm, params->wb, params->icm, params->raw);
+
+    redAWBMul   = rm;
+    greenAWBMul = gm;
+    blueAWBMul  = bm;
+}
+
+
 void StdImageSource::getAutoWBMultipliers (double &rm, double &gm, double &bm)
 {
     if (redAWBMul != -1.) {
@@ -337,6 +362,11 @@ ColorTemp StdImageSource::getSpotWB (std::vector<Coord2D> &red, std::vector<Coor
 
     return ColorTemp (reds / rn * img_r, greens / gn * img_g, blues / bn * img_b, equal);
 }
+
+void StdImageSource::flush() {
+    img->allocate(0, 0);
+};
+
 
 }
 

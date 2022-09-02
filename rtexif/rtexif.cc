@@ -16,7 +16,7 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include <cstdio>
 #include <iostream>
@@ -29,8 +29,11 @@
 
 #include <glib/gstdio.h>
 #include <glib/gunicode.h>
+#include <glibmm/keyfile.h>
 
 #include "rtexif.h"
+
+#include "../rtengine/procparams.h"
 
 #include "../rtgui/cacheimagedata.h"
 #include "../rtgui/version.h"
@@ -51,13 +54,13 @@ Interpreter stdInterpreter;
 //-----------------------------------------------------------------------------
 
 TagDirectory::TagDirectory ()
-    : attribs (ifdAttribs), order (HOSTORDER), parent (nullptr) {}
+    : attribs (ifdAttribs), order (HOSTORDER), parent (nullptr), parseJPEG(true) {}
 
 TagDirectory::TagDirectory (TagDirectory* p, const TagAttrib* ta, ByteOrder border)
-    : attribs (ta), order (border), parent (p) {}
+    : attribs (ta), order (border), parent (p), parseJPEG(true) {}
 
-TagDirectory::TagDirectory (TagDirectory* p, FILE* f, int base, const TagAttrib* ta, ByteOrder border, bool skipIgnored)
-    : attribs (ta), order (border), parent (p)
+TagDirectory::TagDirectory (TagDirectory* p, FILE* f, int base, const TagAttrib* ta, ByteOrder border, bool skipIgnored, bool parseJpeg)
+    : attribs (ta), order (border), parent (p), parseJPEG(parseJpeg)
 {
 
     int numOfTags = get2 (f, order);
@@ -136,7 +139,7 @@ TagDirectory*  TagDirectory::getRoot()
     }
 }
 
-const TagAttrib* TagDirectory::getAttrib (int id)
+const TagAttrib* TagDirectory::getAttrib (int id) const
 {
 
     if (attribs)
@@ -671,7 +674,7 @@ int TagDirectory::calculateSize ()
     return size;
 }
 
-TagDirectory* TagDirectory::clone (TagDirectory* parent)
+TagDirectory* TagDirectory::clone (TagDirectory* parent) const
 {
 
     TagDirectory* td = new TagDirectory (parent, attribs, order);
@@ -855,7 +858,7 @@ TagDirectoryTable::TagDirectoryTable (TagDirectory* p, FILE* f, int memsize, int
         }
     }
 }
-TagDirectory* TagDirectoryTable::clone (TagDirectory* parent)
+TagDirectory* TagDirectoryTable::clone (TagDirectory* parent) const
 {
 
     TagDirectory* td = new TagDirectoryTable (parent, values, valuesSize, zeroOffset, defaultType, attribs, order);
@@ -977,9 +980,10 @@ Tag::Tag (TagDirectory* p, FILE* f, int base)
         }
     }
 
-    if (tag == 0x002e) { // location of the embedded preview image in raw files of Panasonic cameras
+    if (parent->getParseJpeg() && tag == 0x002e) { // location of the embedded preview image in raw files of Panasonic cameras
         ExifManager eManager(f, nullptr, true);
         const auto fpos = ftell(f);
+
         if (fpos >= 0) {
             eManager.parseJPEG(fpos); // try to parse the exif data from the preview image
 
@@ -1013,13 +1017,13 @@ Tag::Tag (TagDirectory* p, FILE* f, int base)
         Tag* tmake = parent->getRoot()->getTag ("Make");
 
         if (tmake) {
-            tmake->toString (make);
+            tmake->toString (make, sizeof(make));
         }
 
         Tag* tmodel = parent->getRoot()->getTag ("Model");
 
         if (tmodel) {
-            tmodel->toString (model);
+            tmodel->toString (model, sizeof(model));
         }
 
         if (!strncmp (make, "SONY", 4)) {
@@ -1236,7 +1240,7 @@ defsubdirs:
             for (size_t j = 0, i = 0; j < count; j++, i++) {
                 int newpos = base + toInt (j * 4, LONG);
                 fseek (f, newpos, SEEK_SET);
-                directory[i] = new TagDirectory (parent, f, base, attrib->subdirAttribs, order);
+                directory[i] = new TagDirectory (parent, f, base, attrib->subdirAttribs, order, true, parent->getParseJpeg());
             }
 
             // set the terminating NULL
@@ -1371,7 +1375,7 @@ bool Tag::parseMakerNote (FILE* f, int base, ByteOrder bom )
         value = new unsigned char[12];
         fread (value, 1, 12, f);
         directory = new TagDirectory*[2];
-        directory[0] = new TagDirectory (parent, f, base, panasonicAttribs, bom);
+        directory[0] = new TagDirectory (parent, f, base, panasonicAttribs, bom, true, parent->getParseJpeg());
         directory[1] = nullptr;
     } else {
         return false;
@@ -1380,7 +1384,7 @@ bool Tag::parseMakerNote (FILE* f, int base, ByteOrder bom )
     return true;
 }
 
-Tag* Tag::clone (TagDirectory* parent)
+Tag* Tag::clone (TagDirectory* parent) const
 {
 
     Tag* t = new Tag (parent, attrib);
@@ -1395,7 +1399,7 @@ Tag* Tag::clone (TagDirectory* parent)
         t->value = new unsigned char [valuesize];
         memcpy (t->value, value, valuesize);
     } else {
-        value = nullptr;
+        t->value = nullptr;
     }
 
     t->makerNoteKind = makerNoteKind;
@@ -1506,8 +1510,6 @@ int Tag::toInt (int ofs, TagType astype) const
         return attrib->interpreter->toInt (this, ofs, astype);
     }
 
-    int a;
-
     if (astype == INVALID) {
         astype = type;
     }
@@ -1533,10 +1535,15 @@ int Tag::toInt (int ofs, TagType astype) const
         case LONG:
             return (int)sget4 (value + ofs, getOrder());
 
-        case SRATIONAL:
-        case RATIONAL:
-            a = (int)sget4 (value + ofs + 4, getOrder());
+        case SRATIONAL: {
+            int a = (int)sget4 (value + ofs + 4, getOrder());
             return a == 0 ? 0 : (int)sget4 (value + ofs, getOrder()) / a;
+        }
+
+        case RATIONAL: {
+            uint32_t a = (uint32_t)sget4 (value + ofs + 4, getOrder());
+            return a == 0 ? 0 : (uint32_t)sget4 (value + ofs, getOrder()) / a;
+        }
 
         case FLOAT:
             return (int)toDouble (ofs);
@@ -1585,10 +1592,14 @@ double Tag::toDouble (int ofs) const
             return (double) ((int)sget4 (value + ofs, getOrder()));
 
         case SRATIONAL:
-        case RATIONAL:
             ud = (int)sget4 (value + ofs, getOrder());
             dd = (int)sget4 (value + ofs + 4, getOrder());
-            return dd == 0. ? 0. : (double)ud / (double)dd;
+            return dd == 0. ? 0. : ud / dd;
+
+        case RATIONAL:
+            ud = (uint32_t)sget4 (value + ofs, getOrder());
+            dd = (uint32_t)sget4 (value + ofs + 4, getOrder());
+            return dd == 0. ? 0. : ud / dd;
 
         case FLOAT:
             conv.i = sget4 (value + ofs, getOrder());
@@ -1666,8 +1677,11 @@ void Tag::toRational (int& num, int& denom, int ofs) const
     }
 }
 
-void Tag::toString (char* buffer, int ofs) const
+void Tag::toString (char* buffer, std::size_t size, int ofs) const
 {
+    if (!buffer || !size) {
+        return;
+    }
 
     if (type == UNDEFINED && !directory) {
         bool isstring = true;
@@ -1679,64 +1693,80 @@ void Tag::toString (char* buffer, int ofs) const
             }
 
         if (isstring) {
-            int j = 0;
+            if (size < 3) {
+                return;
+            }
+
+            std::size_t j = 0;
 
             for (i = 0; i + ofs < count && i < 64 && value[i + ofs]; i++) {
                 if (value[i + ofs] == '<' || value[i + ofs] == '>') {
                     buffer[j++] = '\\';
+                    if (j > size - 2) {
+                        break;
+                    }
                 }
 
                 buffer[j++] = value[i + ofs];
+                if (j > size - 2) {
+                    break;
+                }
             }
 
             buffer[j++] = 0;
             return;
         }
     } else if (type == ASCII) {
-        sprintf (buffer, "%.64s", value + ofs);
+        snprintf(buffer, size, "%.64s", value + ofs);
         return;
     }
 
     size_t maxcount = rtengine::min<size_t>(count, 10);
 
-    strcpy (buffer, "");
+    buffer[0] = 0;
 
     for (ssize_t i = 0; i < rtengine::min<int>(maxcount, valuesize - ofs); i++) {
-        if (i > 0) {
+        std::size_t len = strlen(buffer);
+
+        if (i > 0 && size - len > 2) {
             strcat (buffer, ", ");
+            len += 2;
         }
 
-        char* b = buffer + strlen (buffer);
+        char* b = buffer + len;
 
         switch (type) {
             case UNDEFINED:
             case BYTE:
-                sprintf (b, "%d", value[i + ofs]);
+                snprintf(b, size - len, "%d", value[i + ofs]);
                 break;
 
             case SSHORT:
-                sprintf (b, "%d", toInt (2 * i + ofs));
+                snprintf(b, size - len, "%d", toInt (2 * i + ofs));
                 break;
 
             case SHORT:
-                sprintf (b, "%u", toInt (2 * i + ofs));
+                snprintf(b, size - len, "%u", toInt (2 * i + ofs));
                 break;
 
             case SLONG:
-                sprintf (b, "%d", toInt (4 * i + ofs));
+                snprintf(b, size - len, "%d", toInt (4 * i + ofs));
                 break;
 
             case LONG:
-                sprintf (b, "%u", toInt (4 * i + ofs));
+                snprintf(b, size - len, "%u", toInt (4 * i + ofs));
                 break;
 
             case SRATIONAL:
+                snprintf(b, size - len, "%d/%d", (int)sget4 (value + 8 * i + ofs, getOrder()), (int)sget4 (value + 8 * i + ofs + 4, getOrder()));
+                break;
+
             case RATIONAL:
-                sprintf (b, "%d/%d", (int)sget4 (value + 8 * i + ofs, getOrder()), (int)sget4 (value + 8 * i + ofs + 4, getOrder()));
+                snprintf(b, size - len, "%u/%u", (uint32_t)sget4 (value + 8 * i + ofs, getOrder()), (uint32_t)sget4 (value + 8 * i + ofs + 4, getOrder()));
                 break;
 
             case FLOAT:
-                sprintf (b, "%g", toDouble (8 * i + ofs));
+                snprintf(b, size - len, "%g", toDouble (8 * i + ofs));
                 break;
 
             default:
@@ -1744,7 +1774,7 @@ void Tag::toString (char* buffer, int ofs) const
         }
     }
 
-    if (count > maxcount) {
+    if (count > maxcount && size - strlen(buffer) > 3) {
         strcat (buffer, "...");
     }
 }
@@ -1757,7 +1787,7 @@ std::string Tag::nameToString (int i)
     if (attrib) {
         strncpy (buffer, attrib->name, 1024);
     } else {
-        sprintf (buffer, "0x%x", tag);
+        snprintf(buffer, sizeof(buffer), "0x%x", tag);
     }
 
     if (i > 0) {
@@ -1767,14 +1797,14 @@ std::string Tag::nameToString (int i)
     return buffer;
 }
 
-std::string Tag::valueToString ()
+std::string Tag::valueToString () const
 {
 
     if (attrib && attrib->interpreter) {
         return attrib->interpreter->toString (this);
     } else {
         char buffer[1024];
-        toString (buffer);
+        toString (buffer, sizeof(buffer));
         return buffer;
     }
 }
@@ -2116,6 +2146,7 @@ void ExifManager::parseCIFF ()
     }
     parseCIFF (rml->ciffLength, root);
     root->sort ();
+    parse(true);
 }
 
 Tag* ExifManager::saveCIFFMNTag (TagDirectory* root, int len, const char* name)
@@ -2339,7 +2370,7 @@ void ExifManager::parseCIFF (int length, TagDirectory* root)
             ev = ((short)get2 (f, INTEL)) / 32.0f;
             fseek (f, 34, SEEK_CUR);
 
-            if (shutter > 1e6) {
+            if (shutter > 1e6f) {
                 shutter = get2 (f, INTEL) / 10.0f;
             }
 
@@ -2748,7 +2779,7 @@ parse_leafdata (TagDirectory* root, ByteOrder order)
                                    &tm.tm_mday, &tm.tm_hour,
                                    &tm.tm_min, &tm.tm_sec) == 6) {
                     char tstr[64];
-                    sprintf (tstr, "%04d:%02d:%02d %02d:%02d:%02d", tm.tm_year, tm.tm_mon,
+                    snprintf(tstr, sizeof(tstr), "%04d:%02d:%02d %02d:%02d:%02d", tm.tm_year, tm.tm_mon,
                              tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
                     t->initString (tstr);
                     exif->getDirectory()->addTagFront (t);
@@ -2773,7 +2804,7 @@ void ExifManager::parseStd (bool skipIgnored) {
     parse(false, skipIgnored);
 }
 
-void ExifManager::parse (bool isRaw, bool skipIgnored)
+void ExifManager::parse (bool isRaw, bool skipIgnored, bool parseJpeg)
 {
     int ifdOffset = IFDOffset;
 
@@ -2802,7 +2833,7 @@ void ExifManager::parse (bool isRaw, bool skipIgnored)
         fseek (f, rml->exifBase + ifdOffset, SEEK_SET);
 
         // first read the IFD directory
-        TagDirectory* root =  new TagDirectory (nullptr, f, rml->exifBase, ifdAttribs, order, skipIgnored);
+        TagDirectory* root =  new TagDirectory (nullptr, f, rml->exifBase, ifdAttribs, order, skipIgnored, parseJpeg);
 
         // fix ISO issue with nikon and panasonic cameras
         Tag* make = root->getTag ("Make");
@@ -3034,23 +3065,24 @@ void ExifManager::parse (bool isRaw, bool skipIgnored)
             }
         }
 
+        if (!root->getTag ("Rating")) {
+            Tag *t = new Tag (root, root->getAttrib("Rating"));
+            t->initInt (0, LONG);
+            root->addTag (t);
+        }
+
         // --- detecting image root IFD based on SubFileType, or if not provided, on PhotometricInterpretation
 
         bool frameRootDetected = false;
 
-        if(!frameRootDetected) {
-            std::vector<const Tag*> risTagList = root->findTags("RawImageSegmentation");
-            if (!risTagList.empty()) {
-                for (auto ris : risTagList) {
-                    frames.push_back(ris->getParent());
-                    frameRootDetected = true;
+        for (auto ris : root->findTags("RawImageSegmentation")) {
+            frames.push_back(ris->getParent());
+            frameRootDetected = true;
 
-    #if PRINT_METADATA_TREE
-                    printf("\n--------------- FRAME (RAWIMAGESEGMENTATION) ---------------\n\n");
-                    ris->getParent()->printAll ();
-    #endif
-                }
-            }
+#if PRINT_METADATA_TREE
+            printf("\n--------------- FRAME (RAWIMAGESEGMENTATION) ---------------\n\n");
+            ris->getParent()->printAll ();
+#endif
         }
 
         if(!frameRootDetected) {
@@ -3164,7 +3196,7 @@ void ExifManager::parseJPEG (int offset)
                             rml.reset(new rtengine::RawMetaDataLocation(0));
                         }
                         rml->exifBase = tiffbase;
-                        parse (false);
+                        parse (false, true, false);
                         if (rmlCreated) {
                             rml.reset();
                         }
@@ -3232,7 +3264,43 @@ int ExifManager::createJPEGMarker (const TagDirectory* root, const rtengine::pro
     TagDirectory* cl;
 
     if (root) {
-        cl = (const_cast<TagDirectory*> (root))->clone (nullptr);
+        cl = root->clone(nullptr);
+
+        // Drop unwanted tags before exporting
+        // For example, Nikon Z-series has a 52Kb MakerNotes->ShotInfo tag
+        // which does not fit into the 65Kb limit on JPEG exif tags
+        const Tag* const make_tag = cl->getTag(271);
+        if (make_tag && !std::strncmp((const char*)make_tag->getValue(), "NIKON CORPORATION", 17)) {
+            [cl]()
+            {
+                Tag* const exif_tag = cl->getTag(34665);
+                if (!exif_tag) {
+                    return;
+                }
+
+                TagDirectory* const exif_dir = exif_tag->getDirectory();
+                if (!exif_dir) {
+                    return;
+                }
+
+                Tag* const make_notes_tag = exif_dir->getTag(37500);
+                if (!make_notes_tag) {
+                    return;
+                }
+
+                TagDirectory* const maker_notes_dir = make_notes_tag->getDirectory();
+                if (!maker_notes_dir) {
+                    return;
+                }
+
+                Tag* const shot_info_tag = maker_notes_dir->getTag(145);
+                if (!shot_info_tag) {
+                    return;
+                }
+
+                shot_info_tag->setKeep(false);
+            }();
+        }
     } else {
         cl = new TagDirectory (nullptr, ifdAttribs, INTEL);
     }
@@ -3439,7 +3507,7 @@ short int int2_to_signed (short unsigned int i)
  * <focal>-<focal>mm f/<aperture>-<aperture>
  * NB: no space between separator '-'; no space between focal length and 'mm'
  */
-bool extractLensInfo (std::string &fullname, double &minFocal, double &maxFocal, double &maxApertureAtMinFocal, double &maxApertureAtMaxFocal)
+bool extractLensInfo (const std::string &fullname, double &minFocal, double &maxFocal, double &maxApertureAtMinFocal, double &maxApertureAtMaxFocal)
 {
     minFocal = 0.0;
     maxFocal = 0.0;

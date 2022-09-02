@@ -14,18 +14,19 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef _LABIMAGE_H_
-#define _LABIMAGE_H_
+#pragma once
+
+#include <cstring>
 
 namespace rtengine
 {
 
-class LabImage
+class LabImage final
 {
 private:
-    void allocLab(int w, int h);
+    void allocLab(size_t w, size_t h);
 
 public:
     int W, H;
@@ -34,15 +35,16 @@ public:
     float** a;
     float** b;
 
-    LabImage (int w, int h);
+    LabImage (int w, int h, bool initZero = false, bool multiThread = true);
+    LabImage (const LabImage& source, bool multiThread);
     ~LabImage ();
 
     //Copies image data in Img into this instance.
-    void CopyFrom(LabImage *Img);
-    void getPipetteData (float &L, float &a, float &b, int posX, int posY, int squareSize);
+    void CopyFrom(const LabImage *Img, bool multiThread = true);
+    void getPipetteData (float &L, float &a, float &b, int posX, int posY, int squareSize) const;
     void deleteLab();
     void reallocLab();
+    void clear(bool multiThread = false);
 };
 
 }
-#endif

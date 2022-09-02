@@ -14,10 +14,8 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include <glib.h>
-#include <glib/gstdio.h>
 #include "curves.h"
 #include <cmath>
 #include <vector>
@@ -48,7 +46,7 @@ DiagonalCurve::DiagonalCurve (const std::vector<double>& p, int poly_pn)
         bool identity = true;
         kind = (DiagonalCurveType)p[0];
 
-        if (kind == DCT_Linear || kind == DCT_Spline || kind == DCT_NURBS) {
+        if (kind == DCT_Linear || kind == DCT_Spline || kind == DCT_NURBS || kind == DCT_CatumullRom) {
             N = (p.size() - 1) / 2;
             x = new double[N];
             y = new double[N];
@@ -65,38 +63,39 @@ DiagonalCurve::DiagonalCurve (const std::vector<double>& p, int poly_pn)
                 }
             }
 
-            if (x[0] != 0.0f || x[N - 1] != 1.0f)
+            if (x[0] != 0.0 || x[N - 1] != 1.0)
                 // Special (and very rare) case where all points are on the identity line but
                 // not reaching the limits
             {
                 identity = false;
             }
 
-            if(x[0] == 0.f && x[1] == 0.f)
+            if(x[0] == 0.0 && x[1] == 0.0)
                 // Avoid crash when first two points are at x = 0 (git Issue 2888)
             {
-                x[1] = 0.01f;
+                x[1] = 0.01;
             }
 
-            if(x[0] == 1.f && x[1] == 1.f)
+            if(x[0] == 1.0 && x[1] == 1.0)
                 // Avoid crash when first two points are at x = 1 (100 in gui) (git Issue 2923)
             {
-                x[0] = 0.99f;
+                x[0] = 0.99;
             }
 
             if (!identity) {
                 if (kind == DCT_Spline && N > 2) {
-                    //spline_cubic_set ();
-                    catmull_rom_set();
+                    spline_cubic_set ();
                 } else if (kind == DCT_NURBS && N > 2) {
                     NURBS_set ();
                     fillHash();
+                } else if (kind == DCT_CatumullRom && N > 2) {
+                    catmull_rom_set();
                 } else {
                     kind = DCT_Linear;
                 }
             }
         } else if (kind == DCT_Parametric) {
-            if ((p.size() == 8 || p.size() == 9) && (p.at(4) != 0.0f || p.at(5) != 0.0f || p.at(6) != 0.0f || p.at(7) != 0.0f)) {
+            if ((p.size() == 8 || p.size() == 9) && (p.at(4) != 0.0 || p.at(5) != 0.0 || p.at(6) != 0.0 || p.at(7) != 0.0)) {
                 identity = false;
 
                 x = new double[9];
@@ -117,8 +116,8 @@ DiagonalCurve::DiagonalCurve (const std::vector<double>& p, int poly_pn)
                 }
 
                 mc = -xlog(2.0) / xlog(x[2]);
-                double mbase = pfull (0.5, x[8], x[6], x[5]);
-                mfc = mbase <= 1e-14 ? 0.0 : xexp(xlog(mbase) / mc);        // value of the curve at the center point
+                double mbase = pfull_alt (0.5, x[6], x[5]);
+                mfc = xexp(xlog(mbase) / mc);        // value of the curve at the center point
                 msc = -xlog(2.0) / xlog(x[1] / x[2]);
                 mhc = -xlog(2.0) / xlog((x[3] - x[2]) / (1 - x[2]));
             }
@@ -229,7 +228,6 @@ void DiagonalCurve::NURBS_set ()
     poly_x.clear();
     poly_y.clear();
     unsigned int sc_xsize = j - 1;
-    j = 0;
 
     // adding the initial horizontal segment, if any
     if (x[0] > 0.) {
@@ -313,54 +311,52 @@ inline void catmull_rom_spline(int n_points,
 
     double space = (t2-t1) / n_points;
 
-    double t;
-    int i;
-    double c, d, A1_x, A1_y, A2_x, A2_y, A3_x, A3_y;
-    double B1_x, B1_y, B2_x, B2_y, C_x, C_y;
-
     res_x.push_back(p1_x);
     res_y.push_back(p1_y);
 
     // special case, a segment at 0 or 1 is computed exactly
     if (p1_y == p2_y && (p1_y == 0 || p1_y == 1)) {
-        for (i = 1; i < n_points-1; ++i) {
-            t = p1_x + space * i;
+        for (int i = 1; i < n_points-1; ++i) {
+            double t = p1_x + space * i;
+            if (t >= p2_x) {
+                break;
+            }
             res_x.push_back(t);
             res_y.push_back(p1_y);
         }
     } else {
-        for (i = 1; i < n_points-1; ++i) {
-            t = t1 + space * i;
+        for (int i = 1; i < n_points-1; ++i) {
+            double t = t1 + space * i;
         
-            c = (t1 - t)/(t1 - t0);
-            d = (t - t0)/(t1 - t0);
-            A1_x = c * p0_x + d * p1_x;
-            A1_y = c * p0_y + d * p1_y;
+            double c = (t1 - t)/(t1 - t0);
+            double d = (t - t0)/(t1 - t0);
+            double A1_x = c * p0_x + d * p1_x;
+            double A1_y = c * p0_y + d * p1_y;
 
             c = (t2 - t)/(t2 - t1);
             d = (t - t1)/(t2 - t1);
-            A2_x = c * p1_x + d * p2_x;
-            A2_y = c * p1_y + d * p2_y;
+            double A2_x = c * p1_x + d * p2_x;
+            double A2_y = c * p1_y + d * p2_y;
 
             c = (t3 - t)/(t3 - t2);
             d = (t - t2)/(t3 - t2);
-            A3_x = c * p2_x + d * p3_x;
-            A3_y = c * p2_y + d * p3_y;
+            double A3_x = c * p2_x + d * p3_x;
+            double A3_y = c * p2_y + d * p3_y;
 
             c = (t2 - t)/(t2 - t0);
             d = (t - t0)/(t2 - t0);
-            B1_x = c * A1_x + d * A2_x;
-            B1_y = c * A1_y + d * A2_y;
+            double B1_x = c * A1_x + d * A2_x;
+            double B1_y = c * A1_y + d * A2_y;
 
             c = (t3 - t)/(t3 - t1);
             d = (t - t1)/(t3 - t1);
-            B2_x = c * A2_x + d * A3_x;
-            B2_y = c * A2_y + d * A3_y;        
+            double B2_x = c * A2_x + d * A3_x;
+            double B2_y = c * A2_y + d * A3_y;        
 
             c = (t2 - t)/(t2 - t1);
             d = (t - t1)/(t2 - t1);
-            C_x = c * B1_x + d * B2_x;
-            C_y = c * B1_y + d * B2_y;
+            double C_x = c * B1_x + d * B2_x;
+            double C_y = c * B1_y + d * B2_y;
 
             res_x.push_back(C_x);
             res_y.push_back(C_y);
@@ -428,7 +424,6 @@ void DiagonalCurve::catmull_rom_set()
 
 /*****************************************************************************/
 
-
 double DiagonalCurve::getVal (double t) const
 {
 
@@ -439,27 +434,31 @@ double DiagonalCurve::getVal (double t) const
             return 0.0;
         }
 
-        double tv = xexp(mc * xlog(t));
-        double base = pfull (tv, x[8], x[6], x[5]);
-        double stretched = base <= 1e-14 ? 0.0 : xexp(xlog(base) / mc);
+        double tv = xexp(max(mc * xlog(t),-236.0)); // prevents numerical issues when calling pfull, at the cost of minor artifacts
+        double base = pfull_alt (tv, x[6], x[5]);
+        double stretched = xexp(xlog(base) / mc);
 
         if (t < x[2]) {
             // add shadows effect:
-            double stv = xexp(msc * xlog(stretched / mfc));
-            double sbase = pfull (stv, x[8], x[7], 0.5);
-            return mfc * (sbase <= 1e-14 ? 0.0 : xexp(xlog(sbase) / msc));
+            double stv = xexp(max(msc * xlog(stretched / mfc),-236.0));
+            double sbase = pfull_alt (stv, x[7], 0.5);
+            return mfc * xexp(xlog(sbase) / msc);
         } else {
             // add highlights effect:
-            double htv = xexp(mhc * xlog((stretched - mfc) / (1 - mfc)));
-            double hbase = pfull (htv, x[8], 0.5, x[4]);
-            return mfc + (1 - mfc) * (hbase <= 1e-14 ? 0.0 : xexp(xlog(hbase) / mhc));
+            double htv = xexp(max(mhc * xlog((stretched - mfc) / (1.0 - mfc)),-236.0));
+            if (htv < 1e-6) {
+                return stretched; // this part of the curve isn't affected by highlight, return the base curve
+            } else {
+                double hbase = pfull_alt (htv, 0.5, x[4]);
+                return mfc + (1.0 - mfc) * xexp(xlog(hbase) / mhc);
+            }
         }
 
         break;
     }
 
     case DCT_Linear :
-    // case DCT_Spline :
+    case DCT_Spline :
     {
         // values under and over the first and last point
         if (t > x[N - 1]) {
@@ -484,21 +483,21 @@ double DiagonalCurve::getVal (double t) const
         double h = x[k_hi] - x[k_lo];
 
         // linear
-        // if (kind == DCT_Linear) {
+        if (kind == DCT_Linear) {
             return y[k_lo] + (t - x[k_lo]) * ( y[k_hi] - y[k_lo] ) / h;
-        // }
-        // // spline curve
-        // else { // if (kind==Spline) {
-        //     double a = (x[k_hi] - t) / h;
-        //     double b = (t - x[k_lo]) / h;
-        //     double r = a * y[k_lo] + b * y[k_hi] + ((a * a * a - a) * ypp[k_lo] + (b * b * b - b) * ypp[k_hi]) * (h * h) * 0.1666666666666666666666666666666;
-        //     return CLIPD(r);
-        // }
+        }
+        // spline curve
+        else { // if (kind==Spline) {
+            double a = (x[k_hi] - t) / h;
+            double b = (t - x[k_lo]) / h;
+            double r = a * y[k_lo] + b * y[k_hi] + ((a * a * a - a) * ypp[k_lo] + (b * b * b - b) * ypp[k_hi]) * (h * h) * 0.1666666666666666666666666666666;
+            return CLIPD(r);
+        }
 
         break;
     }
 
-    case DCT_Spline: {
+    case DCT_CatumullRom: {
         auto it = std::lower_bound(poly_x.begin(), poly_x.end(), t);
         if (it == poly_x.end()) {
             return poly_y.back();
@@ -508,7 +507,6 @@ double DiagonalCurve::getVal (double t) const
             ++d;
         }
         return LIM01(*(poly_y.begin() + d));
-        break;
     }
 
     case DCT_NURBS : {

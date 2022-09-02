@@ -14,38 +14,43 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef _SHARPENING_H_
-#define _SHARPENING_H_
+#pragma once
 
 #include <gtkmm.h>
+
 #include "adjuster.h"
 #include "thresholdadjuster.h"
 #include "toolpanel.h"
 
-class Sharpening : public ToolParamBlock, public ThresholdAdjusterListener, public AdjusterListener, public FoldableToolPanel
+class Sharpening final:
+    public ToolParamBlock,
+    public ThresholdAdjusterListener,
+    public AdjusterListener,
+    public FoldableToolPanel
 {
 
 protected:
     Adjuster* contrast;
+    Adjuster* blur;
     MyComboBoxText* method;
     Adjuster* dradius;
     Adjuster* damount;
     Adjuster* ddamping;
     Adjuster* diter;
-    Gtk::VBox* usm;
-    Gtk::VBox* rld;
+    Gtk::Box* usm;
+    Gtk::Box* rld;
 
     Adjuster* radius;
     Adjuster* amount;
     Adjuster* eradius;
     Adjuster* etolerance;
     Adjuster* hcamount;
-    Gtk::VBox* edgebin;
-    Gtk::VBox* hcbin;
-    Gtk::VBox* edgebox;
-    Gtk::VBox* hcbox;
+    Gtk::Box* edgebin;
+    Gtk::Box* hcbin;
+    Gtk::Box* edgebox;
+    Gtk::Box* hcbox;
     ThresholdAdjuster* threshold;
     Gtk::CheckButton* edgesonly;
     bool lastEdgesOnly;
@@ -55,6 +60,7 @@ protected:
     sigc::connection hcConn;
 
     rtengine::ProcEvent EvSharpenContrast;
+    rtengine::ProcEvent EvSharpenBlur;
 public:
 
     Sharpening ();
@@ -66,7 +72,6 @@ public:
     void setBatchMode   (bool batchMode) override;
 
     void adjusterChanged(Adjuster* a, double newval) override;
-    void adjusterAutoToggled(Adjuster* a, bool newval) override;
     void enabledChanged  () override;
     void edgesonly_toggled ();
     void halocontrol_toggled ();
@@ -81,5 +86,3 @@ public:
     void setAdjusterBehavior (bool contrastadd, bool radiusadd, bool amountadd, bool dampingadd, bool iteradd, bool edgetoladd, bool haloctrladd);
     void trimValues          (rtengine::procparams::ProcParams* pp) override;
 };
-
-#endif

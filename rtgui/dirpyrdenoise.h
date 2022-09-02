@@ -14,19 +14,22 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef _DIRPYRDENOISE_H_
-#define _DIRPYRDENOISE_H_
+#pragma once
 
 #include <gtkmm.h>
+
 #include "adjuster.h"
-#include "toolpanel.h"
-#include "curveeditor.h"
-#include "curveeditorgroup.h"
 #include "colorprovider.h"
+#include "curvelistener.h"
 #include "guiutils.h"
-#include "options.h"
+#include "toolpanel.h"
+
+class CurveEditor;
+class CurveEditorGroup;
+class FlatCurveEditor;
+class EditDataProvider;
 
 class DirPyrDenoise final :
     public ToolParamBlock,
@@ -49,7 +52,6 @@ public:
     void autoOpenCurve  () override;
 
     void adjusterChanged (Adjuster* a, double newval) override;
-    void adjusterAutoToggled(Adjuster* a, bool newval) override;
     void enabledChanged  () override;
     void medianChanged  ();
     void chromaChanged (double autchroma, double autred, double autblue) override;
@@ -113,21 +115,21 @@ private:
     sigc::connection  smethodconn;
     MyComboBoxText*   medmethod;
     sigc::connection  medmethodconn;
-    Gtk::HBox* ctbox;
+    Gtk::Box* ctbox;
     MyComboBoxText*   methodmed;
     sigc::connection  methodmedconn;
-    Gtk::HBox* ctboxm;
+    Gtk::Box* ctboxm;
     MyComboBoxText*   rgbmethod;
     sigc::connection  rgbmethodconn;
-    Gtk::HBox* ctboxrgb;
+    Gtk::Box* ctboxrgb;
     double nextchroma;
     double nextred;
     double nextblue;
     double nextnresid;
     double nexthighresid;
-    Gtk::HBox* ctboxL;
-    Gtk::HBox* ctboxC;
-    Gtk::HBox* ctboxC2;
+    Gtk::Box* ctboxL;
+    Gtk::Box* ctboxC;
+    Gtk::Box* ctboxC2;
     int nexttileX;
     int nexttileY;
     int nextprevX;
@@ -137,5 +139,3 @@ private:
 
     IdleRegister idle_register;
 };
-
-#endif

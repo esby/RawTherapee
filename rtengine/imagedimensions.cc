@@ -14,7 +14,7 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include "imagedimensions.h"
@@ -52,6 +52,14 @@ int PreviewProps::getHeight() const
 int PreviewProps::getSkip() const
 {
     return skip;
+}
+
+void PreviewProps::set (int x, int y, int w, int h, int skip) {
+    this->x = x;
+    this->y = y;
+    this->width = w;
+    this->height = h;
+    this->skip = skip;
 }
 
 ImageDimensions::ImageDimensions() :

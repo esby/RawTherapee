@@ -15,10 +15,8 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef _STDATTRIBS_
-#define _STDATTRIBS_
 
 #include <cstdio>
 #include <cstring>
@@ -28,7 +26,7 @@
 namespace rtexif
 {
 
-class ColorSpaceInterpreter : public ChoiceInterpreter
+class ColorSpaceInterpreter : public ChoiceInterpreter<>
 {
 
 public:
@@ -41,7 +39,7 @@ public:
 };
 ColorSpaceInterpreter colorSpaceInterpreter;
 
-class PreviewColorSpaceInterpreter : public ChoiceInterpreter
+class PreviewColorSpaceInterpreter : public ChoiceInterpreter<>
 {
 
 public:
@@ -56,7 +54,7 @@ public:
 };
 PreviewColorSpaceInterpreter previewColorSpaceInterpreter;
 
-class LinearSRGBInterpreter : public ChoiceInterpreter
+class LinearSRGBInterpreter : public ChoiceInterpreter<>
 {
 
 public:
@@ -68,7 +66,7 @@ public:
 };
 LinearSRGBInterpreter linearSRGBInterpreter;
 
-class DefaultBlackRenderInterpreter : public ChoiceInterpreter
+class DefaultBlackRenderInterpreter : public ChoiceInterpreter<>
 {
 
 public:
@@ -80,7 +78,7 @@ public:
 };
 DefaultBlackRenderInterpreter defaultBlackRenderInterpreter;
 
-class ExposureProgramInterpreter : public ChoiceInterpreter
+class ExposureProgramInterpreter : public ChoiceInterpreter<>
 {
 
 public:
@@ -99,7 +97,7 @@ public:
 };
 ExposureProgramInterpreter exposureProgramInterpreter;
 
-class MeteringModeInterpreter : public ChoiceInterpreter
+class MeteringModeInterpreter : public ChoiceInterpreter<>
 {
 
 public:
@@ -117,7 +115,7 @@ public:
 };
 MeteringModeInterpreter meteringModeInterpreter;
 
-class ExposureModeInterpreter : public ChoiceInterpreter
+class ExposureModeInterpreter : public ChoiceInterpreter<>
 {
 
 public:
@@ -130,7 +128,7 @@ public:
 };
 ExposureModeInterpreter exposureModeInterpreter;
 
-class WhiteBalanceInterpreter : public ChoiceInterpreter
+class WhiteBalanceInterpreter : public ChoiceInterpreter<>
 {
 
 public:
@@ -142,7 +140,7 @@ public:
 };
 WhiteBalanceInterpreter whiteBalanceInterpreter;
 
-class SceneCaptureInterpreter : public ChoiceInterpreter
+class SceneCaptureInterpreter : public ChoiceInterpreter<>
 {
 
 public:
@@ -156,7 +154,7 @@ public:
 };
 SceneCaptureInterpreter sceneCaptureInterpreter;
 
-class GainControlInterpreter : public ChoiceInterpreter
+class GainControlInterpreter : public ChoiceInterpreter<>
 {
 
 public:
@@ -171,7 +169,7 @@ public:
 };
 GainControlInterpreter gainControlInterpreter;
 
-class ContrastInterpreter : public ChoiceInterpreter
+class ContrastInterpreter : public ChoiceInterpreter<>
 {
 
 public:
@@ -184,7 +182,7 @@ public:
 };
 ContrastInterpreter contrastInterpreter;
 
-class SharpnessInterpreter : public ChoiceInterpreter
+class SharpnessInterpreter : public ChoiceInterpreter<>
 {
 
 public:
@@ -197,7 +195,7 @@ public:
 };
 SharpnessInterpreter sharpnessInterpreter;
 
-class SaturationInterpreter : public ChoiceInterpreter
+class SaturationInterpreter : public ChoiceInterpreter<>
 {
 
 public:
@@ -210,7 +208,7 @@ public:
 };
 SaturationInterpreter saturationInterpreter;
 
-class FlashInterpreter : public ChoiceInterpreter
+class FlashInterpreter : public ChoiceInterpreter<>
 {
 
 public:
@@ -242,7 +240,7 @@ public:
 };
 FlashInterpreter flashInterpreter;
 
-class LightSourceInterpreter : public ChoiceInterpreter
+class LightSourceInterpreter : public ChoiceInterpreter<>
 {
 
 public:
@@ -273,7 +271,7 @@ public:
 };
 LightSourceInterpreter lightSourceInterpreter;
 
-class CompressionInterpreter : public ChoiceInterpreter
+class CompressionInterpreter : public ChoiceInterpreter<>
 {
 
 public:
@@ -285,7 +283,7 @@ public:
 };
 CompressionInterpreter compressionInterpreter;
 
-class PhotometricInterpreter : public ChoiceInterpreter
+class PhotometricInterpreter : public ChoiceInterpreter<>
 {
 
 public:
@@ -297,7 +295,7 @@ public:
 };
 PhotometricInterpreter photometricInterpreter;
 
-class ProfileEmbedPolicyInterpreter : public ChoiceInterpreter
+class ProfileEmbedPolicyInterpreter : public ChoiceInterpreter<>
 {
 
 public:
@@ -311,7 +309,7 @@ public:
 };
 ProfileEmbedPolicyInterpreter profileEmbedPolicyInterpreter;
 
-class PlanarConfigInterpreter : public ChoiceInterpreter
+class PlanarConfigInterpreter : public ChoiceInterpreter<>
 {
 
 public:
@@ -327,7 +325,7 @@ class FNumberInterpreter : public Interpreter
 {
 public:
     FNumberInterpreter () {}
-    std::string toString (Tag* t) override
+    std::string toString (const Tag* t) const override
     {
         char buffer[32];
         double v = t->toDouble();
@@ -336,7 +334,7 @@ public:
             return "undef";
         }
 
-        sprintf (buffer, "%0.1f", v);
+        snprintf(buffer, sizeof(buffer), "%0.1f", v);
         return buffer;
     }
 };
@@ -346,7 +344,7 @@ class ApertureInterpreter : public Interpreter
 {
 public:
     ApertureInterpreter () {}
-    std::string toString (Tag* t) override
+    std::string toString (const Tag* t) const override
     {
         char buffer[32];
         double v = pow (2.0, t->toDouble() / 2.0);
@@ -355,7 +353,7 @@ public:
             return "undef";
         }
 
-        sprintf (buffer, "%.1f", v );
+        snprintf(buffer, sizeof(buffer), "%.1f", v );
         return buffer;
     }
 };
@@ -365,7 +363,7 @@ class ExposureBiasInterpreter : public Interpreter
 {
 public:
     ExposureBiasInterpreter () {}
-    std::string toString (Tag* t) override
+    std::string toString (const Tag* t) const override
     {
         char buffer[32];
         double v = t->toDouble();
@@ -374,7 +372,7 @@ public:
             return "undef";
         }
 
-        sprintf (buffer, "%+0.2f", v );
+        snprintf(buffer, sizeof(buffer), "%+0.2f", v );
         return buffer;
     }
 };
@@ -384,15 +382,15 @@ class ShutterSpeedInterpreter : public Interpreter
 {
 public:
     ShutterSpeedInterpreter () {}
-    std::string toString (Tag* t) override
+    std::string toString (const Tag* t) const override
     {
         char buffer[32];
         double d = pow (2.0, -t->toDouble());
 
         if (d > 0.0 && d <= 0.5) {
-            sprintf (buffer, "1/%.0f", 1.0 / d);
+            snprintf(buffer, sizeof(buffer), "1/%.0f", 1.0 / d);
         } else {
-            sprintf (buffer, "%.1f", d);
+            snprintf(buffer, sizeof(buffer), "%.1f", d);
         }
 
         return buffer;
@@ -404,15 +402,15 @@ class ExposureTimeInterpreter : public Interpreter
 {
 public:
     ExposureTimeInterpreter () {}
-    std::string toString (Tag* t) override
+    std::string toString (const Tag* t) const override
     {
         char buffer[32];
         double d = t->toDouble();
 
         if (d > 0.0 && d <= 0.5) {
-            sprintf (buffer, "1/%.0f", 1.0 / d);
+            snprintf(buffer, sizeof(buffer), "1/%.0f", 1.0 / d);
         } else {
-            sprintf (buffer, "%.1f", d);
+            snprintf(buffer, sizeof(buffer), "%.1f", d);
         }
 
         return buffer;
@@ -424,7 +422,7 @@ class FocalLengthInterpreter : public Interpreter
 {
 public:
     FocalLengthInterpreter () {}
-    std::string toString (Tag* t) override
+    std::string toString (const Tag* t) const override
     {
         char buffer[32];
         double v = t->toDouble();
@@ -433,7 +431,7 @@ public:
             return "undef";
         }
 
-        sprintf (buffer, "%.1f", v );
+        snprintf(buffer, sizeof(buffer), "%.1f", v );
         return buffer;
     }
 };
@@ -443,7 +441,7 @@ class UserCommentInterpreter : public Interpreter
 {
 public:
     UserCommentInterpreter () {}
-    std::string toString (Tag* t) override
+    std::string toString (const Tag* t) const override
     {
         int count = t->getCount();
 
@@ -575,7 +573,7 @@ class CFAInterpreter : public Interpreter
 {
 public:
     CFAInterpreter() {}
-    std::string toString (Tag* t) override
+    std::string toString (const Tag* t) const override
     {
         char colors[] = "RGB";
         char buffer[1024];
@@ -591,7 +589,7 @@ public:
 };
 CFAInterpreter cfaInterpreter;
 
-class OrientationInterpreter : public ChoiceInterpreter
+class OrientationInterpreter : public ChoiceInterpreter<>
 {
 public:
     OrientationInterpreter ()
@@ -610,7 +608,7 @@ public:
 };
 OrientationInterpreter orientationInterpreter;
 
-class UnitsInterpreter : public ChoiceInterpreter
+class UnitsInterpreter : public ChoiceInterpreter<>
 {
 public:
     UnitsInterpreter()
@@ -632,14 +630,14 @@ UTF8BinInterpreter utf8BinInterpreter;
 class RawImageSegmentationInterpreter : public Interpreter
 {
 public:
-    std::string toString (Tag* t) override
+    std::string toString (const Tag* t) const override
     {
         int segmentNumber = t->toInt(0, SHORT);
         int segmentWidth = t->toInt(2, SHORT);
         int lastSegmentWidth = t->toInt(4, SHORT);
 
         char buffer[32];
-        sprintf (buffer, "%d %d %d", segmentNumber, segmentWidth, lastSegmentWidth);
+        snprintf(buffer, sizeof(buffer), "%d %d %d", segmentNumber, segmentWidth, lastSegmentWidth);
         return buffer;
     }
 };
@@ -927,5 +925,3 @@ const TagAttrib ifdAttribs[] = {
     { -1, AC_DONTWRITE, 0,  nullptr, 0, AUTO, "", nullptr}
 };
 }
-
-#endif

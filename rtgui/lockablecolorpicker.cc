@@ -14,18 +14,17 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include "lockablecolorpicker.h"
 #include "options.h"
 #include "../rtengine/color.h"
 #include "../rtengine/rt_math.h"
+#include "../rtengine/utils.h"
 #include "imagearea.h"
 #include "multilangmgr.h"
 #include "navigator.h"
-
-extern Options options;
 
 LockableColorPicker::LockableColorPicker (CropWindow* cropWindow, Glib::ustring *oProfile, Glib::ustring *wProfile)
 : cropWindow(cropWindow), displayedValues(ColorPickerType::RGB), position(0, 0), size(Size::S15),
@@ -38,7 +37,7 @@ void LockableColorPicker::updateBackBuffer ()
     int newW, newH;
 
     // -------------------- setting some key constants ---------------------
-    constexpr float circlePadding = 3.f;  // keep this value odd
+    constexpr double circlePadding = 3.0;  // keep this value odd
     constexpr double opacity = 0.62;
     // ---------------------------------------------------------------------
 
@@ -122,18 +121,18 @@ void LockableColorPicker::updateBackBuffer ()
         bbcr->set_antialias (Cairo::ANTIALIAS_SUBPIXEL);
         bbcr->set_line_width (0.);
 
-        float center = (float)size / 2.f + circlePadding;
+        double center = static_cast<double>(size) / 2.0 + circlePadding;
 
         // black background of the whole color picker
         bbcr->set_line_width (0.);
         bbcr->set_source_rgba (0., 0., 0., opacity);
-        bbcr->arc_negative (center, center, center, 0., (double)rtengine::RT_PI);
+        bbcr->arc_negative (center, center, center, 0., rtengine::RT_PI);
         bbcr->line_to (0, 2. * center + textHeight);
-        bbcr->arc_negative (2. * textPadding, 2. * center + textHeight, 2. * textPadding, (double)rtengine::RT_PI, (double)rtengine::RT_PI / 2.);
+        bbcr->arc_negative (2. * textPadding, 2. * center + textHeight, 2. * textPadding, rtengine::RT_PI, rtengine::RT_PI / 2.);
         bbcr->line_to (textWidth, 2. * center + textHeight + 2. * textPadding);
-        bbcr->arc_negative (textWidth, 2. * center + textHeight, 2. * textPadding, (double)rtengine::RT_PI / 2., 0.);
+        bbcr->arc_negative (textWidth, 2. * center + textHeight, 2. * textPadding, rtengine::RT_PI / 2., 0.);
         bbcr->line_to (textWidth + 2. * textPadding, 2. * center + 2. * textPadding);
-        bbcr->arc_negative (textWidth, 2. * center + 2. * textPadding, 2. * textPadding, 0., (double)rtengine::RT_PI * 1.5);
+        bbcr->arc_negative (textWidth, 2. * center + 2. * textPadding, 2. * textPadding, 0., rtengine::RT_PI * 1.5);
         bbcr->line_to (2. * center, 2. * center);
         bbcr->close_path();
         bbcr->set_line_join (Cairo::LINE_JOIN_BEVEL);
@@ -223,7 +222,7 @@ void LockableColorPicker::updateBackBuffer ()
 
         bbcr->set_antialias(Cairo::ANTIALIAS_SUBPIXEL);
 
-        float center = (float)size / 2.f + circlePadding;
+        double center = static_cast<double>(size) / 2. + circlePadding;
 
         // light grey circle around the color mark
         bbcr->arc (center, center, center - circlePadding / 2., 0., 2. * (double)rtengine::RT_PI);
@@ -241,7 +240,7 @@ void LockableColorPicker::updateBackBuffer ()
 
 }
 
-void LockableColorPicker::draw (Cairo::RefPtr<Cairo::Context> &cr)
+void LockableColorPicker::draw (const Cairo::RefPtr<Cairo::Context> &cr)
 {
     if (validity == Validity::OUTSIDE) {
         return;
@@ -285,12 +284,12 @@ void LockableColorPicker::setRGB (const float R, const float G, const float B, c
     }
 }
 
-void LockableColorPicker::getImagePosition (rtengine::Coord &imgPos)
+void LockableColorPicker::getImagePosition (rtengine::Coord &imgPos) const
 {
     imgPos = position;
 }
 
-void LockableColorPicker::getScreenPosition (rtengine::Coord &screenPos)
+void LockableColorPicker::getScreenPosition (rtengine::Coord &screenPos) const
 {
     if (cropWindow) {
         cropWindow->imageCoordToScreen(position.x, position.y, screenPos.x, screenPos.y);
@@ -329,7 +328,7 @@ void LockableColorPicker::setSize (Size newSize)
     }
 }
 
-LockableColorPicker::Size LockableColorPicker::getSize ()
+LockableColorPicker::Size LockableColorPicker::getSize () const
 {
     return size;
 }

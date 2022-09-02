@@ -14,20 +14,49 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "cacheimagedata.h"
 #include <vector>
 #include <glib/gstdio.h>
+#include <glibmm/keyfile.h>
 #include "version.h"
 #include <locale.h>
 
-CacheImageData::CacheImageData ()
-    : md5(""), supported(false), format(FT_Invalid), rankOld(-1), inTrashOld(false), recentlySaved(false),
-      timeValid(false), year(0), month(0), day(0), hour(0), min(0), sec(0), exifValid(false), frameCount(1),
-      fnumber(0.0), shutter(0.0), focalLen(0.0), focalLen35mm(0.0), focusDist(0.f), iso(0), isHDR (false),
-      isPixelShift (false), sensortype(rtengine::ST_NONE), sampleFormat(rtengine::IIOSF_UNKNOWN),
-      redAWBMul(-1.0), greenAWBMul(-1.0), blueAWBMul(-1.0), rotate(0), thumbImgType(0)
+#include "../rtengine/procparams.h"
+#include "../rtengine/settings.h"
+
+CacheImageData::CacheImageData() :
+    supported(false),
+    format(FT_Invalid),
+    rankOld(-1),
+    inTrashOld(false),
+    recentlySaved(false),
+    timeValid(false),
+    year(0),
+    month(0),
+    day(0),
+    hour(0),
+    min(0),
+    sec(0),
+    exifValid(false),
+    frameCount(1),
+    fnumber(0.0),
+    shutter(0.0),
+    focalLen(0.0),
+    focalLen35mm(0.0),
+    focusDist(0.f),
+    iso(0),
+    rating(0),
+    isHDR (false),
+    isPixelShift (false),
+    sensortype(rtengine::ST_NONE),
+    sampleFormat(rtengine::IIOSF_UNKNOWN),
+    redAWBMul(-1.0),
+    greenAWBMul(-1.0),
+    blueAWBMul(-1.0),
+    rotate(0),
+    thumbImgType(0)
 {
 }
 
@@ -62,6 +91,10 @@ int CacheImageData::load (const Glib::ustring& fname)
 
                 if (keyFile.has_key ("General", "Rank")) {
                     rankOld     = keyFile.get_integer ("General", "Rank");
+                }
+
+                if (keyFile.has_key ("General", "Rating")) {
+                    rating     = keyFile.get_integer ("General", "Rating");
                 }
 
                 if (keyFile.has_key ("General", "InTrash")) {
@@ -192,11 +225,11 @@ int CacheImageData::load (const Glib::ustring& fname)
             return 0;
         }
     } catch (Glib::Error &err) {
-        if (options.rtSettings.verbose) {
+        if (rtengine::settings->verbose) {
             printf("CacheImageData::load / Error code %d while reading values from \"%s\":\n%s\n", err.code(), fname.c_str(), err.what().c_str());
         }
     } catch (...) {
-        if (options.rtSettings.verbose) {
+        if (rtengine::settings->verbose) {
             printf("CacheImageData::load / Unknown exception while trying to load \"%s\"!\n", fname.c_str());
         }
     }
@@ -225,6 +258,7 @@ int CacheImageData::save (const Glib::ustring& fname)
     keyFile.set_boolean ("General", "Supported", supported);
     keyFile.set_integer ("General", "Format", format);
     keyFile.set_boolean ("General", "RecentlySaved", recentlySaved);
+    keyFile.set_integer ("General", "Rating", rating);
 
     // remove the old implementation of Rank and InTrash from cache
     if (keyFile.has_key ("General", "Rank")) {
@@ -273,11 +307,11 @@ int CacheImageData::save (const Glib::ustring& fname)
     keyData = keyFile.to_data ();
 
     } catch (Glib::Error &err) {
-        if (options.rtSettings.verbose) {
+        if (rtengine::settings->verbose) {
             printf("CacheImageData::save / Error code %d while reading values from \"%s\":\n%s\n", err.code(), fname.c_str(), err.what().c_str());
         }
     } catch (...) {
-        if (options.rtSettings.verbose) {
+        if (rtengine::settings->verbose) {
             printf("CacheImageData::save / Unknown exception while trying to save \"%s\"!\n", fname.c_str());
         }
     }
@@ -289,7 +323,7 @@ int CacheImageData::save (const Glib::ustring& fname)
     FILE *f = g_fopen (fname.c_str (), "wt");
 
     if (!f) {
-        if (options.rtSettings.verbose) {
+        if (rtengine::settings->verbose) {
             printf("CacheImageData::save / Error: unable to open file \"%s\" with write access!\n", fname.c_str());
         }
 
@@ -301,3 +335,7 @@ int CacheImageData::save (const Glib::ustring& fname)
     }
 }
 
+rtengine::procparams::IPTCPairs CacheImageData::getIPTCData(unsigned int frame) const
+{
+    return {};
+}

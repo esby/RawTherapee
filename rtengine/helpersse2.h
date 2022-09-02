@@ -3,6 +3,11 @@
 //  this code was taken from http://shibatch.sourceforge.net/
 //  Many thanks to the author of original version: Naoki Shibata
 //
+//   Copyright Naoki Shibata and contributors 2010 - 2021.
+// Distributed under the Boost Software License, Version 1.0.
+//    (See accompanying file sleef_LICENSE.txt or copy at
+//          http://www.boost.org/LICENSE_1_0.txt)
+//
 //  This version contains modifications made by Ingo Weyrich
 //
 ////////////////////////////////////////////////////////////////
@@ -29,7 +34,7 @@ typedef __m128 vfloat;
 typedef __m128i vint2;
 
 //
-#define LVF(x) _mm_load_ps((float*)&x)
+#define LVF(x) _mm_load_ps((const float*)&x)
 #define LVFU(x) _mm_loadu_ps(&x)
 #define STVF(x,y) _mm_store_ps(&x,y)
 #define STVFU(x,y) _mm_storeu_ps(&x,y)

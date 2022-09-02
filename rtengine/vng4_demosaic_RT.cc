@@ -16,11 +16,12 @@
 //  GNU General Public License for more details.
 //
 //  You should have received a copy of the GNU General Public License
-//  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+//  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //
 ////////////////////////////////////////////////////////////////
 
 #include "rtengine.h"
+#include "rawimage.h"
 #include "rawimagesource.h"
 #include "../rtgui/multilangmgr.h"
 //#define BENCHMARK
@@ -44,12 +45,12 @@ inline void vng4interpolate_row_redblue (const RawImage *ri, const array2D<float
             // cross interpolation of red/blue
             float rb = (rawData[i - 1][j - 1] - pg[j - 1] + rawData[i + 1][j - 1] - ng[j - 1]);
             rb += (rawData[i - 1][j + 1] - pg[j + 1] + rawData[i + 1][j + 1] - ng[j + 1]);
-            ab[j] = cg[j] + rb * 0.25f;
+            ab[j] = std::max(0.f, cg[j] + rb * 0.25f);
         } else {
             // linear R/B-G interpolation horizontally
-            ar[j] = cg[j] + (rawData[i][j - 1] - cg[j - 1] + rawData[i][j + 1] - cg[j + 1]) / 2;
+            ar[j] = std::max(0.f, cg[j] + (rawData[i][j - 1] - cg[j - 1] + rawData[i][j + 1] - cg[j + 1]) / 2);
             // linear B/R-G interpolation vertically
-            ab[j] = cg[j] + (rawData[i - 1][j] - pg[j] + rawData[i + 1][j] - ng[j]) / 2;
+            ab[j] = std::max(0.f, cg[j] + (rawData[i - 1][j] - pg[j] + rawData[i + 1][j] - ng[j]) / 2);
         }
     }
 }
@@ -62,6 +63,18 @@ namespace rtengine
 
 void RawImageSource::vng4_demosaic (const array2D<float> &rawData, array2D<float> &red, array2D<float> &green, array2D<float> &blue)
 {
+    // Test for RGB cfa
+    for (int i = 0; i < 2; i++) {
+        for (int j = 0; j < 2; j++) {
+            if (FC(i, j) == 3) {
+                // avoid crash
+                std::cout << "vng4_demosaic supports only RGB Colour filter arrays. Falling back to igv_interpolate" << std::endl;
+                igv_interpolate(W, H);
+                return;
+            }
+        }
+    }
+
     BENCHFUN
     const signed short int *cp, terms[] = {
         -2, -2, +0, -1, 0, 0x01, -2, -2, +0, +0, 1, 0x01, -2, -1, -1, +0, 0, 0x01,
@@ -93,7 +106,7 @@ void RawImageSource::vng4_demosaic (const array2D<float> &rawData, array2D<float
     const bool plistenerActive = plistener;
 
     if (plistenerActive) {
-        plistener->setProgressStr (Glib::ustring::compose(M("TP_RAW_DMETHOD_PROGRESSBAR"), RAWParams::BayerSensor::getMethodString(RAWParams::BayerSensor::Method::VNG4)));
+        plistener->setProgressStr (Glib::ustring::compose(M("TP_RAW_DMETHOD_PROGRESSBAR"), M("TP_RAW_VNG4")));
         plistener->setProgress (progress);
     }
 
@@ -101,7 +114,7 @@ void RawImageSource::vng4_demosaic (const array2D<float> &rawData, array2D<float
     const int width = W, height = H;
     constexpr unsigned int colors = 4;
 
-    float (*image)[4] = (float (*)[4]) calloc (height * width, sizeof * image);
+    float (*image)[4] = (float (*)[4]) calloc (static_cast<size_t>(height) * width, sizeof * image);
 
     int lcode[16][16][32];
     float mul[16][16][8];
@@ -353,7 +366,7 @@ void RawImageSource::vng4_demosaic (const array2D<float> &rawData, array2D<float
                         }
                     }
                 }
-                green[row][col] = greenval + (sum1 - sum0) / (2 * num);
+                green[row][col] = std::max(0.f, greenval + (sum1 - sum0) / (2 * num));
             }
             if (row - 1 > firstRow) {
                 vng4interpolate_row_redblue(ri, rawData, red[row - 1], blue[row - 1], green[row - 2], green[row - 1], green[row], row - 1, W);
@@ -383,7 +396,7 @@ void RawImageSource::vng4_demosaic (const array2D<float> &rawData, array2D<float
 #endif
         {
             // let the first thread, which is out of work, do the border interpolation
-            border_interpolate2(W, H, 3, rawData, red, green, blue);
+            border_interpolate(W, H, 3, rawData, red, green, blue);
         }
     }
 

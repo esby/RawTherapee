@@ -14,10 +14,8 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef _PENTAXATTRIBS_
-#define _PENTAXATTRIBS_
 
 #include <cmath>
 #include <cstdio>
@@ -31,7 +29,7 @@ namespace rtexif
 {
 
 
-class PAQualityInterpreter : public ChoiceInterpreter
+class PAQualityInterpreter : public ChoiceInterpreter<>
 {
 public:
     PAQualityInterpreter ()
@@ -50,7 +48,7 @@ public:
 };
 PAQualityInterpreter paQualityInterpreter;
 
-class PAOnOffInterpreter : public ChoiceInterpreter
+class PAOnOffInterpreter : public ChoiceInterpreter<>
 {
 public:
     PAOnOffInterpreter ()
@@ -61,7 +59,7 @@ public:
 };
 PAOnOffInterpreter paOnOffInterpreter;
 
-class PAShakeReductionInterpreter : public ChoiceInterpreter
+class PAShakeReductionInterpreter : public ChoiceInterpreter<>
 {
 public:
     PAShakeReductionInterpreter ()
@@ -80,7 +78,7 @@ public:
 };
 PAShakeReductionInterpreter paShakeReductionInterpreter;
 
-class PAShakeReduction2Interpreter : public ChoiceInterpreter
+class PAShakeReduction2Interpreter : public ChoiceInterpreter<>
 {
 public:
     // ShakeReduction
@@ -100,7 +98,7 @@ public:
 };
 PAShakeReduction2Interpreter paShakeReduction2Interpreter;
 
-class PAPictureModeInterpreter : public ChoiceInterpreter
+class PAPictureModeInterpreter : public ChoiceInterpreter<>
 {
 public:
     PAPictureModeInterpreter ()
@@ -164,7 +162,7 @@ public:
 };
 PAPictureModeInterpreter paPictureModeInterpreter;
 
-class PASceneModeInterpreter : public ChoiceInterpreter
+class PASceneModeInterpreter : public ChoiceInterpreter<>
 {
 public:
     PASceneModeInterpreter ()
@@ -196,7 +194,7 @@ public:
 };
 PASceneModeInterpreter paSceneModeInterpreter;
 
-class PAAEProgramModeInterpreter : public ChoiceInterpreter
+class PAAEProgramModeInterpreter : public ChoiceInterpreter<>
 {
 public:
     PAAEProgramModeInterpreter ()
@@ -235,7 +233,7 @@ public:
 };
 PAAEProgramModeInterpreter paAEProgramModeInterpreter;
 
-class PAFlashModeInterpreter : public ChoiceInterpreter
+class PAFlashModeInterpreter : public ChoiceInterpreter<>
 {
 public:
     PAFlashModeInterpreter ()
@@ -259,7 +257,7 @@ public:
 };
 PAFlashModeInterpreter paFlashModeInterpreter;
 
-class PAFocusModeInterpreter : public ChoiceInterpreter
+class PAFocusModeInterpreter : public ChoiceInterpreter<>
 {
 public:
     PAFocusModeInterpreter ()
@@ -283,7 +281,7 @@ public:
 };
 PAFocusModeInterpreter paFocusModeInterpreter;
 
-class PAAFPointInterpreter : public ChoiceInterpreter
+class PAAFPointInterpreter : public ChoiceInterpreter<>
 {
 public:
     // AFPointSelected
@@ -310,7 +308,7 @@ public:
 };
 PAAFPointInterpreter paAFPointInterpreter;
 
-class PAAFFocusInterpreter : public ChoiceInterpreter
+class PAAFFocusInterpreter : public ChoiceInterpreter<>
 {
 public:
     // AFPointsInFocus
@@ -331,7 +329,7 @@ public:
 };
 PAAFFocusInterpreter paAFFocusInterpreter;
 
-class PAISOInterpreter : public ChoiceInterpreter
+class PAISOInterpreter : public ChoiceInterpreter<>
 {
 public:
     PAISOInterpreter        ()
@@ -415,7 +413,7 @@ class PAFNumberInterpreter: public Interpreter
 {
 public:
     PAFNumberInterpreter () {}
-    std::string toString (Tag* t) override
+    std::string toString (const Tag* t) const override
     {
         char buffer[32];
         double v = t->toDouble() / 10;
@@ -424,13 +422,13 @@ public:
             return "undef";
         }
 
-        sprintf (buffer, "%.1f", v );
+        snprintf(buffer, sizeof(buffer), "%.1f", v );
         return buffer;
     }
 };
 PAFNumberInterpreter paFNumberInterpreter;
 
-class PAMeteringModeInterpreter : public ChoiceInterpreter
+class PAMeteringModeInterpreter : public ChoiceInterpreter<>
 {
 public:
     PAMeteringModeInterpreter ()
@@ -442,7 +440,7 @@ public:
 };
 PAMeteringModeInterpreter paMeteringModeInterpreter;
 
-class PAWhiteBalanceInterpreter : public ChoiceInterpreter
+class PAWhiteBalanceInterpreter : public ChoiceInterpreter<>
 {
 public:
     PAWhiteBalanceInterpreter ()
@@ -468,7 +466,7 @@ public:
 };
 PAWhiteBalanceInterpreter paWhiteBalanceInterpreter;
 
-class PAWhiteBalanceModeInterpreter : public ChoiceInterpreter
+class PAWhiteBalanceModeInterpreter : public ChoiceInterpreter<>
 {
 public:
     PAWhiteBalanceModeInterpreter ()
@@ -487,7 +485,7 @@ public:
 };
 PAWhiteBalanceModeInterpreter paWhiteBalanceModeInterpreter;
 
-class PASaturationInterpreter : public ChoiceInterpreter
+class PASaturationInterpreter : public ChoiceInterpreter<>
 {
 public:
     PASaturationInterpreter ()
@@ -506,7 +504,7 @@ public:
 };
 PASaturationInterpreter paSaturationInterpreter;
 
-class PAContrastInterpreter : public ChoiceInterpreter
+class PAContrastInterpreter : public ChoiceInterpreter<>
 {
 public:
     PAContrastInterpreter ()
@@ -525,7 +523,7 @@ public:
 };
 PAContrastInterpreter paContrastInterpreter;
 
-class PASharpnessInterpreter : public ChoiceInterpreter
+class PASharpnessInterpreter : public ChoiceInterpreter<>
 {
 public:
     PASharpnessInterpreter ()
@@ -543,7 +541,7 @@ public:
 };
 PASharpnessInterpreter paSharpnessInterpreter;
 
-class PAPictureModeInterpreter2: public ChoiceInterpreter
+class PAPictureModeInterpreter2: public ChoiceInterpreter<>
 {
 public:
     PAPictureModeInterpreter2()
@@ -610,10 +608,10 @@ public:
         choices[256 * 255 +   0] = "Video (Auto Aperture)";
         choices[256 * 255 +   4] = "Video (4)";
     }
-    std::string toString (Tag* t) override
+    std::string toString (const Tag* t) const override
     {
         int c = 256 * t->toInt (0, BYTE) + t->toInt (1, BYTE);
-        std::map<int, std::string>::iterator r = choices.find (c);
+        const ChoicesIterator r = choices.find (c);
 
         if (r != choices.end()) {
             std::ostringstream s;
@@ -628,14 +626,14 @@ public:
             return s.str();
         } else {
             char buffer[1024];
-            t->toString (buffer);
+            t->toString (buffer, sizeof(buffer));
             return std::string (buffer);
         }
     }
 };
 PAPictureModeInterpreter2 paPictureModeInterpreter2;
 
-class PADriveModeInterpreter : public ChoiceInterpreter
+class PADriveModeInterpreter : public ChoiceInterpreter<>
 {
     std::map<int, std::string> choices1;
     std::map<int, std::string> choices2;
@@ -669,12 +667,12 @@ public:
         choices3[224] = "HDR Auto";
         choices3[255] = "Video";
     }
-    std::string toString (Tag* t) override
+    std::string toString (const Tag* t) const override
     {
-        std::map<int, std::string>::iterator r  = choices.find (t->toInt (0, BYTE));
-        std::map<int, std::string>::iterator r1 = choices1.find (t->toInt (1, BYTE));
-        std::map<int, std::string>::iterator r2 = choices2.find (t->toInt (2, BYTE));
-        std::map<int, std::string>::iterator r3 = choices3.find (t->toInt (3, BYTE));
+        const ChoicesIterator r  = choices.find (t->toInt (0, BYTE));
+        std::map<int, std::string>::const_iterator r1 = choices1.find (t->toInt (1, BYTE));
+        std::map<int, std::string>::const_iterator r2 = choices2.find (t->toInt (2, BYTE));
+        std::map<int, std::string>::const_iterator r3 = choices3.find (t->toInt (3, BYTE));
         std::ostringstream s;
         s << ((r != choices.end()) ? r->second : "");
         s << ((r1 != choices1.end()) ? r1->second : "") << " ";
@@ -685,7 +683,7 @@ public:
 };
 PADriveModeInterpreter paDriveModeInterpreter;
 
-class PAColorSpaceInterpreter: public ChoiceInterpreter
+class PAColorSpaceInterpreter: public ChoiceInterpreter<>
 {
 public:
     PAColorSpaceInterpreter()
@@ -696,7 +694,7 @@ public:
 };
 PAColorSpaceInterpreter paColorSpaceInterpreter;
 
-class PALensTypeInterpreter : public IntLensInterpreter< int >
+class PALensTypeInterpreter final: public IntLensInterpreter< int >
 {
 public:
     PALensTypeInterpreter ()
@@ -752,7 +750,7 @@ public:
         choices.insert (p_t (256 * 3 + 44, "Sigma 17-70mm f/2.8-4.5 DC Macro"));
         choices.insert (p_t (256 * 3 + 44, "Sigma 18-50mm f/3.5-5.6 DC"));
         choices.insert (p_t (256 * 3 + 44, "Sigma 17-35mm f/2.8-4 EX DG"));
-        choices.insert (p_t (256 * 3 + 44, "Tamron 35-90mm f/4 AF"));
+        choices.insert (p_t (256 * 3 + 44, "Tamron 35-90mm f/4-5.6 AF"));
         choices.insert (p_t (256 * 3 + 44, "Sigma AF 18-35mm f/3.5-4.5 Aspherical"));
         choices.insert (p_t (256 * 3 + 46, "Sigma or Samsung Lens (3 46)"));
         choices.insert (p_t (256 * 3 + 46, "Sigma APO 70-200mm f/2.8 EX"));
@@ -784,6 +782,7 @@ public:
         choices.insert (p_t (256 * 4 + 2, "smc PENTAX-FA 80-320mm f/4.5-5.6"));
         choices.insert (p_t (256 * 4 + 3, "smc PENTAX-FA 43mm f/1.9 Limited"));
         choices.insert (p_t (256 * 4 + 6, "smc PENTAX-FA 35-80mm f/4-5.6"));
+        choices.insert (p_t (256 * 4 + 8, "Irix 150mm f/2.8 Macro"));
         choices.insert (p_t (256 * 4 + 9, "Irix 11mm f/4 Firefly"));
         choices.insert (p_t (256 * 4 + 10, "Irix 15mm f/2.4"));
         choices.insert (p_t (256 * 4 + 12, "smc PENTAX-FA 50mm f/1.4"));
@@ -908,8 +907,9 @@ public:
         choices.insert (p_t (256 * 7 + 243, "smc PENTAX-DA 70mm f/2.4 Limited"));
         choices.insert (p_t (256 * 7 + 244, "smc PENTAX-DA 21mm f/3.2 AL Limited"));
         choices.insert (p_t (256 * 8 + 0, "Sigma 50-150mm f/2.8 II APO EX DC HSM"));
-        choices.insert (p_t (256 * 8 + 3, "Sigma AF 18-125mm f/3.5-5.6 DC"));
+        choices.insert (p_t (256 * 8 + 3, "Sigma 18-125mm f/3.8-5.6 DC HSM"));
         choices.insert (p_t (256 * 8 + 4, "Sigma 50mm f/1.4 EX DG HSM"));
+        choices.insert (p_t (256 * 8 + 6, "Sigma 4.5mm f/2.8 EX DC Fisheye"));
         choices.insert (p_t (256 * 8 + 7, "Sigma 24-70mm f/2.8 IF EX DG HSM"));
         choices.insert (p_t (256 * 8 + 8, "Sigma 18-250mm f/3.5-6.3 DC OS HSM"));
         choices.insert (p_t (256 * 8 + 11, "Sigma 10-20mm f/3.5 EX DC HSM"));
@@ -920,6 +920,7 @@ public:
         choices.insert (p_t (256 * 8 + 16, "Sigma 70-200mm f/2.8 EX DG Macro HSM II"));
         choices.insert (p_t (256 * 8 + 17, "Sigma 50-500mm f/4.5-6.3 DG OS HSM"));
         choices.insert (p_t (256 * 8 + 18, "Sigma 8-16mm f/4.5-5.6 DC HSM"));
+        choices.insert (p_t (256 * 8 + 20, "Sigma 18-50mm f/2.8-4.5 DC HSM"));
         choices.insert (p_t (256 * 8 + 21, "Sigma 17-50mm f/2.8 EX DC OS HSM"));
         choices.insert (p_t (256 * 8 + 22, "Sigma 85mm f/1.4 EX DG HSM"));
         choices.insert (p_t (256 * 8 + 23, "Sigma 70-200mm f/2.8 APO EX DG OS HSM"));
@@ -938,6 +939,8 @@ public:
         choices.insert (p_t (256 * 8 + 62, "HD PENTAX-D FA 24-70mm f/2.8 ED SDM WR"));
         choices.insert (p_t (256 * 8 + 63, "HD PENTAX-D FA 15-30mm f/2.8 ED SDM WR"));
         choices.insert (p_t (256 * 8 + 64, "HD PENTAX-D FA* 50mm f/1.4 SDM AW"));
+        choices.insert (p_t (256 * 8 + 65, "HD PENTAX-D FA 70-210mm f/4 ED SDM WR"));
+        choices.insert (p_t (256 * 8 + 196, "HD PENTAX-DA* 11-18mm f/2.8 ED DC AW"));
         choices.insert (p_t (256 * 8 + 197, "HD PENTAX-DA 55-300mm f/4.5-6.3 ED PLM WR RE"));
         choices.insert (p_t (256 * 8 + 198, "smc PENTAX-DA L 18-50mm f/4-5.6 DC WR RE"));
         choices.insert (p_t (256 * 8 + 199, "HD PENTAX-DA 18-50mm f/4-5.6 DC WR RE"));
@@ -992,8 +995,9 @@ public:
         choices.insert (p_t (256 * 22 + 3, "03 Fish-eye 3.2mm f/5.6"));
         choices.insert (p_t (256 * 22 + 4, "04 Toy Lens Wide 6.3mm f/7.1"));
         choices.insert (p_t (256 * 22 + 5, "05 Toy Lens Telephoto 18mm f/8"));
+        choices.insert (p_t (256 * 31 + 1, "GR Lens"));
     }
-    std::string toString (Tag* t) override
+    std::string toString (const Tag* t) const override
     {
         double *liArray = nullptr;
         double maxApertureAtFocal = 0.;
@@ -1061,7 +1065,7 @@ class PASRResultInterpreter: public Interpreter
 {
 public:
     PASRResultInterpreter() { }
-    std::string toString (Tag* t) override
+    std::string toString (const Tag* t) const override
     {
         std::ostringstream str;
         int b = t->toInt (0, BYTE);
@@ -1079,7 +1083,7 @@ public:
 };
 PASRResultInterpreter paSRResultInterpreter;
 
-class PAHighISONoiseInterpreter: public ChoiceInterpreter
+class PAHighISONoiseInterpreter: public ChoiceInterpreter<>
 {
 public:
     // HighISONoiseReduction
@@ -1095,7 +1099,7 @@ public:
 };
 PAHighISONoiseInterpreter paHighISONoiseInterpreter;
 
-class PAMonochromeFilterEffectInterpreter: public ChoiceInterpreter
+class PAMonochromeFilterEffectInterpreter: public ChoiceInterpreter<>
 {
 public:
     PAMonochromeFilterEffectInterpreter()
@@ -1113,7 +1117,7 @@ public:
 };
 PAMonochromeFilterEffectInterpreter paMonochromeFilterEffectInterpreter;
 
-class PAMonochromeToningInterpreter: public ChoiceInterpreter
+class PAMonochromeToningInterpreter: public ChoiceInterpreter<>
 {
 public:
     PAMonochromeToningInterpreter()
@@ -1132,7 +1136,7 @@ public:
 };
 PAMonochromeToningInterpreter paMonochromeToningInterpreter;
 
-class PAShadowCorrectionInterpreter: public ChoiceInterpreter
+class PAShadowCorrectionInterpreter: public ChoiceInterpreter<>
 {
 public:
     PAShadowCorrectionInterpreter()
@@ -1146,7 +1150,7 @@ public:
         choices[ 2 << 8 | 4 ] = "Auto";
     }
 
-    std::string toString (Tag* t) override
+    std::string toString (const Tag* t) const override
     {
         int idx = 0;
 
@@ -1156,7 +1160,7 @@ public:
             idx = t->toInt (0, BYTE) << 8 | t->toInt (1, BYTE);
         }
 
-        std::map<int, std::string>::iterator r  = choices.find (idx);
+        const ChoicesIterator r  = choices.find (idx);
         std::ostringstream s;
         s << ((r != choices.end()) ? r->second : "n/a");
         return s.str();
@@ -1164,7 +1168,7 @@ public:
 };
 PAShadowCorrectionInterpreter paShadowCorrectionInterpreter;
 
-class PAISOAutoParametersInterpreter: public ChoiceInterpreter
+class PAISOAutoParametersInterpreter: public ChoiceInterpreter<>
 {
 public:
     PAISOAutoParametersInterpreter()
@@ -1173,9 +1177,9 @@ public:
         choices[2] = "Standard";
         choices[3] = "Fast";
     }
-    std::string toString (Tag* t) override
+    std::string toString (const Tag* t) const override
     {
-        std::map<int, std::string>::iterator r  = choices.find (t->toInt (0, BYTE));
+        const ChoicesIterator r  = choices.find (t->toInt (0, BYTE));
         std::ostringstream s;
         s << ((r != choices.end()) ? r->second : "n/a");
         return s.str();
@@ -1183,7 +1187,7 @@ public:
 };
 PAISOAutoParametersInterpreter paISOAutoParametersInterpreter;
 
-class PABleachBypassToningInterpreter: public ChoiceInterpreter
+class PABleachBypassToningInterpreter: public ChoiceInterpreter<>
 {
 public:
     PABleachBypassToningInterpreter()
@@ -1201,7 +1205,7 @@ public:
 };
 PABleachBypassToningInterpreter paBleachBypassToningInterpreter;
 
-class PABlurControlInterpreter: public ChoiceInterpreter
+class PABlurControlInterpreter: public ChoiceInterpreter<>
 {
 public:
     PABlurControlInterpreter()
@@ -1211,9 +1215,9 @@ public:
         choices[2] = "Medium";
         choices[3] = "High";
     }
-    std::string toString (Tag* t) override
+    std::string toString (const Tag* t) const override
     {
-        std::map<int, std::string>::iterator r  = choices.find (t->toInt (0, BYTE));
+        const ChoicesIterator r  = choices.find (t->toInt (0, BYTE));
         std::ostringstream s;
         s << ((r != choices.end()) ? r->second : "n/a");
         return s.str();
@@ -1221,7 +1225,7 @@ public:
 };
 PABlurControlInterpreter paBlurControlInterpreter;
 
-class PAHDRInterpreter: public ChoiceInterpreter
+class PAHDRInterpreter: public ChoiceInterpreter<>
 {
     std::map<int, std::string> choices1;
     std::map<int, std::string> choices2;
@@ -1243,11 +1247,11 @@ public:
         choices2[8]   = "2 EV";
         choices2[12]  = "3 EV";
     }
-    std::string toString (Tag* t) override
+    std::string toString (const Tag* t) const override
     {
-        std::map<int, std::string>::iterator r  = choices.find  (t->toInt (0, BYTE));
-        std::map<int, std::string>::iterator r1 = choices1.find (t->toInt (1, BYTE));
-        std::map<int, std::string>::iterator r2 = choices2.find (t->toInt (2, BYTE));
+        const ChoicesIterator r  = choices.find  (t->toInt (0, BYTE));
+        std::map<int, std::string>::const_iterator r1 = choices1.find (t->toInt (1, BYTE));
+        std::map<int, std::string>::const_iterator r2 = choices2.find (t->toInt (2, BYTE));
         std::ostringstream s;
         s << ((r != choices.end() ) ?  r->second : "") << std::endl;
         s << ((r1 != choices1.end()) ? r1->second : "") << std::endl;
@@ -1257,7 +1261,7 @@ public:
 };
 PAHDRInterpreter paHDRInterpreter;
 
-class PACrossProcessInterpreter: public ChoiceInterpreter
+class PACrossProcessInterpreter: public ChoiceInterpreter<>
 {
 public:
     PACrossProcessInterpreter()
@@ -1274,7 +1278,7 @@ public:
 };
 PACrossProcessInterpreter paCrossProcessInterpreter;
 
-class PAPowerSourceInterpreter: public ChoiceInterpreter
+class PAPowerSourceInterpreter: public ChoiceInterpreter<>
 {
 public:
     PAPowerSourceInterpreter()
@@ -1290,7 +1294,7 @@ class PALensModelQInterpreter: public Interpreter
 {
 public:
     PALensModelQInterpreter() {}
-    std::string toString (Tag* t) override
+    std::string toString (const Tag* t) const override
     {
         char buffer[31];
         buffer[0] = 0;  //
@@ -1308,7 +1312,7 @@ class PALensInfoQInterpreter: public Interpreter
 {
 public:
     PALensInfoQInterpreter() {}
-    std::string toString (Tag* t) override
+    std::string toString (const Tag* t) const override
     {
         char buffer[21];
         buffer[0] = 0;
@@ -1326,7 +1330,7 @@ class PAFlashExposureCompInterpreter: public Interpreter
 {
 public:
     PAFlashExposureCompInterpreter() {}
-    std::string toString (Tag* t) override
+    std::string toString (const Tag* t) const override
     {
         int a;
 
@@ -1337,7 +1341,7 @@ public:
         }
 
         char buffer[32];
-        sprintf (buffer, "%d", a );
+        snprintf(buffer, sizeof(buffer), "%d", a );
         return buffer;
     }
     double toDouble (const Tag* t, int ofs) override
@@ -1359,13 +1363,13 @@ class PAFocalLengthInterpreter: public Interpreter
 {
 public:
     PAFocalLengthInterpreter() {}
-    std::string toString (Tag* t) override
+    std::string toString (const Tag* t) const override
     {
         double a = double (t->toInt (0, LONG));
 
         if (a > 1.) {
             char buffer[32];
-            sprintf (buffer, "%.2f", a / 100. );
+            snprintf(buffer, sizeof(buffer), "%.2f", a / 100. );
             return buffer;
         } else {
             return "n/a";
@@ -1388,14 +1392,14 @@ class PALensDataFocalLengthInterpreter: public Interpreter
 {
 public:
     PALensDataFocalLengthInterpreter() {}
-    std::string toString (Tag* t) override
+    std::string toString (const Tag* t) const override
     {
         int a = t->toInt (0, BYTE);
-        float b = float (10 * int (a >> 2)) * pow (4.f, float (int (a & 0x03) - 2));
+        double b = static_cast<double>(10 * (a >> 2)) * std::pow(4.0, static_cast<double>((a & 0x03) - 2));
 
-        if (b > 1.f) {
+        if (b > 1.0) {
             char buffer[32];
-            sprintf (buffer, "%.2f", b );
+            snprintf(buffer, sizeof(buffer), "%.2f", b );
             return buffer;
         } else {
             return "n/a";
@@ -1404,9 +1408,9 @@ public:
     double toDouble (const Tag* t, int ofs) override
     {
         int a = t->toInt (ofs, BYTE);
-        float b = float (10 * int (a >> 2)) * pow (4.f, float (int (a & 0x03) - 2));
+        double b = static_cast<double>(10 * (a >> 2)) * std::pow(4.0, static_cast<double>((a & 0x03) - 2));
 
-        if (b > 1.f) {
+        if (b > 1.0) {
             return b;
         } else {
             return 0.;
@@ -1419,12 +1423,12 @@ class PAISOfInterpreter: public Interpreter
 {
 public:
     PAISOfInterpreter() {}
-    std::string toString (Tag* t) override
+    std::string toString (const Tag* t) const override
     {
         int a = t->toInt (0, BYTE);
         char buffer[32];
         double v = 100.*exp (double (a - 32) * log (2.) / 8.);
-        sprintf (buffer, "%.1f", v );
+        snprintf(buffer, sizeof(buffer), "%.1f", v );
         return buffer;
     }
     double toDouble (const Tag* t, int ofs) override
@@ -1439,7 +1443,7 @@ class PAMaxApertureInterpreter: public Interpreter
 {
 public:
     PAMaxApertureInterpreter() {}
-    std::string toString (Tag* t) override
+    std::string toString (const Tag* t) const override
     {
         int a = t->toInt (0, BYTE);
         a &= 0x7F;
@@ -1452,7 +1456,7 @@ public:
                 return "undef";
             }
 
-            sprintf (buffer, "%.1f", v );
+            snprintf(buffer, sizeof(buffer), "%.1f", v );
             return buffer;
         } else {
             return "n/a";
@@ -1476,12 +1480,12 @@ class PAAEXvInterpreter: public Interpreter
 {
 public:
     PAAEXvInterpreter() {}
-    std::string toString (Tag* t) override
+    std::string toString (const Tag* t) const override
     {
         int a = t->toInt (0, BYTE);
         char buffer[32];
         double v = double (a - 64) / 8.;
-        sprintf (buffer, "%.1f", v );
+        snprintf(buffer, sizeof(buffer), "%.1f", v );
         return buffer;
     }
     double toDouble (const Tag* t, int ofs) override
@@ -1496,12 +1500,12 @@ class PAAEBXvInterpreter: public Interpreter
 {
 public:
     PAAEBXvInterpreter() {}
-    std::string toString (Tag* t) override
+    std::string toString (const Tag* t) const override
     {
         int a = t->toInt (0, SBYTE);
         char buffer[32];
         double v = double (a) / 8.;
-        sprintf (buffer, "%.1f", v );
+        snprintf(buffer, sizeof(buffer), "%.1f", v );
         return buffer;
     }
     double toDouble (const Tag* t, int ofs) override
@@ -1516,12 +1520,12 @@ class PAApertureInterpreter: public Interpreter
 {
 public:
     PAApertureInterpreter() {}
-    std::string toString (Tag* t) override
+    std::string toString (const Tag* t) const override
     {
         int a = t->toInt (0, BYTE);
         char buffer[32];
         double v = exp ((double (a) - 68.) * log (2.) / 16.);
-        sprintf (buffer, "%.1f", v );
+        snprintf(buffer, sizeof(buffer), "%.1f", v );
         return buffer;
     }
     double toDouble (const Tag* t, int ofs) override
@@ -1536,12 +1540,12 @@ class PAExposureTimeInterpreter: public Interpreter
 {
 public:
     PAExposureTimeInterpreter() {}
-    std::string toString (Tag* t) override
+    std::string toString (const Tag* t) const override
     {
         int a = t->toInt (0, BYTE);
         char buffer[32];
         double v = 24.*exp (- (double (a) - 32.) * log (2.) / 8.);
-        sprintf (buffer, "%.6f", v );
+        snprintf(buffer, sizeof(buffer), "%.6f", v );
         return buffer;
     }
     double toDouble (const Tag* t, int ofs) override
@@ -1556,12 +1560,12 @@ class PANominalMinApertureInterpreter: public Interpreter
 {
 public:
     PANominalMinApertureInterpreter() {}
-    std::string toString (Tag* t) override
+    std::string toString (const Tag* t) const override
     {
         char buffer[32];
         int a = t->toInt (0, BYTE);
         int mina = a & 0x0F;
-        sprintf (buffer, "%.1f", double (int (pow (2.0, double (mina + 10) / 4.0) + 0.2)));
+        snprintf(buffer, sizeof(buffer), "%.1f", double (int (pow (2.0, double (mina + 10) / 4.0) + 0.2)));
         return buffer;
     }
     double toDouble (const Tag* t, int ofs) override
@@ -1576,12 +1580,12 @@ class PANominalMaxApertureInterpreter: public Interpreter
 {
 public:
     PANominalMaxApertureInterpreter() {}
-    std::string toString (Tag* t) override
+    std::string toString (const Tag* t) const override
     {
         char buffer[32];
         int a = t->toInt (0, BYTE);
         int maxa = (a & 0xF0) >> 4;
-        sprintf (buffer, "%.1f", double (int (pow (2.0, double (maxa) / 4.0) + 0.2)) );
+        snprintf(buffer, sizeof(buffer), "%.1f", double (int (pow (2.0, double (maxa) / 4.0) + 0.2)) );
         return buffer;
     }
     double toDouble (const Tag* t, int ofs) override
@@ -1592,7 +1596,7 @@ public:
 };
 PANominalMaxApertureInterpreter paNominalMaxApertureInterpreter;
 
-class PAFlashStatusInterpreter: public ChoiceInterpreter
+class PAFlashStatusInterpreter: public ChoiceInterpreter<>
 {
 public:
     PAFlashStatusInterpreter()
@@ -1608,7 +1612,7 @@ public:
 };
 PAFlashStatusInterpreter paFlashStatusInterpreter;
 
-class PAInternalFlashModeInterpreter: public ChoiceInterpreter
+class PAInternalFlashModeInterpreter: public ChoiceInterpreter<>
 {
 public:
     PAInternalFlashModeInterpreter()
@@ -1638,7 +1642,7 @@ public:
 };
 PAInternalFlashModeInterpreter paInternalFlashModeInterpreter;
 
-class PAExternalFlashModeInterpreter: public ChoiceInterpreter
+class PAExternalFlashModeInterpreter: public ChoiceInterpreter<>
 {
 public:
     PAExternalFlashModeInterpreter()
@@ -1658,7 +1662,7 @@ public:
 };
 PAExternalFlashModeInterpreter paExternalFlashModeInterpreter;
 
-class PAExternalFlashExposureCompInterpreter: public ChoiceInterpreter
+class PAExternalFlashExposureCompInterpreter: public ChoiceInterpreter<>
 {
 public:
     PAExternalFlashExposureCompInterpreter()
@@ -1678,7 +1682,7 @@ public:
 };
 PAExternalFlashExposureCompInterpreter paExternalFlashExposureCompInterpreter;
 
-class PAExternalFlashBounceInterpreter: public ChoiceInterpreter
+class PAExternalFlashBounceInterpreter: public ChoiceInterpreter<>
 {
 public:
     PAExternalFlashBounceInterpreter()
@@ -1694,11 +1698,11 @@ class PAExternalFlashGNInterpreter: public Interpreter
 {
 public:
     PAExternalFlashGNInterpreter() {}
-    std::string toString (Tag* t) override
+    std::string toString (const Tag* t) const override
     {
         char buffer[32];
         int b = t->toInt (0, BYTE) & 0x1F;
-        sprintf (buffer, "%.0f", pow (2., b / 16. + 4) );
+        snprintf(buffer, sizeof(buffer), "%.0f", pow (2., b / 16. + 4) );
         return buffer;
     }
 };
@@ -1708,7 +1712,7 @@ class PAEVStepsInterpreter: public Interpreter
 {
 public:
     PAEVStepsInterpreter() {}
-    std::string toString (Tag* t) override
+    std::string toString (const Tag* t) const override
     {
         std::ostringstream str;
 
@@ -1727,7 +1731,7 @@ class PAEDialinInterpreter: public Interpreter
 {
 public:
     PAEDialinInterpreter() {}
-    std::string toString (Tag* t) override
+    std::string toString (const Tag* t) const override
     {
         std::ostringstream str;
 
@@ -1746,7 +1750,7 @@ class PAApertureRingUseInterpreter: public Interpreter
 {
 public:
     PAApertureRingUseInterpreter() {}
-    std::string toString (Tag* t) override
+    std::string toString (const Tag* t) const override
     {
         std::ostringstream str;
 
@@ -1761,7 +1765,7 @@ public:
 };
 PAApertureRingUseInterpreter paApertureRingUseInterpreter;
 
-class PAFlashOptionInterpreter: public ChoiceInterpreter
+class PAFlashOptionInterpreter: public ChoiceInterpreter<>
 {
 public:
     PAFlashOptionInterpreter()
@@ -1776,15 +1780,15 @@ public:
         choices[9] = "Slow-sync, Red-eye reduction";
         choices[10] = "Trailing-curtain Sync";
     }
-    std::string toString (Tag* t) override
+    std::string toString (const Tag* t) const override
     {
-        std::map<int, std::string>::iterator r = choices.find (t->toInt (0, BYTE) >> 4);
+        const ChoicesIterator r = choices.find (t->toInt (0, BYTE) >> 4);
 
         if (r != choices.end()) {
             return r->second;
         } else {
             char buffer[1024];
-            t->toString (buffer);
+            t->toString (buffer, sizeof(buffer));
             return std::string (buffer);
         }
     }
@@ -1795,7 +1799,7 @@ class PAMeteringMode2Interpreter: public Interpreter
 {
 public:
     PAMeteringMode2Interpreter() {}
-    std::string toString (Tag* t) override
+    std::string toString (const Tag* t) const override
     {
         std::ostringstream str;
         int v = (t->toInt (0, BYTE) & 0xF);
@@ -1813,7 +1817,7 @@ public:
 };
 PAMeteringMode2Interpreter paMeteringMode2Interpreter;
 
-class PAExposureBracketStepSizeInterpreter: public ChoiceInterpreter
+class PAExposureBracketStepSizeInterpreter: public ChoiceInterpreter<>
 {
 public:
     PAExposureBracketStepSizeInterpreter()
@@ -1830,7 +1834,7 @@ public:
 };
 PAExposureBracketStepSizeInterpreter paExposureBracketStepSizeInterpreter;
 
-class PAPictureMode2Interpreter: public ChoiceInterpreter
+class PAPictureMode2Interpreter: public ChoiceInterpreter<>
 {
 public:
     PAPictureMode2Interpreter()
@@ -1859,7 +1863,7 @@ class PAProgramLineInterpreter: public Interpreter
 {
 public:
     PAProgramLineInterpreter() {}
-    std::string toString (Tag* t) override
+    std::string toString (const Tag* t) const override
     {
         std::ostringstream str;
         int c = t->toInt (0, BYTE);
@@ -1899,7 +1903,7 @@ class PAAFModeInterpreter: public Interpreter
 {
 public:
     PAAFModeInterpreter() {}
-    std::string toString (Tag* t) override
+    std::string toString (const Tag* t) const override
     {
         switch (t->toInt (0, BYTE) & 0x3) {
             case 0:
@@ -1925,7 +1929,7 @@ class PAAFPointSelectedInterpreter: public Interpreter
 {
 public:
     PAAFPointSelectedInterpreter() {}
-    std::string toString (Tag* t) override
+    std::string toString (const Tag* t) const override
     {
         int c = t->toInt (0, SHORT);
 
@@ -1949,7 +1953,7 @@ class PADriveMode2Interpreter: public Interpreter
 {
 public:
     PADriveMode2Interpreter() {}
-    std::string toString (Tag* t) override
+    std::string toString (const Tag* t) const override
     {
         int c = t->toInt (0, BYTE);
 
@@ -2212,7 +2216,6 @@ const TagAttrib pentaxCameraInfoAttribs[] = {
 };
 
 }
-#endif
 
 
 

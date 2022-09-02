@@ -15,28 +15,36 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef _EDITORPANEL_
-#define _EDITORPANEL_
+#pragma once
 
 #include <gtkmm.h>
-#include "imageareapanel.h"
-#include "toolpanelcoord.h"
-#include "profilepanel.h"
-#include "../rtengine/rtengine.h"
-#include "history.h"
-#include "histogrampanel.h"
-#include "thumbnail.h"
-#include "saveasdlg.h"
-#include "batchqueueentry.h"
-#include "thumbnaillistener.h"
-#include "navigator.h"
-#include "progressconnector.h"
-#include "filepanel.h"
 
+#include "histogrampanel.h"
+#include "history.h"
+#include "imageareapanel.h"
+#include "profilepanel.h"
+#include "progressconnector.h"
+#include "saveasdlg.h"
+#include "thumbnaillistener.h"
+
+#include "../rtengine/noncopyable.h"
+#include "../rtengine/rtengine.h"
+
+namespace rtengine
+{
+template<typename T>
+class array2D;
+}
+
+class BatchQueueEntry;
 class EditorPanel;
+class FilePanel;
 class MyProgressBar;
+class Navigator;
+class Thumbnail;
+class ToolPanelCoordinator;
 
 struct EditorPanelIdleHelper {
     EditorPanel* epanel;
@@ -47,12 +55,14 @@ struct EditorPanelIdleHelper {
 class RTWindow;
 
 class EditorPanel final :
-    public Gtk::VBox,
+    public Gtk::Box,
     public PParamsChangeListener,
     public rtengine::ProgressListener,
     public ThumbnailListener,
     public HistoryBeforeLineListener,
-    public rtengine::HistogramListener
+    public rtengine::HistogramListener,
+    public HistogramPanelListener,
+    public rtengine::NonCopyable
 {
 public:
     explicit EditorPanel (FilePanel* filePanel = nullptr, bool benchmark = false);
@@ -76,6 +86,7 @@ public:
 
     void writeOptions();
     void writeToolExpandedStatus (std::vector<int> &tpOpen);
+    void updateShowtooltipVisibility (bool showtooltip);
 
     void showTopPanel (bool show);
     bool isRealized()
@@ -122,8 +133,25 @@ public:
         const LUTu& histGreenRaw,
         const LUTu& histBlueRaw,
         const LUTu& histChroma,
-        const LUTu& histLRETI
+        const LUTu& histLRETI,
+        int vectorscopeScale,
+        const array2D<int>& vectorscopeHC,
+        const array2D<int>& vectorscopeHS,
+        int waveformScale,
+        const array2D<int>& waveformRed,
+        const array2D<int>& waveformGreen,
+        const array2D<int>& waveformBlue,
+        const array2D<int>& waveformLuma
     ) override;
+    void setObservable(rtengine::HistogramObservable* observable) override;
+    bool updateHistogram(void) const override;
+    bool updateHistogramRaw(void) const override;
+    bool updateVectorscopeHC(void) const override;
+    bool updateVectorscopeHS(void) const override;
+    bool updateWaveform(void) const override;
+
+    // HistogramPanelListener
+    void scopeTypeChanged(Options::ScopeType new_type) override;
 
     // event handlers
     void info_toggled ();
@@ -147,7 +175,7 @@ public:
 
     void saveProfile ();
     Glib::ustring getShortName ();
-    Glib::ustring getFileName ();
+    Glib::ustring getFileName () const;
     bool handleShortcutKey (GdkEventKey* event);
 
     bool getIsProcessing() const
@@ -198,7 +226,7 @@ private:
     Gtk::Image *iShowHideSidePanels_exit;
     Gtk::Image *iBeforeLockON, *iBeforeLockOFF;
     Gtk::Paned *leftbox;
-    Gtk::Box *leftsubbox;
+    Gtk::Paned *leftsubpaned;
     Gtk::Paned *vboxright;
     Gtk::Box *vsubboxright;
 
@@ -258,7 +286,7 @@ private:
     bool isProcessing;
 
     IdleRegister idle_register;
+
+    rtengine::HistogramObservable* histogram_observable;
+    Options::ScopeType histogram_scope_type;
 };
-
-#endif
-

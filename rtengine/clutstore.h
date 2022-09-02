@@ -3,8 +3,6 @@
 #include <memory>
 #include <cstdint>
 
-#include <gtkmm.h>
-
 #include "cache.h"
 #include "alignedbuffer.h"
 #include "noncopyable.h"
@@ -39,7 +37,8 @@ public:
         const Glib::ustring& filename,
         Glib::ustring& name,
         Glib::ustring& extension,
-        Glib::ustring& profile_name
+        Glib::ustring& profile_name,
+        bool checkProfile = true
     );
 
 private:

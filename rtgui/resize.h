@@ -14,16 +14,16 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef _RESIZE_H_
-#define _RESIZE_H_
+#pragma once
 
 #include <gtkmm.h>
+
 #include "adjuster.h"
 #include "guiutils.h"
-#include "toolpanel.h"
 #include "guiutils.h"
+#include "toolpanel.h"
 
 class Resize final :
     public ToolParamBlock,
@@ -46,9 +46,10 @@ public:
     void setBatchMode   (bool batchMode) override;
 
     void adjusterChanged  (Adjuster* a, double newval) override;
-    void adjusterAutoToggled(Adjuster* a, bool newval) override;
     void entryWChanged    ();
     void entryHChanged    ();
+    void entryLEChanged   ();
+    void entrySEChanged   ();
     void appliesToChanged ();
     void methodChanged    ();
     void specChanged      ();
@@ -63,29 +64,31 @@ public:
 
 private:
     void fitBoxScale ();
-    int getComputedWidth ();
-    int getComputedHeight ();
+    int getComputedWidth (double height);
+    int getComputedHeight (double width);
     void notifyBBox ();
     void updateGUI ();
     void allowUpscalingChanged();
 
     rtengine::ProcEvent EvResizeAllowUpscaling;
+    rtengine::ProcEvent EvResizeLongedge;
+    rtengine::ProcEvent EvResizeShortedge;
     Adjuster*          scale;
-    Gtk::VBox*         sizeBox;
+    Gtk::Box*          sizeBox;
     MyComboBoxText*    appliesTo;
     MyComboBoxText*    method;
     MyComboBoxText*    spec;
     MySpinButton*      w;
     MySpinButton*      h;
+    MySpinButton*      le;
+    MySpinButton*      se;
     Gtk::CheckButton *allowUpscaling;
     int                maxw, maxh;
     int                cropw, croph;
-    sigc::connection   sconn, aconn, wconn, hconn;
-    bool               wDirty, hDirty;
+    sigc::connection   sconn, aconn, wconn, hconn, leconn, seconn;
+    bool               wDirty, hDirty, leDirty, seDirty;
     ToolParamBlock*    packBox;
     IdleRegister       idle_register;
 
     static constexpr int MAX_SCALE = 16; // 16 to match the main preview max scale of 1600%
 };
-
-#endif

@@ -14,14 +14,20 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "profilepanel.h"
-#include "options.h"
+
 #include "clipboard.h"
 #include "multilangmgr.h"
+#include "options.h"
 #include "profilestorecombobox.h"
+#include "paramsedited.h"
+#include "pathutils.h"
 #include "rtimage.h"
+
+#include "../rtengine/procparams.h"
+#include "../rtengine/procevents.h"
 
 using namespace rtengine;
 using namespace rtengine::procparams;
@@ -39,7 +45,7 @@ void ProfilePanel::cleanup ()
     delete partialProfileDlg;
 }
 
-ProfilePanel::ProfilePanel () : storedPProfile(nullptr), lastFilename(""), imagePath(""), lastSavedPSE(nullptr), customPSE(nullptr)
+ProfilePanel::ProfilePanel () : storedPProfile(nullptr), lastSavedPSE(nullptr), customPSE(nullptr)
 {
 
     tpc = nullptr;
@@ -167,6 +173,7 @@ Gtk::TreeIter ProfilePanel::getLastSavedRow()
 Gtk::TreeIter ProfilePanel::addCustomRow()
 {
     if(customPSE) {
+        profiles->deleteRow(customPSE);
         delete customPSE;
         customPSE = nullptr;
     }
@@ -179,6 +186,7 @@ Gtk::TreeIter ProfilePanel::addCustomRow()
 Gtk::TreeIter ProfilePanel::addLastSavedRow()
 {
     if(lastSavedPSE) {
+        profiles->deleteRow(lastSavedPSE);
         delete lastSavedPSE;
         lastSavedPSE = nullptr;
     }
@@ -265,14 +273,43 @@ void ProfilePanel::restoreValue ()
 
 void ProfilePanel::save_clicked (GdkEventButton* event)
 {
-
     if (event->button != 1) {
         return;
     }
 
-    Gtk::FileChooserDialog dialog (getToplevelWindow (this), M("PROFILEPANEL_SAVEDLGLABEL"), Gtk::FILE_CHOOSER_ACTION_SAVE);
-    bindCurrentFolder (dialog, options.loadSaveProfilePath);
-    dialog.set_current_name (lastFilename);
+    const PartialProfile* toSave;
+
+    if (isCustomSelected()) {
+        toSave = custom;
+    } else if (isLastSavedSelected()) {
+        toSave = lastsaved;
+    } else {
+        const auto entry = profiles->getSelectedEntry();
+        toSave = entry ? ProfileStore::getInstance()->getProfile(entry) : nullptr;
+    }
+
+    // If it's a partial profile, it's more intuitive to first allow the user
+    // to choose which parameters to save before showing the Save As dialog
+    // #5491
+    const auto isPartial = event->state & Gdk::CONTROL_MASK;
+    if (isPartial) {
+        if (!partialProfileDlg) {
+            partialProfileDlg = new PartialPasteDlg(Glib::ustring(), parent);
+        }
+
+        partialProfileDlg->set_title(M("PROFILEPANEL_SAVEPPASTE"));
+        partialProfileDlg->updateSpotWidget(toSave->pparams);
+        const auto response = partialProfileDlg->run();
+        partialProfileDlg->hide();
+
+        if (response != Gtk::RESPONSE_OK) {
+            return;
+        }
+    }
+
+    Gtk::FileChooserDialog dialog(getToplevelWindow(this), M("PROFILEPANEL_SAVEDLGLABEL"), Gtk::FILE_CHOOSER_ACTION_SAVE);
+    bindCurrentFolder(dialog, options.loadSaveProfilePath);
+    dialog.set_current_name(lastFilename);
 
     //Add the user's default (or global if multiuser=false) profile path to the Shortcut list
     try {
@@ -289,100 +326,60 @@ void ProfilePanel::save_clicked (GdkEventButton* event)
     dialog.add_button(M("GENERAL_SAVE"), Gtk::RESPONSE_OK);
 
     //Add filters, so that only certain file types can be selected:
-
-    Glib::RefPtr<Gtk::FileFilter> filter_pp = Gtk::FileFilter::create();
+    auto filter_pp = Gtk::FileFilter::create();
     filter_pp->set_name(M("FILECHOOSER_FILTER_PP"));
     filter_pp->add_pattern("*" + paramFileExtension);
     dialog.add_filter(filter_pp);
 
-    Glib::RefPtr<Gtk::FileFilter> filter_any = Gtk::FileFilter::create();
+    auto filter_any = Gtk::FileFilter::create();
     filter_any->set_name(M("FILECHOOSER_FILTER_ANY"));
     filter_any->add_pattern("*");
     dialog.add_filter(filter_any);
 
-//    dialog.set_do_overwrite_confirmation (true);
-
-    bool done = false;
+    bool done = true;
 
     do {
         if (dialog.run() == Gtk::RESPONSE_OK) {
 
-            dialog.hide();
-
             std::string fname = dialog.get_filename();
-            Glib::ustring ext = getExtension (fname);
 
-            if (("." + ext) != paramFileExtension) {
+            if (("." + getExtension(fname)) != paramFileExtension) {
                 fname += paramFileExtension;
             }
 
-            if (!confirmOverwrite (dialog, fname)) {
+            if (!confirmOverwrite(dialog, fname)) {
                 continue;
             }
 
-            lastFilename = Glib::path_get_basename (fname);
-
-            const PartialProfile* toSave;
-
-            if (isCustomSelected()) {
-                toSave = custom;
-            } else if (isLastSavedSelected()) {
-                toSave = lastsaved;
-            } else {
-                const ProfileStoreEntry* entry = profiles->getSelectedEntry();
-                toSave = entry ? ProfileStore::getInstance()->getProfile (profiles->getSelectedEntry()) : nullptr;
-            }
+            lastFilename = Glib::path_get_basename(fname);
 
             if (toSave) {
-                if (event->state & Gdk::CONTROL_MASK) {
-                    // opening the partial paste dialog window
-                    if(!partialProfileDlg) {
-                        partialProfileDlg = new PartialPasteDlg (Glib::ustring (), parent);
-                    }
-                    partialProfileDlg->set_title(M("PROFILEPANEL_SAVEPPASTE"));
-                    int i = partialProfileDlg->run();
-                    partialProfileDlg->hide();
+                int retCode;
 
-                    if (i != Gtk::RESPONSE_OK) {
-                        return;
-                    }
-
-                    // saving the partial profile
+                if (isPartial) {
+                    // Build partial profile
                     PartialProfile ppTemp(true);
-                    partialProfileDlg->applyPaste (ppTemp.pparams, ppTemp.pedited, toSave->pparams, toSave->pedited);
-                    int retCode = ppTemp.pparams->save (fname, "", true, ppTemp.pedited);
+                    partialProfileDlg->applyPaste(ppTemp.pparams, ppTemp.pedited, toSave->pparams, nullptr);
+                    // Save partial profile
+                    retCode = ppTemp.pparams->save(fname, "", true, ppTemp.pedited);
+                    // Cleanup
                     ppTemp.deleteInstance();
-
-                    if (retCode) {
-                        writeFailed(dialog, fname);
-                    } else {
-                        done = true;
-                        bool ccPrevState = changeconn.block(true);
-                        ProfileStore::getInstance()->parseProfiles();
-                        changeconn.block (ccPrevState);
-                    }
                 } else {
-                    // saving a full profile
-                    int retCode = toSave->pparams->save (fname);
-
-                    if (retCode) {
-                        writeFailed(dialog, fname);
-                    } else {
-                        done = true;
-                        bool ccPrevState = changeconn.block(true);
-                        ProfileStore::getInstance()->parseProfiles();
-                        changeconn.block (ccPrevState);
-                    }
+                    // Save full profile
+                    retCode = toSave->pparams->save(fname);
                 }
-            } else {
-                done = true;
+
+                if (!retCode) {
+                    const auto ccPrevState = changeconn.block(true);
+                    ProfileStore::getInstance()->parseProfiles();
+                    changeconn.block(ccPrevState);
+                } else {
+                    done = false;
+                    writeFailed(dialog, fname);
+                }
             }
-        } else {
-            done = true;
         }
     } while (!done);
-
-    return;
 }
 
 /*
@@ -414,6 +411,7 @@ void ProfilePanel::copy_clicked (GdkEventButton* event)
                 partialProfileDlg = new PartialPasteDlg (Glib::ustring (), parent);
             }
             partialProfileDlg->set_title(M("PROFILEPANEL_COPYPPASTE"));
+            partialProfileDlg->updateSpotWidget(toSave->pparams);
             int i = partialProfileDlg->run();
             partialProfileDlg->hide();
 
@@ -462,7 +460,6 @@ void ProfilePanel::load_clicked (GdkEventButton* event)
     dialog.add_button(M("GENERAL_OPEN"), Gtk::RESPONSE_OK);
 
     //Add filters, so that only certain file types can be selected:
-
     Glib::RefPtr<Gtk::FileFilter> filter_pp = Gtk::FileFilter::create();
     filter_pp->set_name(M("FILECHOOSER_FILTER_PP"));
     filter_pp->add_pattern("*" + paramFileExtension);
@@ -478,20 +475,7 @@ void ProfilePanel::load_clicked (GdkEventButton* event)
 
     if (result == Gtk::RESPONSE_OK) {
         Glib::ustring fname = dialog.get_filename();
-
-        if (event->state & Gdk::CONTROL_MASK) {
-            // opening the partial paste dialog window
-            if(!partialProfileDlg) {
-                partialProfileDlg = new PartialPasteDlg (Glib::ustring (), parent);
-            }
-            partialProfileDlg->set_title(M("PROFILEPANEL_LOADPPASTE"));
-            int i = partialProfileDlg->run();
-            partialProfileDlg->hide();
-
-            if (i != Gtk::RESPONSE_OK) {
-                return;
-            }
-        }
+		printf("fname=%s\n", fname.c_str());
 
         bool customCreated = false;
 
@@ -507,6 +491,9 @@ void ProfilePanel::load_clicked (GdkEventButton* event)
         if (!err) {
             if (!customCreated && fillMode->get_active()) {
                 custom->pparams->setDefaults();
+
+                // Clearing all LocallabSpotEdited to be compliant with default pparams
+                custom->pedited->locallab.spots.clear();
             }
 
             custom->set(true);
@@ -526,6 +513,17 @@ void ProfilePanel::load_clicked (GdkEventButton* event)
                 if(!partialProfileDlg) {
                     partialProfileDlg = new PartialPasteDlg (Glib::ustring (), parent);
                 }
+
+                // opening the partial paste dialog window
+                partialProfileDlg->set_title(M("PROFILEPANEL_LOADPPASTE"));
+                partialProfileDlg->updateSpotWidget(&pp);
+                int i = partialProfileDlg->run();
+                partialProfileDlg->hide();
+
+                if (i != Gtk::RESPONSE_OK) {
+                    return;
+                }
+
                 partialProfileDlg->applyPaste (custom->pparams, !fillMode->get_active() ? custom->pedited : nullptr, &pp, &pe);
             } else {
                 // custom.pparams = loadedFile.pparams filtered by ( loadedFile.pedited )
@@ -533,6 +531,9 @@ void ProfilePanel::load_clicked (GdkEventButton* event)
 
                 if (!fillMode->get_active()) {
                     *custom->pedited = pe;
+                } else {
+                    // Resize custom->pedited to be compliant with pe spot size
+                    custom->pedited->locallab.spots.resize(pe.locallab.spots.size(), LocallabParamsEdited::LocallabSpotEdited(true));
                 }
             }
 
@@ -562,32 +563,27 @@ void ProfilePanel::paste_clicked (GdkEventButton* event)
         return;
     }
 
-    if (event->state & Gdk::CONTROL_MASK) {
-        if(!partialProfileDlg) {
-            partialProfileDlg = new PartialPasteDlg (Glib::ustring (), parent);
-        }
-        partialProfileDlg->set_title(M("PROFILEPANEL_PASTEPPASTE"));
-        int i = partialProfileDlg->run();
-        partialProfileDlg->hide();
-
-        if (i != Gtk::RESPONSE_OK) {
-            return;
-        }
-    }
-
     bool prevState = changeconn.block(true);
 
     if (!custom) {
-        custom = new PartialProfile (true);
+        custom = new PartialProfile (true); // custom pedited is initialized to false
 
         if (isLastSavedSelected()) {
             *custom->pparams = *lastsaved->pparams;
+
+            // Setting LocallabSpotEdited number coherent with spots number in lastsaved->pparams
+            custom->pedited->locallab.spots.clear();
+            custom->pedited->locallab.spots.resize(custom->pparams->locallab.spots.size(), LocallabParamsEdited::LocallabSpotEdited(false));
         } else {
             const ProfileStoreEntry* entry = profiles->getSelectedEntry();
 
             if (entry) {
                 const PartialProfile* partProfile = ProfileStore::getInstance()->getProfile (entry);
                 *custom->pparams = *partProfile->pparams;
+
+                // Setting LocallabSpotEdited number coherent with spots number in partProfile->pparams
+                custom->pedited->locallab.spots.clear();
+                custom->pedited->locallab.spots.resize(custom->pparams->locallab.spots.size(), LocallabParamsEdited::LocallabSpotEdited(false));
             }
         }
 
@@ -596,15 +592,26 @@ void ProfilePanel::paste_clicked (GdkEventButton* event)
     } else {
         if (fillMode->get_active()) {
             custom->pparams->setDefaults();
+
+            // Clear all LocallabSpotEdited to be compliant with default pparams
+            custom->pedited->locallab.spots.clear();
         } else if (!isCustomSelected ()) {
             if (isLastSavedSelected()) {
                 *custom->pparams = *lastsaved->pparams;
+
+                // Setting LocallabSpotEdited number coherent with spots number in lastsaved->pparams
+                custom->pedited->locallab.spots.clear();
+                custom->pedited->locallab.spots.resize(custom->pparams->locallab.spots.size(), LocallabParamsEdited::LocallabSpotEdited(true));
             } else {
                 const ProfileStoreEntry* entry = profiles->getSelectedEntry();
 
                 if (entry) {
                     const PartialProfile* partProfile = ProfileStore::getInstance()->getProfile (entry);
                     *custom->pparams = *partProfile->pparams;
+
+                    // Setting LocallabSpotEdited number coherent with spots number in partProfile->pparams
+                    custom->pedited->locallab.spots.clear();
+                    custom->pedited->locallab.spots.resize(custom->pparams->locallab.spots.size(), LocallabParamsEdited::LocallabSpotEdited(true));
                 }
             }
         }
@@ -631,6 +638,16 @@ void ProfilePanel::paste_clicked (GdkEventButton* event)
             if(!partialProfileDlg) {
                 partialProfileDlg = new PartialPasteDlg (Glib::ustring (), parent);
             }
+
+            partialProfileDlg->set_title(M("PROFILEPANEL_PASTEPPASTE"));
+            partialProfileDlg->updateSpotWidget(&pp);
+            int i = partialProfileDlg->run();
+            partialProfileDlg->hide();
+
+            if (i != Gtk::RESPONSE_OK) {
+                return;
+            }
+
             partialProfileDlg->applyPaste (custom->pparams, !fillMode->get_active() ? custom->pedited : nullptr, &pp, &pe);
         } else {
             // custom.pparams = clipboard.pparams filtered by ( clipboard.pedited )
@@ -638,6 +655,10 @@ void ProfilePanel::paste_clicked (GdkEventButton* event)
 
             if (!fillMode->get_active()) {
                 *custom->pedited = pe;
+            } else {
+                // Setting LocallabSpotEdited number coherent with spots number in custom->pparams
+                custom->pedited->locallab.spots.clear();
+                custom->pedited->locallab.spots.resize(custom->pparams->locallab.spots.size(), LocallabParamsEdited::LocallabSpotEdited(true));
             }
         }
     } else {
@@ -647,10 +668,28 @@ void ProfilePanel::paste_clicked (GdkEventButton* event)
             if(!partialProfileDlg) {
                 partialProfileDlg = new PartialPasteDlg (Glib::ustring (), parent);
             }
+
+            partialProfileDlg->set_title(M("PROFILEPANEL_PASTEPPASTE"));
+            partialProfileDlg->updateSpotWidget(&pp);
+            int i = partialProfileDlg->run();
+            partialProfileDlg->hide();
+
+            if (i != Gtk::RESPONSE_OK) {
+                return;
+            }
+
             partialProfileDlg->applyPaste (custom->pparams, nullptr, &pp, nullptr);
+
+            // Setting LocallabSpotEdited number coherent with spots number in custom->pparams
+            custom->pedited->locallab.spots.clear();
+            custom->pedited->locallab.spots.resize(custom->pparams->locallab.spots.size(), LocallabParamsEdited::LocallabSpotEdited(true));
         } else {
             // custom.pparams = clipboard.pparams non filtered
             *custom->pparams = pp;
+
+            // Setting LocallabSpotEdited number coherent with spots number in custom->pparams
+            custom->pedited->locallab.spots.clear();
+            custom->pedited->locallab.spots.resize(custom->pparams->locallab.spots.size(), LocallabParamsEdited::LocallabSpotEdited(true));
         }
     }
 
@@ -698,6 +737,10 @@ void ProfilePanel::selection_changed ()
         if (s) {
             if (fillMode->get_active() && s->pedited) {
                 ParamsEdited pe(true);
+
+                // Setting LocallabSpotEdited number coherent with spots number in s->pparams
+                pe.locallab.spots.resize(s->pparams->locallab.spots.size(), LocallabParamsEdited::LocallabSpotEdited(true));
+
                 PartialProfile s2(s->pparams, &pe, false);
                 changeTo (&s2, pse->label + "+");
             } else {
@@ -736,6 +779,10 @@ void ProfilePanel::procParamsChanged(
     }
 
     *custom->pparams = *p;
+
+    // Setting LocallabSpotEdited number coherent with spots number in p
+    custom->pedited->locallab.spots.clear();
+    custom->pedited->locallab.spots.resize(p->locallab.spots.size(), LocallabParamsEdited::LocallabSpotEdited(true));
 }
 
 void ProfilePanel::clearParamChanges()
@@ -771,6 +818,8 @@ void ProfilePanel::initProfile (const Glib::ustring& profileFullPath, ProcParams
 
     if (lastSaved) {
         ParamsEdited* pe = new ParamsEdited(true);
+        // Setting LocallabSpotEdited number coherent with lastSaved->locallab spots number (initialized at true such as pe)
+        pe->locallab.spots.resize(lastSaved->locallab.spots.size(), LocallabParamsEdited::LocallabSpotEdited(true));
         // copying the provided last saved profile to ProfilePanel::lastsaved
         lastsaved = new PartialProfile(lastSaved, pe);
     }

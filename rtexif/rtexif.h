@@ -14,26 +14,39 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef _MEXIF3_
-#define _MEXIF3_
+#pragma once
 
-#include <cstdio>
-#include <vector>
-#include <map>
-#include <string>
-#include <sstream>
-#include <iomanip>
-#include <cstdlib>
 #include <cmath>
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
+#include <iomanip>
+#include <map>
 #include <memory>
+#include <sstream>
+#include <string>
+#include <vector>
 
-#include <glibmm.h>
+#include <glibmm/ustring.h>
 
-#include "../rtengine/procparams.h"
 #include "../rtengine/noncopyable.h"
 #include "../rtengine/rawmetadatalocation.h"
+
+namespace Glib
+{
+    class KeyFile;
+}
+namespace rtengine
+{
+
+namespace procparams
+{
+    class ExifPairs;
+}
+
+}
 
 class CacheImageData;
 
@@ -57,7 +70,7 @@ const enum ByteOrder HOSTORDER = MOTOROLA;
 #endif
 enum MNKind {NOMK, IFD, HEADERIFD, NIKON3, OLYMPUS2, FUJI, TABLESUBDIR};
 
-bool extractLensInfo (std::string &fullname, double &minFocal, double &maxFocal, double &maxApertureAtMinFocal, double &maxApertureAtMaxFocal);
+bool extractLensInfo (const std::string &fullname, double &minFocal, double &maxFocal, double &maxApertureAtMinFocal, double &maxApertureAtMaxFocal);
 
 unsigned short sget2 (unsigned char *s, ByteOrder order);
 int sget4 (unsigned char *s, ByteOrder order);
@@ -106,11 +119,12 @@ protected:
     const TagAttrib*  attribs;      // descriptor table to decode the tags
     ByteOrder         order;        // byte order
     TagDirectory*     parent;       // parent directory (NULL if root)
+    bool              parseJPEG;
     static Glib::ustring getDumpKey (int tagID, const Glib::ustring &tagName);
 
 public:
     TagDirectory ();
-    TagDirectory (TagDirectory* p, FILE* f, int base, const TagAttrib* ta, ByteOrder border, bool skipIgnored = true);
+    TagDirectory (TagDirectory* p, FILE* f, int base, const TagAttrib* ta, ByteOrder border, bool skipIgnored = true, bool parseJpeg = true);
     TagDirectory (TagDirectory* p, const TagAttrib* ta, ByteOrder border);
     virtual ~TagDirectory ();
 
@@ -122,17 +136,21 @@ public:
     {
         return parent;
     }
+    inline bool getParseJpeg() const
+    {
+        return parseJPEG;
+    }
     TagDirectory*    getRoot       ();
     inline int       getCount      () const
     {
         return tags.size ();
     }
-    const TagAttrib* getAttrib     (int id);
+    const TagAttrib* getAttrib     (int id) const;
     // Find a Tag by scanning the whole tag tree and stopping at the first occurrence
     const TagAttrib* getAttrib     (const char* name);
     // Try to get the Tag at a given location. 'name' is a path relative to this directory (e.g. "LensInfo/FocalLength")
     const TagAttrib* getAttribP    (const char* name);
-    const TagAttrib* getAttribTable()
+    const TagAttrib* getAttribTable() const
     {
         return attribs;
     }
@@ -145,14 +163,14 @@ public:
     // Try to get the Tag in the current directory and in subdirectories
     // if lookUpward = true, it will scan the parents TagDirectory up to the root one,
     // but w/o looking into their subdirs
-    virtual Tag*     findTag       (const char* name, bool lookUpward = false) const;
+    Tag*     findTag       (const char* name, bool lookUpward = false) const;
     // Find a all Tags with the given name by scanning the whole tag tree
     std::vector<const Tag*> findTags (const char* name);
     // Find a all Tags with the given ID by scanning the whole tag tree
     std::vector<const Tag*> findTags (int ID);
     // Try to get the Tag in the current directory and in parent directories
     // (won't look into subdirs)
-    virtual Tag*     findTagUpward (const char* name) const;
+    Tag*     findTagUpward (const char* name) const;
     bool             getXMPTagValue (const char* name, char* value) const;
 
     void        keepTag       (int ID);
@@ -170,17 +188,17 @@ public:
 
     virtual int      calculateSize ();
     virtual int      write         (int start, unsigned char* buffer);
-    virtual TagDirectory* clone    (TagDirectory* parent);
+    virtual TagDirectory* clone    (TagDirectory* parent) const;
     void     applyChange   (const std::string &field, const Glib::ustring &value);
 
-    virtual void     printAll      (unsigned  int level = 0) const; // reentrant debug function, keep level=0 on first call !
-    virtual bool     CPBDump       (const Glib::ustring &commFName, const Glib::ustring &imageFName, const Glib::ustring &profileFName, const Glib::ustring &defaultPParams,
+    void     printAll      (unsigned  int level = 0) const; // reentrant debug function, keep level=0 on first call !
+    bool     CPBDump       (const Glib::ustring &commFName, const Glib::ustring &imageFName, const Glib::ustring &profileFName, const Glib::ustring &defaultPParams,
                                     const CacheImageData* cfs, const bool flagMode, Glib::KeyFile *keyFile = nullptr, Glib::ustring tagDirName = "") const;
-    virtual void     sort     ();
+    void     sort     ();
 };
 
 // a table of tags: id are offset from beginning and not identifiers
-class TagDirectoryTable: public TagDirectory
+class TagDirectoryTable: public TagDirectory, public rtengine::NonCopyable
 {
 protected:
     unsigned char *values; // Tags values are saved internally here
@@ -194,7 +212,7 @@ public:
     ~TagDirectoryTable() override;
     int calculateSize () override;
     int write (int start, unsigned char* buffer) override;
-    TagDirectory* clone (TagDirectory* parent) override;
+    TagDirectory* clone (TagDirectory* parent) const override;
 };
 
 // a class representing a single tag
@@ -286,13 +304,13 @@ public:
     double  toDouble        (int ofs = 0) const;
     double* toDoubleArray   (int ofs = 0) const;
     void    toRational      (int& num, int& denom, int ofs = 0) const;
-    void    toString        (char* buffer, int ofs = 0) const;
+    void    toString        (char* buffer, std::size_t size, int ofs = 0) const;
     void    fromString      (const char* v, int size = -1);
     void    setInt          (int v, int ofs = 0, TagType astype = LONG);
     int     getDistanceFrom (const TagDirectory *root);
 
     // additional getter/setter for more comfortable use
-    std::string valueToString         ();
+    std::string valueToString         () const;
     std::string nameToString          (int i = 0);
     void        valueFromString       (const std::string& value);
     void        userCommentFromString (const Glib::ustring& text);
@@ -300,10 +318,10 @@ public:
     // functions for writing
     int  calculateSize ();
     int  write         (int offs, int dataOffs, unsigned char* buffer);
-    Tag* clone         (TagDirectory* parent);
+    Tag* clone         (TagDirectory* parent) const;
 
     // to control if the tag shall be written
-    bool getKeep ()
+    bool getKeep () const
     {
         return keep;
     }
@@ -313,7 +331,7 @@ public:
     }
 
     // get subdirectory (there can be several, the last is NULL)
-    bool           isDirectory  ()
+    bool isDirectory () const
     {
         return directory != nullptr;
     }
@@ -322,7 +340,7 @@ public:
         return (directory) ? directory[i] : nullptr;
     }
 
-    MNKind getMakerNoteFormat ()
+    MNKind getMakerNoteFormat () const
     {
         return makerNoteKind;
     }
@@ -333,7 +351,7 @@ class ExifManager
 
     Tag* saveCIFFMNTag (TagDirectory* root, int len, const char* name);
     void parseCIFF (int length, TagDirectory* root);
-    void parse (bool isRaw, bool skipIgnored = true);
+    void parse (bool isRaw, bool skipIgnored = true, bool parseJpeg = true);
 
 public:
     FILE* f;
@@ -371,10 +389,10 @@ class Interpreter
 public:
     Interpreter () {}
     virtual ~Interpreter() {};
-    virtual std::string toString (Tag* t)
+    virtual std::string toString (const Tag* t) const
     {
         char buffer[1024];
-        t->toString (buffer);
+        t->toString (buffer, sizeof(buffer));
         std::string s (buffer);
         std::string::size_type p1 = s.find_first_not_of (' ');
 
@@ -395,7 +413,6 @@ public:
     // Get the value as a double
     virtual double toDouble (const Tag* t, int ofs = 0)
     {
-        double ud, dd;
 
         switch (t->getType()) {
             case SBYTE:
@@ -417,11 +434,17 @@ public:
             case LONG:
                 return (double) ((int)sget4 (t->getValue() + ofs, t->getOrder()));
 
-            case SRATIONAL:
-            case RATIONAL:
-                ud = (int)sget4 (t->getValue() + ofs, t->getOrder());
-                dd = (int)sget4 (t->getValue() + ofs + 4, t->getOrder());
-                return dd == 0. ? 0. : (double)ud / (double)dd;
+            case SRATIONAL: {
+                const double dividend = (int)sget4 (t->getValue() + ofs, t->getOrder());
+                const double divisor = (int)sget4 (t->getValue() + ofs + 4, t->getOrder());
+                return divisor == 0. ? 0. : dividend / divisor;
+            }
+
+            case RATIONAL: {
+                const double dividend = (uint32_t)sget4 (t->getValue() + ofs, t->getOrder());
+                const double divisor = (uint32_t)sget4 (t->getValue() + ofs + 4, t->getOrder());
+                return divisor == 0. ? 0. : dividend / divisor;
+            }
 
             case FLOAT:
                 return double (sget4 (t->getValue() + ofs, t->getOrder()));
@@ -436,8 +459,6 @@ public:
     // Get the value as an int
     virtual int toInt (const Tag* t, int ofs = 0, TagType astype = INVALID)
     {
-        int a;
-
         if (astype == INVALID || astype == AUTO) {
             astype = t->getType();
         }
@@ -462,10 +483,15 @@ public:
             case LONG:
                 return (int)sget4 (t->getValue() + ofs, t->getOrder());
 
-            case SRATIONAL:
-            case RATIONAL:
-                a = (int)sget4 (t->getValue() + ofs + 4, t->getOrder());
+            case SRATIONAL: {
+                int a = (int)sget4 (t->getValue() + ofs + 4, t->getOrder());
                 return a == 0 ? 0 : (int)sget4 (t->getValue() + ofs, t->getOrder()) / a;
+            }
+
+            case RATIONAL: {
+                uint32_t a = (uint32_t)sget4 (t->getValue() + ofs + 4, t->getOrder());
+                return a == 0 ? 0 : (uint32_t)sget4 (t->getValue() + ofs, t->getOrder()) / a;
+            }
 
             case FLOAT:
                 return (int)toDouble (t, ofs);
@@ -482,22 +508,26 @@ public:
 };
 
 extern Interpreter stdInterpreter;
+
+template<typename T = std::uint32_t>
 class ChoiceInterpreter : public Interpreter
 {
 protected:
-    std::map<int, std::string> choices;
+    using Choices = std::map<T, std::string>;
+    using ChoicesIterator = typename Choices::const_iterator;
+    Choices choices;
 public:
     ChoiceInterpreter () {};
-    std::string toString (Tag* t) override
+    std::string toString (const Tag* t) const override
     {
-        std::map<int, std::string>::iterator r = choices.find (t->toInt());
+        const typename std::map<T, std::string>::const_iterator r = choices.find(t->toInt());
 
         if (r != choices.end()) {
             return r->second;
         } else {
             char buffer[1024];
-            t->toString (buffer);
-            return std::string (buffer);
+            t->toString(buffer, sizeof(buffer));
+            return buffer;
         }
     }
 };
@@ -507,11 +537,11 @@ class IntLensInterpreter : public Interpreter
 {
 protected:
     typedef std::multimap< T, std::string> container_t;
-    typedef typename std::multimap< T, std::string>::iterator it_t;
+    typedef typename std::multimap< T, std::string>::const_iterator it_t;
     typedef std::pair< T, std::string> p_t;
     container_t choices;
 
-    virtual std::string guess (const T lensID, double focalLength, double maxApertureAtFocal, double *lensInfoArray)
+    virtual std::string guess (const T lensID, double focalLength, double maxApertureAtFocal, double *lensInfoArray) const
     {
         it_t r;
         size_t nFound = choices.count ( lensID );
@@ -672,5 +702,5 @@ extern const TagAttrib kodakIfdAttribs[];
 void parseKodakIfdTextualInfo (Tag *textualInfo, Tag* exif);
 extern const TagAttrib panasonicAttribs[];
 extern const TagAttrib panasonicRawAttribs[];
+
 }
-#endif

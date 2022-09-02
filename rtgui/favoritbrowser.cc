@@ -14,19 +14,21 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include <favoritbrowser.h>
 #include "multilangmgr.h"
 #include "rtimage.h"
 
-FavoritBrowser::FavoritBrowser () : listener (NULL), lastSelectedDir ("")
+FavoritBrowser::FavoritBrowser () : listener (NULL)
 {
+    set_orientation(Gtk::ORIENTATION_VERTICAL);
 
     scrollw = Gtk::manage (new Gtk::ScrolledWindow ());
     scrollw->set_policy (Gtk::POLICY_NEVER, Gtk::POLICY_AUTOMATIC);
 
     Gtk::Frame* frame = Gtk::manage (new Gtk::Frame ("Favorite Folders"));
+    frame->set_label_align(0.025, 0.5);
     frame->add (*scrollw);
 
     pack_start (*frame);
@@ -65,7 +67,7 @@ FavoritBrowser::FavoritBrowser () : listener (NULL), lastSelectedDir ("")
     del->set_valign(Gtk::ALIGN_START);
     del->set_image (*Gtk::manage (new RTImage ("remove-small.png")));
     del->get_style_context()->add_class("Right");
-    Gtk::HBox* buttonBox = Gtk::manage (new Gtk::HBox ());
+    Gtk::Box* buttonBox = Gtk::manage (new Gtk::Box ());
     buttonBox->pack_start (*add);
     buttonBox->pack_start (*del);
 
@@ -97,7 +99,7 @@ void FavoritBrowser::dirSelected (const Glib::ustring& dirname, const Glib::ustr
 void FavoritBrowser::addPressed ()
 {
 
-    if (lastSelectedDir == "") {
+    if (lastSelectedDir.empty()) {
         return;
     }
 

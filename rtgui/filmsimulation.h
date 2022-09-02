@@ -1,14 +1,17 @@
-#ifndef FILM_SIMULATION_INCLUDED
-#define FILM_SIMULATION_INCLUDED
+#pragma once
+
+#include <memory>
 
 #include <gtkmm.h>
-#include <glibmm.h>
-#include <memory>
-#include "toolpanel.h"
-#include "guiutils.h"
-#include "adjuster.h"
 
-class ClutComboBox : public MyComboBox
+#include <glibmm/ustring.h>
+
+#include "adjuster.h"
+#include "guiutils.h"
+#include "toolpanel.h"
+
+class ClutComboBox final :
+    public MyComboBox
 {
 public:
     explicit ClutComboBox(const Glib::ustring &path);
@@ -17,6 +20,8 @@ public:
     Glib::ustring getSelectedClut();
     void setSelectedClut( Glib::ustring filename );
     void setBatchMode(bool yes);
+
+    static void cleanup();
 
 private:
     void updateUnchangedEntry(); // in batchMode we need to add an extra entry "(Unchanged)". We do this whenever the widget is mapped (connecting to signal_map()), unless options.multiDisplayMode (see the comment below about cm2 in this case)
@@ -54,7 +59,6 @@ public:
     FilmSimulation();
 
     void adjusterChanged(Adjuster* a, double newval) override;
-    void adjusterAutoToggled(Adjuster* a, bool newval) override;
     void setBatchMode(bool batchMode) override;
     void read(const rtengine::procparams::ProcParams* pp, const ParamsEdited* pedited = nullptr) override;
     void write(rtengine::procparams::ProcParams* pp, ParamsEdited* pedited = nullptr) override;
@@ -73,5 +77,3 @@ private:
 
     Adjuster *m_strength;
 };
-
-#endif

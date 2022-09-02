@@ -14,7 +14,7 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #pragma once
@@ -24,6 +24,10 @@
 namespace rtengine
 {
 void findMinMaxPercentile(const float* data, size_t size, float minPrct, float& minOut, float maxPrct, float& maxOut, bool multiThread = true);
-void buildBlendMask(float** luminance, float **blend, int W, int H, float &contrastThreshold, float amount = 1.f, bool autoContrast = false);
-int calcContrastThreshold(float** luminance, float **blend, int W, int H);
+void buildBlendMask(const float* const * luminance, float **blend, int W, int H, float &contrastThreshold, bool autoContrast = false, float ** clipmask = nullptr);
+// implemented in tmo_fattal02
+void buildGradientsMask(int W, int H, float **luminance, float **out, 
+                        float amount, int nlevels, int detail_level,
+                        float alfa, float beta, bool multithread);
+double accumulateProduct(const float* data1, const float* data2, size_t n, bool multiThread = true);
 }

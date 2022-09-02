@@ -14,75 +14,73 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include "flatfield.h"
-#include "options.h"
-#include "guiutils.h"
 #include <sstream>
+
+#include "flatfield.h"
+
+#include "guiutils.h"
+#include "options.h"
 #include "rtimage.h"
+
+#include "../rtengine/procparams.h"
+#include "../rtengine/rawimage.h"
 
 using namespace rtengine;
 using namespace rtengine::procparams;
 
 FlatField::FlatField () : FoldableToolPanel(this, "flatfield", M("TP_FLATFIELD_LABEL"))
 {
-    hbff = Gtk::manage(new Gtk::HBox());
-    hbff->set_spacing(2);
+    hbff = Gtk::manage(new Gtk::Box());
     flatFieldFile = Gtk::manage(new MyFileChooserButton(M("TP_FLATFIELD_LABEL"), Gtk::FILE_CHOOSER_ACTION_OPEN));
     bindCurrentFolder (*flatFieldFile, options.lastFlatfieldDir);
     ffLabel = Gtk::manage(new Gtk::Label(M("GENERAL_FILE")));
     flatFieldFileReset = Gtk::manage(new Gtk::Button());
     flatFieldFileReset->set_image (*Gtk::manage(new RTImage ("cancel-small.png")));
-    hbff->pack_start(*ffLabel, Gtk::PACK_SHRINK, 0);
+    hbff->pack_start(*ffLabel, Gtk::PACK_SHRINK);
     hbff->pack_start(*flatFieldFile);
-    hbff->pack_start(*flatFieldFileReset, Gtk::PACK_SHRINK, 0);
+    hbff->pack_start(*flatFieldFileReset, Gtk::PACK_SHRINK);
     flatFieldAutoSelect = Gtk::manage(new Gtk::CheckButton((M("TP_FLATFIELD_AUTOSELECT"))));
-    ffInfo = Gtk::manage(new Gtk::Label(""));
-    ffInfo->set_alignment(0, 0); //left align
+    ffInfo = Gtk::manage(new Gtk::Label("-"));
+    setExpandAlignProperties(ffInfo, true, false, Gtk::ALIGN_CENTER, Gtk::ALIGN_CENTER);
     flatFieldBlurRadius = Gtk::manage(new Adjuster (M("TP_FLATFIELD_BLURRADIUS"), 0, 200, 2, 32));
     flatFieldBlurRadius->setAdjusterListener (this);
 
-    if (flatFieldBlurRadius->delay < options.adjusterMaxDelay) {
-        flatFieldBlurRadius->delay = options.adjusterMaxDelay;
-    }
+    flatFieldBlurRadius->setDelay(std::max(options.adjusterMinDelay, options.adjusterMaxDelay));
 
     flatFieldBlurRadius->show();
 
-    Gtk::HBox* hbffbt = Gtk::manage (new Gtk::HBox ());
-    hbffbt->pack_start (*Gtk::manage (new Gtk::Label ( M("TP_FLATFIELD_BLURTYPE") + ":")));
-    hbffbt->set_spacing(4);
+    Gtk::Box* hbffbt = Gtk::manage (new Gtk::Box ());
+    hbffbt->pack_start (*Gtk::manage (new Gtk::Label ( M("TP_FLATFIELD_BLURTYPE") + ":")), Gtk::PACK_SHRINK);
     flatFieldBlurType = Gtk::manage (new MyComboBoxText ());
     flatFieldBlurType->append(M("TP_FLATFIELD_BT_AREA"));
     flatFieldBlurType->append(M("TP_FLATFIELD_BT_VERTICAL"));
     flatFieldBlurType->append(M("TP_FLATFIELD_BT_HORIZONTAL"));
     flatFieldBlurType->append(M("TP_FLATFIELD_BT_VERTHORIZ"));
     flatFieldBlurType->set_active(0);
-    hbffbt->pack_end (*flatFieldBlurType);
+    hbffbt->pack_end (*flatFieldBlurType, Gtk::PACK_EXPAND_WIDGET);
 
     flatFieldClipControl = Gtk::manage (new Adjuster(M("TP_FLATFIELD_CLIPCONTROL"), 0., 100., 1., 0.));
     flatFieldClipControl->setAdjusterListener(this);
     flatFieldClipControl->addAutoButton("");
 
-    if (flatFieldClipControl->delay < options.adjusterMaxDelay) {
-        flatFieldClipControl->delay = options.adjusterMaxDelay;
-    }
+    flatFieldClipControl->setDelay(std::max(options.adjusterMinDelay, options.adjusterMaxDelay));
 
     flatFieldClipControl->show();
     flatFieldClipControl->set_tooltip_markup (M("TP_FLATFIELD_CLIPCONTROL_TOOLTIP"));
 
-    pack_start( *hbff, Gtk::PACK_SHRINK, 0);
-    pack_start( *flatFieldAutoSelect, Gtk::PACK_SHRINK, 0);
-    pack_start( *ffInfo, Gtk::PACK_SHRINK, 0);
-    pack_start( *hbffbt, Gtk::PACK_SHRINK, 0);
-    pack_start( *flatFieldBlurRadius, Gtk::PACK_SHRINK, 0);
-    pack_start( *flatFieldClipControl, Gtk::PACK_SHRINK, 0);
+    pack_start( *hbff, Gtk::PACK_SHRINK);
+    pack_start( *flatFieldAutoSelect, Gtk::PACK_SHRINK);
+    pack_start( *ffInfo, Gtk::PACK_SHRINK);
+    pack_start( *hbffbt, Gtk::PACK_SHRINK);
+    pack_start( *flatFieldBlurRadius, Gtk::PACK_SHRINK);
+    pack_start( *flatFieldClipControl, Gtk::PACK_SHRINK);
 
     flatFieldFileconn = flatFieldFile->signal_file_set().connect ( sigc::mem_fun(*this, &FlatField::flatFieldFileChanged)); //, true);
     flatFieldFileReset->signal_clicked().connect( sigc::mem_fun(*this, &FlatField::flatFieldFile_Reset), true );
     flatFieldAutoSelectconn = flatFieldAutoSelect->signal_toggled().connect ( sigc::mem_fun(*this, &FlatField::flatFieldAutoSelectChanged), true);
     flatFieldBlurTypeconn = flatFieldBlurType->signal_changed().connect( sigc::mem_fun(*this, &FlatField::flatFieldBlurTypeChanged) );
-    lastShortcutPath = "";
 
     // Set filename filters
     b_filter_asCurrent = false;
@@ -166,7 +164,7 @@ void FlatField::read(const rtengine::procparams::ProcParams* pp, const ParamsEdi
             ffInfo->set_text(Glib::ustring(M("TP_PREPROCESS_NO_FOUND")));
         }
     } else {
-        ffInfo->set_text("");
+        ffInfo->set_text("-");
     }
 
     ffChanged = false;
@@ -188,7 +186,7 @@ void FlatField::read(const rtengine::procparams::ProcParams* pp, const ParamsEdi
         Glib::ustring fname = Glib::path_get_basename(ffp->GetCurrentImageFilePath());
         Glib::ustring filetype;
 
-        if (fname != "") {
+        if (!fname.empty()) {
             // get image filetype, set filter to the same as current image's filetype
             std::string::size_type idx;
             idx = fname.rfind('.');
@@ -250,7 +248,7 @@ void FlatField::adjusterChanged(Adjuster* a, double newval)
     }
 }
 
-void FlatField::adjusterAutoToggled (Adjuster* a, bool newval)
+void FlatField::adjusterAutoToggled (Adjuster* a)
 {
     if (multiImage) {
         if (flatFieldClipControl->getAutoInconsistent()) {
@@ -331,7 +329,7 @@ void FlatField::flatFieldFile_Reset()
         flatFieldFile->set_current_folder(options.lastFlatfieldDir);
     }
 
-    ffInfo->set_text("");
+    ffInfo->set_text("-");
 
     if (listener) {
         listener->panelChanged (EvFlatFieldFile, M("GENERAL_NONE") );
@@ -381,7 +379,7 @@ void FlatField::flatFieldAutoSelectChanged()
             ffInfo->set_text(Glib::ustring(M("TP_PREPROCESS_NO_FOUND")));
         }
     } else {
-        ffInfo->set_text("");
+        ffInfo->set_text("-");
     }
 
     if (listener) {
@@ -411,19 +409,13 @@ void FlatField::setShortcutPath(const Glib::ustring& path)
 
 void FlatField::flatFieldAutoClipValueChanged(int n)
 {
-    struct Data {
-        FlatField *me;
-        int n;
-    };
-    const auto func = [](gpointer data) -> gboolean {
-        Data *d = static_cast<Data *>(data);
-        FlatField *me = d->me;
-        me->disableListener();
-        me->flatFieldClipControl->setValue (d->n);
-        me->enableListener();
-        delete d;
-        return FALSE;
-    };
-
-    idle_register.add(func, new Data { this, n });
+    idle_register.add(
+        [this, n]() -> bool
+        {
+            disableListener();
+            flatFieldClipControl->setValue(n);
+            enableListener();
+            return false;
+        }
+    );
 }

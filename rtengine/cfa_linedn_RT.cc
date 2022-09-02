@@ -18,13 +18,12 @@
 //  GNU General Public License for more details.
 //
 //  You should have received a copy of the GNU General Public License
-//  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+//  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //
 ////////////////////////////////////////////////////////////////
 
 #include <cmath>
 
-#include "rtengine.h"
 #include "rawimagesource.h"
 #include "rt_math.h"
 
@@ -54,17 +53,19 @@ void RawImageSource::CLASS cfa_linedn(float noise, bool horizontal, bool vertica
 
     // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+    double progress = 0.0;
     if (plistener) {
-        plistener->setProgressStr ("Line Denoise...");
-        plistener->setProgress (0.0);
+        plistener->setProgressStr("PROGRESSBAR_LINEDENOISE");
+        plistener->setProgress(progress);
     }
 
     // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     float noisevar = SQR(3 * noise * 65535); // _noise_ (as a fraction of saturation) is input to the algorithm
     float noisevarm4 = 4.0f * noisevar;
-    volatile double progress = 0.0;
-    float* RawDataTmp = (float*)malloc( width * height * sizeof(float));
+    float* RawDataTmp = (float*)malloc(static_cast<unsigned long>(width) * height * sizeof(float));
+#ifdef _OPENMP
     #pragma omp parallel
+#endif
     {
 
         // allocate memory and assure the arrays don't have same 64 byte boundary to avoid L1 conflict misses
@@ -76,7 +77,9 @@ void RawImageSource::CLASS cfa_linedn(float noise, bool horizontal, bool vertica
         float linehvar[4], linevvar[4], noisefactor[4][8][2], coeffsq;
         float dctblock[4][8][8];
 
+#ifdef _OPENMP
         #pragma omp for
+#endif
 
         for(int i = 0; i < height; i++)
             for(int j = 0; j < width; j++) {
@@ -84,7 +87,9 @@ void RawImageSource::CLASS cfa_linedn(float noise, bool horizontal, bool vertica
             }
 
         // Main algorithm: Tile loop
+#ifdef _OPENMP
         #pragma omp for schedule(dynamic) collapse(2)
+#endif
 
         for (int top = 0; top < height - 16; top += TS - 32)
             for (int left = 0; left < width - 16; left += TS - 32) {
@@ -251,7 +256,9 @@ void RawImageSource::CLASS cfa_linedn(float noise, bool horizontal, bool vertica
         free(cfain);
 
 // copy temporary buffer back to image matrix
+#ifdef _OPENMP
         #pragma omp for schedule(dynamic,16)
+#endif
 
         for(int i = 0; i < height; i++) {
             float f = rowblender(i);

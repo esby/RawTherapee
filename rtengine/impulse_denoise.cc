@@ -12,7 +12,7 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  *
  *  2010 Emil Martinec <ejmartin@uchicago.edu>
  *
@@ -22,7 +22,7 @@
 #include "labimage.h"
 #include "improcfun.h"
 #include "cieimage.h"
-#include "sleef.c"
+#include "sleef.h"
 #include "opthelper.h"
 #include "gauss.h"
 
@@ -322,7 +322,7 @@ void ImProcFunctions::impulse_nrcam (CieImage* ncie, double thresh, float **buff
                         hfnbrave += fabs(ncie->sh_p[i1][j1] - lpf[i1][j1]);
                     }
 
-                impish[i][j] = (hpfabs > ((hfnbrave - hpfabs) * impthrDiv24));
+                impish[i][j] = static_cast<float>(hpfabs > ((hfnbrave - hpfabs) * impthrDiv24));
             }
 
 #ifdef __SSE2__
@@ -353,7 +353,7 @@ void ImProcFunctions::impulse_nrcam (CieImage* ncie, double thresh, float **buff
                         hfnbrave += fabs(ncie->sh_p[i1][j1] - lpf[i1][j1]);
                     }
 
-                impish[i][j] = (hpfabs > ((hfnbrave - hpfabs) * impthrDiv24));
+                impish[i][j] = static_cast<float>(hpfabs > ((hfnbrave - hpfabs) * impthrDiv24));
             }
 
             for (; j < width; j++) {
@@ -365,7 +365,7 @@ void ImProcFunctions::impulse_nrcam (CieImage* ncie, double thresh, float **buff
                         hfnbrave += fabs(ncie->sh_p[i1][j1] - lpf[i1][j1]);
                     }
 
-                impish[i][j] = (hpfabs > ((hfnbrave - hpfabs) * impthrDiv24));
+                impish[i][j] = static_cast<float>(hpfabs > ((hfnbrave - hpfabs) * impthrDiv24));
             }
         }
     }

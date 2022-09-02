@@ -14,20 +14,21 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef _CURVEEDITORGROUP_
-#define _CURVEEDITORGROUP_
+#pragma once
 
-#include <gtkmm.h>
 #include <fstream>
 #include <string>
+
+#include <gtkmm.h>
+
 #include "guiutils.h"
 #include "mycurve.h"
-#include "myflatcurve.h"
-#include "mydiagonalcurve.h"
 #include "shcselector.h"
-#include "adjuster.h"
+
+#include "../rtengine/diagonalcurvetypes.h"
+#include "../rtengine/flatcurvetypes.h"
 
 class CurveEditor;
 class DiagonalCurveEditorSubGroup;
@@ -39,7 +40,7 @@ class FlatCurveEditorSubGroup;
  * - to start a new line of curve button, use the 'newLine' method
  * - if you add more than one curve, you must add a "CurveEditor* ce" parameter to your listener
  */
-class CurveEditorGroup : public Gtk::Grid, public CurveListener
+class CurveEditorGroup final : public Gtk::Grid, public CurveListener
 {
 
     friend class CurveEditor;
@@ -70,7 +71,7 @@ public:
      *                 dialogs.
      */
 
-    CurveEditorGroup(Glib::ustring& curveDir, Glib::ustring groupLabel = "");
+    explicit CurveEditorGroup(Glib::ustring& curveDir, Glib::ustring groupLabel = "", int blank = 0);
     ~CurveEditorGroup() override;
     void newLine();
     void curveListComplete();
@@ -136,6 +137,7 @@ public:
     }
     void updateEditButton(CurveEditor* curve, Gtk::ToggleButton *button, sigc::connection &connection);
     virtual void updateBackgroundHistogram (CurveEditor* ce) {}
+    virtual void updateLocallabBackground(CurveEditor* ce) {};
     virtual void switchGUI() = 0;
     virtual void refresh(CurveEditor *curveToRefresh) = 0;
     virtual void editModeSwitchedOff() = 0;
@@ -165,9 +167,8 @@ protected:
     virtual void storeCurveValues (CurveEditor* ce, const std::vector<double>& p) = 0;
     virtual void storeDisplayedCurve () = 0;
     virtual void restoreDisplayedHistogram() {};
+    virtual void restoreLocallabBackground() {};
     virtual void removeEditor () = 0;
     virtual const std::vector<double> getCurveFromGUI (int type) = 0;
 
 };
-
-#endif

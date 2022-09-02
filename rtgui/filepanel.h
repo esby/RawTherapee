@@ -14,38 +14,41 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef _FILEPANEL_
-#define _FILEPANEL_
+#pragma once
 
 #include <gtkmm.h>
-#include "batchtoolpanelcoord.h"
-#include "filecatalog.h"
-#include "dirbrowser.h"
-#include "fileselectionlistener.h"
-#include "placesbrowser.h"
-#include "recentbrowser.h"
-#include "pparamschangelistener.h"
-#include "history.h"
-#include "filterpanel.h"
-#include "exportpanel.h"
-#include "progressconnector.h"
 
+#include "exportpanel.h"
+#include "filecatalog.h"
+#include "fileselectionlistener.h"
+#include "filterpanel.h"
+#include "history.h"
+#include "placesbrowser.h"
+#include "pparamschangelistener.h"
+#include "progressconnector.h"
+#include "recentbrowser.h"
+
+#include "../rtengine/noncopyable.h"
+
+class BatchToolPanelCoordinator;
 class RTWindow;
+class DirBrowser;
 
 class FilePanel final :
-    public Gtk::HPaned,
-    public FileSelectionListener
+    public Gtk::Paned,
+    public FileSelectionListener,
+    public rtengine::NonCopyable
 {
 public:
     FilePanel ();
     ~FilePanel () override;
 
     Gtk::Paned* placespaned;
-    Gtk::HPaned* dirpaned;
+    Gtk::Paned* dirpaned;
 
-    Gtk::HBox* rightBox;
+    Gtk::Box* rightBox;
 
     DirBrowser* dirBrowser;
     FilterPanel* filterPanel;
@@ -79,6 +82,7 @@ public:
     bool imageLoaded( Thumbnail* thm, ProgressConnector<rtengine::InitialImage*> * );
 
     bool handleShortcutKey (GdkEventKey* event);
+    bool handleShortcutKeyRelease(GdkEventKey *event);
     void updateTPVScrollbar (bool hide);
 
 private:
@@ -88,7 +92,7 @@ private:
     RecentBrowser* recentBrowser;
 
     Inspector* inspectorPanel;
-    Gtk::VPaned* tpcPaned;
+    Gtk::Paned* tpcPaned;
     BatchToolPanelCoordinator* tpc;
     History* history;
     RTWindow* parent;
@@ -107,6 +111,3 @@ private:
 
     IdleRegister idle_register;
 };
-
-#endif
-

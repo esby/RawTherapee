@@ -2,16 +2,33 @@
  *  This file is part of RawTherapee.
  */
 #include "gradient.h"
+
+#include "editwidgets.h"
 #include "rtimage.h"
+
+#include "../rtengine/procparams.h"
 #include "../rtengine/rt_math.h"
 
 using namespace rtengine;
 using namespace rtengine::procparams;
 
+namespace
+{
+
+enum GeometryIndex {
+    H_LINE,
+    V_LINE,
+    FEATHER_LINE_1,
+    FEATHER_LINE_2,
+    CENTER_CIRCLE,
+};
+
+}
+
 Gradient::Gradient () : FoldableToolPanel(this, "gradient", M("TP_GRADIENT_LABEL"), false, true), EditSubscriber(ET_OBJECTS), lastObject(-1), draggedPointOldAngle(-1000.)
 {
 
-    editHBox = Gtk::manage (new Gtk::HBox());
+    editHBox = Gtk::manage (new Gtk::Box());
     edit = Gtk::manage (new Gtk::ToggleButton());
     edit->get_style_context()->add_class("independent");
     edit->add (*Gtk::manage (new RTImage ("crosshair-adjust.png")));
@@ -89,7 +106,7 @@ Gradient::Gradient () : FoldableToolPanel(this, "gradient", M("TP_GRADIENT_LABEL
     centerCircle = new Circle();
     centerCircle->datum = Geometry::IMAGE;
     centerCircle->radiusInImageSpace = false;
-    centerCircle->radius = 30;
+    centerCircle->radius = 12;
     centerCircle->filled = true;
 
     EditSubscriber::mouseOverGeometry.push_back( hLine );
@@ -147,6 +164,8 @@ void Gradient::updateGeometry(const int centerX, const int centerY, const double
 
     int imW=0;
     int imH=0;
+	
+	
     if (fullWidth != -1 && fullHeight != -1) {
         imW = fullWidth;
         imH = fullHeight;
@@ -160,7 +179,7 @@ void Gradient::updateGeometry(const int centerX, const int centerY, const double
     const auto decay = feather * rtengine::norm2<double> (imW, imH) / 200.0;
     rtengine::Coord origin (imW / 2 + centerX * imW / 200, imH / 2 + centerY * imH / 200);
 
-    const auto updateLine = [&](Geometry* geometry, const float radius, const float begin, const float end)
+    const auto updateLine = [&](Geometry* geometry, const double radius, const double begin, const double end)
     {
         const auto line = static_cast<Line*>(geometry);
         line->begin = PolarCoord(radius, -degree + begin);
@@ -169,7 +188,7 @@ void Gradient::updateGeometry(const int centerX, const int centerY, const double
         line->end += origin;
     };
 
-    const auto updateLineWithDecay = [&](Geometry* geometry, const float radius, const float offSetAngle)
+    const auto updateLineWithDecay = [&](Geometry* geometry, const double radius, const double offSetAngle)
     {
         const auto line = static_cast<Line*>(geometry);
         line->begin = PolarCoord (radius, -degree + 180.) + PolarCoord (decay, -degree + offSetAngle);
@@ -185,24 +204,24 @@ void Gradient::updateGeometry(const int centerX, const int centerY, const double
     };
 
     // update horizontal line
-    updateLine (visibleGeometry.at(0), 1500., 0., 180.);
-    updateLine (mouseOverGeometry.at(0), 1500., 0., 180.);
+    updateLine (visibleGeometry.at(H_LINE), 1500., 0., 180.);
+    updateLine (mouseOverGeometry.at(H_LINE), 1500., 0., 180.);
 
     // update vertical line
-    updateLine (visibleGeometry.at(1), 700., 90., 270.);
-    updateLine (mouseOverGeometry.at(1), 700., 90., 270.);
+    updateLine (visibleGeometry.at(V_LINE), 700., 90., 270.);
+    updateLine (mouseOverGeometry.at(V_LINE), 700., 90., 270.);
 
     // update upper feather line
-    updateLineWithDecay (visibleGeometry.at(2), 350., 270.);
-    updateLineWithDecay (mouseOverGeometry.at(2), 350., 270.);
+    updateLineWithDecay (visibleGeometry.at(FEATHER_LINE_1), 350., 270.);
+    updateLineWithDecay (mouseOverGeometry.at(FEATHER_LINE_1), 350., 270.);
 
     // update lower feather line
-    updateLineWithDecay (visibleGeometry.at(3), 350., 90.);
-    updateLineWithDecay (mouseOverGeometry.at(3), 350., 90.);
+    updateLineWithDecay (visibleGeometry.at(FEATHER_LINE_2), 350., 90.);
+    updateLineWithDecay (mouseOverGeometry.at(FEATHER_LINE_2), 350., 90.);
 
     // update circle's position
-    updateCircle (visibleGeometry.at(4));
-    updateCircle (mouseOverGeometry.at(4));
+    updateCircle (visibleGeometry.at(CENTER_CIRCLE));
+    updateCircle (mouseOverGeometry.at(CENTER_CIRCLE));
 }
 
 void Gradient::write (ProcParams* pp, ParamsEdited* pedited)
@@ -265,10 +284,6 @@ void Gradient::adjusterChanged(Adjuster* a, double newval)
     }
 }
 
-void Gradient::adjusterAutoToggled(Adjuster* a, bool newval)
-{
-}
-
 void Gradient::enabledChanged ()
 {
 
@@ -323,19 +338,20 @@ void Gradient::editToggled ()
     if (edit->get_active()) {
         subscribe();
     } else {
+        releaseEdit();
         unsubscribe();
     }
 }
 
-CursorShape Gradient::getCursor(const int objectID)
+CursorShape Gradient::getCursor(int objectID, int xPos, int yPos) const
 {
     switch (objectID) {
-    case (0):
-    case (1):
+    case (H_LINE):
+    case (V_LINE):
         return CSMoveRotate;
 
-    case (2):
-    case (3): {
+    case (FEATHER_LINE_1):
+    case (FEATHER_LINE_2): {
         int angle = degree->getIntValue();
 
         if (angle < -135 || (angle >= -45 && angle <= 45) || angle > 135) {
@@ -345,7 +361,7 @@ CursorShape Gradient::getCursor(const int objectID)
         return CSMove1DH;
     }
 
-    case (4):
+    case (CENTER_CIRCLE):
         return CSMove2D;
 
     default:
@@ -353,37 +369,37 @@ CursorShape Gradient::getCursor(const int objectID)
     }
 }
 
-bool Gradient::mouseOver(const int modifierKey)
+bool Gradient::mouseOver(int modifierKey)
 {
     EditDataProvider* editProvider = getEditProvider();
 
-    if (editProvider && editProvider->object != lastObject) {
+    if (editProvider && editProvider->getObject() != lastObject) {
         if (lastObject > -1) {
-            if (lastObject == 2 || lastObject == 3) {
-                EditSubscriber::visibleGeometry.at(2)->state = Geometry::NORMAL;
-                EditSubscriber::visibleGeometry.at(3)->state = Geometry::NORMAL;
+            if (lastObject == FEATHER_LINE_1 || lastObject == FEATHER_LINE_2) {
+                EditSubscriber::visibleGeometry.at(FEATHER_LINE_1)->state = Geometry::NORMAL;
+                EditSubscriber::visibleGeometry.at(FEATHER_LINE_2)->state = Geometry::NORMAL;
             } else {
                 EditSubscriber::visibleGeometry.at(lastObject)->state = Geometry::NORMAL;
             }
         }
 
-        if (editProvider->object > -1) {
-            if (editProvider->object == 2 || editProvider->object == 3) {
-                EditSubscriber::visibleGeometry.at(2)->state = Geometry::PRELIGHT;
-                EditSubscriber::visibleGeometry.at(3)->state = Geometry::PRELIGHT;
+        if (editProvider->getObject() > -1) {
+            if (editProvider->getObject() == FEATHER_LINE_1 || editProvider->getObject() == FEATHER_LINE_2) {
+                EditSubscriber::visibleGeometry.at(FEATHER_LINE_1)->state = Geometry::PRELIGHT;
+                EditSubscriber::visibleGeometry.at(FEATHER_LINE_2)->state = Geometry::PRELIGHT;
             } else {
-                EditSubscriber::visibleGeometry.at(editProvider->object)->state = Geometry::PRELIGHT;
+                EditSubscriber::visibleGeometry.at(editProvider->getObject())->state = Geometry::PRELIGHT;
             }
         }
 
-        lastObject = editProvider->object;
+        lastObject = editProvider->getObject();
         return true;
     }
 
     return false;
 }
 
-bool Gradient::button1Pressed(const int modifierKey)
+bool Gradient::button1Pressed(int modifierKey)
 {
     if (lastObject < 0) {
         return false;
@@ -412,7 +428,7 @@ bool Gradient::button1Pressed(const int modifierKey)
         //printf("\ndraggedPointOldAngle=%.3f\n\n", draggedPointOldAngle);
         draggedPointAdjusterAngle = degree->getValue();
 
-        if (lastObject == 2 || lastObject == 3) {
+        if (lastObject == FEATHER_LINE_1 || lastObject == FEATHER_LINE_2) {
             // Dragging a line to change the angle
             PolarCoord draggedPoint;
             rtengine::Coord currPos;
@@ -422,28 +438,26 @@ bool Gradient::button1Pressed(const int modifierKey)
             double diagonal = sqrt(double(imW) * double(imW) + double(imH) * double(imH));
 
             // trick to get the correct angle (clockwise/counter-clockwise)
-            int p = centerPos.y;
-            centerPos.y = currPos.y;
-            currPos.y = p;
+            std::swap(centerPos.y, currPos.y);
 
             draggedPoint = currPos - centerPos;
             // compute the projected value of the dragged point
             draggedFeatherOffset = draggedPoint.radius * sin((draggedPoint.angle - degree->getValue()) / 180.*rtengine::RT_PI);
 
-            if (lastObject == 3) {
+            if (lastObject == FEATHER_LINE_2) {
                 draggedFeatherOffset = -draggedFeatherOffset;
             }
 
             draggedFeatherOffset -= (feather->getValue() / 200. * diagonal);
         }
 
-        EditSubscriber::action = ES_ACTION_DRAGGING;
+        EditSubscriber::action = EditSubscriber::Action::DRAGGING;
         return false;
     } else { // should theoretically always be true
         // this will let this class ignore further drag events
-        if (lastObject == 2 || lastObject == 3) {
-            EditSubscriber::visibleGeometry.at(2)->state = Geometry::NORMAL;
-            EditSubscriber::visibleGeometry.at(3)->state = Geometry::NORMAL;
+        if (lastObject == FEATHER_LINE_1 || lastObject == FEATHER_LINE_2) {
+            EditSubscriber::visibleGeometry.at(FEATHER_LINE_1)->state = Geometry::NORMAL;
+            EditSubscriber::visibleGeometry.at(FEATHER_LINE_2)->state = Geometry::NORMAL;
         } else {
             EditSubscriber::visibleGeometry.at(lastObject)->state = Geometry::NORMAL;
         }
@@ -458,11 +472,11 @@ bool Gradient::button1Pressed(const int modifierKey)
 bool Gradient::button1Released()
 {
     draggedPointOldAngle = -1000.;
-    EditSubscriber::action = ES_ACTION_NONE;
+    EditSubscriber::action = EditSubscriber::Action::NONE;
     return true;
 }
 
-bool Gradient::drag1(const int modifierKey)
+bool Gradient::drag1(int modifierKey)
 {
     // compute the polar coordinate of the mouse position
     EditDataProvider *provider = getEditProvider();
@@ -471,7 +485,7 @@ bool Gradient::drag1(const int modifierKey)
     double halfSizeW = imW / 2.;
     double halfSizeH = imH / 2.;
 
-    if (lastObject == 0 || lastObject == 1) {
+    if (lastObject == H_LINE || lastObject == V_LINE) {
 
         // Dragging a line to change the angle
         PolarCoord draggedPoint;
@@ -515,7 +529,7 @@ bool Gradient::drag1(const int modifierKey)
 
             return true;
         }
-    } else if (lastObject == 2 || lastObject == 3) {
+    } else if (lastObject == FEATHER_LINE_1 || lastObject == FEATHER_LINE_2) {
         // Dragging the upper or lower feather bar
         PolarCoord draggedPoint;
         rtengine::Coord currPos;
@@ -532,11 +546,11 @@ bool Gradient::drag1(const int modifierKey)
         draggedPoint = currPos - centerPos;
         double currDraggedFeatherOffset = draggedPoint.radius * sin((draggedPoint.angle - degree->getValue()) / 180.*rtengine::RT_PI);
 
-        if (lastObject == 2)
+        if (lastObject == FEATHER_LINE_1)
             // Dragging the upper feather bar
         {
             currDraggedFeatherOffset -= draggedFeatherOffset;
-        } else if (lastObject == 3)
+        } else if (lastObject == FEATHER_LINE_2)
             // Dragging the lower feather bar
         {
             currDraggedFeatherOffset = -currDraggedFeatherOffset + draggedFeatherOffset;
@@ -554,7 +568,7 @@ bool Gradient::drag1(const int modifierKey)
 
             return true;
         }
-    } else if (lastObject == 4) {
+    } else if (lastObject == CENTER_CIRCLE) {
         // Dragging the circle to change the center
         rtengine::Coord currPos;
         draggedCenter += provider->deltaPrevImage;
@@ -577,6 +591,19 @@ bool Gradient::drag1(const int modifierKey)
     }
 
     return false;
+}
+
+void Gradient::releaseEdit()
+{
+    if (lastObject >= 0) {
+        if (lastObject == FEATHER_LINE_1 || lastObject == FEATHER_LINE_2) {
+            EditSubscriber::visibleGeometry.at(FEATHER_LINE_1)->state = Geometry::NORMAL;
+            EditSubscriber::visibleGeometry.at(FEATHER_LINE_2)->state = Geometry::NORMAL;
+        } else {
+            EditSubscriber::visibleGeometry.at(lastObject)->state = Geometry::NORMAL;
+        }
+    }
+    action = Action::NONE;
 }
 
 void Gradient::switchOffEditMode ()

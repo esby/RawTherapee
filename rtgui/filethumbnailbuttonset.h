@@ -14,35 +14,41 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef _FILETHUMBNAILBUTTONSET_
-#define _FILETHUMBNAILBUTTONSET_
+#pragma once
+
+#include <array>
+
+#include <gtkmm.h>
 
 #include "lwbuttonset.h"
-#include <gtkmm.h>
-#include "filebrowserentry.h"
 
 class FileBrowserEntry;
-class FileThumbnailButtonSet : public LWButtonSet
+class RTSurface;
+
+class FileThumbnailButtonSet :
+    public LWButtonSet
 {
 
     static bool iconsLoaded;
 
 public:
-    static Cairo::RefPtr<Cairo::ImageSurface> rankIcon;
-    static Cairo::RefPtr<Cairo::ImageSurface> gRankIcon;
-    static Cairo::RefPtr<Cairo::ImageSurface> unRankIcon;
-    static Cairo::RefPtr<Cairo::ImageSurface> trashIcon;
-    static Cairo::RefPtr<Cairo::ImageSurface> unTrashIcon;
-    static Cairo::RefPtr<Cairo::ImageSurface> processIcon;
+    static Cairo::RefPtr<RTSurface> rankIcon;
+    static Cairo::RefPtr<RTSurface> gRankIcon;
+    static Cairo::RefPtr<RTSurface> unRankIcon;
+    static Cairo::RefPtr<RTSurface> trashIcon;
+    static Cairo::RefPtr<RTSurface> unTrashIcon;
+    static Cairo::RefPtr<RTSurface> processIcon;
 
-    static Cairo::RefPtr<Cairo::ImageSurface> colorLabelIcon_0;
-    static Cairo::RefPtr<Cairo::ImageSurface> colorLabelIcon_1;
-    static Cairo::RefPtr<Cairo::ImageSurface> colorLabelIcon_2;
-    static Cairo::RefPtr<Cairo::ImageSurface> colorLabelIcon_3;
-    static Cairo::RefPtr<Cairo::ImageSurface> colorLabelIcon_4;
-    static Cairo::RefPtr<Cairo::ImageSurface> colorLabelIcon_5;
+    static std::array<Cairo::RefPtr<RTSurface>, 6> colorLabelIcon;
+
+    static Glib::ustring processToolTip;
+    static Glib::ustring unrankToolTip;
+    static Glib::ustring trashToolTip;
+    static Glib::ustring untrashToolTip;
+    static Glib::ustring colorLabelToolTip;
+    static std::array<Glib::ustring, 5> rankToolTip;
 
     explicit FileThumbnailButtonSet (FileBrowserEntry* myEntry);
     void    setRank (int stars);
@@ -50,5 +56,3 @@ public:
     void    setInTrash (bool inTrash);
 
 };
-
-#endif

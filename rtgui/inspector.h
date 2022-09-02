@@ -14,14 +14,15 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef _INSPECTOR_
-#define _INSPECTOR_
+#pragma once
 
 #include <gtkmm.h>
+
 #include "guiutils.h"
-#include "../rtengine/coord.h"
+
+#include "../rtengine/coord2d.h"
 
 class InspectorBuffer
 {
@@ -38,18 +39,47 @@ public:
     //~InspectorBuffer();
 };
 
-class Inspector : public Gtk::DrawingArea
+class Inspector final : public Gtk::DrawingArea
 {
 
 private:
-    rtengine::Coord center;
+    rtengine::Coord2D center;
     std::vector<InspectorBuffer*> images;
     InspectorBuffer* currImage;
-    double zoom;
+    bool scaled;  // fit image into window
+    double scale; // current scale
+    double zoomScale, zoomScaleBegin; // scale during zoom
+    rtengine::Coord2D centerBegin, dcenterBegin; // center during zoom
     bool active;
+    bool pinned;
+    bool dirty;
+    bool initialized;
+    bool fullscreen;  // window is shown in fullscreen mode
+    bool keyDown;
+    bool windowShowing;
 
     sigc::connection delayconn;
     Glib::ustring next_image_path;
+    rtengine::Coord2D next_image_pos;
+
+    Gtk::Window *window;
+    bool on_key_release(GdkEventKey *event);
+    bool on_key_press(GdkEventKey *event);
+
+    void on_window_hide();
+    bool on_inspector_window_state_event(GdkEventWindowState *event);
+
+    rtengine::Coord button_pos;
+    bool on_button_press_event(GdkEventButton *event) override;
+    bool on_motion_notify_event(GdkEventMotion *event) override;
+
+    bool on_scroll_event(GdkEventScroll *event) override;
+    void moveCenter(int delta_x, int delta_y, int imW, int imH, int deviceScale);
+
+    Glib::RefPtr<Gtk::GestureZoom> gestureZoom;
+    void beginZoom(double x, double y);
+    void on_zoom_begin(GdkEventSequence *);
+    void on_zoom_scale_changed(double zscale);
 
     bool on_draw(const ::Cairo::RefPtr< Cairo::Context> &cr) override;
     void deleteBuffers();
@@ -59,6 +89,17 @@ private:
 public:
     Inspector();
     ~Inspector() override;
+
+    /** @brief Show or hide window
+     * @param pinned pin window
+     * @param scaled fit image into window
+     */
+    void showWindow(bool pinned, bool scaled = true);
+
+    /**
+     * Hide the window.
+     */
+    void hideWindow();
 
     /** @brief Mouse movement to a new position
      * @param pos Location of the mouse, in percentage (i.e. [0;1] range) relative to the full size image ; -1,-1 == out of the image
@@ -87,7 +128,7 @@ public:
 
     /** @brief Get the on/off state
      */
-    bool isActive()
+    bool isActive() const
     {
         return active;
     };
@@ -99,5 +140,3 @@ public:
     void get_preferred_width_for_height_vfunc (int height, int &minimum_width, int &natural_width) const override;
 
 };
-
-#endif

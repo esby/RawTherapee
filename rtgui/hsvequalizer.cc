@@ -12,13 +12,18 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  *
  *  2010 Ilya Popov <ilia_popov@rambler.ru>
  */
-
 #include "hsvequalizer.h"
+
+#include "curveeditor.h"
+#include "curveeditorgroup.h"
+#include "options.h"
+
 #include "../rtengine/color.h"
+#include "../rtengine/procparams.h"
 
 using namespace rtengine;
 using namespace rtengine::procparams;
@@ -33,7 +38,7 @@ HSVEqualizer::HSVEqualizer () : FoldableToolPanel(this, "hsvequalizer", M("TP_HS
 
     // -0.1 rad < Hue < 1.6 rad
     for (int i = 0; i < 7; i++) {
-        float x = float(i) * (1.0f / 6.0);
+        float x = i / 6.0;
         Color::hsv2rgb01(x, 0.5f, 0.5f, R, G, B);
         bottomMilestones.push_back( GradientMilestone(double(x), double(R), double(G), double(B)) );
     }
@@ -108,7 +113,7 @@ void HSVEqualizer::autoOpenCurve ()
     bool active = hshape->openIfNonlinear();
 
     if (!active) {
-        sshape->openIfNonlinear();
+        active = sshape->openIfNonlinear();
     }
 
     if (!active) {

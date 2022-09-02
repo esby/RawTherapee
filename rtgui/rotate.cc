@@ -14,12 +14,17 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include "rotate.h"
 #include <iomanip>
+
+#include "rotate.h"
+
 #include "guiutils.h"
+#include "lensgeomlistener.h"
 #include "rtimage.h"
+
+#include "../rtengine/procparams.h"
 
 using namespace rtengine;
 using namespace rtengine::procparams;
@@ -90,10 +95,6 @@ void Rotate::adjusterChanged(Adjuster* a, double newval)
     if (listener) {
         listener->panelChanged(EvROTDegree, Glib::ustring::format (std::setw(3), std::fixed, std::setprecision(2), degree->getValue()));
     }
-}
-
-void Rotate::adjusterAutoToggled(Adjuster* a, bool newval)
-{
 }
 
 void Rotate::straighten (double deg)

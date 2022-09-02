@@ -14,17 +14,24 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef _DIAGONALCURVEEDITORSUBGROUP_
-#define _DIAGONALCURVEEDITORSUBGROUP_
+#pragma once
 
 #include <gtkmm.h>
+
 #include "curveeditorgroup.h"
+#include "adjuster.h"
+#include "../rtengine/noncopyable.h"
 
 class DiagonalCurveEditor;
+class MyDiagonalCurve;
 
-class DiagonalCurveEditorSubGroup : public CurveEditorSubGroup, public SHCListener, public AdjusterListener
+class DiagonalCurveEditorSubGroup final :
+    public CurveEditorSubGroup,
+    public SHCListener,
+    public AdjusterListener,
+    public rtengine::NonCopyable
 {
 
     friend class DiagonalCurveEditor;
@@ -88,6 +95,7 @@ public:
     void pipetteDrag(EditDataProvider *provider, int modifierKey) override;
     void showCoordinateAdjuster(CoordinateProvider *provider) override;
     void stopNumericalAdjustment() override;
+    void updateLocallabBackground(CurveEditor* ce) override;    
 
     bool curveReset (CurveEditor *ce) override;
 
@@ -95,6 +103,7 @@ protected:
     void storeCurveValues (CurveEditor* ce, const std::vector<double>& p) override;
     void storeDisplayedCurve () override;
     void restoreDisplayedHistogram () override;
+    void restoreLocallabBackground() override;
     void savePressed ();
     void loadPressed ();
     void copyPressed ();
@@ -105,11 +114,8 @@ protected:
     const std::vector<double> getCurveFromGUI (int type) override;
     void shcChanged () override;
     void adjusterChanged (Adjuster* a, double newval) override;
-    void adjusterAutoToggled(Adjuster* a, bool newval) override;
     bool adjusterEntered (GdkEventCrossing* ev, int ac);
     bool adjusterLeft (GdkEventCrossing* ev, int ac);
     void setSubGroupRangeLabels(Glib::ustring r1, Glib::ustring r2, Glib::ustring r3, Glib::ustring r4);
     void setSubGroupBottomBarBgGradient();
 };
-
-#endif

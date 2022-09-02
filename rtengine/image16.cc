@@ -14,13 +14,15 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
+#include <cstdio>
+
+#include "colortemp.h"
 #include "image16.h"
 #include "imagefloat.h"
 #include "image8.h"
-#include <cstdio>
-#include "rtengine.h"
+#include "rt_math.h"
 
 namespace
 {
@@ -74,7 +76,7 @@ void Image16::getScanline(int row, unsigned char* buffer, int bps, bool isFloat)
     }
 }
 
-void Image16::setScanline(int row, unsigned char* buffer, int bps, unsigned int numSamples)
+void Image16::setScanline(int row, const unsigned char* buffer, int bps, unsigned int numSamples)
 {
 
     if (data == nullptr) {
@@ -101,7 +103,7 @@ void Image16::setScanline(int row, unsigned char* buffer, int bps, unsigned int 
         }
 
         case (IIOSF_UNSIGNED_SHORT): {
-            unsigned short* sbuffer = (unsigned short*) buffer;
+            const unsigned short* sbuffer = (const unsigned short*) buffer;
             int ix = 0;
 
             for (int i = 0; i < width; ++i) {
@@ -132,7 +134,21 @@ Image16* Image16::copy() const
     return cp;
 }
 
-void Image16::getStdImage(const ColorTemp &ctemp, int tran, Imagefloat* image, PreviewProps pp) const
+Image16* Image16::copySubRegion (int x, int y, int width, int height)
+{
+    Image16* cp = NULL;
+    int realWidth  = LIM<int>(x + width,  0, this->width)  - x;
+    int realHeight = LIM<int>(y + height, 0, this->height) - y;
+
+    if (realWidth > 0 && realHeight > 0) {
+        cp = new Image16 (realWidth, realHeight);
+        copyData(cp, x, y, realWidth, realHeight);
+    }
+
+    return cp;
+}
+
+void Image16::getStdImage(const ColorTemp &ctemp, int tran, Imagefloat* image, const PreviewProps &pp) const
 {
 
     // compute channel multipliers
@@ -145,10 +161,10 @@ void Image16::getStdImage(const ColorTemp &ctemp, int tran, Imagefloat* image, P
         gm = dgm;
         bm = dbm;
 
-        rm = 1.0 / rm;
-        gm = 1.0 / gm;
-        bm = 1.0 / bm;
-        float mul_lum = 0.299 * rm + 0.587 * gm + 0.114 * bm;
+        rm = 1.f / rm;
+        gm = 1.f / gm;
+        bm = 1.f / bm;
+        float mul_lum = 0.299f * rm + 0.587f * gm + 0.114f * bm;
         rm /= mul_lum;
         gm /= mul_lum;
         bm /= mul_lum;
@@ -184,8 +200,6 @@ void Image16::getStdImage(const ColorTemp &ctemp, int tran, Imagefloat* image, P
     rm /= area;
     gm /= area;
     bm /= area;
-
-#define GCLIP( x ) Color::gamma_srgb(CLIP(x))
 
 #ifdef _OPENMP
     #pragma omp parallel
@@ -258,10 +272,10 @@ void Image16::getStdImage(const ColorTemp &ctemp, int tran, Imagefloat* image, P
                         lineB[dst_x] = CLIP(bm * btot);
                     } else {
                         // computing a special factor for this incomplete sub-region
-                        float area = src_sub_width * src_sub_height;
-                        lineR[dst_x] = CLIP(rm2 * rtot / area);
-                        lineG[dst_x] = CLIP(gm2 * gtot / area);
-                        lineB[dst_x] = CLIP(bm2 * btot / area);
+                        float larea = src_sub_width * src_sub_height;
+                        lineR[dst_x] = CLIP(rm2 * rtot / larea);
+                        lineG[dst_x] = CLIP(gm2 * gtot / larea);
+                        lineB[dst_x] = CLIP(bm2 * btot / larea);
                     }
                 }
             }
@@ -293,21 +307,6 @@ void Image16::getStdImage(const ColorTemp &ctemp, int tran, Imagefloat* image, P
     }
 #endif
 #undef GCLIP
-}
-
-Image8* Image16::to8() const
-{
-    Image8* img8 = new Image8(width, height);
-
-    for (int h = 0; h < height; ++h) {
-        for (int w = 0; w < width; ++w) {
-            img8->r(h, w) = uint16ToUint8Rounded(r(h, w));
-            img8->g(h, w) = uint16ToUint8Rounded(g(h, w));
-            img8->b(h, w) = uint16ToUint8Rounded(b(h, w));
-        }
-    }
-
-    return img8;
 }
 
 // Parallelized transformation; create transform with cmsFLAGS_NOCACHE!

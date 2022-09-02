@@ -14,31 +14,44 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include <gtkmm.h>
 #include "rtwindow.h"
-#include "options.h"
+#include "cachemanager.h"
 #include "preferences.h"
 #include "iccprofilecreator.h"
 #include "cursormanager.h"
+#include "editwindow.h"
 #include "rtimage.h"
+#include "thumbnail.h"
 #include "whitebalance.h"
-#include "../rtengine/icons.h"
+#include "../rtengine/settings.h"
+#include "batchqueuepanel.h"
+#include "batchqueueentry.h"
+#include "editorpanel.h"
+#include "filepanel.h"
+#include "filmsimulation.h"
+
+float fontScale = 1.f;
+Glib::RefPtr<Gtk::CssProvider> cssForced;
+Glib::RefPtr<Gtk::CssProvider> cssRT;
+
+extern unsigned char initialGdkScale;
 
 #if defined(__APPLE__)
 static gboolean
 osx_should_quit_cb (GtkosxApplication *app, gpointer data)
 {
-    RTWindow *rtWin = (RTWindow *)data;
+    RTWindow * const rtWin = static_cast<RTWindow*>(data);
     return rtWin->on_delete_event (0);
 }
 
 static void
 osx_will_quit_cb (GtkosxApplication *app, gpointer data)
 {
-    RTWindow *rtWin = (RTWindow *)data;
+    RTWindow *rtWin = static_cast<RTWindow*>(data);
     rtWin->on_delete_event (0);
     gtk_main_quit ();
 }
@@ -62,7 +75,7 @@ bool RTWindow::osxFileOpenEvent (Glib::ustring path)
 static gboolean
 osx_open_file_cb (GtkosxApplication *app, gchar *path_, gpointer data)
 {
-    RTWindow *rtWin = (RTWindow *)data;
+    RTWindow *rtWin = static_cast<RTWindow*>(data);
 
     if (!argv1.empty()) {
         // skip handling if we have a file argument or else we get double open of same file
@@ -86,21 +99,156 @@ RTWindow::RTWindow (bool _benchmark)
     , bpanel (nullptr)
     , splash (nullptr)
     , btn_fullscreen (nullptr)
+    , iFullscreen (nullptr)
+    , iFullscreen_exit (nullptr)
     , epanel (nullptr)
     , fpanel (nullptr)
 {
     benchmark = _benchmark;
+    if (options.is_new_version()) {
+        RTImage::cleanup(true);
+    }
     cacheMgr->init ();
-    WhiteBalance::init();
     ProfilePanel::init (this);
+
+    // ------- loading theme files
+
+    Glib::RefPtr<Gdk::Screen> screen = Gdk::Screen::get_default();
+
+    if (screen) {
+        Gtk::Settings::get_for_screen (screen)->property_gtk_theme_name() = "Adwaita";
+        Gtk::Settings::get_for_screen (screen)->property_gtk_application_prefer_dark_theme() = true;
+
+        Glib::RefPtr<Glib::Regex> regex = Glib::Regex::create (THEMEREGEXSTR, Glib::RegexCompileFlags::REGEX_CASELESS);
+        Glib::ustring filename;
+        Glib::MatchInfo mInfo;
+        bool match = regex->match(options.theme + ".css", mInfo);
+        if (match) {
+            // save old theme (name + version)
+            Glib::ustring initialTheme(options.theme);
+
+            // update version
+            auto pos = options.theme.find("-GTK3-");
+            Glib::ustring themeRootName(options.theme.substr(0, pos));
+            if (GTK_MINOR_VERSION < 20) {
+                options.theme = themeRootName + "-GTK3-_19";
+            } else {
+                options.theme = themeRootName + "-GTK3-20_";
+            }
+            // check if this version exist
+            if (!Glib::file_test(Glib::build_filename(argv0, "themes", options.theme + ".css"), Glib::FILE_TEST_EXISTS)) {
+                // set back old theme version if the actual one doesn't exist yet
+                options.theme = initialTheme;
+            }
+        }
+        filename = Glib::build_filename(argv0, "themes", options.theme + ".css");
+
+        if (!match || !Glib::file_test(filename, Glib::FILE_TEST_EXISTS)) {
+            options.theme = "RawTherapee-GTK";
+
+            // We're not testing GTK_MAJOR_VERSION == 3 here, since this branch requires Gtk3 only
+            if (GTK_MINOR_VERSION < 20) {
+                options.theme = options.theme + "3-_19";
+            } else {
+                options.theme = options.theme + "3-20_";
+            }
+
+            filename = Glib::build_filename (argv0, "themes", options.theme + ".css");
+        }
+
+        cssRT = Gtk::CssProvider::create();
+
+        try {
+            cssRT->load_from_path (filename);
+            Gtk::StyleContext::add_provider_for_screen (screen, cssRT, GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+        } catch (Glib::Error &err) {
+            printf ("Error: Can't load css file \"%s\"\nMessage: %s\n", filename.c_str(), err.what().c_str());
+        } catch (...) {
+            printf ("Error: Can't load css file \"%s\"\n", filename.c_str());
+        }
+
+        // Set the font face and size
+        Glib::ustring css;
+        if (options.fontFamily != "default") {
+            //GTK318
+            #if GTK_MAJOR_VERSION == 3 && GTK_MINOR_VERSION < 20
+            css = Glib::ustring::compose ("* { font-family: %1; font-size: %2px}", options.fontFamily, options.fontSize * (int)initialGdkScale);
+            #else
+            css = Glib::ustring::compose ("* { font-family: %1; font-size: %2pt}", options.fontFamily, options.fontSize * (int)initialGdkScale);
+            #endif
+            //GTK318
+            if (options.pseudoHiDPISupport) {
+                fontScale = options.fontSize / (float)RTScalable::baseFontSize;
+            }
+            if (rtengine::settings->verbose) {
+                printf("\"Non-Default\" font size(%d) * scale(%d) / fontScale(%.3f)\n", options.fontSize, (int)initialGdkScale, static_cast<double>(fontScale));
+            }
+        } else {
+            Glib::RefPtr<Gtk::StyleContext> style = Gtk::StyleContext::create();
+            Pango::FontDescription pfd = style->get_font(Gtk::STATE_FLAG_NORMAL);
+            if (pfd.get_set_fields() & Pango::FONT_MASK_SIZE) {
+                int pt;
+                int fontSize = pfd.get_size();
+                bool isPix = pfd.get_size_is_absolute();
+                int resolution = (int)style->get_screen()->get_resolution();
+                if (isPix) {
+                    // HOMBRE: guessing here...
+                    // if resolution is lower than baseHiDPI, we're supposing that it's already expressed in a scale==1 scenario
+                    if (resolution >= int(RTScalable::baseHiDPI)) {
+                        // converting the resolution to a scale==1 scenario
+                        resolution /= 2;
+                    }
+                    // 1pt =  1/72in @ 96 ppi
+                    // HOMBRE: If the font unit is px, is it already scaled up to match the resolution ?
+                    //                 px         >inch                 >pt    >"scaled pt"
+                    pt = (int)(double(fontSize) / RTScalable::baseDPI * 72. * (96. / (double)resolution) + 0.49);
+                } else {
+                    pt = fontSize / Pango::SCALE;
+                }
+                if (options.pseudoHiDPISupport) {
+                    fontScale = (float)pt / (float)RTScalable::baseFontSize;
+                }
+                if ((int)initialGdkScale > 1 || pt != RTScalable::baseFontSize) {
+                    css = Glib::ustring::compose ("* { font-size: %1pt}", pt * (int)initialGdkScale);
+                    if (rtengine::settings->verbose) {
+                        printf("\"Default\" font size(%d) * scale(%d) / fontScale(%.3f)\n", pt, (int)initialGdkScale, static_cast<double>(fontScale));
+                    }
+                }
+            }
+        }
+        if (!css.empty()) {
+            if (rtengine::settings->verbose) {
+                printf("CSS:\n%s\n\n", css.c_str());
+            }
+            try {
+                cssForced = Gtk::CssProvider::create();
+                cssForced->load_from_data (css);
+
+                Gtk::StyleContext::add_provider_for_screen (screen, cssForced, GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+
+            } catch (Glib::Error &err) {
+                printf ("Error: \"%s\"\n", err.what().c_str());
+            } catch (...) {
+                printf ("Error: Can't find the font named \"%s\"\n", options.fontFamily.c_str());
+            }
+        }
+    }
+
+    // ------- end loading theme files
+
+    RTScalable::init(this);
+    RTSurface::init();
+    RTImage::init();
+    WhiteBalance::init();
+    MyExpander::init();
 
 #ifndef WIN32
     const std::vector<Glib::RefPtr<Gdk::Pixbuf>> appIcons = {
-        RTImage::createFromFile("rawtherapee-logo-16.png"),
-        RTImage::createFromFile("rawtherapee-logo-24.png"),
-        RTImage::createFromFile("rawtherapee-logo-48.png"),
-        RTImage::createFromFile("rawtherapee-logo-128.png"),
-        RTImage::createFromFile("rawtherapee-logo-256.png")
+        RTImage::createPixbufFromFile("rawtherapee-logo-16.png"),
+        RTImage::createPixbufFromFile("rawtherapee-logo-24.png"),
+        RTImage::createPixbufFromFile("rawtherapee-logo-48.png"),
+        RTImage::createPixbufFromFile("rawtherapee-logo-128.png"),
+        RTImage::createPixbufFromFile("rawtherapee-logo-256.png")
     };
     try {
         set_default_icon_list(appIcons);
@@ -112,8 +260,6 @@ RTWindow::RTWindow (bool _benchmark)
 #if defined(__APPLE__)
     {
         osxApp  = (GtkosxApplication *)g_object_new (GTKOSX_TYPE_APPLICATION, NULL);
-        gboolean falseval = FALSE;
-        gboolean trueval = TRUE;
         RTWindow *rtWin = this;
         g_signal_connect (osxApp, "NSApplicationBlockTermination", G_CALLBACK (osx_should_quit_cb), rtWin);
         g_signal_connect (osxApp, "NSApplicationWillTerminate",  G_CALLBACK (osx_will_quit_cb), rtWin);
@@ -134,28 +280,14 @@ RTWindow::RTWindow (bool _benchmark)
     set_default_size (options.windowWidth, options.windowHeight);
     set_modal (false);
 
-    Gdk::Rectangle lMonitorRect;
-    get_screen()->get_monitor_geometry (std::min (options.windowMonitor, Gdk::Screen::get_default()->get_n_monitors() - 1), lMonitorRect);
-
-    if (options.windowMaximized) {
-        move (lMonitorRect.get_x(), lMonitorRect.get_y());
-        maximize();
-    } else {
-        unmaximize();
-        resize (options.windowWidth, options.windowHeight);
-
-        if (options.windowX <= lMonitorRect.get_x() + lMonitorRect.get_width() && options.windowY <= lMonitorRect.get_y() + lMonitorRect.get_height()) {
-            move (options.windowX, options.windowY);
-        } else {
-            move (lMonitorRect.get_x(), lMonitorRect.get_y());
-        }
-    }
-
     on_delete_has_run = false;
     is_fullscreen = false;
+    is_minimized = false;
     property_destroy_with_parent().set_value (false);
     signal_window_state_event().connect ( sigc::mem_fun (*this, &RTWindow::on_window_state_event) );
+    onConfEventConn = signal_configure_event().connect ( sigc::mem_fun (*this, &RTWindow::on_configure_event) );
     signal_key_press_event().connect ( sigc::mem_fun (*this, &RTWindow::keyPressed) );
+    signal_key_release_event().connect(sigc::mem_fun(*this, &RTWindow::keyReleased));
 
     if (simpleEditor) {
         epanel = Gtk::manage ( new EditorPanel (nullptr, benchmark) );
@@ -193,10 +325,12 @@ RTWindow::RTWindow (bool _benchmark)
         if (options.mainNBVertical) {
             mainNB->set_tab_pos (Gtk::POS_LEFT);
             fpl->set_angle (90);
-            fpanelLabelGrid->attach_next_to (*Gtk::manage (new RTImage ("folder-closed.png")), Gtk::POS_TOP, 1, 1);
+            RTImage* folderIcon = Gtk::manage (new RTImage ("folder-closed.png"));
+            fpanelLabelGrid->attach_next_to (*folderIcon, Gtk::POS_TOP, 1, 1);
             fpanelLabelGrid->attach_next_to (*fpl, Gtk::POS_TOP, 1, 1);
         } else {
-            fpanelLabelGrid->attach_next_to (*Gtk::manage (new RTImage ("folder-closed.png")), Gtk::POS_RIGHT, 1, 1);
+            RTImage* folderIcon = Gtk::manage (new RTImage ("folder-closed.png"));
+            fpanelLabelGrid->attach_next_to (*folderIcon, Gtk::POS_RIGHT, 1, 1);
             fpanelLabelGrid->attach_next_to (*fpl, Gtk::POS_RIGHT, 1, 1);
         }
 
@@ -209,7 +343,7 @@ RTWindow::RTWindow (bool _benchmark)
         bpanel = Gtk::manage ( new BatchQueuePanel (fpanel->fileCatalog) );
 
         // decorate tab, the label is unimportant since its updated in batchqueuepanel anyway
-        Gtk::Label* lbq = Gtk::manage ( new Gtk::Label (M ("MAIN_FRAME_BATCHQUEUE")) );
+        Gtk::Label* lbq = Gtk::manage ( new Gtk::Label (M ("MAIN_FRAME_QUEUE")) );
 
         if (options.mainNBVertical) {
             lbq->set_angle (90);
@@ -224,7 +358,7 @@ RTWindow::RTWindow (bool _benchmark)
 
         mainNB->set_current_page (mainNB->page_num (*fpanel));
 
-        //Gtk::VBox* mainBox = Gtk::manage (new Gtk::VBox ());
+        //Gtk::Box* mainBox = Gtk::manage (new Gtk::Box(Gtk::ORIENTATION_VERTICAL));
         //mainBox->pack_start (*mainNB);
 
         // filling bottom box
@@ -238,8 +372,13 @@ RTWindow::RTWindow (bool _benchmark)
         iccProfileCreator->set_tooltip_markup (M ("MAIN_BUTTON_ICCPROFCREATOR"));
         iccProfileCreator->signal_clicked().connect ( sigc::mem_fun (*this, &RTWindow::showICCProfileCreator) );
 
-        //Gtk::LinkButton* rtWeb = Gtk::manage (new Gtk::LinkButton ("http://rawtherapee.com"));   // unused... but fail to be linked anyway !?
-        //Gtk::Button* preferences = Gtk::manage (new Gtk::Button (M("MAIN_BUTTON_PREFERENCES")+"..."));
+        Gtk::Button* helpBtn = Gtk::manage (new Gtk::Button ());
+        setExpandAlignProperties (helpBtn, false, false, Gtk::ALIGN_CENTER, Gtk::ALIGN_CENTER);
+        helpBtn->set_relief(Gtk::RELIEF_NONE);
+        helpBtn->set_image (*Gtk::manage (new RTImage ("questionmark.png")));
+        helpBtn->set_tooltip_markup (M ("GENERAL_HELP"));
+        helpBtn->signal_clicked().connect (sigc::mem_fun (*this, &RTWindow::showRawPedia));
+
         Gtk::Button* preferences = Gtk::manage (new Gtk::Button ());
         setExpandAlignProperties (preferences, false, false, Gtk::ALIGN_CENTER, Gtk::ALIGN_CENTER);
         preferences->set_relief(Gtk::RELIEF_NONE);
@@ -247,7 +386,6 @@ RTWindow::RTWindow (bool _benchmark)
         preferences->set_tooltip_markup (M ("MAIN_BUTTON_PREFERENCES"));
         preferences->signal_clicked().connect ( sigc::mem_fun (*this, &RTWindow::showPreferences) );
 
-        //btn_fullscreen = Gtk::manage( new Gtk::Button(M("MAIN_BUTTON_FULLSCREEN")));
         btn_fullscreen = Gtk::manage ( new Gtk::Button());
         setExpandAlignProperties (btn_fullscreen, false, false, Gtk::ALIGN_CENTER, Gtk::ALIGN_CENTER);
         btn_fullscreen->set_relief(Gtk::RELIEF_NONE);
@@ -269,6 +407,7 @@ RTWindow::RTWindow (bool _benchmark)
             actionGrid->set_orientation (Gtk::ORIENTATION_VERTICAL);
             actionGrid->attach_next_to (prProgBar, Gtk::POS_BOTTOM, 1, 1);
             actionGrid->attach_next_to (*iccProfileCreator, Gtk::POS_BOTTOM, 1, 1);
+            actionGrid->attach_next_to (*helpBtn, Gtk::POS_BOTTOM, 1, 1);
             actionGrid->attach_next_to (*preferences, Gtk::POS_BOTTOM, 1, 1);
             actionGrid->attach_next_to (*btn_fullscreen, Gtk::POS_BOTTOM, 1, 1);
             mainNB->set_action_widget (actionGrid, Gtk::PACK_END);
@@ -277,6 +416,7 @@ RTWindow::RTWindow (bool _benchmark)
             actionGrid->set_orientation (Gtk::ORIENTATION_HORIZONTAL);
             actionGrid->attach_next_to (prProgBar, Gtk::POS_RIGHT, 1, 1);
             actionGrid->attach_next_to (*iccProfileCreator, Gtk::POS_RIGHT, 1, 1);
+            actionGrid->attach_next_to (*helpBtn, Gtk::POS_RIGHT, 1, 1);
             actionGrid->attach_next_to (*preferences, Gtk::POS_RIGHT, 1, 1);
             actionGrid->attach_next_to (*btn_fullscreen, Gtk::POS_RIGHT, 1, 1);
             mainNB->set_action_widget (actionGrid, Gtk::PACK_END);
@@ -322,9 +462,10 @@ RTWindow::~RTWindow()
     g_object_unref (osxApp);
 #endif
 
-    if (fpanel) {
-        delete fpanel;
-    }
+    delete fpanel;
+    delete iFullscreen;
+    delete iFullscreen_exit;
+    RTImage::cleanup();
 }
 
 void RTWindow::on_realize ()
@@ -342,16 +483,8 @@ void RTWindow::on_realize ()
     mainWindowCursorManager.init (get_window());
 
     // Display release notes only if new major version.
-    // Pattern matches "5.1" from "5.1-23-g12345678"
-    const std::string vs[] = {versionString, options.version};
-    std::vector<std::string> vMajor;
-
-    for (const auto& v : vs) {
-        vMajor.emplace_back(v, 0, v.find_first_not_of("0123456789."));
-    }
-
     bool waitForSplash = false;
-    if (vMajor.size() == 2 && vMajor[0] != vMajor[1]) {
+    if (options.is_new_version()) {
         // Update the version parameter with the right value
         options.version = versionString;
 
@@ -379,22 +512,22 @@ void RTWindow::showErrors()
     // alerting users if the default raw and image profiles are missing
     if (options.is_defProfRawMissing()) {
         options.defProfRaw = DEFPROFILE_RAW;
-        Gtk::MessageDialog msgd (*this, Glib::ustring::compose (M ("OPTIONS_DEFRAW_MISSING"), options.defProfRaw), true, Gtk::MESSAGE_ERROR, Gtk::BUTTONS_OK, true);
+        Gtk::MessageDialog msgd (*this, Glib::ustring::compose (M ("OPTIONS_DEFRAW_MISSING"), escapeHtmlChars(options.defProfRaw)), true, Gtk::MESSAGE_ERROR, Gtk::BUTTONS_OK, true);
         msgd.run ();
     }
     if (options.is_bundledDefProfRawMissing()) {
-        Gtk::MessageDialog msgd (*this, Glib::ustring::compose (M ("OPTIONS_BUNDLED_MISSING"), options.defProfRaw), true, Gtk::MESSAGE_ERROR, Gtk::BUTTONS_OK, true);
+        Gtk::MessageDialog msgd (*this, Glib::ustring::compose (M ("OPTIONS_BUNDLED_MISSING"), escapeHtmlChars(options.defProfRaw)), true, Gtk::MESSAGE_ERROR, Gtk::BUTTONS_OK, true);
         msgd.run ();
         options.defProfRaw = DEFPROFILE_INTERNAL;
     }
 
     if (options.is_defProfImgMissing()) {
         options.defProfImg = DEFPROFILE_IMG;
-        Gtk::MessageDialog msgd (*this, Glib::ustring::compose (M ("OPTIONS_DEFIMG_MISSING"), options.defProfImg), true, Gtk::MESSAGE_ERROR, Gtk::BUTTONS_OK, true);
+        Gtk::MessageDialog msgd (*this, Glib::ustring::compose (M ("OPTIONS_DEFIMG_MISSING"), escapeHtmlChars(options.defProfImg)), true, Gtk::MESSAGE_ERROR, Gtk::BUTTONS_OK, true);
         msgd.run ();
     }
     if (options.is_bundledDefProfImgMissing()) {
-        Gtk::MessageDialog msgd (*this, Glib::ustring::compose (M ("OPTIONS_BUNDLED_MISSING"), options.defProfImg), true, Gtk::MESSAGE_ERROR, Gtk::BUTTONS_OK, true);
+        Gtk::MessageDialog msgd (*this, Glib::ustring::compose (M ("OPTIONS_BUNDLED_MISSING"), escapeHtmlChars(options.defProfImg)), true, Gtk::MESSAGE_ERROR, Gtk::BUTTONS_OK, true);
         msgd.run ();
         options.defProfImg = DEFPROFILE_INTERNAL;
     }
@@ -402,20 +535,24 @@ void RTWindow::showErrors()
 
 bool RTWindow::on_configure_event (GdkEventConfigure* event)
 {
-    if (!is_maximized() && is_visible()) {
+    if (!options.windowMaximized && !is_fullscreen && !is_minimized) {
         get_size (options.windowWidth, options.windowHeight);
         get_position (options.windowX, options.windowY);
     }
+
+    RTImage::setDPInScale(RTScalable::getDPI(), RTScalable::getScale());   // will update the RTImage   on scale/resolution change
+    RTSurface::setDPInScale(RTScalable::getDPI(), RTScalable::getScale()); // will update the RTSurface on scale/resolution change
 
     return Gtk::Widget::on_configure_event (event);
 }
 
 bool RTWindow::on_window_state_event (GdkEventWindowState* event)
 {
-    if (event->changed_mask & GDK_WINDOW_STATE_MAXIMIZED) {
-        options.windowMaximized = event->new_window_state & GDK_WINDOW_STATE_MAXIMIZED;
-    }
-
+    // Retrieve RT window states
+    options.windowMaximized = event->new_window_state & GDK_WINDOW_STATE_MAXIMIZED;
+    is_minimized = event->new_window_state & GDK_WINDOW_STATE_ICONIFIED;
+    is_fullscreen = event->new_window_state & GDK_WINDOW_STATE_FULLSCREEN;
+    
     return Gtk::Widget::on_window_state_event (event);
 }
 
@@ -454,8 +591,10 @@ void RTWindow::addEditorPanel (EditorPanel* ep, const std::string &name)
 {
     if (options.multiDisplayMode > 0) {
         EditWindow * wndEdit = EditWindow::getInstance (this);
-        wndEdit->show();
         wndEdit->addEditorPanel (ep, name);
+        wndEdit->show_all();
+        wndEdit->restoreWindow(); // Need to be called after RTWindow creation to work with all OS Windows Manager
+        ep->setAspect();
         wndEdit->toFront();
     } else {
         ep->setParent (this);
@@ -472,7 +611,9 @@ void RTWindow::addEditorPanel (EditorPanel* ep, const std::string &name)
         closeb->set_focus_on_click (false);
         closeb->signal_clicked().connect ( sigc::bind (sigc::mem_fun (*this, &RTWindow::remEditorPanel), ep));
 
-        titleGrid->attach_next_to (*Gtk::manage (new RTImage ("aperture.png")), Gtk::POS_RIGHT, 1, 1);
+        if (!EditWindow::isMultiDisplayEnabled()) {
+            titleGrid->attach_next_to (*Gtk::manage (new RTImage ("aperture.png")), Gtk::POS_RIGHT, 1, 1);
+        }
         titleGrid->attach_next_to (*Gtk::manage (new Gtk::Label (Glib::path_get_basename (name))), Gtk::POS_RIGHT, 1, 1);
         titleGrid->attach_next_to (*closeb, Gtk::POS_RIGHT, 1, 1);
         titleGrid->show_all ();
@@ -519,8 +660,8 @@ void RTWindow::remEditorPanel (EditorPanel* ep)
 
             set_title_decorated ("");
         } else {
-            EditorPanel* ep = static_cast<EditorPanel*> (mainNB->get_nth_page (mainNB->get_current_page()));
-            set_title_decorated (ep->getFileName());
+            const EditorPanel* lep = static_cast<EditorPanel*> (mainNB->get_nth_page (mainNB->get_current_page()));
+            set_title_decorated (lep->getFileName());
         }
 
         // TODO: ask what to do: close & apply, close & apply selection, close & revert, cancel
@@ -632,6 +773,14 @@ bool RTWindow::keyPressed (GdkEventKey* event)
     return false;
 }
 
+bool RTWindow::keyReleased(GdkEventKey *event)
+{
+    if (fpanel && mainNB->get_current_page() == mainNB->page_num(*fpanel)) {
+        return fpanel->handleShortcutKeyRelease(event);
+    }
+    return false;
+}
+
 void RTWindow::addBatchQueueJob (BatchQueueEntry* bqe, bool head)
 {
 
@@ -662,7 +811,7 @@ bool RTWindow::on_delete_event (GdkEventAny* event)
     if (isSingleTabMode() || simpleEditor) {
         isProcessing = epanel->getIsProcessing();
     } else if (options.multiDisplayMode > 0) {
-        editWindow = EditWindow::getInstance (this, false);
+        editWindow = EditWindow::getInstance (this);
         isProcessing = editWindow->isProcessing();
     } else {
         int pageCount = mainNB->get_n_pages();
@@ -719,13 +868,33 @@ bool RTWindow::on_delete_event (GdkEventAny* event)
     cacheMgr->closeCache ();  // also makes cleanup if too large
     WhiteBalance::cleanup();
     ProfilePanel::cleanup();
+    ClutComboBox::cleanup();
+    MyExpander::cleanup();
+    mainWindowCursorManager.cleanup();
+    editWindowCursorManager.cleanup();
+    BatchQueueEntry::savedAsIcon.reset();
+    FileBrowserEntry::editedIcon.reset();
+    FileBrowserEntry::recentlySavedIcon.reset();
+    FileBrowserEntry::enqueuedIcon.reset();
+    FileBrowserEntry::hdr.reset();
+    FileBrowserEntry::ps.reset();
 
-    if (!options.windowMaximized) {
+    if (!options.windowMaximized && !is_fullscreen && !is_minimized) {
         get_size (options.windowWidth, options.windowHeight);
         get_position (options.windowX, options.windowY);
     }
 
-    options.windowMonitor = get_screen()->get_monitor_at_window (get_window());
+    // Retrieve window monitor ID
+    options.windowMonitor = 0;
+    const auto display = get_screen()->get_display();
+    const int monitor_nb = display->get_n_monitors();
+
+    for (int id = 0; id < monitor_nb; id++) {
+        if (display->get_monitor_at_window(get_window()) == display->get_monitor(id)) {
+            options.windowMonitor = id;
+            break;
+        }
+    }
 
     try {
         Options::save ();
@@ -769,6 +938,12 @@ void RTWindow::writeToolExpandedStatus (std::vector<int> &tpOpen)
     }
 }
 
+
+void RTWindow::showRawPedia()
+{
+    GError* gerror = nullptr;
+    gtk_show_uri(nullptr, "https://rawpedia.rawtherapee.com/", GDK_CURRENT_TIME, &gerror);
+}
 
 void RTWindow::showICCProfileCreator ()
 {
@@ -832,25 +1007,25 @@ void RTWindow::error(const Glib::ustring& descr)
 
 void RTWindow::toggle_fullscreen ()
 {
+    onConfEventConn.block(true); // Avoid getting size and position while window is getting fullscreen
+    
     if (is_fullscreen) {
         unfullscreen();
-        is_fullscreen = false;
 
         if (btn_fullscreen) {
-            //btn_fullscreen->set_label(M("MAIN_BUTTON_FULLSCREEN"));
             btn_fullscreen->set_tooltip_markup (M ("MAIN_BUTTON_FULLSCREEN"));
             btn_fullscreen->set_image (*iFullscreen);
         }
     } else {
         fullscreen();
-        is_fullscreen = true;
 
         if (btn_fullscreen) {
-            //btn_fullscreen->set_label(M("MAIN_BUTTON_UNFULLSCREEN"));
             btn_fullscreen->set_tooltip_markup (M ("MAIN_BUTTON_UNFULLSCREEN"));
             btn_fullscreen->set_image (*iFullscreen_exit);
         }
     }
+    
+    onConfEventConn.block(false);
 }
 
 void RTWindow::SetEditorCurrent()
@@ -924,6 +1099,17 @@ void RTWindow::updateFBToolBarVisibility (bool showFilmStripToolBar)
     fpanel->fileCatalog->updateFBToolBarVisibility (showFilmStripToolBar);
 }
 
+void RTWindow::updateShowtooltipVisibility (bool showtooltip)
+{
+    if (epanel) {
+        epanel->updateShowtooltipVisibility (showtooltip);
+    }
+
+    for (auto panel : epanels) {
+        panel.second->updateShowtooltipVisibility (showtooltip);
+    }
+}
+
 void RTWindow::updateHistogramPosition (int oldPosition, int newPosition)
 {
     if (epanel) {
@@ -941,6 +1127,74 @@ bool RTWindow::splashClosed (GdkEventAny* event)
     splash = nullptr;
     showErrors();
     return true;
+}
+
+void RTWindow::setWindowSize ()
+{
+    onConfEventConn.block(true); // Avoid getting size and position while window is being moved, maximized, ...
+    
+    Gdk::Rectangle lMonitorRect;
+    const auto display = get_screen()->get_display();
+    display->get_monitor (std::min (options.windowMonitor, display->get_n_monitors() - 1))->get_geometry(lMonitorRect);
+
+#ifdef __APPLE__
+    // Get macOS menu bar height
+    Gdk::Rectangle lWorkAreaRect;
+    display->get_monitor (std::min (options.windowMonitor, display->get_n_monitors() - 1))->get_workarea(lWorkAreaRect);
+    const int macMenuBarHeight = lWorkAreaRect.get_y();
+
+    // Place RT window to saved one in options file
+    if (options.windowX <= lMonitorRect.get_x() + lMonitorRect.get_width()
+            && options.windowX >= 0
+            && options.windowY <= lMonitorRect.get_y() + lMonitorRect.get_height() - macMenuBarHeight
+            && options.windowY >= 0) {
+        move (options.windowX, options.windowY + macMenuBarHeight);
+    } else {
+        move (lMonitorRect.get_x(), lMonitorRect.get_y() + macMenuBarHeight);
+    }
+#else
+    // Place RT window to saved one in options file
+    if (options.windowX <= lMonitorRect.get_x() + lMonitorRect.get_width()
+            && options.windowX >= 0
+            && options.windowY <= lMonitorRect.get_y() + lMonitorRect.get_height()
+            && options.windowY >= 0) {
+        move (options.windowX, options.windowY);
+    } else {
+        move (lMonitorRect.get_x(), lMonitorRect.get_y());
+    }
+#endif
+
+    // Maximize RT window according to options file
+    if (options.windowMaximized) {
+        maximize();
+    } else {
+        unmaximize();
+        resize (options.windowWidth, options.windowHeight);
+    }
+    
+    onConfEventConn.block(false);
+}
+
+void RTWindow::get_position(int& x, int& y) const
+{
+    // Call native function
+    Gtk::Window::get_position (x, y);
+    
+    // Retrieve display (concatenation of all monitors) size
+    int width = 0, height = 0;
+    const auto display = get_screen()->get_display();
+    const int nbMonitors = display->get_n_monitors();
+
+    for (int i = 0; i < nbMonitors; i++) {
+        Gdk::Rectangle lMonitorRect;
+        display->get_monitor(i)->get_geometry(lMonitorRect);
+        width = std::max(width, lMonitorRect.get_x() + lMonitorRect.get_width());
+        height = std::max(height, lMonitorRect.get_y() + lMonitorRect.get_height());
+    }
+
+    // Saturate position at monitor limits to avoid unexpected behavior (fixes #6233)
+    x = std::min(width, std::max(0, x));
+    y = std::min(height, std::max(0, y));
 }
 
 void RTWindow::set_title_decorated (Glib::ustring fname)
@@ -1010,7 +1264,7 @@ void RTWindow::createSetmEditor()
         el->set_angle (90);
     }
 
-    editorLabelGrid->attach_next_to (*Gtk::manage (new RTImage ("rawtherapee-logo-24.png")), pos, 1, 1);
+    editorLabelGrid->attach_next_to (*Gtk::manage (new RTImage ("aperture.png")), pos, 1, 1);
     editorLabelGrid->attach_next_to (*el, pos, 1, 1);
 
     editorLabelGrid->set_tooltip_markup (M ("MAIN_FRAME_EDITOR_TOOLTIP"));
@@ -1018,4 +1272,9 @@ void RTWindow::createSetmEditor()
     epanel->tbTopPanel_1_visible (true); //show the toggle Top Panel button
     mainNB->append_page (*epanel, *editorLabelGrid);
 
+}
+
+bool RTWindow::isSingleTabMode() const
+{
+    return !options.tabbedUI && ! (options.multiDisplayMode > 0);
 }

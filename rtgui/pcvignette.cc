@@ -3,6 +3,8 @@
  */
 #include "pcvignette.h"
 
+#include "../rtengine/procparams.h"
+
 using namespace rtengine;
 using namespace rtengine::procparams;
 
@@ -89,10 +91,6 @@ void PCVignette::adjusterChanged(Adjuster* a, double newval)
             listener->panelChanged (EvPCVignetteRoundness, roundness->getTextValue());
         }
     }
-}
-
-void PCVignette::adjusterAutoToggled(Adjuster* a, bool newval)
-{
 }
 
 void PCVignette::enabledChanged ()

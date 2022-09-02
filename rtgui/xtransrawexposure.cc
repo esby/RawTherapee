@@ -14,39 +14,37 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include "xtransrawexposure.h"
-#include "guiutils.h"
 #include <sstream>
+
+#include "xtransrawexposure.h"
+
+#include "guiutils.h"
+#include "options.h"
+#include "../rtengine/procparams.h"
 
 using namespace rtengine;
 using namespace rtengine::procparams;
 
 XTransRAWExposure::XTransRAWExposure () : FoldableToolPanel(this, "xtransrawexposure", M("TP_EXPOS_BLACKPOINT_LABEL"))
 {
-    PexBlackRed = Gtk::manage(new Adjuster (M("TP_RAWEXPOS_BLACK_RED"), -2048, 2048, 0.1, 0)); //black level
+    PexBlackRed = Gtk::manage(new Adjuster (M("TP_RAWEXPOS_BLACK_RED"), -2048, 2048, 1.0, 0)); //black level
     PexBlackRed->setAdjusterListener (this);
 
-    if (PexBlackRed->delay < options.adjusterMaxDelay) {
-        PexBlackRed->delay = options.adjusterMaxDelay;
-    }
+    PexBlackRed->setDelay(std::max(options.adjusterMinDelay, options.adjusterMaxDelay));
 
     PexBlackRed->show();
-    PexBlackGreen = Gtk::manage(new Adjuster (M("TP_RAWEXPOS_BLACK_GREEN"), -2048, 2048, 0.1, 0)); //black level
+    PexBlackGreen = Gtk::manage(new Adjuster (M("TP_RAWEXPOS_BLACK_GREEN"), -2048, 2048, 1.0, 0)); //black level
     PexBlackGreen->setAdjusterListener (this);
 
-    if (PexBlackGreen->delay < options.adjusterMaxDelay) {
-        PexBlackGreen->delay = options.adjusterMaxDelay;
-    }
+    PexBlackGreen->setDelay(std::max(options.adjusterMinDelay, options.adjusterMaxDelay));
 
     PexBlackGreen->show();
-    PexBlackBlue = Gtk::manage(new Adjuster (M("TP_RAWEXPOS_BLACK_BLUE"), -2048, 2048, 0.1, 0)); //black level
+    PexBlackBlue = Gtk::manage(new Adjuster (M("TP_RAWEXPOS_BLACK_BLUE"), -2048, 2048, 1.0, 0)); //black level
     PexBlackBlue->setAdjusterListener (this);
 
-    if (PexBlackBlue->delay < options.adjusterMaxDelay) {
-        PexBlackBlue->delay = options.adjusterMaxDelay;
-    }
+    PexBlackBlue->setDelay(std::max(options.adjusterMinDelay, options.adjusterMaxDelay));
 
     PexBlackBlue->show();
 
@@ -103,10 +101,6 @@ void XTransRAWExposure::adjusterChanged(Adjuster* a, double newval)
             listener->panelChanged (EvPreProcessExpBlackBlue, value);
         }
     }
-}
-
-void XTransRAWExposure::adjusterAutoToggled(Adjuster* a, bool newval)
-{
 }
 
 void XTransRAWExposure::setBatchMode(bool batchMode)

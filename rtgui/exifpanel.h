@@ -14,21 +14,26 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef _EXIFPANEL_
-#define _EXIFPANEL_
+#pragma once
+
+#include <memory>
 
 #include <gtkmm.h>
-#include "toolpanel.h"
 
-class ExifPanel : public Gtk::VBox, public ToolPanel
+#include "toolpanel.h"
+#include "../rtexif/rtexif.h"
+
+class ExifPanel final :
+    public Gtk::Box,
+    public ToolPanel
 {
 
 private:
     const rtengine::FramesMetaData* idata;
-    rtengine::procparams::ExifPairs changeList;
-    rtengine::procparams::ExifPairs defChangeList;
+    const std::unique_ptr<rtengine::procparams::ExifPairs> changeList;
+    const std::unique_ptr<rtengine::procparams::ExifPairs> defChangeList;
     bool recursiveOp;
 
     class ExifColumns : public Gtk::TreeModelColumnRecord
@@ -111,5 +116,3 @@ public:
     void notifyListener();
 
 };
-
-#endif

@@ -14,21 +14,26 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include "labcurve.h"
 #include <iomanip>
+
+#include "labcurve.h"
+
+#include "curveeditor.h"
+#include "curveeditorgroup.h"
+#include "options.h"
+
+#include "../rtengine/color.h"
 #include "../rtengine/improcfun.h"
-#include "edit.h"
+#include "../rtengine/procparams.h"
+#include "editcallbacks.h"
 
 using namespace rtengine;
 using namespace rtengine::procparams;
 
 LCurve::LCurve () : FoldableToolPanel(this, "labcurves", M("TP_LABCURVE_LABEL"), false, true)
 {
-
-    std::vector<GradientMilestone> milestones;
-
     brightness = Gtk::manage (new Adjuster (M("TP_LABCURVE_BRIGHTNESS"), -100., 100., 1., 0.));
     contrast   = Gtk::manage (new Adjuster (M("TP_LABCURVE_CONTRAST"), -100., 100., 1., 0.));
     chromaticity   = Gtk::manage (new Adjuster (M("TP_LABCURVE_CHROMATICITY"), -100., 100., 1., 0.));
@@ -52,7 +57,7 @@ LCurve::LCurve () : FoldableToolPanel(this, "labcurves", M("TP_LABCURVE_LABEL"),
     chromaticity->setLogScale(2, 0, true);
 
     //%%%%%%%%%%%%%%%%%%
-    Gtk::HSeparator *hsep2 = Gtk::manage (new  Gtk::HSeparator());
+    Gtk::Separator* hsep2 = Gtk::manage (new Gtk::Separator(Gtk::ORIENTATION_HORIZONTAL));
     hsep2->show ();
     pack_start (*hsep2, Gtk::PACK_EXPAND_WIDGET, 4);
 
@@ -76,7 +81,7 @@ LCurve::LCurve () : FoldableToolPanel(this, "labcurves", M("TP_LABCURVE_LABEL"),
 
     //%%%%%%%%%%%%%%%%%%%
 
-    Gtk::HSeparator *hsep3 = Gtk::manage (new  Gtk::HSeparator());
+    Gtk::Separator* hsep3 = Gtk::manage (new Gtk::Separator(Gtk::ORIENTATION_HORIZONTAL));
     hsep3->show ();
     pack_start (*hsep3, Gtk::PACK_EXPAND_WIDGET, 4);
 
@@ -95,12 +100,12 @@ LCurve::LCurve () : FoldableToolPanel(this, "labcurves", M("TP_LABCURVE_LABEL"),
         M("TP_LABCURVE_CURVEEDITOR_A_RANGE3"), M("TP_LABCURVE_CURVEEDITOR_A_RANGE4")
     );
     //from green to magenta
-    milestones.clear();
-    milestones.push_back( GradientMilestone(0., 0., 1., 0.) );
-    milestones.push_back( GradientMilestone(1., 1., 0., 1.) );
+    std::vector<GradientMilestone> milestones = {
+        GradientMilestone(0., 0., 1., 0.),
+        GradientMilestone(1., 1., 0., 1.)
+    };
     ashape->setBottomBarBgGradient(milestones);
     ashape->setLeftBarBgGradient(milestones);
-    milestones.clear();
 
     bshape = static_cast<DiagonalCurveEditor*>(curveEditorG->addCurve(CT_Diagonal, "b*"));
     bshape->setRangeLabels(
@@ -110,12 +115,12 @@ LCurve::LCurve () : FoldableToolPanel(this, "labcurves", M("TP_LABCURVE_LABEL"),
     bshape->setEditID(EUID_Lab_bCurve, BT_SINGLEPLANE_FLOAT);
 
     //from blue to yellow
-    milestones.clear();
-    milestones.push_back( GradientMilestone(0., 0., 0., 1.) );
-    milestones.push_back( GradientMilestone(1., 1., 1., 0.) );
+    milestones = {
+        GradientMilestone(0., 0., 0., 1.),
+        GradientMilestone(1., 1., 1., 0.)
+    };
     bshape->setBottomBarBgGradient(milestones);
     bshape->setLeftBarBgGradient(milestones);
-    milestones.clear();
 
     curveEditorG->newLine();  //  ------------------------------------------------ second line
 
@@ -168,21 +173,23 @@ LCurve::LCurve () : FoldableToolPanel(this, "labcurves", M("TP_LABCURVE_LABEL"),
 
     clshape->setLeftBarColorProvider(this, 7);
     clshape->setRangeDefaultMilestones(0.25, 0.5, 0.75);
-    milestones.push_back( GradientMilestone(0., 0., 0., 0.) );
-    milestones.push_back( GradientMilestone(1., 1., 1., 1.) );
 
+    milestones = {
+        GradientMilestone(0., 0., 0., 0.),
+        GradientMilestone(1., 1., 1., 1.)
+    };
     clshape->setBottomBarBgGradient(milestones);
 
 
     // Setting the gradient milestones
 
     // from black to white
-    milestones.push_back( GradientMilestone(0., 0., 0., 0.) );
-    milestones.push_back( GradientMilestone(1., 1., 1., 1.) );
+    milestones.emplace_back(0., 0., 0., 0.);
+    milestones.emplace_back(1., 1., 1., 1.);
     lshape->setBottomBarBgGradient(milestones);
     lshape->setLeftBarBgGradient(milestones);
-    milestones.push_back( GradientMilestone(0., 0., 0., 0.) );
-    milestones.push_back( GradientMilestone(1., 1., 1., 1.) );
+    milestones.emplace_back(0., 0., 0., 0.);
+    milestones.emplace_back(1., 1., 1., 1.);
     lcshape->setRangeDefaultMilestones(0.05, 0.2, 0.58);
 
     lcshape->setBottomBarBgGradient(milestones);
@@ -196,9 +203,9 @@ LCurve::LCurve () : FoldableToolPanel(this, "labcurves", M("TP_LABCURVE_LABEL"),
 
     for (int i = 0; i < 7; i++) {
         float R, G, B;
-        float x = float(i) * (1.0f / 6.0);
+        float x = i / 6.0;
         Color::hsv2rgb01(x, 0.5f, 0.5f, R, G, B);
-        milestones.push_back( GradientMilestone(double(x), double(R), double(G), double(B)) );
+        milestones.emplace_back(x, R, G, B);
     }
 
     chshape->setBottomBarBgGradient(milestones);
@@ -210,7 +217,7 @@ LCurve::LCurve () : FoldableToolPanel(this, "labcurves", M("TP_LABCURVE_LABEL"),
     curveEditorG->curveListComplete();
 
     pack_start (*curveEditorG, Gtk::PACK_SHRINK, 4);
-    Gtk::HSeparator *hsepdh = Gtk::manage (new  Gtk::HSeparator());
+    Gtk::Separator* hsepdh = Gtk::manage (new Gtk::Separator(Gtk::ORIENTATION_HORIZONTAL));
     hsepdh->show ();
     pack_start (*hsepdh, Gtk::PACK_EXPAND_WIDGET, 4);
 
@@ -296,31 +303,31 @@ void LCurve::autoOpenCurve ()
     bool active = lshape->openIfNonlinear();
 
     if (!active) {
-        ashape->openIfNonlinear();
+        active = ashape->openIfNonlinear();
     }
 
     if (!active) {
-        bshape->openIfNonlinear();
+        active = bshape->openIfNonlinear();
     }
 
     if (!active) {
-        ccshape->openIfNonlinear();
+        active = ccshape->openIfNonlinear();
     }
 
     if (!active) {
-        chshape->openIfNonlinear();
+        active = chshape->openIfNonlinear();
     }
 
     if (!active) {
-        lhshape->openIfNonlinear();
+        active = lhshape->openIfNonlinear();
     }
 
     if (!active) {
-        hhshape->openIfNonlinear();
+        active = hhshape->openIfNonlinear();
     }
 
     if (!active) {
-        lcshape->openIfNonlinear();
+        active = lcshape->openIfNonlinear();
     }
 
     if (!active) {
@@ -564,10 +571,6 @@ void LCurve::adjusterChanged(Adjuster* a, double newval)
     }
 }
 
-void LCurve::adjusterAutoToggled(Adjuster* a, bool newval)
-{
-}
-
 void LCurve::colorForValue (double valX, double valY, enum ColorCaller::ElemType elemType, int callerId, ColorCaller *caller)
 {
 
@@ -660,6 +663,8 @@ void LCurve::updateCurveBackgroundHistogram(
 {
     lshape->updateBackgroundHistogram (histLCurve);
     ccshape->updateBackgroundHistogram (histCCurve);
+    lcshape->updateBackgroundHistogram (histCCurve);
+    clshape->updateBackgroundHistogram (histLCurve);
 }
 
 void LCurve::setAdjusterBehavior (bool bradd, bool contradd, bool satadd)

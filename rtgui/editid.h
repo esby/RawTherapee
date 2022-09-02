@@ -14,14 +14,12 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef _EDITID_H_
-#define _EDITID_H_
-
+#pragma once
 
 /// @brief List of pipette editing operation
-enum EditUniqueID {
+enum EditUniqueID : int {
     EUID_None,  /// special value (default)
 
     EUID_ToneCurve1,
@@ -67,5 +65,3 @@ enum ObjectMode {
     OM_255,   /// less or equal than 255 objects
     OM_65535  /// less or equal than 65535 objects
 };
-
-#endif

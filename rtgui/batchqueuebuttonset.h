@@ -14,26 +14,30 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef _BATCHQUEUEBUTTONSET_
-#define _BATCHQUEUEBUTTONSET_
+#pragma once
 
-#include "lwbuttonset.h"
 #include <gtkmm.h>
 
+#include "lwbuttonset.h"
+
 class BatchQueueEntry;
+class RTSurface;
+
 class BatchQueueButtonSet : public LWButtonSet
 {
 
     static bool iconsLoaded;
 
 public:
-    static Cairo::RefPtr<Cairo::ImageSurface> cancelIcon;
-    static Cairo::RefPtr<Cairo::ImageSurface> headIcon;
-    static Cairo::RefPtr<Cairo::ImageSurface> tailIcon;
+    static Cairo::RefPtr<RTSurface> cancelIcon;
+    static Cairo::RefPtr<RTSurface> headIcon;
+    static Cairo::RefPtr<RTSurface> tailIcon;
+
+    static Glib::ustring moveHeadToolTip;
+    static Glib::ustring moveEndToolTip;
+    static Glib::ustring cancelJobToolTip;
 
     explicit BatchQueueButtonSet (BatchQueueEntry* myEntry);
 };
-
-#endif

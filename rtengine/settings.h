@@ -7,20 +7,18 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation, either version 3 of the License, or
  *  (at your option) any later version.
- *
  *  RawTherapee is distributed in the hope that it will be useful,
+itcw *
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef _RTSETTINGS_
-#define _RTSETTINGS_
+#pragma once
 
-#include "procparams.h"
-
+#include <glibmm/ustring.h>
 namespace rtengine
 {
 
@@ -39,10 +37,10 @@ public:
     int             leveldnautsimpl;        // STD or EXPERT
 
     Glib::ustring   printerProfile;         ///< ICC profile name used for soft-proofing a printer output
-    RenderingIntent printerIntent;          ///< Colorimetric intent used with the above profile
+    int             printerIntent;          ///< Colorimetric intent used with the above profile
     bool            printerBPC;             ///< Black Point Compensation for the Labimage->Printer->Monitor transform
     Glib::ustring   monitorProfile;         ///< ICC profile name used for the monitor
-    RenderingIntent monitorIntent;          ///< Colorimetric intent used with the above profile
+    int             monitorIntent;          ///< Colorimetric intent used with the above profile
     bool            monitorBPC;             ///< Black Point Compensation for the Labimage->Monitor transform (directly, i.e. not soft-proofing and no WCS in between)
     bool            autoMonitorProfile;     ///< Try to auto-determine the correct monitor color profile
     bool            autocielab;
@@ -61,12 +59,14 @@ public:
     Glib::ustring   rec2020;                // filename of Rec2020      profile (default to the bundled one)
     Glib::ustring   ACESp0;                 // filename of ACES P0      profile (default to the bundled one)
     Glib::ustring   ACESp1;                 // filename of ACES P1      profile (default to the bundled one)
+    Glib::ustring   DCIP3;                 // filename of DCIP3         profile (default to the bundled one)
 
     bool            gamutICC; // no longer used
     bool            gamutLch;
     bool            HistogramWorking;       // true: histogram is display the value of the image computed in the Working profile
-                                            // false: histogram is display the value of the image computed in the Output profile
+    // false: histogram is display the value of the image computed in the Output profile
     int             amchroma;
+    int             amchromajz;
     int             protectred;
     double          protectredh;
     double          nrauto;
@@ -82,7 +82,30 @@ public:
     //  bool            bw_complementary;
     double          level0_cbdl;
     double          level123_cbdl;
-    Glib::ustring   lensfunDbDirectory; ///< The directory containing the lensfun database. If empty, the system defaults will be used (as described in http://lensfun.sourceforge.net/manual/dbsearch.html)
+    Glib::ustring   lensfunDbDirectory; // The directory containing the lensfun database. If empty, the system defaults will be used, as described in https://lensfun.github.io/manual/latest/dbsearch.html
+    int             cropsleep;
+    double          reduchigh;
+    double          reduclow;
+    bool            detectshape;
+    bool            fftwsigma;
+    int             previewselection;
+    double          cbdlsensi;
+//    bool            showtooltip;
+
+    int             itcwb_thres;
+    bool            itcwb_sort;
+    int             itcwb_greenrange;
+    int             itcwb_greendeltatemp;
+    bool            itcwb_forceextra;
+    int             itcwb_sizereference;
+    int             itcwb_delta;
+    bool            itcwb_stdobserver10;
+    int             itcwb_precis;
+//wavelet levels
+    double          edghi;
+    double          edglo;
+    double          limrad;
+
 
     enum class ThumbnailInspectorMode {
         JPEG,
@@ -98,7 +121,5 @@ public:
       * @param s a pointer to the Settings instance to destroy. */
     static void      destroy(Settings* s);
 };
+extern const Settings* settings;
 }
-
-#endif
-

@@ -14,14 +14,20 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "rgbcurves.h"
+
+#include "curveeditor.h"
+#include "curveeditorgroup.h"
+#include "options.h"
+
+#include "../rtengine/procparams.h"
 
 using namespace rtengine;
 using namespace rtengine::procparams;
 
-RGBCurves::RGBCurves () : FoldableToolPanel(this, "rgbcurves", M("TP_RGBCURVES_LABEL"), false, true)
+RGBCurves::RGBCurves () : FoldableToolPanel(this, "rgbcurves", M("TP_RGBCURVES_LABEL"), false, true), lastLumamode(false)
 {
 
     lumamode = Gtk::manage (new Gtk::CheckButton (M("TP_RGBCURVES_LUMAMODE")));
@@ -30,7 +36,7 @@ RGBCurves::RGBCurves () : FoldableToolPanel(this, "rgbcurves", M("TP_RGBCURVES_L
     lumamode->show ();
     pack_start (*lumamode);
 
-    Gtk::HSeparator *hsep1 = Gtk::manage (new  Gtk::HSeparator());
+    Gtk::Separator *hsep1 = Gtk::manage (new Gtk::Separator(Gtk::ORIENTATION_HORIZONTAL));
     hsep1->show ();
     pack_start (*hsep1);
 
@@ -115,7 +121,7 @@ void RGBCurves::autoOpenCurve  ()
     bool active = Rshape->openIfNonlinear();
 
     if (!active) {
-        Gshape->openIfNonlinear();
+        active = Gshape->openIfNonlinear();
     }
 
     if (!active) {

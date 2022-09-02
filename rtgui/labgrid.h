@@ -15,7 +15,7 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 // adapted from the "color correction" module of Darktable. Original copyright follows
@@ -33,7 +33,7 @@
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
-    along with darktable.  If not, see <http://www.gnu.org/licenses/>.
+    along with darktable.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #pragma once
@@ -43,40 +43,49 @@
 #include "toolpanel.h"
 
 
-class LabGridArea: public Gtk::DrawingArea, public BackBuffer {
+class LabGridArea final : public Gtk::DrawingArea, public BackBuffer {
 private:
     rtengine::ProcEvent evt;
     Glib::ustring evtMsg;
     
-    enum State { NONE, HIGH, LOW };
+    enum State { NONE, HIGH, LOW, GRE};
     State litPoint;
-    float low_a;
-    float high_a;
-    float low_b;
-    float high_b;
-
-    float defaultLow_a;
-    float defaultHigh_a;
-    float defaultLow_b;
-    float defaultHigh_b;
+    double low_a;
+    double high_a;
+    double low_b;
+    double high_b;
+    double gre_x;
+    double gre_y;
+    double whi_x;
+    double whi_y;
+    
+    double defaultLow_a;
+    double defaultHigh_a;
+    double defaultLow_b;
+    double defaultHigh_b;
+    double defaultgre_x;
+    double defaultgre_y;
+    double defaultwhi_x;
+    double defaultwhi_y;
 
     ToolPanelListener *listener;
     bool edited;
     bool isDragged;
     sigc::connection delayconn;
-    static const int inset = 2;
+    static const int inset = 5;
 
     bool low_enabled;
+    bool ciexy_enabled;
 
     bool notifyListener();
     void getLitPoint();
 
 public:
-    LabGridArea(rtengine::ProcEvent evt, const Glib::ustring &msg, bool enable_low=true);
+    LabGridArea(rtengine::ProcEvent evt, const Glib::ustring &msg, bool enable_low=true, bool ciexy=false);
 
-    void getParams(double &la, double &lb, double &ha, double &hb) const;
-    void setParams(double la, double lb, double ha, double hb, bool notify);
-    void setDefault (double la, double lb, double ha, double hb);
+    void getParams(double &la, double &lb, double &ha, double &hb, double &gx, double &gy, double &wx, double &wy) const;
+    void setParams(double la, double lb, double ha, double hb, double gx, double gy, double wx, double wy,  bool notify);
+    void setDefault (double la, double lb, double ha, double hb, double gx, double gy, double wx, double wy);
     void setEdited(bool yes);
     bool getEdited() const;
     void reset(bool toInitial);
@@ -84,6 +93,8 @@ public:
 
     bool lowEnabled() const;
     void setLowEnabled(bool yes);
+    bool ciexyEnabled() const;
+    void setciexyEnabled(bool yes);
 
     bool on_draw(const ::Cairo::RefPtr<Cairo::Context> &crf) override;
     void on_style_updated () override;
@@ -96,23 +107,25 @@ public:
 };
 
 
-class LabGrid: public Gtk::HBox {
+class LabGrid: public Gtk::Box {
 private:
     LabGridArea grid;
 
     bool resetPressed(GdkEventButton *event);
     
 public:
-    LabGrid(rtengine::ProcEvent evt, const Glib::ustring &msg, bool enable_low=true);
+    LabGrid(rtengine::ProcEvent evt, const Glib::ustring &msg, bool enable_low=true, bool ciexy=false);
 
-    void getParams(double &la, double &lb, double &ha, double &hb) const { return grid.getParams(la, lb, ha, hb); }
-    void setParams(double la, double lb, double ha, double hb, bool notify) { grid.setParams(la, lb, ha, hb, notify); }
-    void setDefault (double la, double lb, double ha, double hb) { grid.setDefault(la, lb, ha, hb); }
+    void getParams(double &la, double &lb, double &ha, double &hb, double &gx, double &gy, double &wx, double &wy) const { return grid.getParams(la, lb, ha, hb, gx, gy, wx, wy); }
+    void setParams(double la, double lb, double ha, double hb, double gx, double gy, double wx, double wy, bool notify) { grid.setParams(la, lb, ha, hb, gx, gy, wx, wy, notify); }
+    void setDefault (double la, double lb, double ha, double hb, double gx, double gy, double wx, double wy) { grid.setDefault(la, lb, ha, hb, gx, gy, wx, wy); }
     void setEdited(bool yes) { grid.setEdited(yes); }
     bool getEdited() const { return grid.getEdited(); }
     void reset(bool toInitial) { grid.reset(toInitial); }
     void setListener(ToolPanelListener *l) { grid.setListener(l); }
     bool lowEnabled() const { return grid.lowEnabled(); }
     void setLowEnabled(bool yes) { grid.setLowEnabled(yes); }
+    bool ciexyEnabled() const { return grid.ciexyEnabled(); }
+    void setciexyEnabled(bool yes) { grid.setciexyEnabled(yes); }
 };
 

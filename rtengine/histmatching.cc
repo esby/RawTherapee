@@ -15,25 +15,25 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "rawimagesource.h"
-#include "rtthumbnail.h"
-#include "curves.h"
-#include "color.h"
-#include "rt_math.h"
-#include "iccstore.h"
-#include "../rtgui/mydiagonalcurve.h"
-#include "improcfun.h"
-//#define BENCHMARK
-#include "StopWatch.h"
 #include <iostream>
 
+#include "color.h"
+#include "curves.h"
+#include "improcfun.h"
+#include "procparams.h"
+#include "rawimagesource.h"
+#include "rt_math.h"
+#include "rtthumbnail.h"
+#include "settings.h"
 
-namespace rtengine {
+//#define BENCHMARK
+#include "StopWatch.h"
 
-extern const Settings *settings;
+namespace rtengine
+{
 
 namespace {
 
@@ -68,7 +68,7 @@ CdfInfo getCdf(const IImage8 &img)
         sum += ret.cdf[i];
         ret.cdf[i] = sum;
     }
-    
+
     return ret;
 }
 
@@ -97,59 +97,10 @@ int findMatch(int val, const std::vector<int> &cdf, int j)
 }
 
 
-class CubicSplineCurve: public DiagonalCurve {
-public:
-    CubicSplineCurve(const std::vector<double> &points):
-        DiagonalCurve({DCT_Linear})
-    {
-        N = points.size() / 2;
-        x = new double[N];
-        y = new double[N];
-
-        for (int i = 0; i < N; ++i) {
-            x[i] = points[2*i];
-            y[i] = points[2*i+1];
-        }
-        kind = DCT_Spline;
-        spline_cubic_set();
-    }
-
-    double getVal(double t) const override
-    {
-        // values under and over the first and last point
-        if (t > x[N - 1]) {
-            return y[N - 1];
-        } else if (t < x[0]) {
-            return y[0];
-        }
-
-        // do a binary search for the right interval:
-        unsigned int k_lo = 0, k_hi = N - 1;
-
-        while (k_hi > 1 + k_lo) {
-            unsigned int k = (k_hi + k_lo) / 2;
-
-            if (x[k] > t) {
-                k_hi = k;
-            } else {
-                k_lo = k;
-            }
-        }
-
-        double h = x[k_hi] - x[k_lo];
-
-        double a = (x[k_hi] - t) / h;
-        double b = (t - x[k_lo]) / h;
-        double r = a * y[k_lo] + b * y[k_hi] + ((a * a * a - a) * ypp[k_lo] + (b * b * b - b) * ypp[k_hi]) * (h * h) * 0.1666666666666666666666666666666;
-        return LIM01(r);
-    }
-};
-
-
 void mappingToCurve(const std::vector<int> &mapping, std::vector<double> &curve)
 {
     curve.clear();
-    
+
     int idx = 15;
     for (; idx < int(mapping.size()); ++idx) {
         if (mapping[idx] >= idx) {
@@ -157,7 +108,7 @@ void mappingToCurve(const std::vector<int> &mapping, std::vector<double> &curve)
         }
     }
     if (idx == int(mapping.size())) {
-        for (idx = 1; idx < int(mapping.size()); ++idx) {
+        for (idx = 1; idx < int(mapping.size())-1; ++idx) {
             if (mapping[idx] >= idx) {
                 break;
             }
@@ -208,7 +159,7 @@ void mappingToCurve(const std::vector<int> &mapping, std::vector<double> &curve)
         doit(start, idx, idx > step ? step : idx / 2, true);
         doit(idx, end, step, idx - step > step / 2 && std::abs(curve[curve.size()-2] - coord(idx)) > 0.01);
     }
-    
+
     if (curve.size() > 2 && (1 - curve[curve.size()-2] <= coord(step) / 3)) {
         curve.pop_back();
         curve.pop_back();
@@ -227,8 +178,8 @@ void mappingToCurve(const std::vector<int> &mapping, std::vector<double> &curve)
             return (x - xa) / (xb - xa) * (yb - ya) + ya;
         };
     idx = -1;
-    for (size_t i = curve.size()-1; i > 0; i -= 2) {
-        if (curve[i] <= 0.f) {
+    for (ssize_t i = curve.size()-1; i > 0; i -= 2) {
+        if (curve[i] <= 0.0) {
             idx = i+1;
             break;
         }
@@ -255,14 +206,15 @@ void mappingToCurve(const std::vector<int> &mapping, std::vector<double> &curve)
             }
         }
     }
-        
+
     if (curve.size() < 4) {
         curve = { DCT_Linear }; // not enough points, fall back to linear
     } else {
-        CubicSplineCurve c(curve);
+        curve.insert(curve.begin(), DCT_Spline);
+        DiagonalCurve c(curve);
         double gap = 0.05;
         double x = 0.0;
-        curve = { DCT_Spline };
+        curve = { DCT_CatumullRom };
         while (x < 1.0) {
             curve.push_back(x);
             curve.push_back(c.getVal(x));
@@ -280,7 +232,7 @@ void mappingToCurve(const std::vector<int> &mapping, std::vector<double> &curve)
 void RawImageSource::getAutoMatchedToneCurve(const ColorManagementParams &cp, std::vector<double> &outCurve)
 {
     BENCHFUN
-        
+
     if (settings->verbose) {
         std::cout << "performing histogram matching for " << getFileName() << " on the embedded thumbnail" << std::endl;
     }
@@ -296,7 +248,7 @@ void RawImageSource::getAutoMatchedToneCurve(const ColorManagementParams &cp, st
                     && a.dcpIlluminant == b.dcpIlluminant);
         };
 
-    if (!histMatchingCache.empty() && same_profile(histMatchingParams, cp)) {
+    if (!histMatchingCache.empty() && same_profile(*histMatchingParams, cp)) {
         if (settings->verbose) {
             std::cout << "tone curve found in cache" << std::endl;
         }
@@ -322,26 +274,29 @@ void RawImageSource::getAutoMatchedToneCurve(const ColorManagementParams &cp, st
     neutral.raw.bayersensor.method = RAWParams::BayerSensor::getMethodString(RAWParams::BayerSensor::Method::FAST);
     neutral.raw.xtranssensor.method = RAWParams::XTransSensor::getMethodString(RAWParams::XTransSensor::Method::FAST);
     neutral.icm.outputProfile = ColorManagementParams::NoICMString;
-    
+
     std::unique_ptr<IImage8> source;
     {
         RawMetaDataLocation rml;
         eSensorType sensor_type;
-        int w, h;
+        int w = 0, h = 0;
         std::unique_ptr<Thumbnail> thumb(Thumbnail::loadQuickFromRaw(getFileName(), rml, sensor_type, w, h, 1, false, true, true));
         if (!thumb) {
             if (settings->verbose) {
                 std::cout << "histogram matching: no thumbnail found, generating a neutral curve" << std::endl;
             }
             histMatchingCache = outCurve;
-            histMatchingParams = cp;
+            *histMatchingParams = cp;
             return;
-        } else if (w * 10 < fw) {
+        } else if (w * 33 < fw || w * h < 19200) {
+             // Some cameras have extremely small thumbs, for example Canon PowerShot A3100 IS has 128x96 thumbs.
+             // For them we skip histogram matching.
+             // With 160x120 thumbs from RICOH GR DIGITAL 2 it works fine, so we use 19200 as limit.
             if (settings->verbose) {
                 std::cout << "histogram matching: the embedded thumbnail is too small: " << w << "x" << h << std::endl;
             }
             histMatchingCache = outCurve;
-            histMatchingParams = cp;
+            *histMatchingParams = cp;
             return;
         }
         skip = LIM(skip * fh / h, 6, 10); // adjust the skip factor -- the larger the thumbnail, the less we should skip to get a good match
@@ -351,7 +306,7 @@ void RawImageSource::getAutoMatchedToneCurve(const ColorManagementParams &cp, st
             std::cout << "histogram matching: extracted embedded thumbnail" << std::endl;
         }
     }
-    
+
     std::unique_ptr<IImage8> target;
     {
         RawMetaDataLocation rml;
@@ -364,7 +319,7 @@ void RawImageSource::getAutoMatchedToneCurve(const ColorManagementParams &cp, st
                 std::cout << "histogram matching: raw decoding failed, generating a neutral curve" << std::endl;
             }
             histMatchingCache = outCurve;
-            histMatchingParams = cp;
+            *histMatchingParams = cp;
             return;
         }
         target.reset(thumb->processImage(neutral, sensor_type, fh / skip, TI_Nearest, getMetaData(), scale, false, true));
@@ -373,8 +328,8 @@ void RawImageSource::getAutoMatchedToneCurve(const ColorManagementParams &cp, st
         int tw = target->getWidth(), th = target->getHeight();
         float thumb_ratio = float(std::max(sw, sh)) / float(std::min(sw, sh));
         float target_ratio = float(std::max(tw, th)) / float(std::min(tw, th));
-        int cx = 0, cy = 0;
-        if (std::abs(thumb_ratio - target_ratio) > 0.01) {
+        if (std::abs(thumb_ratio - target_ratio) > 0.01f) {
+            int cx = 0, cy = 0;
             if (thumb_ratio > target_ratio) {
                 // crop the height
                 int ch = th - (tw * float(sh) / float(sw));
@@ -387,7 +342,7 @@ void RawImageSource::getAutoMatchedToneCurve(const ColorManagementParams &cp, st
                 tw -= cw;
             }
             if (settings->verbose) {
-                std::cout << "histogram matching: cropping target to get an aspect ratio of " << round(thumb_ratio * 100)/100.0 << ":1, new size is " << tw << "x" << th << std::endl;
+                std::cout << "histogram matching: cropping target to get an aspect ratio of " << round(thumb_ratio * 100)/100.f << ":1, new size is " << tw << "x" << th << std::endl;
             }
 
             if (cx || cy) {
@@ -436,7 +391,7 @@ void RawImageSource::getAutoMatchedToneCurve(const ColorManagementParams &cp, st
     }
 
     histMatchingCache = outCurve;
-    histMatchingParams = cp;
+    *histMatchingParams = cp;
 }
 
 } // namespace rtengine

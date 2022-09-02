@@ -14,46 +14,42 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "bayerrawexposure.h"
+
 #include "guiutils.h"
+#include "options.h"
+
+#include "../rtengine/procparams.h"
 
 using namespace rtengine;
 using namespace rtengine::procparams;
 
-BayerRAWExposure::BayerRAWExposure () : FoldableToolPanel(this, "bayerrawexposure", M("TP_EXPOS_BLACKPOINT_LABEL"), true)
+BayerRAWExposure::BayerRAWExposure () : FoldableToolPanel(this, "bayerrawexposure", M("TP_EXPOS_BLACKPOINT_LABEL"), options.prevdemo != PD_Sidecar)
 {
-    PexBlack1 = Gtk::manage(new Adjuster (M("TP_RAWEXPOS_BLACK_1"), -2048, 2048, 0.1, 0)); //black level
+    PexBlack1 = Gtk::manage(new Adjuster (M("TP_RAWEXPOS_BLACK_1"), -2048, 2048, 1.0, 0)); //black level
     PexBlack1->setAdjusterListener (this);
 
-    if (PexBlack1->delay < options.adjusterMaxDelay) {
-        PexBlack1->delay = options.adjusterMaxDelay;
-    }
+    PexBlack1->setDelay(std::max(options.adjusterMinDelay, options.adjusterMaxDelay));
 
     PexBlack1->show();
-    PexBlack2 = Gtk::manage(new Adjuster (M("TP_RAWEXPOS_BLACK_2"), -2048, 2048, 0.1, 0)); //black level
+    PexBlack2 = Gtk::manage(new Adjuster (M("TP_RAWEXPOS_BLACK_2"), -2048, 2048, 1.0, 0)); //black level
     PexBlack2->setAdjusterListener (this);
 
-    if (PexBlack2->delay < options.adjusterMaxDelay) {
-        PexBlack2->delay = options.adjusterMaxDelay;
-    }
+    PexBlack2->setDelay(std::max(options.adjusterMinDelay, options.adjusterMaxDelay));
 
     PexBlack2->show();
-    PexBlack3 = Gtk::manage(new Adjuster (M("TP_RAWEXPOS_BLACK_3"), -2048, 2048, 0.1, 0)); //black level
+    PexBlack3 = Gtk::manage(new Adjuster (M("TP_RAWEXPOS_BLACK_3"), -2048, 2048, 1.0, 0)); //black level
     PexBlack3->setAdjusterListener (this);
 
-    if (PexBlack3->delay < options.adjusterMaxDelay) {
-        PexBlack3->delay = options.adjusterMaxDelay;
-    }
+    PexBlack3->setDelay(std::max(options.adjusterMinDelay, options.adjusterMaxDelay));
 
     PexBlack3->show();
-    PexBlack0 = Gtk::manage(new Adjuster (M("TP_RAWEXPOS_BLACK_0"), -2048, 2048, 0.1, 0)); //black level
+    PexBlack0 = Gtk::manage(new Adjuster (M("TP_RAWEXPOS_BLACK_0"), -2048, 2048, 1.0, 0)); //black level
     PexBlack0->setAdjusterListener (this);
 
-    if (PexBlack0->delay < options.adjusterMaxDelay) {
-        PexBlack0->delay = options.adjusterMaxDelay;
-    }
+    PexBlack0->setDelay(std::max(options.adjusterMinDelay, options.adjusterMaxDelay));
 
     PexBlack0->show();
     PextwoGreen = Gtk::manage(new CheckBox(M("TP_RAWEXPOS_TWOGREEN"), multiImage));// two green
@@ -141,15 +137,11 @@ void BayerRAWExposure::adjusterChanged(Adjuster* a, double newval)
             if(!PextwoGreen->getLastActive()) {
                 listener->panelChanged (EvPreProcessExpBlackthree,  value );
             } else {
-                listener->panelChanged (EvPreProcessExpBlackthree,  value );
                 PexBlack0->setValue (PexBlack3->getValue());
+                listener->panelChanged (EvPreProcessExpBlackthree,  value );
             }
         }
     }
-}
-
-void BayerRAWExposure::adjusterAutoToggled(Adjuster* a, bool newval)
-{
 }
 
 void BayerRAWExposure::checkBoxToggled (CheckBox* c, CheckValue newval)

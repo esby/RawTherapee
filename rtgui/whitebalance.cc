@@ -14,7 +14,7 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "whitebalance.h"
 
@@ -35,32 +35,27 @@ using namespace rtengine;
 using namespace rtengine::procparams;
 
 Glib::RefPtr<Gdk::Pixbuf> WhiteBalance::wbPixbufs[toUnderlying(WBEntry::Type::CUSTOM) + 1];
-/*
-Glib::RefPtr<Gdk::Pixbuf> WhiteBalance::wbCameraPB, WhiteBalance::wbAutoPB, WhiteBalance::wbSunPB, WhiteBalance::wbTungstenPB,
-                          WhiteBalance::wbCloudyPB, WhiteBalance::wbShadePB, WhiteBalance::wbFluorescentPB, WhiteBalance::wbLampPB,
-                          WhiteBalance::wbFlashPB, WhiteBalance::wbLedPB, WhiteBalance::wbCustomPB;
-*/
 
 void WhiteBalance::init ()
 {
-    wbPixbufs[toUnderlying(WBEntry::Type::CAMERA)]      = RTImage::createFromFile ("wb-camera-small.png");
-    wbPixbufs[toUnderlying(WBEntry::Type::AUTO)]        = RTImage::createFromFile ("wb-auto-small.png");
-    wbPixbufs[toUnderlying(WBEntry::Type::DAYLIGHT)]    = RTImage::createFromFile ("wb-sun-small.png");
-    wbPixbufs[toUnderlying(WBEntry::Type::CLOUDY)]      = RTImage::createFromFile ("wb-cloudy-small.png");
-    wbPixbufs[toUnderlying(WBEntry::Type::SHADE)]       = RTImage::createFromFile ("wb-shade-small.png");
-    wbPixbufs[toUnderlying(WBEntry::Type::WATER)]       = RTImage::createFromFile ("wb-water-small.png");
-  //wbPixbufs[WBEntry::Type::WATER2]                    = RTImage::createFromFile ("wb-water-small.png");
-    wbPixbufs[toUnderlying(WBEntry::Type::TUNGSTEN)]    = RTImage::createFromFile ("wb-tungsten-small.png");
-    wbPixbufs[toUnderlying(WBEntry::Type::FLUORESCENT)] = RTImage::createFromFile ("wb-fluorescent-small.png");
-    wbPixbufs[toUnderlying(WBEntry::Type::LAMP)]        = RTImage::createFromFile ("wb-lamp-small.png");
-    wbPixbufs[toUnderlying(WBEntry::Type::FLASH)]       = RTImage::createFromFile ("wb-flash-small.png");
-    wbPixbufs[toUnderlying(WBEntry::Type::LED)]         = RTImage::createFromFile ("wb-led-small.png");
-    wbPixbufs[toUnderlying(WBEntry::Type::CUSTOM)]      = RTImage::createFromFile ("wb-custom-small.png");
+    wbPixbufs[toUnderlying(WBEntry::Type::CAMERA)]      = RTImage::createPixbufFromFile ("wb-camera-small.png");
+    wbPixbufs[toUnderlying(WBEntry::Type::AUTO)]        = RTImage::createPixbufFromFile ("wb-auto-small.png");
+    wbPixbufs[toUnderlying(WBEntry::Type::DAYLIGHT)]    = RTImage::createPixbufFromFile ("wb-sun-small.png");
+    wbPixbufs[toUnderlying(WBEntry::Type::CLOUDY)]      = RTImage::createPixbufFromFile ("wb-cloudy-small.png");
+    wbPixbufs[toUnderlying(WBEntry::Type::SHADE)]       = RTImage::createPixbufFromFile ("wb-shade-small.png");
+    wbPixbufs[toUnderlying(WBEntry::Type::WATER)]       = RTImage::createPixbufFromFile ("wb-water-small.png");
+  //wbPixbufs[toUnderlying(WBEntry::Type::WATER2)]      = RTImage::createPixbufFromFile ("wb-water-small.png");
+    wbPixbufs[toUnderlying(WBEntry::Type::TUNGSTEN)]    = RTImage::createPixbufFromFile ("wb-tungsten-small.png");
+    wbPixbufs[toUnderlying(WBEntry::Type::FLUORESCENT)] = RTImage::createPixbufFromFile ("wb-fluorescent-small.png");
+    wbPixbufs[toUnderlying(WBEntry::Type::LAMP)]        = RTImage::createPixbufFromFile ("wb-lamp-small.png");
+    wbPixbufs[toUnderlying(WBEntry::Type::FLASH)]       = RTImage::createPixbufFromFile ("wb-flash-small.png");
+    wbPixbufs[toUnderlying(WBEntry::Type::LED)]         = RTImage::createPixbufFromFile ("wb-led-small.png");
+    wbPixbufs[toUnderlying(WBEntry::Type::CUSTOM)]      = RTImage::createPixbufFromFile ("wb-custom-small.png");
 }
 
 void WhiteBalance::cleanup ()
 {
-    for (unsigned int i = 0; i < toUnderlying(WBEntry::Type::CUSTOM) + 1; i++) {
+    for (int i = 0; i < toUnderlying(WBEntry::Type::CUSTOM) + 1; i++) {
         wbPixbufs[i].reset();
     }
 }
@@ -147,13 +142,13 @@ static double wbTemp2Slider(double temp)
     return sval;
 }
 
-WhiteBalance::WhiteBalance () : FoldableToolPanel(this, "whitebalance", M("TP_WBALANCE_LABEL"), false, true), wbp(nullptr), wblistener(nullptr)
+WhiteBalance::WhiteBalance () : FoldableToolPanel(this, "whitebalance", M("TP_WBALANCE_LABEL"), true, true), wbp(nullptr), wblistener(nullptr)
 {
-    
+
     Gtk::Grid* methodgrid = Gtk::manage(new Gtk::Grid());
     methodgrid->get_style_context()->add_class("grid-spacing");
     setExpandAlignProperties(methodgrid, true, false, Gtk::ALIGN_FILL, Gtk::ALIGN_CENTER);
-    
+
     Gtk::Label* lab = Gtk::manage (new Gtk::Label (M("TP_WBALANCE_METHOD") + ":"));
     setExpandAlignProperties(lab, false, false, Gtk::ALIGN_START, Gtk::ALIGN_CENTER);
 
@@ -177,6 +172,14 @@ WhiteBalance::WhiteBalance () : FoldableToolPanel(this, "whitebalance", M("TP_WB
                 row = *(refTreeModel->append());
                 row[methodColumns.colIcon] = wbPixbufs[toUnderlying(currType)];
                 row[methodColumns.colLabel] = M("TP_WBALANCE_FLUO_HEADER");
+                row[methodColumns.colId] = i + 100;
+            }
+
+            if (currType == WBEntry::Type::AUTO) {
+                // Creating the auto category
+                row = *(refTreeModel->append());
+                row[methodColumns.colIcon] = wbPixbufs[toUnderlying(currType)];
+                row[methodColumns.colLabel] = M("TP_WBALANCE_AUTO_HEADER");
                 row[methodColumns.colId] = i + 100;
             }
 
@@ -218,6 +221,7 @@ WhiteBalance::WhiteBalance () : FoldableToolPanel(this, "whitebalance", M("TP_WB
                 || currType == WBEntry::Type::WATER
                 || currType == WBEntry::Type::FLASH
                 || currType == WBEntry::Type::LED
+                || currType == WBEntry::Type::AUTO
            ) {
             childrow = *(refTreeModel->append(row.children()));
             childrow[methodColumns.colIcon] = wbPixbufs[toUnderlying(currType)];
@@ -244,10 +248,17 @@ WhiteBalance::WhiteBalance () : FoldableToolPanel(this, "whitebalance", M("TP_WB
     std::vector<Gtk::CellRenderer*> cells = method->get_cells();
     Gtk::CellRendererText* cellRenderer = dynamic_cast<Gtk::CellRendererText*>(cells.at(1));
     cellRenderer->property_ellipsize() = Pango::ELLIPSIZE_MIDDLE;
+    
+    resetButton = Gtk::manage (new Gtk::Button()); // No label, keep it short
+    setExpandAlignProperties(resetButton, false, false, Gtk::ALIGN_START, Gtk::ALIGN_CENTER);
+    resetButton->set_relief(Gtk::RELIEF_NONE);
+    resetButton->get_style_context()->add_class(GTK_STYLE_CLASS_FLAT);
+    resetButton->set_image (*Gtk::manage (new RTImage ("undo-small.png")));
 
     method->set_active (0); // Camera
     methodgrid->attach (*lab, 0, 0, 1, 1);
     methodgrid->attach (*method, 1, 0, 1, 1);
+    methodgrid->attach (*resetButton, 2, 0, 1, 1);
     pack_start (*methodgrid, Gtk::PACK_SHRINK, 0 );
     opt = 0;
 
@@ -263,7 +274,7 @@ WhiteBalance::WhiteBalance () : FoldableToolPanel(this, "whitebalance", M("TP_WB
 
     Gtk::Label* slab = Gtk::manage (new Gtk::Label (M("TP_WBALANCE_SIZE")));
     setExpandAlignProperties(slab, false, false, Gtk::ALIGN_START, Gtk::ALIGN_CENTER);
-    
+
     Gtk::Grid* wbsizehelper = Gtk::manage(new Gtk::Grid());
     wbsizehelper->set_name("WB-Size-Helper");
     setExpandAlignProperties(wbsizehelper, false, false, Gtk::ALIGN_START, Gtk::ALIGN_CENTER);
@@ -299,15 +310,15 @@ WhiteBalance::WhiteBalance () : FoldableToolPanel(this, "whitebalance", M("TP_WB
     if (options.whiteBalanceSpotSize == 32) {
         spotsize->set_active(4);
     }
-    
+
     wbsizehelper->attach (*spotsize, 0, 0, 1, 1);
 
     spotgrid->attach (*spotbutton, 0, 0, 1, 1);
     spotgrid->attach (*slab, 1, 0, 1, 1);
     spotgrid->attach (*wbsizehelper, 2, 0, 1, 1);
     pack_start (*spotgrid, Gtk::PACK_SHRINK, 0 );
-    
-    Gtk::HSeparator *separator = Gtk::manage (new  Gtk::HSeparator());
+
+    Gtk::Separator *separator = Gtk::manage (new Gtk::Separator(Gtk::ORIENTATION_HORIZONTAL));
     separator->get_style_context()->add_class("grid-row-separator");
     pack_start (*separator, Gtk::PACK_SHRINK, 0);
 
@@ -320,9 +331,11 @@ WhiteBalance::WhiteBalance () : FoldableToolPanel(this, "whitebalance", M("TP_WB
     Gtk::Image* itempbiasL =  Gtk::manage (new RTImage ("circle-blue-small.png"));
     Gtk::Image* itempbiasR =  Gtk::manage (new RTImage ("circle-yellow-small.png"));
 
+    StudLabel = Gtk::manage(new Gtk::Label("---", Gtk::ALIGN_CENTER));
+    StudLabel->set_tooltip_text(M("TP_WBALANCE_STUDLABEL_TOOLTIP"));
+
     temp = Gtk::manage (new Adjuster (M("TP_WBALANCE_TEMPERATURE"), MINTEMP, MAXTEMP, 5, CENTERTEMP, itempL, itempR, &wbSlider2Temp, &wbTemp2Slider));
     green = Gtk::manage (new Adjuster (M("TP_WBALANCE_GREEN"), MINGREEN, MAXGREEN, 0.001, 1.0, igreenL, igreenR));
-    green->setLogScale(10, 1, true);
     equal = Gtk::manage (new Adjuster (M("TP_WBALANCE_EQBLUERED"), MINEQUAL, MAXEQUAL, 0.001, 1.0, iblueredL, iblueredR));
     tempBias = Gtk::manage (new Adjuster(M("TP_WBALANCE_TEMPBIAS"), -0.5, 0.5, 0.01, 0.0, itempbiasL, itempbiasR));
     cache_customTemp (0);
@@ -335,12 +348,13 @@ WhiteBalance::WhiteBalance () : FoldableToolPanel(this, "whitebalance", M("TP_WB
     equal->show ();
     tempBias->show ();
 
-    /*  Gtk::HBox* boxgreen = Gtk::manage (new Gtk::HBox ());
+    /*  Gtk::Box* boxgreen = Gtk::manage (new Gtk::Box ());
     boxgreen->show ();
 
     boxgreen->pack_start(*igreenL);
     boxgreen->pack_start(*green);
     boxgreen->pack_start(*igreenR);*/
+    pack_start(*StudLabel);
 
     pack_start (*temp);
     //pack_start (*boxgreen);
@@ -355,6 +369,7 @@ WhiteBalance::WhiteBalance () : FoldableToolPanel(this, "whitebalance", M("TP_WB
 
     spotbutton->signal_pressed().connect( sigc::mem_fun(*this, &WhiteBalance::spotPressed) );
     methconn = method->signal_changed().connect( sigc::mem_fun(*this, &WhiteBalance::optChanged) );
+    resetButton->signal_pressed().connect( sigc::mem_fun(*this, &WhiteBalance::resetWB) );
     spotsize->signal_changed().connect( sigc::mem_fun(*this, &WhiteBalance::spotSizeChanged) );
 }
 
@@ -388,7 +403,6 @@ void WhiteBalance::adjusterChanged(Adjuster* a, double newval)
         return;
     }
 
-    Glib::ustring colLabel = row[methodColumns.colLabel];
     const std::pair<bool, const WBEntry&> ppMethod = findWBEntry (row[methodColumns.colLabel], WBLT_GUI);
     const std::pair<bool, const WBEntry&> wbCustom = findWBEntry ("Custom", WBLT_PP);
 
@@ -440,10 +454,6 @@ void WhiteBalance::adjusterChanged(Adjuster* a, double newval)
     }
 }
 
-void WhiteBalance::adjusterAutoToggled(Adjuster* a, bool newval)
-{
-}
-
 void WhiteBalance::optChanged ()
 {
     Gtk::TreeModel::Row row = getActiveMethod();
@@ -459,6 +469,7 @@ void WhiteBalance::optChanged ()
         methconn.block(prevState);
         return;
     }
+    StudLabel->hide();
 
     if (opt != row[methodColumns.colId]) {
 
@@ -474,6 +485,12 @@ void WhiteBalance::optChanged ()
             const WBEntry& currMethod = WBParams::getWbEntries()[methodId];
 
             tempBias->set_sensitive(currMethod.type == WBEntry::Type::AUTO);
+            bool autit = (currMethod.ppLabel == "autitcgreen");
+            if (autit) {
+                StudLabel->show();
+            } else {
+                StudLabel->hide();
+            }
 
             switch (currMethod.type) {
             case WBEntry::Type::CAMERA:
@@ -558,6 +575,8 @@ void WhiteBalance::optChanged ()
 
 void WhiteBalance::spotPressed ()
 {
+    StudLabel->hide();
+
     if (wblistener) {
         wblistener->spotWBRequested (getSize());
     }
@@ -694,6 +713,13 @@ void WhiteBalance::read (const ProcParams* pp, const ParamsEdited* pedited)
         }
 
         tempBias->set_sensitive(wbValues.type == WBEntry::Type::AUTO);
+        bool autit = (wbValues.ppLabel == "autitcgreen");
+        if (autit) {
+            StudLabel->show();
+        } else {
+            StudLabel->hide();
+        }
+        
     }
 
     setEnabled(pp->wb.enabled);
@@ -701,8 +727,7 @@ void WhiteBalance::read (const ProcParams* pp, const ParamsEdited* pedited)
         set_inconsistent(multiImage && !pedited->wb.enabled);
     }
 
-    green->setLogScale(10, green->getValue(), true);
-    
+
     methconn.block (false);
     enableListener ();
 }
@@ -809,7 +834,11 @@ void WhiteBalance::setWB (int vtemp, double vgreen)
         listener->panelChanged (EvWBTemp, Glib::ustring::compose("%1, %2", (int)temp->getValue(), Glib::ustring::format (std::setw(4), std::fixed, std::setprecision(3), green->getValue())));
     }
 
-    green->setLogScale(10, vgreen, true);
+}
+
+void WhiteBalance::resetWB ()
+{
+    setActiveMethod("Camera");
 }
 
 void WhiteBalance::setAdjusterBehavior (bool tempadd, bool greenadd, bool equaladd, bool tempbiasadd)
@@ -887,7 +916,7 @@ int WhiteBalance::_setActiveMethod(Glib::ustring &label, Gtk::TreeModel::Childre
 
         if (row[methodColumns.colLabel] == label) {
             method->set_active(iter);
-            found = method->get_active_row_number();
+            found = row[methodColumns.colId];
         }
 
         if (found != -1) {
@@ -920,30 +949,23 @@ inline Gtk::TreeRow WhiteBalance::getActiveMethod ()
     return *(method->get_active());
 }
 
-void WhiteBalance::WBChanged(double temperature, double greenVal)
+void WhiteBalance::WBChanged(double temperature, double greenVal, float studgood)
 {
-    struct Data {
-        WhiteBalance* self;
-        double temperature;
-        double green_val;
-    };
+    idle_register.add(
+        [this, temperature, greenVal, studgood]() -> bool
+        {
+            disableListener();
+            temp->setValue(temperature);
+            green->setValue(greenVal);
+            StudLabel->set_text(
+                Glib::ustring::compose(M("TP_WBALANCE_STUDLABEL"),
+                                   Glib::ustring::format(std::fixed, std::setprecision(4), studgood))
+            );            
+            temp->setDefault(temperature);
+            green->setDefault(greenVal);
+            enableListener();
 
-    const auto func = [](gpointer data) -> gboolean {
-        WhiteBalance* const self = static_cast<WhiteBalance*>(static_cast<Data*>(data)->self);
-        const double temperature = static_cast<Data*>(data)->temperature;
-        const double green_val = static_cast<Data*>(data)->green_val;
-        delete static_cast<Data*>(data);
-
-        self->disableListener();
-        self->setEnabled(true);
-        self->temp->setValue(temperature);
-        self->green->setValue(green_val);
-        self->temp->setDefault(temperature);
-        self->green->setDefault(green_val);
-        self->enableListener();
-
-        return FALSE;
-    };
-
-    idle_register.add(func, new Data{this, temperature, greenVal});
+            return false;
+        }
+    );
 }

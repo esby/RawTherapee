@@ -14,20 +14,28 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef _TONECURVE_H_
-#define _TONECURVE_H_
+#pragma once
 
 #include <gtkmm.h>
-#include "adjuster.h"
-#include "toolpanel.h"
-#include "curveeditor.h"
-#include "curveeditorgroup.h"
-#include "mycurve.h"
-#include "guiutils.h"
 
-class ToneCurve : public ToolParamBlock, public AdjusterListener, public FoldableToolPanel, public rtengine::AutoExpListener, public CurveListener
+#include "adjuster.h"
+#include "curvelistener.h"
+#include "guiutils.h"
+#include "toolpanel.h"
+
+class CurveEditor;
+class CurveEditorGroup;
+class DiagonalCurveEditor;
+class EditDataProvider;
+
+class ToneCurve final :
+    public ToolParamBlock,
+    public AdjusterListener,
+    public FoldableToolPanel,
+    public rtengine::AutoExpListener,
+    public CurveListener
 {
 private:
     IdleRegister idle_register;
@@ -39,9 +47,10 @@ protected:
     sigc::connection    methconn;
     sigc::connection    enaconn;
     bool                lasthrEnabled;
+    Adjuster* hlbl;
 
-    Gtk::HBox* abox;
-    Gtk::HBox* hlrbox;
+    Gtk::Box* abox;
+    Gtk::Box* hlrbox;
 
     Gtk::ToggleButton* autolevels;
     Gtk::Label* lclip;
@@ -72,7 +81,8 @@ protected:
     rtengine::ProcEvent EvHistMatching;
     rtengine::ProcEvent EvHistMatchingBatch;
     rtengine::ProcEvent EvClampOOG;
-    
+    rtengine::ProcEvent EvHLbl;
+
     // used temporarily in eventing
     double nextExpcomp;
     int nextBrightness;
@@ -81,7 +91,7 @@ protected:
     int nextHlcompr;
     int nextHlcomprthresh;
     bool nextHLRecons;
-    rtengine::procparams::ToneCurveParams::TcMode nextToneCurveMode;
+    rtengine::procparams::ToneCurveMode nextToneCurveMode;
     std::vector<double> nextToneCurve;
 
     void setHistmatching(bool enabled);
@@ -102,13 +112,11 @@ public:
     float blendPipetteValues (CurveEditor *ce, float chan1, float chan2, float chan3) override;
 
     void adjusterChanged (Adjuster* a, double newval) override;
-    void adjusterAutoToggled(Adjuster* a, bool newval) override;
     void neutral_pressed ();
     void autolevels_toggled ();
     void clip_changed ();
     bool clip_changed_ ();
     void waitForAutoExp ();
-    bool autoExpComputed_ ();
     void enableAll ();
     void curveChanged (CurveEditor* ce) override;
     void curveMode1Changed ();
@@ -131,10 +139,9 @@ public:
     );
 
     void histmatchingToggled();
-    bool histmatchingComputed();
 
     void autoExpChanged(double expcomp, int bright, int contr, int black, int hlcompr, int hlcomprthresh, bool hlrecons) override;
-    void autoMatchedToneCurveChanged(rtengine::procparams::ToneCurveParams::TcMode curveMode, const std::vector<double>& curve) override;
+    void autoMatchedToneCurveChanged(rtengine::procparams::ToneCurveMode curveMode, const std::vector<double>& curve) override;
 
     void setRaw (bool raw);
 
@@ -142,5 +149,3 @@ public:
     void methodChanged ();
     void clampOOGChanged();
 };
-
-#endif

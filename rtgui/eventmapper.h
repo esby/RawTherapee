@@ -15,11 +15,12 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
 
 #include <string>
+#include <map>
 #include <unordered_map>
 #include "../rtengine/refreshmap.h"
 
@@ -34,4 +35,5 @@ private:
     ProcEventMapper();
     
     std::unordered_map<int, std::string> history_msgs_;
+    std::map<std::string, rtengine::ProcEvent> events_;
 };

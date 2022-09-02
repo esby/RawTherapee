@@ -14,19 +14,18 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef _CACHEMANAGER_
-#define _CACHEMANAGER_
+#pragma once
 
-#include <string>
 #include <map>
+#include <string>
 
 #include <glibmm/ustring.h>
 
-#include "../rtengine/noncopyable.h"
-
 #include "threadutils.h"
+
+#include "../rtengine/noncopyable.h"
 
 class Thumbnail;
 
@@ -60,7 +59,6 @@ public:
     void clearImages () const;
     void clearProfiles () const;
     void clearFromCache (const Glib::ustring& fname, bool purge) const;
-
     static std::string getMD5 (const Glib::ustring& fname);
 
     Glib::ustring    getCacheFileName (const Glib::ustring& subDir,
@@ -70,6 +68,3 @@ public:
 };
 
 #define cacheMgr CacheManager::getInstance()
-
-#endif
-

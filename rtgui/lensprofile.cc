@@ -14,17 +14,24 @@
 *  GNU General Public License for more details.
 *
 *  You should have received a copy of the GNU General Public License
-*  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+*  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
 */
-#include <glibmm.h>
-#include "lensprofile.h"
-#include "guiutils.h"
-#include "../rtengine/lcp.h"
-#include <sstream>
-#include "rtimage.h"
-#include "../rtengine/rtlensfun.h"
 #include <map>
 #include <set>
+#include <iostream>
+#include <sstream>
+
+#include <glibmm/ustring.h>
+
+#include "lensprofile.h"
+
+#include "guiutils.h"
+#include "rtimage.h"
+#include "options.h"
+
+#include "../rtengine/lcp.h"
+#include "../rtengine/procparams.h"
+#include "../rtengine/rtlensfun.h"
 
 using namespace rtengine;
 using namespace rtengine::procparams;
@@ -67,11 +74,13 @@ LensProfilePanel::LensProfilePanel() :
     // Main containers:
 
     Gtk::Frame *nodesFrame = Gtk::manage(new Gtk::Frame(M("TP_LENSPROFILE_MODE_HEADER")));
+    nodesFrame->set_label_align (0.025, 0.5);
 
     modesGrid->get_style_context()->add_class("grid-spacing");
     setExpandAlignProperties(modesGrid, true, false, Gtk::ALIGN_FILL, Gtk::ALIGN_CENTER);
 
     Gtk::Frame *distFrame = Gtk::manage(new Gtk::Frame(M("TP_LENSPROFILE_USE_HEADER")));
+    distFrame->set_label_align (0.025, 0.5);
 
     distGrid->get_style_context()->add_class("grid-spacing");
     setExpandAlignProperties(distGrid, true, false, Gtk::ALIGN_FILL, Gtk::ALIGN_CENTER);
@@ -579,22 +588,23 @@ void LensProfilePanel::onCorrModeChanged(const Gtk::RadioButton* rbChanged)
 
 LensProfilePanel::LFDbHelper::LFDbHelper()
 {
+    lensfunCameraModel = Gtk::TreeStore::create(lensfunModelCam);
+    lensfunLensModel = Gtk::TreeStore::create(lensfunModelLens);
+
 #ifdef _OPENMP
-#pragma omp parallel sections if (!options.rtSettings.verbose)
+#pragma omp parallel sections if (!settings->verbose)
 #endif
     {
 #ifdef _OPENMP
 #pragma omp section
 #endif
         {
-            lensfunCameraModel = Gtk::TreeStore::create(lensfunModelCam);
             fillLensfunCameras();
         }
 #ifdef _OPENMP
 #pragma omp section
 #endif
         {
-            lensfunLensModel = Gtk::TreeStore::create(lensfunModelLens);
             fillLensfunLenses();
         }
     }
@@ -602,7 +612,7 @@ LensProfilePanel::LFDbHelper::LFDbHelper()
 
 void LensProfilePanel::LFDbHelper::fillLensfunCameras()
 {
-    if (options.rtSettings.verbose) {
+    if (settings->verbose) {
         std::cout << "LENSFUN, scanning cameras:" << std::endl;
     }
 
@@ -612,7 +622,7 @@ void LensProfilePanel::LFDbHelper::fillLensfunCameras()
     for (const auto& c : camlist) {
         camnames[c.getMake()].insert(c.getModel());
 
-        if (options.rtSettings.verbose) {
+        if (settings->verbose) {
             std::cout << "  found: " << c.getDisplayString().c_str() << std::endl;
         }
     }
@@ -632,7 +642,7 @@ void LensProfilePanel::LFDbHelper::fillLensfunCameras()
 
 void LensProfilePanel::LFDbHelper::fillLensfunLenses()
 {
-    if (options.rtSettings.verbose) {
+    if (settings->verbose) {
         std::cout << "LENSFUN, scanning lenses:" << std::endl;
     }
 
@@ -644,7 +654,7 @@ void LensProfilePanel::LFDbHelper::fillLensfunLenses()
         const auto& make = l.getMake();
         lenses[make].insert(name);
 
-        if (options.rtSettings.verbose) {
+        if (settings->verbose) {
             std::cout << "  found: " << l.getDisplayString().c_str() << std::endl;
         }
     }
@@ -754,7 +764,7 @@ bool LensProfilePanel::checkLensfunCanCorrect(bool automatch)
 
     rtengine::procparams::ProcParams lpp;
     write(&lpp);
-    const std::unique_ptr<LFModifier> mod(LFDatabase::findModifier(lpp.lensProf, metadata, 100, 100, lpp.coarse, -1));
+    const std::unique_ptr<LFModifier> mod(LFDatabase::getInstance()->findModifier(lpp.lensProf, metadata, 100, 100, lpp.coarse, -1));
     return static_cast<bool>(mod);
 }
 

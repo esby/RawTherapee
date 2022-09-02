@@ -14,26 +14,29 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef _FILEBROWSER_
-#define _FILEBROWSER_
+#pragma once
+
+#include <map>
 
 #include <gtkmm.h>
-#include <map>
-#include "thumbbrowserbase.h"
-#include "exiffiltersettings.h"
-#include "filebrowserentry.h"
+
 #include "browserfilter.h"
-#include "pparamschangelistener.h"
-#include "partialpastedlg.h"
 #include "exportpanel.h"
 #include "extprog.h"
-#include "profilestorecombobox.h"
+#include "filebrowserentry.h"
+#include "lwbutton.h"
+#include "partialpastedlg.h"
+#include "pparamschangelistener.h"
+#include "../rtengine/profilestore.h"
+#include "thumbbrowserbase.h"
 
-class ProfileStoreLabel;
+#include "../rtengine/noncopyable.h"
+
 class FileBrowser;
 class FileBrowserEntry;
+class ProfileStoreLabel;
 
 class FileBrowserListener
 {
@@ -43,7 +46,7 @@ public:
     virtual void openRequested(const std::vector<Thumbnail*>& tbe) = 0;
     virtual void developRequested(const std::vector<FileBrowserEntry*>& tbe, bool fastmode) = 0;
     virtual void renameRequested(const std::vector<FileBrowserEntry*>& tbe) = 0;
-    virtual void deleteRequested(const std::vector<FileBrowserEntry*>& tbe, bool inclBatchProcessed) = 0;
+    virtual void deleteRequested(const std::vector<FileBrowserEntry*>& tbe, bool inclBatchProcessed, bool onlySelected) = 0;
     virtual void copyMoveRequested(const std::vector<FileBrowserEntry*>& tbe, bool moveRequested) = 0;
     virtual void selectionChanged(const std::vector<Thumbnail*>& tbe) = 0;
     virtual void clearFromCacheRequested(const std::vector<FileBrowserEntry*>& tbe, bool leavenotrace) = 0;
@@ -53,13 +56,16 @@ public:
 /*
  * Class handling actions common to all thumbnails of the file browser
  */
-class FileBrowser  : public ThumbBrowserBase,
+class FileBrowser final : public ThumbBrowserBase,
     public LWButtonListener,
     public ExportPanelListener,
-    public ProfileStoreListener
+    public ProfileStoreListener,
+    public rtengine::NonCopyable
 {
 private:
     typedef sigc::signal<void> type_trash_changed;
+
+    using ThumbBrowserBase::redrawNeeded;
 
     IdleRegister idle_register;
     unsigned int session_id_;
@@ -75,6 +81,7 @@ protected:
     Gtk::MenuItem* remove;
     Gtk::MenuItem* removeInclProc;
     Gtk::MenuItem* open;
+    Gtk::MenuItem* inspect;
     Gtk::MenuItem* selall;
     Gtk::MenuItem* copyTo;
     Gtk::MenuItem* moveTo;
@@ -130,6 +137,7 @@ protected:
     void requestColorLabel(int colorlabel);
     void notifySelectionListener ();
     void openRequested( std::vector<FileBrowserEntry*> mselected);
+    void inspectRequested( std::vector<FileBrowserEntry*> mselected);
     ExportPanel* exportPanel;
 
     type_trash_changed m_trash_changed;
@@ -166,33 +174,35 @@ public:
 
     void buttonPressed (LWButton* button, int actionCode, void* actionData) override;
     void redrawNeeded  (LWButton* button) override;
-    bool checkFilter (ThumbBrowserEntryBase* entry) override;
-    void rightClicked (ThumbBrowserEntryBase* entry) override;
+    bool checkFilter (ThumbBrowserEntryBase* entry) const override;
+    void rightClicked () override;
     void doubleClicked (ThumbBrowserEntryBase* entry) override;
     bool keyPressed (GdkEventKey* event) override;
 
     void saveThumbnailHeight (int height) override;
     int  getThumbnailHeight () override;
 
+
+    void enableTabMode(bool enable);
     bool isInTabMode() override
     {
         return tbl ? tbl->isInTabMode() : false;
     }
 
-    void openNextImage ();
-    void openPrevImage ();
+    void openNextImage();
+    void openPrevImage();
+    void selectImage(const Glib::ustring& fname, bool doScroll = true);
+
     void copyProfile ();
     void pasteProfile ();
     void partPasteProfile ();
-    void selectImage (Glib::ustring fname);
-    void openNextPreviousEditorImage (Glib::ustring fname, eRTNav eNextPrevious);
+    void openNextPreviousEditorImage(const Glib::ustring& fname, eRTNav eNextPrevious);
 
 #ifdef WIN32
     void openDefaultViewer (int destination);
 #endif
 
     void thumbRearrangementNeeded () override;
-    void _thumbRearrangementNeeded ();
 
     void selectionChanged () override;
 
@@ -206,5 +216,3 @@ public:
 
     type_trash_changed trash_changed();
 };
-
-#endif

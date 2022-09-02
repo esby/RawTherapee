@@ -14,7 +14,7 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include <cmath>
 #include "eventmapper.h"
@@ -27,13 +27,18 @@ Sharpening::Sharpening () : FoldableToolPanel(this, "sharpening", M("TP_SHARPENI
 {
     auto m = ProcEventMapper::getInstance();
     EvSharpenContrast = m->newEvent(SHARPENING, "HISTORY_MSG_SHARPENING_CONTRAST");
+    EvSharpenBlur = m->newEvent(SHARPENING, "HISTORY_MSG_SHARPENING_BLUR");
 
-    Gtk::HBox* hb = Gtk::manage (new Gtk::HBox ());
+    Gtk::Box* hb = Gtk::manage (new Gtk::Box ());
     hb->show ();
     contrast = Gtk::manage(new Adjuster (M("TP_SHARPENING_CONTRAST"), 0, 200, 1, 20));
     contrast->setAdjusterListener (this);
     pack_start(*contrast);
     contrast->show();
+    blur = Gtk::manage(new Adjuster (M("TP_SHARPENING_BLUR"), 0.2, 2.0, 0.05, 0.2));
+    blur->setAdjusterListener (this);
+    pack_start(*blur);
+    blur->show();
 
     Gtk::Label* ml = Gtk::manage (new Gtk::Label (M("TP_SHARPENING_METHOD") + ":"));
     ml->show ();
@@ -45,7 +50,7 @@ Sharpening::Sharpening () : FoldableToolPanel(this, "sharpening", M("TP_SHARPENI
     hb->pack_start(*method);
     pack_start (*hb);
 
-    rld = new Gtk::VBox ();
+    rld = new Gtk::Box(Gtk::ORIENTATION_VERTICAL);
     dradius = Gtk::manage (new Adjuster (M("TP_SHARPENING_EDRADIUS"), 0.4, 2.5, 0.01, 0.75));
     damount = Gtk::manage (new Adjuster (M("TP_SHARPENING_RLD_AMOUNT"), 0.0, 100, 1, 100));
     ddamping = Gtk::manage (new Adjuster (M("TP_SHARPENING_RLD_DAMPING"), 0, 100, 1, 0));
@@ -60,11 +65,11 @@ Sharpening::Sharpening () : FoldableToolPanel(this, "sharpening", M("TP_SHARPENI
     diter->show ();
     rld->show ();
 
-    usm = new Gtk::VBox ();
+    usm = new Gtk::Box(Gtk::ORIENTATION_VERTICAL);
     usm->show ();
 
 
-    Gtk::HSeparator *hsep6a = Gtk::manage (new  Gtk::HSeparator());
+    Gtk::Separator* hsep6a = Gtk::manage (new Gtk::Separator(Gtk::ORIENTATION_HORIZONTAL));
     amount = Gtk::manage (new Adjuster (M("TP_SHARPENING_AMOUNT"), 1, 1000, 1, 200));
     radius = Gtk::manage (new Adjuster (M("TP_SHARPENING_RADIUS"), 0.3, 3, 0.01, 0.5));
     threshold = Gtk::manage (new ThresholdAdjuster (M("TP_SHARPENING_THRESHOLD"), 0., 2000., 20., 80., 2000., 1200., 0, false));
@@ -81,10 +86,10 @@ Sharpening::Sharpening () : FoldableToolPanel(this, "sharpening", M("TP_SHARPENI
     threshold->show ();
     amount->show ();
 
-    Gtk::HSeparator *hsep6 = Gtk::manage (new  Gtk::HSeparator());
+    Gtk::Separator* hsep6 = Gtk::manage (new Gtk::Separator(Gtk::ORIENTATION_HORIZONTAL));
     edgesonly = Gtk::manage (new Gtk::CheckButton (M("TP_SHARPENING_ONLYEDGES")));
     edgesonly->set_active (false);
-    edgebox = new Gtk::VBox ();
+    edgebox = new Gtk::Box(Gtk::ORIENTATION_VERTICAL);
     eradius = Gtk::manage (new Adjuster (M("TP_SHARPENING_EDRADIUS"), 0.5, 2.5, 0.1, 1.9));
     etolerance = Gtk::manage (new Adjuster (M("TP_SHARPENING_EDTOLERANCE"), 10, 10000, 100, 1800));
     usm->pack_start(*hsep6, Gtk::PACK_SHRINK, 2);
@@ -92,7 +97,7 @@ Sharpening::Sharpening () : FoldableToolPanel(this, "sharpening", M("TP_SHARPENI
     edgebox->pack_start(*eradius);
     edgebox->pack_start(*etolerance);
     edgebox->show ();
-    edgebin = Gtk::manage (new Gtk::VBox ());
+    edgebin = Gtk::manage (new Gtk::Box(Gtk::ORIENTATION_VERTICAL));
     usm->pack_start (*edgebin);
     edgebin->show ();
     hsep6->show();
@@ -100,16 +105,16 @@ Sharpening::Sharpening () : FoldableToolPanel(this, "sharpening", M("TP_SHARPENI
     eradius->show();
     etolerance->show();
 
-    Gtk::HSeparator *hsep6b = Gtk::manage (new  Gtk::HSeparator());
+    Gtk::Separator* hsep6b = Gtk::manage (new Gtk::Separator(Gtk::ORIENTATION_HORIZONTAL));
     halocontrol = Gtk::manage (new Gtk::CheckButton (M("TP_SHARPENING_HALOCONTROL")));
     halocontrol->set_active (false);
-    hcbox = new Gtk::VBox ();
+    hcbox = new Gtk::Box(Gtk::ORIENTATION_VERTICAL);
     hcamount = Gtk::manage (new Adjuster (M("TP_SHARPENING_HCAMOUNT"), 1, 100, 1, 75));
     usm->pack_start(*hsep6b, Gtk::PACK_SHRINK, 2);
     usm->pack_start(*halocontrol);
     hcbox->pack_start(*hcamount);
     hcbox->show ();
-    hcbin = Gtk::manage (new Gtk::VBox ());
+    hcbin = Gtk::manage (new Gtk::Box(Gtk::ORIENTATION_VERTICAL));
     usm->pack_start (*hcbin);
     hcbin->show ();
     hsep6b->show ();
@@ -152,7 +157,8 @@ void Sharpening::read (const ProcParams* pp, const ParamsEdited* pedited)
     disableListener ();
 
     if (pedited) {
-        contrast->setEditedState   (pedited->sharpening.contrast ? Edited : UnEdited);
+        contrast->setEditedState    (pedited->sharpening.contrast ? Edited : UnEdited);
+        blur->setEditedState        (pedited->sharpening.blurradius ? Edited : UnEdited);
         amount->setEditedState      (pedited->sharpening.amount ? Edited : UnEdited);
         radius->setEditedState      (pedited->sharpening.radius ? Edited : UnEdited);
         threshold->setEditedState   (pedited->sharpening.threshold ? Edited : UnEdited);
@@ -182,6 +188,7 @@ void Sharpening::read (const ProcParams* pp, const ParamsEdited* pedited)
     lastHaloControl = pp->sharpening.halocontrol;
 
     contrast->setValue      (pp->sharpening.contrast);
+    blur->setValue          (pp->sharpening.blurradius);
     amount->setValue        (pp->sharpening.amount);
     radius->setValue        (pp->sharpening.radius);
     threshold->setValue<int>(pp->sharpening.threshold);
@@ -224,6 +231,7 @@ void Sharpening::write (ProcParams* pp, ParamsEdited* pedited)
 {
 
     pp->sharpening.contrast         = contrast->getValue ();
+    pp->sharpening.blurradius       = blur->getValue ();
     pp->sharpening.amount           = (int)amount->getValue();
     pp->sharpening.enabled          = getEnabled ();
     pp->sharpening.radius           = radius->getValue ();
@@ -246,6 +254,7 @@ void Sharpening::write (ProcParams* pp, ParamsEdited* pedited)
 
     if (pedited) {
         pedited->sharpening.contrast        = contrast->getEditedState ();
+        pedited->sharpening.blurradius      = blur->getEditedState ();
         pedited->sharpening.amount          = amount->getEditedState ();
         pedited->sharpening.radius          = radius->getEditedState ();
         pedited->sharpening.threshold       = threshold->getEditedState ();
@@ -266,6 +275,7 @@ void Sharpening::write (ProcParams* pp, ParamsEdited* pedited)
 void Sharpening::setDefaults (const ProcParams* defParams, const ParamsEdited* pedited)
 {
     contrast->setDefault (defParams->sharpening.contrast);
+    blur->setDefault (defParams->sharpening.blurradius);
     amount->setDefault (defParams->sharpening.amount);
     radius->setDefault (defParams->sharpening.radius);
     threshold->setDefault<int> (defParams->sharpening.threshold);
@@ -279,6 +289,7 @@ void Sharpening::setDefaults (const ProcParams* defParams, const ParamsEdited* p
 
     if (pedited) {
         contrast->setDefaultEditedState     (pedited->sharpening.contrast ? Edited : UnEdited);
+        blur->setDefaultEditedState         (pedited->sharpening.blurradius ? Edited : UnEdited);
         amount->setDefaultEditedState       (pedited->sharpening.amount ? Edited : UnEdited);
         radius->setDefaultEditedState       (pedited->sharpening.radius ? Edited : UnEdited);
         threshold->setDefaultEditedState    (pedited->sharpening.threshold ? Edited : UnEdited);
@@ -291,6 +302,7 @@ void Sharpening::setDefaults (const ProcParams* defParams, const ParamsEdited* p
         ddamping->setDefaultEditedState     (pedited->sharpening.deconvdamping ? Edited : UnEdited);
     } else {
         contrast->setDefaultEditedState     (Irrelevant);
+        blur->setDefaultEditedState         (Irrelevant);
         amount->setDefaultEditedState       (Irrelevant);
         radius->setDefaultEditedState       (Irrelevant);
         threshold->setDefaultEditedState    (Irrelevant);
@@ -310,7 +322,7 @@ void Sharpening::adjusterChanged(Adjuster* a, double newval)
 
         Glib::ustring costr;
 
-        if (a == radius || a == dradius) {
+        if (a == radius || a == dradius || a == blur) {
             costr = Glib::ustring::format (std::setw(3), std::fixed, std::setprecision(2), a->getValue());
         } else if (a == eradius) {
             costr = Glib::ustring::format (std::setw(2), std::fixed, std::setprecision(1), a->getValue());
@@ -324,6 +336,8 @@ void Sharpening::adjusterChanged(Adjuster* a, double newval)
             listener->panelChanged (EvShrAmount, costr);
         } else if (a == radius) {
             listener->panelChanged (EvShrRadius, costr);
+        } else if (a == blur) {
+            listener->panelChanged (EvSharpenBlur, costr);
         } else if (a == eradius) {
             listener->panelChanged (EvShrEdgeRadius, costr);
         } else if (a == etolerance) {
@@ -340,10 +354,6 @@ void Sharpening::adjusterChanged(Adjuster* a, double newval)
             listener->panelChanged (EvShrDIterations, costr);
         }
     }
-}
-
-void Sharpening::adjusterAutoToggled(Adjuster* a, bool newval)
-{
 }
 
 void Sharpening::adjusterChanged(ThresholdAdjuster* a, double newBottom, double newTop)
@@ -487,6 +497,7 @@ void Sharpening::setBatchMode (bool batchMode)
     pack_start (*rld);
 
     contrast->showEditedCB ();
+    blur->showEditedCB ();
     radius->showEditedCB ();
     amount->showEditedCB ();
     threshold->showEditedCB ();
@@ -518,6 +529,7 @@ void Sharpening::setAdjusterBehavior (bool contrastadd, bool radiusadd, bool amo
 void Sharpening::trimValues (rtengine::procparams::ProcParams* pp)
 {
     contrast->trimValue(pp->sharpening.contrast);
+    blur->trimValue(pp->sharpening.blurradius);
     radius->trimValue(pp->sharpening.radius);
     dradius->trimValue(pp->sharpening.deconvradius);
     amount->trimValue(pp->sharpening.amount);

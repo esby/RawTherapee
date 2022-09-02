@@ -34,27 +34,43 @@ function CheckLink {
     done
 }
 
+function ModifyInstallNames {
+    find -E "${CONTENTS}" -type f -regex '.*/(rawtherapee-cli|rawtherapee|.*\.(dylib|so))' | while read -r x; do
+        msg "Modifying install names: ${x}"
+        {
+            # id
+            if [[ ${x:(-6)} == ".dylib" ]] || [[ f${x:(-3)} == ".so" ]]; then
+                install_name_tool -id /Applications/"${LIB}"/$(basename ${x}) ${x}
+            fi
+            GetDependencies "${x}" | while read -r y
+            do
+                install_name_tool -change ${y} /Applications/"${LIB}"/$(basename ${y}) ${x}
+            done
+        } | bash -v
+    done
+}
+
 # Source check
-if [[ ! -d "${CMAKE_BUILD_TYPE}" ]]; then
+if [[ ! -d $CMAKE_BUILD_TYPE ]]; then
     msgError "${PWD}/${CMAKE_BUILD_TYPE} folder does not exist. Please execute 'make install' first."
     exit 1
 fi
 
 # Update project version
-if [[ -x "$(which git)" && -d "${PROJECT_SOURCE_DIR}/.git" ]]; then
+if [[ -x $(which git) && -d $PROJECT_SOURCE_DIR/.git ]]; then
     ### This section is copied from tools/generateReleaseInfo
     # Get version description.
     # Depending on whether you checked out a branch (dev) or a tag (release),
     # "git describe" will return "5.0-gtk2-2-g12345678" or "5.0-gtk2", respectively.
     gitDescribe="$(git describe --tags --always)"
-
+    
     # Apple requires a numeric version of the form n.n.n
     # https://goo.gl/eWDQv6
-
+    
     # Get number of commits since tagging. This is what gitDescribe uses.
     # Works when checking out branch, tag or commit.
     gitCommitsSinceTag="$(git rev-list --count HEAD --not $(git tag --merged HEAD))"
-
+    
     # Create numeric version.
     # This version is nonsense, either don't use it at all or use it only where you have no other choice, e.g. Inno Setup's VersionInfoVersion.
     # Strip everything after hyphen, e.g. "5.0-gtk2" -> "5.0", "5.1-rc1" -> "5.1" (ergo BS).
@@ -65,21 +81,25 @@ if [[ -x "$(which git)" && -d "${PROJECT_SOURCE_DIR}/.git" ]]; then
         gitVersionNumericBS="${gitVersionNumericBS}.${gitCommitsSinceTag}" # Remove everything until after first hyphen: 5.0
     fi
     ### Copy end.
-
+    
     PROJECT_FULL_VERSION="$gitDescribe"
     PROJECT_VERSION="$gitVersionNumericBS"
-
 fi
+
+#In: CMAKE_OSX_DEPLOYMENT_TARGET=11.3
+#Out: 11.3
+CMAKE_OSX_DEPLOYMENT_TARGET="$(cmake .. -L -N | grep CMAKE_OSX_DEPLOYMENT_TARGET)"; CMAKE_OSX_DEPLOYMENT_TARGET="${CMAKE_OSX_DEPLOYMENT_TARGET#*=}"
+
+#In: CMAKE_OSX_ARCHITECTURES=x86_64
+#Out: x86_64
+CMAKE_OSX_ARCHITECTURES="$(cmake .. -L -N | grep CMAKE_OSX_ARCHITECTURES)"; CMAKE_OSX_ARCHITECTURES="${CMAKE_OSX_ARCHITECTURES#*=}"
 
 MINIMUM_SYSTEM_VERSION="$(otool -l "${CMAKE_BUILD_TYPE}"/MacOS/rawtherapee | grep -A2 'LC_VERSION_MIN_MACOSX' | awk '$1 ~ /version/ { printf $2 }')"
-if [[ -z "${MINIMUM_SYSTEM_VERSION}" ]]; then
-    MINIMUM_SYSTEM_VERSION="$(sw_vers -productVersion | cut -d. -f-2)"
+if [[ -z $MINIMUM_SYSTEM_VERSION ]]; then
+    MINIMUM_SYSTEM_VERSION=${CMAKE_OSX_DEPLOYMENT_TARGET}
 fi
 
-case ${PROC_BIT_DEPTH} in
-    64) arch=x86_64;;
-    32) arch=i386;;
-esac
+arch=${CMAKE_OSX_ARCHITECTURES}
 
 cat <<__EOS__
 PROJECT_NAME:           ${PROJECT_NAME}
@@ -92,6 +112,33 @@ GTK_PREFIX:             ${GTK_PREFIX}
 PWD:                    ${PWD}
 __EOS__
 
+minimum_macos_version=${MINIMUM_SYSTEM_VERSION}
+
+# Retrieve cached values from cmake
+
+#In: LOCAL_PREFIX:STRING=/opt
+#Out: /opt
+LOCAL_PREFIX="$(cmake .. -L -N | grep LOCAL_PREFIX)"; LOCAL_PREFIX="${LOCAL_PREFIX#*=}"
+
+#In: pkgcfg_lib_EXPAT_expat:FILEPATH=/opt/local/lib/libexpat.dylib
+#Out: /opt/local/lib/libexpat.dylib
+EXPATLIB="$(cmake .. -LA -N | grep pkgcfg_lib_EXPAT_expat)"; pkgcfg_lib_EXPAT_expat="${pkgcfg_lib_EXPAT_expat#*=}"
+
+#In: CODESIGNID:STRING=Developer ID Application: Doctor Who (1234567890)
+#Out: Developer ID Application: Doctor Who (1234567890)
+CODESIGNID="$(cmake .. -L -N | grep CODESIGNID)"; CODESIGNID="${CODESIGNID#*=}"
+
+#In: NOTARY:STRING=--username drwho@bbc.com --password abcd-efgh-hijk-lmno
+#Out: --username drwho@bbc.com --password abcd-efgh-hijk-lmno
+NOTARY="$(cmake .. -L -N | grep NOTARY)"; NOTARY="${NOTARY#*=}"
+
+# In: FANCY_DMG:BOOL=ON
+# Out: ON
+FANCY_DMG="$(cmake .. -L -N | grep FANCY_DMG)"; FANCY_DMG="${FANCY_DMG#*=}"
+if [[ -n $FANCY_DMG ]]; then
+    echo "Fancy .dmg build is ON."
+fi
+
 APP="${PROJECT_NAME}.app"
 CONTENTS="${APP}/Contents"
 RESOURCES="${CONTENTS}/Resources"
@@ -99,151 +146,279 @@ MACOS="${CONTENTS}/MacOS"
 LIB="${CONTENTS}/Frameworks"
 ETC="${RESOURCES}/etc"
 EXECUTABLE="${MACOS}/rawtherapee"
+GDK_PREFIX="${LOCAL_PREFIX}/"
 
 msg "Removing old files:"
-rm -rf "${APP}" "${PROJECT_NAME}_*.dmg"
+rm -rf "${APP}" *.dmg *.zip
 
 msg "Creating bundle container:"
-install -d  "${RESOURCES}" \
-    "${MACOS}" \
-    "${LIB}" \
-    "${ETC}"
+install -d "${RESOURCES}"
+install -d "${MACOS}"
+install -d "${LIB}"
+install -d "${ETC}"
 
-msg "Copying release files:"
+msg "Copying binary executable files."
 ditto "${CMAKE_BUILD_TYPE}/MacOS" "${MACOS}"
+
+msg "Copying Resources directory."
+#cp AboutThisBuild.txt "${RESOURCES}"
 ditto "${CMAKE_BUILD_TYPE}/Resources" "${RESOURCES}"
 
-msg "Copying dependencies from ${GTK_PREFIX}:"
-CheckLink "${EXECUTABLE}"
-
-msg "Copying library modules from ${GTK_PREFIX}:"
-ditto --arch "${arch}" {"${GTK_PREFIX}/lib","${LIB}"}/gdk-pixbuf-2.0
-ditto --arch "${arch}" {"${GTK_PREFIX}/lib","${LIB}"}/gtk-3.0
-
-msg "Removing static libraries and cache files:"
-find -E "${LIB}" -type f -regex '.*\.(a|la|cache)$' | while read -r; do rm "${REPLY}"; done
-
-msg "Copying configuration files from ${GTK_PREFIX}:"
-install -d "${ETC}/gtk-3.0"
-
-# Make Frameworks folder flat
-mv "${LIB}"/gdk-pixbuf-2.0/2*/loaders/*.so "${LIB}"
-mv "${LIB}"/gtk-3.0/3*/immodules/*.so "${LIB}"
-rm -r "${LIB}"/gtk-3.0
-rm -r "${LIB}"/gdk-pixbuf-2.0
-
-"${GTK_PREFIX}/bin/gdk-pixbuf-query-loaders" "${LIB}"/libpix*.so > "${ETC}/gtk-3.0/gdk-pixbuf.loaders"
-"${GTK_PREFIX}/bin/gtk-query-immodules-3.0"  "${LIB}"/{im*.so,libprint*.so}      > "${ETC}/gtk-3.0/gtk.immodules"
-sed -i "" -e "s|${PWD}/RawTherapee.app/Contents/|@executable_path/../|" "${ETC}/gtk-3.0/gdk-pixbuf.loaders" "${ETC}/gtk-3.0/gtk.immodules"
-
-ditto {"${GTK_PREFIX}","${RESOURCES}"}/share/glib-2.0/schemas
-"${GTK_PREFIX}/bin/glib-compile-schemas" "${RESOURCES}/share/glib-2.0/schemas"
-
-msg "Copying shared files from ${GTK_PREFIX}:"
-ditto {"${GTK_PREFIX}","${RESOURCES}"}/share/mime
-# GTK3 themes
-ditto {"${GTK_PREFIX}","${RESOURCES}"}/share/themes/Mac/gtk-3.0/gtk-keys.css
-ditto {"${GTK_PREFIX}","${RESOURCES}"}/share/themes/Default/gtk-3.0/gtk-keys.css
-# Adwaita icons
-iconfolders=("16x16/actions" "16x16/devices" "16x16/mimetypes" "16x16/places" "16x16/status" "48x48/devices")
-for f in "${iconfolders[@]}"; do
-    ditto {"${GTK_PREFIX}","${RESOURCES}"}/share/icons/Adwaita/"$f"
-done
-ditto {"${GTK_PREFIX}","${RESOURCES}"}/share/icons/Adwaita/index.theme
-"${GTK_PREFIX}/bin/gtk-update-icon-cache-3.0" "${RESOURCES}/share/icons/Adwaita"
-
-# Copy libjpeg-turbo into the app bundle
-cp /opt/local/lib/libjpeg.62.dylib "${RESOURCES}/../Frameworks"
-
-# Copy libtiff into the app bundle
-cp /opt/local/lib/libtiff.5.dylib "${RESOURCES}/../Frameworks"
+echo "\n--------\n" >> "${RESOURCES}/AboutThisBuild.txt"
+echo "Bundle system: $(sysctl -n machdep.cpu.brand_string)" >> "${RESOURCES}/AboutThisBuild.txt"
+echo "Bundle OS:     $(sw_vers -productName) $(sw_vers -productVersion) $(sw_vers -buildVersion) $(uname -mrs)" >> "${RESOURCES}/AboutThisBuild.txt"
+echo "Bundle date:   $(date -Ru) UTC" >> "${RESOURCES}/AboutThisBuild.txt"
+echo "Bundle epoch:  $(date +%s)" >> "${RESOURCES}/AboutThisBuild.txt"
+echo "Bundle UUID:   $(uuidgen|tr 'A-Z' 'a-z')" >> "${RESOURCES}/AboutThisBuild.txt"
 
 # Copy the Lensfun database into the app bundle
 mkdir -p "${RESOURCES}/share/lensfun"
-cp /opt/local/share/lensfun/version_2/* "${RESOURCES}/share/lensfun"
+lensfunversion=$(pkg-config --modversion lensfun | cut -f3 -d'.')
+if [ $lensfunversion = 95 ]
+then
+    ditto ${LOCAL_PREFIX}/share/lensfun/version_2/* "${RESOURCES}/share/lensfun"
+else
+    ditto ${LOCAL_PREFIX}/share/lensfun/version_1/* "${RESOURCES}/share/lensfun"
+fi
 
 # Copy liblensfun to Frameworks
-cp /opt/local/lib/liblensfun.2.dylib "${RESOURCES}/../Frameworks"
+ditto ${LOCAL_PREFIX}/lib/liblensfun.2.dylib "${CONTENTS}/Frameworks/liblensfun.2.dylib"
 
-# Copy libiomp5 to Frameworks
-cp /opt/local/lib/libomp/libiomp5.dylib "${RESOURCES}/../Frameworks"
+# Copy libomp to Frameworks
+ditto ${LOCAL_PREFIX}/lib/libomp.dylib "${CONTENTS}/Frameworks"
 
-# Copy the libiomp5 license into the app bundle
-cp "${PROJECT_SOURCE_DIR}/licenses/osx_libiomp5_LICENSE.txt" "${RESOURCES}"
+msg "Copying dependencies from ${GTK_PREFIX}."
+CheckLink "${EXECUTABLE}"
 
-# Install names
-find -E "${CONTENTS}" -type f -regex '.*/(rawtherapee-cli|rawtherapee|.*\.(dylib|so))' | while read -r x; do
-    msg "Modifying install names: ${x}"
-    {
-        # id
-        case ${x} in *.dylib) echo "   install_name_tool -id '@rpath/$(basename "${x}")' '${x}'";; esac
-        # names
-        GetDependencies "${x}" | while read -r y; do
-            echo "   install_name_tool -change '${y}' '@rpath/$(basename "${y}")' '${x}'"
-        done
-    } | bash -v
+# dylib install names
+ModifyInstallNames
+
+# Copy libjpeg-turbo ("62") into the app bundle
+ditto ${LOCAL_PREFIX}/lib/libjpeg.62.dylib "${CONTENTS}/Frameworks/libjpeg.62.dylib"
+
+# Copy libexpat into the app bundle (which is keg-only)
+if [[ -d /usr/local/Cellar/expat ]]; then ditto /usr/local/Cellar/expat/*/lib/libexpat.1.dylib "${CONTENTS}/Frameworks"; else ditto "${EXPATLIB}" "${CONTENTS}/Frameworks/libexpat.1.dylib"; fi
+
+# Copy libz into the app bundle
+ditto ${LOCAL_PREFIX}/lib/libz.1.dylib "${CONTENTS}/Frameworks"
+
+# Copy libpng12 & 16 to the app bundle
+ditto ${LOCAL_PREFIX}/lib/libpng16.16.dylib "${CONTENTS}/Frameworks/libpng16.16.dylib"
+ditto ${LOCAL_PREFIX}/lib/libpng12.0.dylib "${CONTENTS}/Frameworks/libpng12.0.dylib"
+
+# Copy libtiff 5 into the app bundle
+ditto ${LOCAL_PREFIX}/lib/libtiff.5.dylib "${CONTENTS}/Frameworks/libtiff.5.dylib"
+
+# Copy libomp to Frameworks
+ditto ${LOCAL_PREFIX}/lib/libomp.dylib "${CONTENTS}/Frameworks"
+
+# Prepare GTK+3 installation
+msg "Copying configuration files from ${GTK_PREFIX}:"
+cp -RL {"${GDK_PREFIX}/lib","${LIB}"}/gdk-pixbuf-2.0
+msg "Copying library modules from ${GTK_PREFIX}:"
+cp -RL {"${GDK_PREFIX}/lib","${LIB}"}/gdk-pixbuf-2.0
+ditto --arch "${arch}" {"${GTK_PREFIX}/lib","${LIB}"}/gtk-3.0
+msg "Removing static libraries and cache files:"
+find -E "${LIB}" -type f -regex '.*\.(a|la|cache)$' | while read -r; do rm "${REPLY}"; done
+
+# Make Frameworks folder flat
+msg "Flattening the Frameworks folder"
+cp -RL "${LIB}"/gdk-pixbuf-2.0/2*/loaders/* "${LIB}"
+cp "${LIB}"/gtk-3.0/3*/immodules/*.{dylib,so} "${LIB}"
+rm -r "${LIB}"/gtk-3.0
+rm -r "${LIB}"/gdk-pixbuf-2.0
+
+# GTK+3 themes
+msg "Copy GTK+3 theme and icon resources:"
+ditto {"${LOCAL_PREFIX}","${RESOURCES}"}/share/themes/Mac/gtk-3.0/gtk-keys.css
+ditto {"${LOCAL_PREFIX}","${RESOURCES}"}/share/themes/Default/gtk-3.0/gtk-keys.css
+
+# Adwaita icons
+msg "Copy Adwaita icons"
+iconfolders=("16x16/actions" "16x16/devices" "16x16/mimetypes" "16x16/places" "16x16/status" "16x16/ui" "48x48/devices")
+for f in "${iconfolders[@]}"; do
+    mkdir -p ${RESOURCES}/share/icons/Adwaita/${f}
+    cp -RL ${LOCAL_PREFIX}/share/icons/Adwaita/${f}/* "${RESOURCES}"/share/icons/Adwaita/${f}
+done
+cp -RL {"${LOCAL_PREFIX}","${RESOURCES}"}/share/icons/Adwaita/index.theme
+"${LOCAL_PREFIX}/bin/gtk-update-icon-cache" "${RESOURCES}/share/icons/Adwaita" || "${LOCAL_PREFIX}/bin/gtk-update-icon-cache-3.0" "${RESOURCES}/share/icons/Adwaita"
+cp -RL "${LOCAL_PREFIX}/share/icons/hicolor" "${RESOURCES}/share/icons/hicolor"
+
+# fix libfreetype install name
+for lib in "${LIB}"/*; do
+    install_name_tool -change libfreetype.6.dylib "${LIB}"/libfreetype.6.dylib "${lib}"
 done
 
-msg "Registering @loader_path into the executable:"
-echo "   install_name_tool -add_rpath @loader_path/../Frameworks '${EXECUTABLE}'" | bash -v
-echo "   install_name_tool -add_rpath @loader_path/../Frameworks '${EXECUTABLE}-cli'" | bash -v
+# Build GTK3 pixbuf loaders & immodules database
+msg "Build GTK3 databases:"
+"${LOCAL_PREFIX}"/bin/gdk-pixbuf-query-loaders "${LIB}"/libpixbufloader-*.so > "${ETC}"/gtk-3.0/gdk-pixbuf.loaders
+"${LOCAL_PREFIX}"/bin/gtk-query-immodules-3.0 "${LIB}"/im-* > "${ETC}"/gtk-3.0/gtk.immodules || "${LOCAL_PREFIX}"/bin/gtk-query-immodules "${LIB}"/im-* > "${ETC}"/gtk-3.0/gtk.immodules
+sed -i.bak -e "s|${PWD}/RawTherapee.app/Contents/|/Applications/RawTherapee.app/Contents/|" "${ETC}"/gtk-3.0/gdk-pixbuf.loaders "${ETC}/gtk-3.0/gtk.immodules"
+sed -i.bak -e "s|${LOCAL_PREFIX}/share/|/Applications/RawTherapee.app/Contents/Resources/share/|" "${ETC}"/gtk-3.0/gtk.immodules
+sed -i.bak -e "s|${LOCAL_PREFIX}/|/Applications/RawTherapee.app/Contents/Frameworks/|" "${ETC}"/gtk-3.0/gtk.immodules
+rm "${ETC}"/*.bak
+
+# Install names
+ModifyInstallNames
+
+# Mime directory
+msg "Copying shared files from ${GTK_PREFIX}:"
+ditto {"${LOCAL_PREFIX}","${RESOURCES}"}/share/mime
 
 msg "Installing required application bundle files:"
 PROJECT_SOURCE_DATA_DIR="${PROJECT_SOURCE_DIR}/tools/osx"
+ditto "${PROJECT_SOURCE_DIR}/rtdata/fonts" "${ETC}/fonts"
 
-# Executable loader
-# Note: executable is renamed to 'rawtherapee-bin'.
-mv "${MACOS}/rawtherapee" "${MACOS}/rawtherapee-bin"
-install -m 0755 "${PROJECT_SOURCE_DATA_DIR}/executable_loader.in" "${MACOS}/rawtherapee"
 # App bundle resources
-cp "${PROJECT_SOURCE_DATA_DIR}/"{rawtherapee,profile}.icns "${RESOURCES}"
-cp "${PROJECT_SOURCE_DATA_DIR}/PkgInfo" "${CONTENTS}"
-install -m 0644 "${PROJECT_SOURCE_DATA_DIR}/Info.plist.in" "${CONTENTS}/Info.plist"
-sed -i "" -e "s|@version@|${PROJECT_FULL_VERSION}|
-s|@shortVersion@|${PROJECT_VERSION}|
-s|@arch@|${arch}|" \
-    "${CONTENTS}/Info.plist"
-plutil -convert binary1 "${CONTENTS}/Info.plist"
+ditto "${PROJECT_SOURCE_DATA_DIR}/"{rawtherapee,profile}.icns "${RESOURCES}"
+ditto "${PROJECT_SOURCE_DATA_DIR}/PkgInfo" "${CONTENTS}"
+cmake -DPROJECT_SOURCE_DATA_DIR=${PROJECT_SOURCE_DATA_DIR} -DCONTENTS=${CONTENTS} -Dversion=${PROJECT_FULL_VERSION} -DshortVersion=${PROJECT_VERSION} -Darch=${arch} -P "${PROJECT_SOURCE_DATA_DIR}/info-plist.cmake"
+update-mime-database -V  "${RESOURCES}/share/mime"
+cp -RL "${LOCAL_PREFIX}/share/locale" "${RESOURCES}/share/locale"
 
-# Sign the app
-CODESIGNID="$(cmake .. -LA -N | grep "CODESIGNID" | cut -d "=" -f2)"
-codesign --deep --force -v -s "${CODESIGNID}"  "${APP}"
-spctl -a -vvvv "${APP}"
- 
+msg "Build glib database:"
+mkdir -p ${RESOURCES}/share/glib-2.0
+cp -LR {"${LOCAL_PREFIX}","${RESOURCES}"}/share/glib-2.0/schemas
+"${LOCAL_PREFIX}/bin/glib-compile-schemas" "${RESOURCES}/share/glib-2.0/schemas"
+
+# Append an LC_RPATH
+msg "Registering @rpath into the main executable."
+install_name_tool -add_rpath /Applications/"${LIB}" "${EXECUTABLE}"
+
+ModifyInstallNames
+
+# fix @rpath in Frameworks
+msg "Registering @rpath in Frameworks folder."
+for frameworklibs in "${LIB}"/*{dylib,so,cli}; do
+    install_name_tool -delete_rpath ${LOCAL_PREFIX}/lib "${frameworklibs}"
+    install_name_tool -add_rpath /Applications/"${LIB}" "${frameworklibs}"
+done
+install_name_tool -delete_rpath RawTherapee.app/Contents/Frameworks "${EXECUTABLE}"-cli
+install_name_tool -add_rpath /Applications/"${LIB}" "${EXECUTABLE}"-cli
+ditto "${EXECUTABLE}"-cli "${APP}"/..
+
+# Codesign the app
+if [[ -n $CODESIGNID ]]; then
+    msg "Codesigning Application."
+    iconv -f UTF-8 -t ASCII "${PROJECT_SOURCE_DATA_DIR}"/rt.entitlements > "${CMAKE_BUILD_TYPE}"/rt.entitlements
+    mv "${EXECUTABLE}"-cli "${LIB}"
+    codesign --force --deep --timestamp --strict -v -s "${CODESIGNID}" -i com.rawtherapee.RawTherapee -o runtime --entitlements "${CMAKE_BUILD_TYPE}"/rt.entitlements "${APP}"
+    spctl -a -vvvv "${APP}"
+fi
+
+# Notarize the app
+if [[ -n $NOTARY ]]; then
+    msg "Notarizing the application:"
+    ditto -c -k --sequesterRsrc --keepParent "${APP}" "${APP}.zip"
+    echo "Uploading..."
+    uuid=`xcrun altool --notarize-app --primary-bundle-id "com.rawtherapee.RawTherapee" ${NOTARY} --file "${APP}.zip" 2>&1 | grep 'RequestUUID' | awk '{ print $3 }'`
+    echo "Result= $uuid" # Display identifier string
+    sleep 15
+    while :
+    do
+        fullstatus=`xcrun altool --notarization-info "$uuid" ${NOTARY}  2>&1`  # get the status
+        status1=`echo "$fullstatus" | grep 'Status\:' | awk '{ print $2 }'`
+        if [[ $status1 = "success" ]]; then
+            xcrun stapler staple *app   #  staple the ticket
+            xcrun stapler validate -v *app
+            echo "Notarization success"
+            break
+            elif [[ $status1 = "in" ]]; then
+            echo "Notarization still in progress, sleeping for 15 seconds and trying again"
+            sleep 15
+        else
+            echo "Notarization failed fullstatus below"
+            echo "$fullstatus"
+            exit 1
+        fi
+    done
+fi
+
 function CreateDmg {
-    local srcDir="$(mktemp -dt $$)"
-
+    local srcDir="$(mktemp -dt $$.XXXXXXXXXXXX)"
+    
     msg "Preparing disk image sources at ${srcDir}:"
     cp -R "${APP}" "${srcDir}"
-    cp AboutThisBuild.txt "${srcDir}"
+    cp "${RESOURCES}"/LICENSE.txt "${srcDir}"
     ln -s /Applications "${srcDir}"
-
+    
     # Web bookmarks
     function CreateWebloc {
         defaults write "${srcDir}/$1" URL "$2"
         mv "${srcDir}/$1".{plist,webloc}
     }
-    CreateWebloc 'Website' 'http://www.rawtherapee.com/'
-    CreateWebloc 'Manual'  'http://rawpedia.rawtherapee.com/'
-
+    CreateWebloc       'Website' 'https://www.rawtherapee.com/'
+    CreateWebloc 'Documentation' 'https://rawpedia.rawtherapee.com/'
+    CreateWebloc         'Forum' 'https://discuss.pixls.us/c/software/rawtherapee'
+    CreateWebloc    'Report Bug' 'https://github.com/Beep6581/RawTherapee/issues/new'
+    
     # Disk image name
-    dmg_name="${PROJECT_NAME// /_}_OSX_${MINIMUM_SYSTEM_VERSION}_${PROC_BIT_DEPTH}_${PROJECT_FULL_VERSION}"
+    dmg_name="${PROJECT_NAME}_macOS_${MINIMUM_SYSTEM_VERSION}_${arch}_${PROJECT_FULL_VERSION}"
     lower_build_type="$(tr '[:upper:]' '[:lower:]' <<< "$CMAKE_BUILD_TYPE")"
-    if [[ ${lower_build_type} != release ]]; then
+    if [[ $lower_build_type != release ]]; then
         dmg_name="${dmg_name}_${lower_build_type}"
     fi
-
+    
     msg "Creating disk image:"
-    hdiutil create -format UDBZ -fs HFS+ -srcdir "${srcDir}" -volname "${PROJECT_NAME}_${PROJECT_FULL_VERSION}" "${dmg_name}.dmg"
-
+    if [[ ! -z $FANCY_DMG ]]; then
+        echo "Building Fancy .dmg"
+        mkdir "${srcDir}/.background"
+        cp -R "${PROJECT_SOURCE_DATA_DIR}/rtdmg.icns" "${srcDir}/.VolumeIcon.icns"
+        cp -R "${PROJECT_SOURCE_DATA_DIR}/rtdmg-bkgd.png" "${srcDir}/.background/background.png"
+        SetFile -c incC "${srcDir}/.VolumeIcon.icns"
+        create-dmg "${dmg_name}.dmg" "${srcDir}" \
+        --volname "${PROJECT_NAME}_${PROJECT_FULL_VERSION}" \
+        --volicon "${srcDir}/.VolumeIcon.icns" \
+        --sandbox-safe \
+        --no-internet-enable \
+        --eula LICENSE.txt \
+        --hdiutil-verbose \
+        --rez /Library/Developer/CommandLineTools/usr/bin/Rez
+    else
+        hdiutil create -format UDBZ -fs HFS+ -srcdir "${srcDir}" -volname "${PROJECT_NAME}_${PROJECT_FULL_VERSION}" "${dmg_name}.dmg"
+    fi
+    
     # Sign disk image
-    codesign --deep --force -v -s "${CODESIGNID}" "${dmg_name}.dmg"
-
+    if [[ -n $CODESIGNID ]]; then
+        msg "Signing disk image"
+        codesign --deep --force -v -s "${CODESIGNID}" --timestamp "${dmg_name}.dmg"
+    fi
+    
+    # Notarize the dmg
+    if ! test -z "$NOTARY"; then
+        msg "Notarizing the dmg:"
+        zip "${dmg_name}.dmg.zip" "${dmg_name}.dmg"
+        echo "Uploading..."
+        uuid=`xcrun altool --notarize-app --primary-bundle-id "com.rawtherapee" ${NOTARY} --file "${dmg_name}.dmg.zip" 2>&1 | grep 'RequestUUID' | awk '{ print $3 }'`
+        echo "dmg Result= $uuid" # Display identifier string
+        sleep 15
+        while :
+        do
+            fullstatus=`xcrun altool --notarization-info "$uuid" ${NOTARY} 2>&1`  # get the status
+            status1=`echo "$fullstatus" | grep 'Status\:' | awk '{ print $2 }'`
+            if [[ $status1 = "success" ]]; then
+                xcrun stapler staple "${dmg_name}.dmg"   #  staple the ticket
+                xcrun stapler validate -v "${dmg_name}.dmg"
+                echo "dmg Notarization success"
+                rm *dmg.zip
+                break
+                elif [[ $status1 = "in" ]]; then
+                echo "dmg Notarization still in progress, sleeping for 15 seconds and trying again"
+                sleep 15
+            else
+                echo "dmg Notarization failed fullstatus below"
+                echo "$fullstatus"
+                exit 1
+            fi
+        done
+    fi
+    
     # Zip disk image for redistribution
-    zip "${dmg_name}.zip" "${dmg_name}.dmg" AboutThisBuild.txt
-    rm "${dmg_name}.dmg"
-
-    msg "Removing disk image caches:"
-    rm -rf "${srcDir}"
+    msg "Zipping disk image for redistribution:"
+    mkdir "${PROJECT_NAME}_macOS_${MINIMUM_SYSTEM_VERSION}_${arch}_${PROJECT_FULL_VERSION}_folder"
+        ditto {"${PROJECT_NAME}_macOS_${MINIMUM_SYSTEM_VERSION}_${arch}_${PROJECT_FULL_VERSION}.dmg","rawtherapee-cli","${PROJECT_SOURCE_DATA_DIR}/INSTALL.readme.rtf"} "${PROJECT_NAME}_macOS_${MINIMUM_SYSTEM_VERSION}_${arch}_${PROJECT_FULL_VERSION}_folder"
+    zip -r "${PROJECT_NAME}_macOS_${MINIMUM_SYSTEM_VERSION}_${arch}_${PROJECT_FULL_VERSION}.zip" "${PROJECT_NAME}_macOS_${MINIMUM_SYSTEM_VERSION}_${arch}_${PROJECT_FULL_VERSION}_folder/"
 }
 CreateDmg
+msg "Finishing build:"
+echo "Script complete."

@@ -14,7 +14,7 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "recentbrowser.h"
 #include "multilangmgr.h"
@@ -24,10 +24,12 @@ using namespace rtengine;
 
 RecentBrowser::RecentBrowser ()
 {
-
+    set_orientation(Gtk::ORIENTATION_VERTICAL);
+    
     recentDirs = Gtk::manage (new MyComboBoxText ());
 
     Gtk::Frame* frame = Gtk::manage (new Gtk::Frame (M("MAIN_FRAME_RECENT")));
+    frame->set_label_align(0.025, 0.5);
     frame->add (*recentDirs);
 
     for(size_t i = 0; i < options.recentFolders.size(); i++) {

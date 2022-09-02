@@ -14,11 +14,14 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include "epd.h"
-#include <iomanip>
 #include <cmath>
+#include <iomanip>
+
+#include "epd.h"
+
+#include "../rtengine/procparams.h"
 
 using namespace rtengine;
 using namespace rtengine::procparams;
@@ -26,12 +29,10 @@ using namespace rtengine::procparams;
 EdgePreservingDecompositionUI::EdgePreservingDecompositionUI () : FoldableToolPanel(this, "epd", M("TP_EPD_LABEL"), true, true)
 {
 
-    setEnabledTooltipMarkup(M("TP_EPD_TOOLTIP"));
-
     strength = Gtk::manage(new Adjuster (M("TP_EPD_STRENGTH"), -1.0, 2.0, 0.01, 0.5));
     gamma = Gtk::manage(new Adjuster (M("TP_EPD_GAMMA"), 0.8, 1.5, 0.01, 1.));
-    edgeStopping = Gtk::manage(new Adjuster (M("TP_EPD_EDGESTOPPING"), 0.1, 4.0, 0.01, 0.5));
-    scale = Gtk::manage(new Adjuster (M("TP_EPD_SCALE"), 0.1, 10.0, 0.01, 0.1));
+    edgeStopping = Gtk::manage(new Adjuster (M("TP_EPD_EDGESTOPPING"), 0.1, 4.0, 0.01, 1.4));
+    scale = Gtk::manage(new Adjuster (M("TP_EPD_SCALE"), 0.1, 10.0, 0.01, 1.0));
     reweightingIterates = Gtk::manage(new Adjuster (M("TP_EPD_REWEIGHTINGITERATES"), 0, 9, 1, 0));
 
     strength->setAdjusterListener(this);
@@ -68,17 +69,18 @@ void EdgePreservingDecompositionUI::read(const ProcParams *pp, const ParamsEdite
 
     setEnabled(pp->epd.enabled);
     strength->set_sensitive (true);
-
-    if(pp->wavelet.enabled) {
-        if(pp->wavelet.tmrs == 0) {
+    gamma->set_sensitive (true);
+/*
+    if(pp->wavelet.enabled) { 
+        if(pp->wavelet.tmrs == 0 || pp->wavelet.TMmethod == "cont") {
             strength->set_sensitive (true);
             gamma->set_sensitive (true);
-        } else {
+        } else if(pp->wavelet.tmrs != 0 && pp->wavelet.TMmethod == "tm") {
             strength->set_sensitive (false);
             gamma->set_sensitive (false);
         }
     }
-
+*/
     strength->setValue(pp->epd.strength);
     gamma->setValue(pp->epd.gamma);
     edgeStopping->setValue(pp->epd.edgeStopping);
@@ -97,17 +99,18 @@ void EdgePreservingDecompositionUI::write(ProcParams *pp, ParamsEdited *pedited)
     pp->epd.reweightingIterates = reweightingIterates->getValue();
     pp->epd.enabled = getEnabled();
     strength->set_sensitive (true);
-
-    if(pp->wavelet.enabled) {
-        if(pp->wavelet.tmrs == 0) {
+    gamma->set_sensitive (true);
+/*
+    if(pp->wavelet.enabled) { 
+        if(pp->wavelet.tmrs == 0 || pp->wavelet.TMmethod == "cont") {
             strength->set_sensitive (true);
             gamma->set_sensitive (true);
-        } else {
+        } else if(pp->wavelet.tmrs != 0 && pp->wavelet.TMmethod == "tm") {
             strength->set_sensitive (false);
             gamma->set_sensitive (false);
         }
     }
-
+*/
     if(pedited) {
         pedited->epd.strength = strength->getEditedState();
         pedited->epd.gamma = gamma->getEditedState();
@@ -156,10 +159,6 @@ void EdgePreservingDecompositionUI::adjusterChanged(Adjuster* a, double newval)
             listener->panelChanged(EvEPDReweightingIterates, Glib::ustring::format((int)a->getValue()));
         }
     }
-}
-
-void EdgePreservingDecompositionUI::adjusterAutoToggled(Adjuster* a, bool newval)
-{
 }
 
 void EdgePreservingDecompositionUI::enabledChanged ()
