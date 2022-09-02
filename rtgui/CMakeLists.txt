@@ -1,7 +1,7 @@
 # Common source files for both CLI and non-CLI execautables
 set(CLISOURCEFILES
     alignedmalloc.cc
-    edit.cc
+    editcallbacks.cc
     main-cli.cc
     multilangmgr.cc
     options.cc

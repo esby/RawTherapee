@@ -24,6 +24,7 @@
 #include "toolpanel.h"
 #include "../rtengine/rawimage.h"
 #include "guiutils.h"
+#include "pathutils.h"
 
 
 class TTSaver : public ToolParamBlock, public FoldableToolPanel {

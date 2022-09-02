@@ -92,10 +92,10 @@ ControlSpotPanel::ControlSpotPanel():
     shortc_(Gtk::manage(new Gtk::CheckButton(M("TP_LOCALLAB_SHORTC")))),
     savrest_(Gtk::manage(new Gtk::CheckButton(M("TP_LOCALLAB_SAVREST")))),
 
-    expTransGrad_(Gtk::manage(new MyExpander(false, M("TP_LOCALLAB_TRANSIT")))),
-    expShapeDetect_(Gtk::manage(new MyExpander(false, M("TP_LOCALLAB_ARTIF")))),
-    expSpecCases_(Gtk::manage(new MyExpander(false, M("TP_LOCALLAB_SPECCASE")))),
-    expMaskMerge_(Gtk::manage(new MyExpander(false, M("TP_LOCALLAB_MASFRAME")))),
+    expTransGrad_(Gtk::manage(new MyExpander(false, M("TP_LOCALLAB_TRANSIT"),this))),
+    expShapeDetect_(Gtk::manage(new MyExpander(false, M("TP_LOCALLAB_ARTIF"),this))),
+    expSpecCases_(Gtk::manage(new MyExpander(false, M("TP_LOCALLAB_SPECCASE"),this))),
+    expMaskMerge_(Gtk::manage(new MyExpander(false, M("TP_LOCALLAB_MASFRAME"),this))),
 
     preview_(Gtk::manage(new Gtk::ToggleButton(M("TP_LOCALLAB_PREVIEW")))),
     ctboxshape(Gtk::manage(new Gtk::Box())),

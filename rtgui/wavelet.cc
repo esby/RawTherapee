@@ -208,7 +208,7 @@ Wavelet::Wavelet() :
     expsettings(Gtk::manage(new MyExpander(false, M("TP_WAVELET_SETTINGS"),this))),
     exptoning(Gtk::manage(new MyExpander(true, M("TP_WAVELET_TON"),this))),
     expclari(Gtk::manage(new MyExpander(true, M("TP_WAVELET_CLARI"),this))),
-    expbl(Gtk::manage(new MyExpander(true, M("TP_WAVELET_BL")))),
+    expbl(Gtk::manage(new MyExpander(true, M("TP_WAVELET_BL"),this))),
     neutrHBox(Gtk::manage(new Gtk::Box())),
     usharpHBox(Gtk::manage(new Gtk::Box())),
     ctboxch(Gtk::manage(new Gtk::Box())),

@@ -136,14 +136,14 @@ float checkCoarse(float f, CoarsePanel* coarse)
 {
   while (f>45) 
    {
-    printf("coase roatating to the left\n");
+    printf("coarse rotating to the left\n");
      f = f -90;
      coarse->rotateLeft();
    }
 
   while (f<-45)
   {
-    printf("coase roatating to the right\n");
+    printf("coarse rotating to the right\n");
     f = f +90;
     coarse->rotateRight();
   }
@@ -185,8 +185,13 @@ void TTTweaker::react(FakeProcEvent ev)
       if (s_burst == "0")
       {
         Glib::ustring s_roll= env->getExifVariable("Exif:MakerNote:RollAngle");
-        double d = atof(s_roll.c_str()) / 10;
-        printf("d=%f \n",d);
+        printf("Rotating angle d=%s \n",s_roll.c_str());
+        int i = atoi(s_roll.c_str()) ;
+        short d;
+        d = (short)i;
+        d = d / 10;
+
+        printf("Rotating angle d=%i \n",d);
         if (d!=0)
         {
           Glib::ustring s_orientation = env->getExifVariable("Exif:MakerNote:CameraOrientation");

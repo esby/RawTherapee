@@ -259,6 +259,7 @@ void MovableToolPanel::cleanBox() {
 
 void MovableToolPanel::moveToFavorite(int posFav, int posOri)
 {
+  printf("location %i\n",location);
   if (location != 0)
   {
     cleanBox();

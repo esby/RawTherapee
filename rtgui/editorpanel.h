@@ -28,6 +28,7 @@
 #include "progressconnector.h"
 #include "saveasdlg.h"
 #include "thumbnaillistener.h"
+#include "toolpanelcoord.h"
 
 #include "../rtengine/noncopyable.h"
 #include "../rtengine/rtengine.h"

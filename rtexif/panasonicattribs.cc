@@ -13,7 +13,7 @@ namespace rtexif
 class PanaSShortReader : public Interpreter
 {
 public:
-    std::string toString (Tag* t) override
+    std::string toString (Tag* t) 
     {
         char buffer[32];
         int a = t->toInt (0, SSHORT); 
@@ -21,7 +21,7 @@ public:
         return buffer;
     }
 
-   double toDouble (const Tag* t, int ofs ) override
+   double toDouble (const Tag* t, int ofs )
     {
         return t->toInt (ofs, SSHORT);
     }
@@ -31,7 +31,7 @@ public:
 PanaSShortReader panaSShortReader;
 
 
-class PanaOrientationInterpreter : public ChoiceInterpreter
+class PanaOrientationInterpreter : public ChoiceInterpreter<int>
 {
 public:
     PanaOrientationInterpreter ()
@@ -44,7 +44,7 @@ public:
         choices[5] = "Tilt Downwards";
     }
  
-     std::string toString (Tag* t) override
+     std::string toString (Tag* t) //override
     {
         int a = t->toInt (0, SHORT);
       

@@ -28,8 +28,10 @@
 #include "blackwhite.h"
 #include "cacorrection.h"
 #include "chmixer.h"
+#include "tonecurve.h"
 #include "coarsepanel.h"
 #include "colorappearance.h"
+#include "vibrance.h"
 #include "colortoning.h"
 #include "crop.h"
 #include "darkframe.h"
@@ -76,9 +78,20 @@
 #include "sharpening.h"
 #include "sharpenmicro.h"
 #include "softlight.h"
+#include "spot.h"
+#include "tonecurve.h"
+#include "toolbar.h"
+#include "toolpanel.h"
+#include "vibrance.h"
+#include "vignetting.h"
+#include "wavelet.h"
+#include "whitebalance.h"
+#include "xtransprocess.h"
+#include "xtransrawexposure.h"
 
 #include "../rtengine/noncopyable.h"
 #include "../rtengine/rtengine.h"
+#include "rtdef.h"
 #include "guiutils.h"
 #include "ttsaver.h"
 #include "ttfavoritecolorer.h"
@@ -88,13 +101,12 @@
 #include "tttweaker.h"
 #include "ttvardisplayer.h"
 #include "ttisoprofiler.h"
+#include "toolbar.h"
 
-
-#include "guiutils.h"
 
 //defining the number of panels for once.
 #define NB_PANEL 10
-#define NB_PANEL_SWITCHABLE 8
+#define NB_PANEL_SWITCHABLE 9
 #define PANEL_SWITCHABLE_START 1
 
 class ImageEditorCoordinator;
@@ -120,6 +132,8 @@ class ToolPanelCoordinator :
 protected:
     Environment* env;
     bool isReaction;
+    bool useRtFav;
+    int favoriteCount;
 
     WhiteBalance* whitebalance;
     Vignetting* vignetting;
@@ -192,13 +206,14 @@ protected:
     ToolVBox* rawPanel;
     ToolVBox* advancedPanel;
     ToolVBox* locallabPanel;
-    ToolVBox* favoritePanel;
     ToolVBox* trashPanel;
     ToolVBox* usefulPanel;
+
     Gtk::Notebook* metadataPanel;
 
     ToolBar* toolBar;
 
+    TextOrIcon* toiF;
     TextOrIcon* toiE;
     TextOrIcon* toiD;
     TextOrIcon* toiC;
@@ -207,7 +222,6 @@ protected:
     TextOrIcon* toiM;
     TextOrIcon* toiW;
     TextOrIcon* toiL;
-    TextOrIcon* toiF;
     TextOrIcon* toiP;
     TextOrIcon* toiU;
 
@@ -221,8 +235,6 @@ protected:
     Gtk::Label* labelL;
     Gtk::Label* labelP;
     Gtk::Label* labelU;
-;
-
 
     Gtk::Image* imgIconF;
     Gtk::Image* imgIconE;
@@ -255,12 +267,13 @@ protected:
 
     bool hasChanged;
 
-    void addPanel (Gtk::Box* where, FoldableToolPanel* panel, int level = 1);
-    void foldThemAll (GdkEventButton* event);
-    void updateVScrollbars (bool hide);
-    void notebookPageChanged(Gtk::Widget* page, guint page_num);
-//    void addfavoritePanel (Gtk::Box* where, FoldableToolPanel* panel, int level = 1);
     void handlePanel(Gtk::VBox* vbox, Gtk::ScrolledWindow* panelSW, int panelIterator, int spacing);
+    void addPanel(Gtk::Box* where, FoldableToolPanel* panel, int level = 1);
+    void foldThemAll(GdkEventButton* event);
+    void updateVScrollbars(bool hide);
+    void addfavoritePanel (Gtk::Box* where, FoldableToolPanel* panel, int level = 1);
+    void notebookPageChanged(Gtk::Widget* page, guint page_num);
+
 private:
     EditDataProvider *editDataProvider;
     sigc::connection notebookconn;
@@ -271,14 +284,16 @@ public:
     CoarsePanel* coarse;
     Gtk::Notebook* toolPanelNotebook;
 
-    ToolPanelCoordinator (bool batch = false,bool benchmark=false);
-    ~ToolPanelCoordinator () override;
+    ToolPanelCoordinator (bool batch = false, bool benchmark=false);
+    virtual ~ToolPanelCoordinator () override;
 
     bool getChangedState()
     {
         return hasChanged;
     }
+
     Environment* getEnv(){ return env;}
+
     void updateCurveBackgroundHistogram(
         const LUTu& histToneCurve,
         const LUTu& histLCurve,
@@ -405,8 +420,7 @@ public:
     void toolSelected (ToolMode tool) override;
     void editModeSwitchedOff () final;
 
-    void setEditProvider (EditDataProvider *provider);
-
+    void setEditProvider(EditDataProvider *provider);
     void on_notebook_switch_page(Gtk::Widget* page, guint page_num);
 
 private:

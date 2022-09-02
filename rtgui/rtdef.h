@@ -25,6 +25,7 @@
 #define  PANEL_NAME_DETAILS   "detailsPanel"
 #define  PANEL_NAME_COLOR     "colorPanel" 
 #define  PANEL_NAME_WAVELET   "waveletPanel"
+#define PANEL_NAME_LOCALLAB   "locallabPanel"
 #define  PANEL_NAME_TRANSFORM "transformPanel"
 #define  PANEL_NAME_RAW       "rawPanel" 
 // it lacks metadata definition, but it's normal.

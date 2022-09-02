@@ -29,6 +29,8 @@
 #include <sstream>
 #include "rtimage.h"
 #include "rtwindow.h"
+//needed for testing sound.
+#include "soundman.h"
 #ifdef _OPENMP
 #include <omp.h>
 #endif
@@ -112,8 +114,7 @@ Preferences::Preferences(RTWindow *rtwindow)
     nb->append_page(*getSoundsPanel(), M("PREFERENCES_TAB_SOUND"));
 #endif
     nb->append_page (*getTTPanel(), M("PREFERENCES_THEME_TOOL"));
-    nb->set_current_page (0);
-
+    nb->set_current_page(0);
 
     ProfileStore::getInstance()->addListener(this);
 
@@ -1577,6 +1578,9 @@ Gtk::Widget* Preferences::getSoundsPanel ()
     Gtk::Label* lSndBatchQueueDone = Gtk::manage (new Gtk::Label (M("PREFERENCES_SND_QUEUEDONE") + Glib::ustring (":"), Gtk::ALIGN_START));
     pBatchQueueDone->pack_start (*lSndBatchQueueDone, Gtk::PACK_SHRINK, 4);
 
+    Gtk::Button* btnSndBatchQueueDone =  Gtk::manage (new Gtk::Button(M("PREFERENCES_SND_TEST_BATCHQUEUEDONE")));
+    pBatchQueueDone->pack_end (*btnSndBatchQueueDone, Gtk::PACK_SHRINK, 4);
+
     txtSndBatchQueueDone = Gtk::manage(new Gtk::Entry());
     pBatchQueueDone->pack_end(*txtSndBatchQueueDone, Gtk::PACK_EXPAND_WIDGET, 4);
 
@@ -1593,6 +1597,9 @@ Gtk::Widget* Preferences::getSoundsPanel ()
 
     Gtk::Label* lSndLngEditProcDoneSecs = Gtk::manage (new Gtk::Label (M("PREFERENCES_SND_THRESHOLDSECS") + Glib::ustring (":"), Gtk::ALIGN_START));
     pSndLngEditProcDone->pack_start(*lSndLngEditProcDoneSecs, Gtk::PACK_SHRINK, 12);
+
+    Gtk::Button* btnSndLngEditProcDone =  Gtk::manage (new Gtk::Button(M("PREFERENCES_SND_TEST_LNGEDITPROCDONE")));
+    pSndLngEditProcDone->pack_start (*btnSndLngEditProcDone, Gtk::PACK_SHRINK, 4);
 
     spbSndLngEditProcDoneSecs = Gtk::manage(new Gtk::SpinButton());
     spbSndLngEditProcDoneSecs->set_digits(1);
@@ -1614,6 +1621,16 @@ Gtk::Widget* Preferences::getSoundsPanel ()
 
     swSounds->add(*vbSounds);
     return swSounds;
+}
+
+void  Preferences::btn_test_batchqueuedone_clicked (GdkEventButton* event)
+{
+  SoundManager::playSoundAsync(txtSndBatchQueueDone->get_text ());
+}
+
+void  Preferences::btn_test_lngedit_clicked (GdkEventButton* event)
+{
+  SoundManager::playSoundAsync(txtSndLngEditProcDone->get_text ());
 }
 
 Gtk::Widget* Preferences::getTTPanel ()
@@ -1835,6 +1852,7 @@ void Preferences::storePreferences()
     moptions.navGuideBrush[1] = NavGuideCol.get_green();
     moptions.navGuideBrush[2] = NavGuideCol.get_blue();
     moptions.navGuideBrush[3] = navGuideColorCB->get_alpha() / 65535.0;
+
     Pango::FontDescription fd (mainFontFB->get_font_name());
 
 

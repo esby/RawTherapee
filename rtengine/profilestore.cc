@@ -461,7 +461,16 @@ const PartialProfile* ProfileStore::getDefaultPartialProfile (bool isRaw)
 const Glib::ustring ProfileStore::getPathFromId (int folderId) const
 {
     // initialization must have been done when calling this
+  if ( (long unsigned) folderId < folders.size() )
+  {
     return folders.at (folderId);
+  }
+  else
+  {
+    printf("issue encountered %i\n", folderId);
+
+    return "";
+}
 }
 
 

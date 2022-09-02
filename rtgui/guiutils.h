@@ -26,9 +26,12 @@
 #include <cairomm/cairomm.h>
 
 #include "threadutils.h"
+#include "rtdef.h"
+#include "rtimage.h"
 
 #include "../rtengine/coord.h"
 #include "../rtengine/noncopyable.h"
+
 
 namespace rtengine
 {

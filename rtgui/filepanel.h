@@ -29,6 +29,7 @@
 #include "pparamschangelistener.h"
 #include "progressconnector.h"
 #include "recentbrowser.h"
+#include "batchtoolpanelcoord.h"
 
 #include "../rtengine/noncopyable.h"
 

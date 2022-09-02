@@ -25,7 +25,7 @@
 #include "../rtengine/procparams.h"
 #include "multilangmgr.h"
 #include "paramsedited.h"
-#include "edit.h"
+//#include "edit.h"
 #include "toolvboxdef.h"
 #include "rtdef.h"
 #include "guiutils.h"

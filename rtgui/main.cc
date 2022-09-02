@@ -68,9 +68,8 @@ Glib::ustring argv2;
 bool simpleEditor = false;
 bool gimpPlugin = false;
 bool remote = false;
+unsigned char initialGdkScale = 1;
 bool benchmark = false;
-Glib::RefPtr<Gtk::CssProvider> cssForced;
-Glib::RefPtr<Gtk::CssProvider> cssRT;
 //Glib::Threads::Thread* mainThread;
 
 namespace

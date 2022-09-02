@@ -26,6 +26,8 @@
 
 #include "../rtengine/procparams.h"
 
+
+
 using namespace rtengine::procparams;
 
 
@@ -48,11 +50,6 @@ ToolParamBlock::ToolParamBlock() {
 #endif
 //GTK318
 }
-
-
-
-
-
 
 FoldableToolPanel::FoldableToolPanel(Gtk::Box* content, Glib::ustring toolName, Glib::ustring UILabel, bool need11, bool useEnabled) : ToolPanel(toolName, need11), parentContainer(nullptr), exp(nullptr), lastEnabled(true)
 {

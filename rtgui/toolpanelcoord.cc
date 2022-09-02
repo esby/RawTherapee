@@ -33,24 +33,25 @@
 
 using namespace rtengine::procparams;
 
-ToolPanelCoordinator::ToolPanelCoordinator (bool batch, bool benchmark) : ipc (nullptr), favoritePanelSW(nullptr), hasChanged (false), editDataProvider (nullptr)
+ToolPanelCoordinator::ToolPanelCoordinator(bool batch, bool benchmark) : ipc(nullptr), favoritePanelSW(nullptr), hasChanged(false), editDataProvider(nullptr)
 {
+    useRtFav = false;
 
-    favoritePanel   = Gtk::manage (new ToolVBox ());
-    exposurePanel   = Gtk::manage (new ToolVBox ());
-    detailsPanel    = Gtk::manage (new ToolVBox ());
-    colorPanel      = Gtk::manage (new ToolVBox ());
-    transformPanel  = Gtk::manage (new ToolVBox ());
-    rawPanel        = Gtk::manage (new ToolVBox ());
-    advancedPanel    = Gtk::manage (new ToolVBox ());
-    locallabPanel    = Gtk::manage(new ToolVBox());
-    favoritePanel   = Gtk::manage (new ToolVBox ());
-    trashPanel      = Gtk::manage (new ToolVBox ());
-    usefulPanel     = Gtk::manage (new ToolVBox ());
+    favoritePanel   = Gtk::manage(new ToolVBox());
+    exposurePanel   = Gtk::manage(new ToolVBox());
+    detailsPanel    = Gtk::manage(new ToolVBox());
+    colorPanel      = Gtk::manage(new ToolVBox());
+    transformPanel  = Gtk::manage(new ToolVBox());
+    rawPanel        = Gtk::manage(new ToolVBox());
+    advancedPanel   = Gtk::manage(new ToolVBox());
+    locallabPanel   = Gtk::manage(new ToolVBox());
+    favoritePanel   = Gtk::manage(new ToolVBox());
+    trashPanel      = Gtk::manage(new ToolVBox());
+    usefulPanel     = Gtk::manage(new ToolVBox());
 
     favoritePanel->setBoxName(PANEL_NAME_FAVORITE);
     exposurePanel->setBoxName(PANEL_NAME_EXPOSURE);
-    detailsPanel->setBoxName (PANEL_NAME_DETAILS);
+    detailsPanel->setBoxName(PANEL_NAME_DETAILS);
     colorPanel->setBoxName(PANEL_NAME_COLOR);
     advancedPanel->setBoxName(PANEL_NAME_WAVELET);
     locallabPanel->setBoxName(PANEL_NAME_LOCALLAB);
@@ -58,7 +59,7 @@ ToolPanelCoordinator::ToolPanelCoordinator (bool batch, bool benchmark) : ipc (n
     rawPanel->setBoxName(PANEL_NAME_RAW);
     trashPanel->setBoxName(PANEL_NAME_TRASH);
     usefulPanel->setBoxName(PANEL_NAME_USEFUL);
-    
+
     env =  new Environment(toolPanels, expList);
     isReaction = false;
     printf("environment created: #%i \n",env->getEnvRef());
@@ -79,15 +80,15 @@ ToolPanelCoordinator::ToolPanelCoordinator (bool batch, bool benchmark) : ipc (n
     env->setFavoritePanel(favoritePanel);
     env->setTrashPanel(trashPanel);
 
-    coarse              = Gtk::manage (new CoarsePanel ());
-    toneCurve           = Gtk::manage (new ToneCurve ());
-    shadowshighlights   = Gtk::manage (new ShadowsHighlights ());
-    impulsedenoise      = Gtk::manage (new ImpulseDenoise ());
-    defringe            = Gtk::manage (new Defringe ());
-    spot                = Gtk::manage (new Spot ());
-    dirpyrdenoise       = Gtk::manage (new DirPyrDenoise ());
-    epd                 = Gtk::manage (new EdgePreservingDecompositionUI ());
-    sharpening          = Gtk::manage (new Sharpening ());
+    coarse              = Gtk::manage(new CoarsePanel());
+    toneCurve           = Gtk::manage(new ToneCurve());
+    shadowshighlights   = Gtk::manage(new ShadowsHighlights());
+    impulsedenoise      = Gtk::manage(new ImpulseDenoise());
+    defringe            = Gtk::manage(new Defringe());
+    spot                = Gtk::manage(new Spot());
+    dirpyrdenoise       = Gtk::manage(new DirPyrDenoise());
+    epd                 = Gtk::manage(new EdgePreservingDecompositionUI());
+    sharpening          = Gtk::manage(new Sharpening());
     localContrast       = Gtk::manage(new LocalContrast());
     sharpenEdge         = Gtk::manage(new SharpenEdge());
     sharpenMicro        = Gtk::manage(new SharpenMicro());
@@ -131,227 +132,199 @@ ToolPanelCoordinator::ToolPanelCoordinator (bool batch, bool benchmark) : ipc (n
     flatfield           = Gtk::manage(new FlatField());
     rawcacorrection     = Gtk::manage(new RAWCACorr());
     rawexposure         = Gtk::manage(new RAWExposure());
-    preprocessWB        = Gtk::manage (new PreprocessWB ());
+    preprocessWB        = Gtk::manage(new PreprocessWB());
     bayerrawexposure    = Gtk::manage(new BayerRAWExposure());
     xtransrawexposure   = Gtk::manage(new XTransRAWExposure());
     fattal              = Gtk::manage(new FattalToneMapping());
-    filmNegative        = Gtk::manage (new FilmNegative());
-    pdSharpening        = Gtk::manage (new PdSharpening());
-    // So Demosaic, Line noise filter, Green Equilibration, Ca-Correction (garder le nom de section identique!) and Black-Level will be moved in a "Bayer sensor" tool,
+    filmNegative        = Gtk::manage(new FilmNegative());
+    pdSharpening        = Gtk::manage(new PdSharpening());
+    // So Demosaic, Line noise filter, Green Equilibration, Ca-Correction(garder le nom de section identique!) and Black-Level will be moved in a "Bayer sensor" tool,
     // and a separate Demosaic and Black Level tool will be created in an "X-Trans sensor" tool
 
-    // X-Trans demozaic methods: "3-pass (best), 1-pass (medium), fast"
+    // X-Trans demozaic methods: "3-pass(best), 1-pass(medium), fast"
     // Mettre  jour les profils fournis pour inclure les nouvelles section Raw, notamment pour "Default High ISO"
     // Valeurs par dfaut:
     //     Best -> low ISO
     //     Medium -> High ISO
-    favorites.resize(options.favorites.size(), nullptr);
+    if (useRtFav)
+      favorites.resize(options.favorites.size(), nullptr);
 
-    addfavoritePanel (colorPanel, whitebalance);
-    addfavoritePanel (exposurePanel, toneCurve);
-    addfavoritePanel (colorPanel, vibrance);
-    addfavoritePanel (colorPanel, chmixer);
-    addfavoritePanel (colorPanel, blackwhite);
-    addfavoritePanel (exposurePanel, shadowshighlights);
-    addfavoritePanel (detailsPanel, spot);
-    addfavoritePanel (detailsPanel, sharpening);
-    addfavoritePanel (detailsPanel, localContrast);
-    addfavoritePanel (detailsPanel, sharpenEdge);
-    addfavoritePanel (detailsPanel, sharpenMicro);
-    addfavoritePanel (colorPanel, hsvequalizer);
-    addfavoritePanel (colorPanel, filmSimulation);
-    addfavoritePanel (colorPanel, filmNegative);
-    addfavoritePanel (colorPanel, softlight);
-    addfavoritePanel (colorPanel, rgbcurves);
-    addfavoritePanel (colorPanel, colortoning);
-    addfavoritePanel (exposurePanel, epd);
-    addfavoritePanel (exposurePanel, fattal);
-    addfavoritePanel (advancedPanel, retinex);
-    addfavoritePanel (exposurePanel, pcvignette);
-    addfavoritePanel (exposurePanel, gradient);
-    addfavoritePanel (exposurePanel, lcurve);
-    addfavoritePanel (advancedPanel, colorappearance);
-    addfavoritePanel (detailsPanel, impulsedenoise);
-    addfavoritePanel (detailsPanel, dirpyrdenoise);
-    addfavoritePanel (detailsPanel, defringe);
-    addfavoritePanel (detailsPanel, dirpyrequalizer);
-    addfavoritePanel (detailsPanel, dehaze);
-    addfavoritePanel (advancedPanel, wavelet);
+    addfavoritePanel(colorPanel, whitebalance);
+    addfavoritePanel(exposurePanel, toneCurve);
+    addfavoritePanel(colorPanel, vibrance);
+    addfavoritePanel(colorPanel, chmixer);
+    addfavoritePanel(colorPanel, blackwhite);
+    addfavoritePanel(exposurePanel, shadowshighlights);
+    addfavoritePanel(detailsPanel, spot);
+    addfavoritePanel(detailsPanel, sharpening);
+    addfavoritePanel(detailsPanel, localContrast);
+    addfavoritePanel(detailsPanel, sharpenEdge);
+    addfavoritePanel(detailsPanel, sharpenMicro);
+    addfavoritePanel(colorPanel, hsvequalizer);
+    addfavoritePanel(colorPanel, filmSimulation);
+    addfavoritePanel(colorPanel, filmNegative);
+    addfavoritePanel(colorPanel, softlight);
+    addfavoritePanel(colorPanel, rgbcurves);
+    addfavoritePanel(colorPanel, colortoning);
+    addfavoritePanel(exposurePanel, epd);
+    addfavoritePanel(exposurePanel, fattal);
+    addfavoritePanel(advancedPanel, retinex);
+    addfavoritePanel(exposurePanel, pcvignette);
+    addfavoritePanel(exposurePanel, gradient);
+    addfavoritePanel(exposurePanel, lcurve);
+    addfavoritePanel(advancedPanel, colorappearance);
+    addfavoritePanel(detailsPanel, impulsedenoise);
+    addfavoritePanel(detailsPanel, dirpyrdenoise);
+    addfavoritePanel(detailsPanel, defringe);
+    addfavoritePanel(detailsPanel, dirpyrequalizer);
+    addfavoritePanel(detailsPanel, dehaze);
+    addfavoritePanel(advancedPanel, wavelet);
     addfavoritePanel(locallabPanel, locallab);
-    
-    addfavoritePanel (transformPanel, crop);
-    addfavoritePanel (transformPanel, resize);
-    addPanel (resize->getPackBox(), prsharpening, 2);
-    addfavoritePanel (transformPanel, lensgeom);
-    addfavoritePanel (lensgeom->getPackBox(), rotate, 2);
-    addfavoritePanel (lensgeom->getPackBox(), perspective, 2);
-    addfavoritePanel (lensgeom->getPackBox(), lensProf, 2);
-    addfavoritePanel (lensgeom->getPackBox(), distortion, 2);
-    addfavoritePanel (lensgeom->getPackBox(), cacorrection, 2);
-    addfavoritePanel (lensgeom->getPackBox(), vignetting, 2);
-    addfavoritePanel (colorPanel, icm);
-    addfavoritePanel (rawPanel, sensorbayer);
-    addfavoritePanel (sensorbayer->getPackBox(), bayerprocess, 2);
-    addfavoritePanel (sensorbayer->getPackBox(), bayerrawexposure, 2);
-    addfavoritePanel (sensorbayer->getPackBox(), bayerpreprocess, 2);
-    addfavoritePanel (sensorbayer->getPackBox(), rawcacorrection, 2);
-    addfavoritePanel (rawPanel, sensorxtrans);
-    addfavoritePanel (sensorxtrans->getPackBox(), xtransprocess, 2);
-    addfavoritePanel (sensorxtrans->getPackBox(), xtransrawexposure, 2);
-    addfavoritePanel (rawPanel, rawexposure);
-    addfavoritePanel (rawPanel, preprocessWB);
-    addfavoritePanel (rawPanel, preprocess);
-    addfavoritePanel (rawPanel, darkframe);
-    addfavoritePanel (rawPanel, flatfield);
-    addfavoritePanel (rawPanel, pdSharpening);
 
-    int favoriteCount = 0;
-    for(auto it = favorites.begin(); it != favorites.end(); ++it) {
-        if (*it) {
+    addfavoritePanel(transformPanel, crop);
+    addfavoritePanel(transformPanel, resize);
+    addPanel(resize->getPackBox(), prsharpening, 2);
+    addfavoritePanel(transformPanel, lensgeom);
+    addfavoritePanel(lensgeom->getPackBox(), rotate, 2);
+    addfavoritePanel(lensgeom->getPackBox(), perspective, 2);
+    addfavoritePanel(lensgeom->getPackBox(), lensProf, 2);
+    addfavoritePanel(lensgeom->getPackBox(), distortion, 2);
+    addfavoritePanel(lensgeom->getPackBox(), cacorrection, 2);
+    addfavoritePanel(lensgeom->getPackBox(), vignetting, 2);
+    addfavoritePanel(colorPanel, icm);
+    addfavoritePanel(rawPanel, sensorbayer);
+    addfavoritePanel(sensorbayer->getPackBox(), bayerprocess, 2);
+    addfavoritePanel(sensorbayer->getPackBox(), bayerrawexposure, 2);
+    addfavoritePanel(sensorbayer->getPackBox(), bayerpreprocess, 2);
+    addfavoritePanel(sensorbayer->getPackBox(), rawcacorrection, 2);
+    addfavoritePanel(rawPanel, sensorxtrans);
+    addfavoritePanel(sensorxtrans->getPackBox(), xtransprocess, 2);
+    addfavoritePanel(sensorxtrans->getPackBox(), xtransrawexposure, 2);
+    addfavoritePanel(rawPanel, rawexposure);
+    addfavoritePanel(rawPanel, preprocessWB);
+    addfavoritePanel(rawPanel, preprocess);
+    addfavoritePanel(rawPanel, darkframe);
+    addfavoritePanel(rawPanel, flatfield);
+    addfavoritePanel(rawPanel, pdSharpening);
+
+    favoriteCount = 0;
+    if (useRtFav){
+       for(auto it = favorites.begin(); it != favorites.end(); ++it) {
+         if (*it) {
             addPanel(favoritePanel, *it);
             ++favoriteCount;
-        }
+         }
+       }
     }
 
-    toolPanels.push_back (coarse);
+    toolPanels.push_back(coarse);
     toolPanels.push_back(metadata);
-    coarse->setToolName("coarse"); // coase does not have a name.
+    coarse->setToolName("coarse"); // coarse does not have a name.
 
     toolPanelNotebook = new Gtk::Notebook();
     toolPanelNotebook->set_name("ToolPanelNotebook");
 
-
   // new panels are registered a bit diffently
-    addPanel (usefulPanel, Gtk::manage (new TTSaver()));
-    addPanel (usefulPanel, Gtk::manage (new TTIsoProfiler()));
-    addPanel (usefulPanel, Gtk::manage (new TTTabHider()));
-    addPanel (usefulPanel, Gtk::manage (new TTFavoriteColorChooser()));
-    addPanel (usefulPanel, Gtk::manage (new TTPanelColorChooser()));
-    addPanel (usefulPanel, Gtk::manage (new TTUDLRHider()));
-    addPanel (usefulPanel, Gtk::manage (new TTTweaker()));
-    addPanel (usefulPanel, Gtk::manage (new TTVarDisplayer()));
-    advancedPanelSW    = Gtk::manage (new MyScrolledWindow ());
-    locallabPanelSW     = Gtk::manage(new MyScrolledWindow());    
+    addPanel(usefulPanel, Gtk::manage(new TTSaver()));
+    addPanel(usefulPanel, Gtk::manage(new TTIsoProfiler()));
+    addPanel(usefulPanel, Gtk::manage(new TTTabHider()));
+    addPanel(usefulPanel, Gtk::manage(new TTFavoriteColorChooser()));
+    addPanel(usefulPanel, Gtk::manage(new TTPanelColorChooser()));
+    addPanel(usefulPanel, Gtk::manage(new TTUDLRHider()));
+    addPanel(usefulPanel, Gtk::manage(new TTTweaker()));
+    addPanel(usefulPanel, Gtk::manage(new TTVarDisplayer()));
 
-    toolPanelNotebook = new Gtk::Notebook ();
-    toolPanelNotebook->set_name ("ToolPanelNotebook");
+    toolPanelNotebook = new Gtk::Notebook();
+    toolPanelNotebook->set_name("ToolPanelNotebook");
     env->setToolPanelNotebook(toolPanelNotebook);
 
-    exposurePanelSW    = Gtk::manage (new MyScrolledWindow ());
-    detailsPanelSW     = Gtk::manage (new MyScrolledWindow ());
-    colorPanelSW       = Gtk::manage (new MyScrolledWindow ());
-    transformPanelSW   = Gtk::manage (new MyScrolledWindow ());
-    rawPanelSW         = Gtk::manage (new MyScrolledWindow ());
-    advancedPanelSW     = Gtk::manage (new MyScrolledWindow ());
-    locallabPanelSW     = Gtk::manage(new MyScrolledWindow());    
-    favoritePanelSW    = Gtk::manage (new MyScrolledWindow ()); 
-    trashPanelSW       = Gtk::manage (new MyScrolledWindow ());
-    usefulPanelSW      = Gtk::manage (new MyScrolledWindow ());
-
-    updateVScrollbars (options.hideTPVScrollbar);
-
+    favoritePanelSW    = Gtk::manage(new MyScrolledWindow()); 
+    exposurePanelSW    = Gtk::manage(new MyScrolledWindow());
+    detailsPanelSW     = Gtk::manage(new MyScrolledWindow());
+    colorPanelSW       = Gtk::manage(new MyScrolledWindow());
+    transformPanelSW   = Gtk::manage(new MyScrolledWindow());
+    rawPanelSW         = Gtk::manage(new MyScrolledWindow());
+    advancedPanelSW    = Gtk::manage(new MyScrolledWindow());
+    locallabPanelSW    = Gtk::manage(new MyScrolledWindow());    
+    
+    trashPanelSW       = Gtk::manage(new MyScrolledWindow());
+    usefulPanelSW      = Gtk::manage(new MyScrolledWindow());
+    updateVScrollbars(options.hideTPVScrollbar);
 
     // load panel endings
-    for (int i = 0; i < NB_PANEL; i++) {
-        vbPanelEnd[i] = Gtk::manage (new Gtk::Box(Gtk::ORIENTATION_VERTICAL));
-        imgPanelEnd[i] = Gtk::manage (new RTImage ("ornament1.png"));
+    for(int i = 0; i < NB_PANEL; i++) {
+        vbPanelEnd[i] = Gtk::manage(new Gtk::VBox());
+        imgPanelEnd[i] = Gtk::manage(new RTImage("ornament1.png"));
         imgPanelEnd[i]->show();
         vbPanelEnd[i]->pack_start(*imgPanelEnd[i], Gtk::PACK_SHRINK);
         vbPanelEnd[i]->show_all();
         hsPanelEnd[i] = Gtk::manage(new Gtk::HSeparator);
     }
-    if(favoriteCount > 0) {
+    if (useRtFav)
+    {
+      if (favoriteCount > 0) {
         favoritePanelSW = Gtk::manage(new MyScrolledWindow());
         favoritePanelSW->add(*favoritePanel);
-        favoritePanel->pack_start(*vbPanelEnd[0], Gtk::PACK_SHRINK, 4);
+        favoritePanel->pack_start(*vbPanelEnd[0], Gtk::PACK_SHRINK, 4);     
+      }
     }
     updateVScrollbars(options.hideTPVScrollbar);
 
     int panelIter = 0;
-    handlePanel(favoritePanel, favoritePanelSW, panelIter++, 4);
+    if ((!useRtFav) || favoriteCount > 0 )
+      handlePanel(favoritePanel, favoritePanelSW, panelIter++, 4);
     handlePanel(exposurePanel, exposurePanelSW, panelIter++, 4);
     handlePanel(detailsPanel, detailsPanelSW, panelIter++, 4);
     handlePanel(colorPanel, colorPanelSW, panelIter++, 4);
     handlePanel(advancedPanel, advancedPanelSW, panelIter++,4);
     handlePanel(transformPanel, transformPanelSW, panelIter++, 4);
-    handlePanel(locallabPanel, localalbPanelSW, panelIter++, 4);
-
+    handlePanel(locallabPanel, locallabPanelSW, panelIter++, 4);
     handlePanel(rawPanel, rawPanelSW, panelIter++, 0);
     handlePanel(usefulPanel, usefulPanelSW, panelIter++, 4);
     handlePanel(trashPanel, trashPanelSW, panelIter++, 4);
 
-/**    
-    exposurePanelSW->add  (*exposurePanel);
-    exposurePanel->pack_start (*Gtk::manage (new Gtk::HSeparator), Gtk::PACK_SHRINK, 0);
-    exposurePanel->pack_start (*vbPanelEnd[0], Gtk::PACK_SHRINK, 4);
-
-
-    detailsPanelSW->add   (*detailsPanel);
-    detailsPanel->pack_start (*Gtk::manage (new Gtk::HSeparator), Gtk::PACK_SHRINK, 0);
-    detailsPanel->pack_start (*vbPanelEnd[1], Gtk::PACK_SHRINK, 4);
-
-    colorPanelSW->add     (*colorPanel);
-    colorPanel->pack_start (*Gtk::manage (new Gtk::HSeparator), Gtk::PACK_SHRINK, 0);
-    colorPanel->pack_start (*vbPanelEnd[2], Gtk::PACK_SHRINK, 4);
-
-
-    advancedPanelSW->add       (*advancedPanel);
-    advancedPanel->pack_start (*Gtk::manage (new Gtk::HSeparator), Gtk::PACK_SHRINK, 0);
-    advancedPanel->pack_start (*vbPanelEnd[5], Gtk::PACK_SHRINK, 0);
-
-    transformPanelSW->add (*transformPanel);
-    transformPanel->pack_start (*Gtk::manage (new Gtk::HSeparator), Gtk::PACK_SHRINK, 0);
-    transformPanel->pack_start (*vbPanelEnd[3], Gtk::PACK_SHRINK, 4);
-
-    rawPanelSW->add       (*rawPanel);
-    rawPanel->pack_start (*Gtk::manage (new Gtk::HSeparator), Gtk::PACK_SHRINK, 0);
-    rawPanel->pack_start (*vbPanelEnd[4], Gtk::PACK_SHRINK, 0);
-**/
-
-    if( options.rtSettings.verbose )
+    if ( options.rtSettings.verbose )
       printf("panel handling performed. \n");
 
-    for (int i=PANEL_SWITCHABLE_START; i< PANEL_SWITCHABLE_START + NB_PANEL_SWITCHABLE; i++) { //last panel is trash thus ignored
+    for(int i=PANEL_SWITCHABLE_START; i< PANEL_SWITCHABLE_START + NB_PANEL_SWITCHABLE; i++) { //last panel is trash thus ignored
+      printf("panel %i \n",i);
       int modOp  = NB_PANEL_SWITCHABLE ; //-2 because we ignore first panel and trash panel
       // I really don't want to know how modulo negative number is h@ndled 
       // so i am adding nbPanel to the values
       // -- esby
-      ToolVBox* box1 =  static_cast<ToolVBox*> (vbPanel[PANEL_SWITCHABLE_START + ((i+modOp-2) % (modOp))]);
-      ToolVBox* box2 =  static_cast<ToolVBox*> (vbPanel[i]);
+      ToolVBox* box1 =  static_cast<ToolVBox*>(vbPanel[PANEL_SWITCHABLE_START +((i+modOp-2) %(modOp))]);
+      ToolVBox* box2 =  static_cast<ToolVBox*>(vbPanel[i]);
       box2->setPrevBox(box1);
       box1->setNextBox(box2);
       env->addVBox(box1);
     }
 
-    ToolVBox* box =  static_cast<ToolVBox*> (lensgeom->getPackBox());
+  //allowing those filters to be extracted from their entity
+
+    ToolVBox* box =  static_cast<ToolVBox*>(lensgeom->getPackBox());
 
     box->setBoxName("lensgeom");
     box->setNextBox(transformPanel);
     box->setPrevBox(transformPanel);
     env->addVBox(box);
 
-
-
-
-    toiF = Gtk::manage (new TextOrIcon ("star.png", M ("MAIN_TAB_FAVORITES"), M ("MAIN_TAB_FAVORITES_TOOLTIP")));
-    toiE = Gtk::manage (new TextOrIcon ("exposure.png", M ("MAIN_TAB_EXPOSURE"), M ("MAIN_TAB_EXPOSURE_TOOLTIP")));
-    toiD = Gtk::manage (new TextOrIcon ("detail.png", M ("MAIN_TAB_DETAIL"), M ("MAIN_TAB_DETAIL_TOOLTIP")));
-    toiC = Gtk::manage (new TextOrIcon ("color-circles.png", M ("MAIN_TAB_COLOR"), M ("MAIN_TAB_COLOR_TOOLTIP")));
-    toiW = Gtk::manage (new TextOrIcon ("atom.png", M ("MAIN_TAB_ADVANCED"), M ("MAIN_TAB_ADVANCED_TOOLTIP")));
+    toiF = Gtk::manage(new TextOrIcon("star.png", M("MAIN_TAB_FAVORITES"), M("MAIN_TAB_FAVORITES_TOOLTIP")));
+    toiE = Gtk::manage(new TextOrIcon("exposure.png", M("MAIN_TAB_EXPOSURE"), M("MAIN_TAB_EXPOSURE_TOOLTIP")));
+    toiD = Gtk::manage(new TextOrIcon("detail.png", M("MAIN_TAB_DETAIL"), M("MAIN_TAB_DETAIL_TOOLTIP")));
+    toiC = Gtk::manage(new TextOrIcon("color-circles.png", M("MAIN_TAB_COLOR"), M("MAIN_TAB_COLOR_TOOLTIP")));
+    toiW = Gtk::manage(new TextOrIcon("atom.png", M("MAIN_TAB_ADVANCED"), M("MAIN_TAB_ADVANCED_TOOLTIP")));
     toiL = Gtk::manage(new TextOrIcon("hand-open.png", M("MAIN_TAB_LOCALLAB"), M("MAIN_TAB_LOCALLAB_TOOLTIP")));
+    toiT = Gtk::manage(new TextOrIcon("transform.png", M("MAIN_TAB_TRANSFORM"), M("MAIN_TAB_TRANSFORM_TOOLTIP")));
+    toiR = Gtk::manage(new TextOrIcon("bayer.png", M("MAIN_TAB_RAW"), M("MAIN_TAB_RAW_TOOLTIP")));
+    toiM = Gtk::manage(new TextOrIcon("metadata.png", M("MAIN_TAB_METADATA"), M("MAIN_TAB_METADATA_TOOLTIP")));
+    toiF = Gtk::manage(new TextOrIcon("favorite.png" , M("MAIN_TAB_FAVORITE") , M("MAIN_TAB_FAVORITE_TOOLTIP") ));
+    toiP = Gtk::manage(new TextOrIcon("trash.png"    , M("MAIN_TAB_TRASH") ,    M("MAIN_TAB_TRASH_TOOLTIP") ));
+    toiU = Gtk::manage(new TextOrIcon("useful.png"   , M("MAIN_TAB_USEFUL") ,   M("MAIN_TAB_USEFUL_TOOLTIP") ));
 
-    toiT = Gtk::manage (new TextOrIcon ("transform.png", M ("MAIN_TAB_TRANSFORM"), M ("MAIN_TAB_TRANSFORM_TOOLTIP")));
-    toiR = Gtk::manage (new TextOrIcon ("bayer.png", M ("MAIN_TAB_RAW"), M ("MAIN_TAB_RAW_TOOLTIP")));
-    toiM = Gtk::manage (new TextOrIcon ("metadata.png", M ("MAIN_TAB_METADATA"), M ("MAIN_TAB_METADATA_TOOLTIP")));
-    toiF = Gtk::manage (new TextOrIcon ("favorite.png" , M ("MAIN_TAB_FAVORITE") , M ("MAIN_TAB_FAVORITE_TOOLTIP") ));
-    toiP = Gtk::manage (new TextOrIcon ("trash.png"    , M ("MAIN_TAB_TRASH") ,    M ("MAIN_TAB_TRASH_TOOLTIP") ));
-    toiU = Gtk::manage (new TextOrIcon ("useful.png"   , M ("MAIN_TAB_USEFUL") ,   M ("MAIN_TAB_USEFUL_TOOLTIP") ));
 
-/** Note: not sure it is necessary in my version
-    if (favoritePanelSW) {
-        toolPanelNotebook->append_page (*favoritePanelSW,  *toiF);
-    }
-*//
+    if ((!useRtFav) || (favoriteCount>0 ))
+        toolPanelNotebook->append_page(*favoritePanelSW,  *toiF);
+
     box =  static_cast<ToolVBox*>(sensorbayer->getPackBox());
     box->setBoxName("sensorbayer");
     box->setPrevBox(rawPanel);
@@ -370,22 +343,23 @@ ToolPanelCoordinator::ToolPanelCoordinator (bool batch, bool benchmark) : ipc (n
     box->setNextBox(transformPanel);
     env->addVBox(box);
 
-    toolPanelNotebook->append_page (*favoritePanelSW,  *toiF);
-    toolPanelNotebook->append_page (*exposurePanelSW,  *toiE);
-    toolPanelNotebook->append_page (*detailsPanelSW,   *toiD);
-    toolPanelNotebook->append_page (*colorPanelSW,     *toiC);
-    toolPanelNotebook->append_page (*advancedPanelSW,   *toiW);
+    toolPanelNotebook->append_page(*exposurePanelSW,  *toiE);
+    toolPanelNotebook->append_page(*detailsPanelSW,   *toiD);
+    toolPanelNotebook->append_page(*colorPanelSW,     *toiC);
+    toolPanelNotebook->append_page(*advancedPanelSW,   *toiW);
 
     // Locallab notebook is hidden in batch mode
     if (!batch) {
         toolPanelNotebook->append_page(*locallabPanelSW,   *toiL);
     }
 
-    toolPanelNotebook->append_page (*transformPanelSW, *toiT);
-    toolPanelNotebook->append_page (*rawPanelSW,       *toiR);
-    toolPanelNotebook->append_page (*metadata,    *toiM);
-    toolPanelNotebook->append_page (*usefulPanelSW,    *toiU);
-    toolPanelNotebook->append_page (*trashPanelSW,     *toiP);
+    toolPanelNotebook->append_page(*transformPanelSW, *toiT);
+    toolPanelNotebook->append_page(*rawPanelSW,       *toiR);
+    toolPanelNotebook->append_page(*metadata,         *toiM);
+    toolPanelNotebook->append_page(*usefulPanelSW,    *toiU);
+    toolPanelNotebook->append_page(*trashPanelSW,     *toiP);
+
+    toolPanelNotebook->set_current_page(0);
 
     toolPanelNotebook->set_scrollable();
     toolPanelNotebook->show_all();
@@ -393,39 +367,85 @@ ToolPanelCoordinator::ToolPanelCoordinator (bool batch, bool benchmark) : ipc (n
     notebookconn = toolPanelNotebook->signal_switch_page().connect(
                        sigc::mem_fun(*this, &ToolPanelCoordinator::notebookPageChanged));
 
+    if ( options.rtSettings.verbose )
+      printf("Starting toolpanel deployment\n");
+    doDeploy();
+    if ( options.rtSettings.verbose )
+      printf("Panel deployment finished\n");
+
     // In batch mode, notebookPageChanged method is blocked because it's useless to display spots
     if (batch) {
         notebookconn.block(true);
     }
 
-    for (auto toolPanel : toolPanels) 
-        toolPanel->setListener (this);
+    for (auto toolPanel : toolPanels) {
+        toolPanel->setListener(this);
+    }
 
-    whitebalance->setWBProvider (this);
-    whitebalance->setSpotWBListener (this);
-    darkframe->setDFProvider (this);
-    flatfield->setFFProvider (this);
-    lensgeom->setLensGeomListener (this);
-    rotate->setLensGeomListener (this);
-    distortion->setLensGeomListener (this);
-    crop->setCropPanelListener (this);
-    icm->setICMPanelListener (this);
+    whitebalance->setWBProvider(this);
+    whitebalance->setSpotWBListener(this);
+    darkframe->setDFProvider(this);
+    flatfield->setFFProvider(this);
+    lensgeom->setLensGeomListener(this);
+    rotate->setLensGeomListener(this);
+    perspective->setLensGeomListener(this);
+    perspective->setPerspCorrectionPanelListener(this);
+    distortion->setLensGeomListener(this);
+    crop->setCropPanelListener(this);
+    icm->setICMPanelListener(this);
+    filmNegative->setFilmNegProvider(this);
 
-    toolBar = new ToolBar ();
-    toolBar->setToolBarListener (this);
-    toolPanelNotebook->signal_switch_page().connect (sigc::mem_fun(*this,  &ToolPanelCoordinator::on_notebook_switch_page) );
+    toolBar = new ToolBar();
+    toolBar->setToolBarListener(this);
+    toolPanelNotebook->signal_switch_page().connect(sigc::mem_fun(*this,  &ToolPanelCoordinator::on_notebook_switch_page) );
+}
+
+void ToolPanelCoordinator::notebookPageChanged(Gtk::Widget* page, guint page_num)
+{
+    // Locallab spot curves are set visible if at least one photo has been loaded (to avoid
+    // segfault) and locallab panel is active
+    if (photoLoadedOnce) {
+        if (page == locallabPanelSW) {
+            toolBar->blockEditDeactivation(); // Avoid edit tool deactivation when Locallab page is active (except if pressing other tools button)
+            locallab->subscribe();
+        }
+
+        if (prevPage == locallabPanelSW) { // To deactivate Locallab only when switching from Locallab page
+            toolBar->blockEditDeactivation(false);
+            locallab->unsubscribe();
+        }
+
+        prevPage = page;
+    }
 }
 
 void ToolPanelCoordinator::addPanel(Gtk::Box* where, FoldableToolPanel* panel, int level)
 {
-    env->registerPanel (where, panel, level);
+    env->registerPanel(where, panel, level);
 
-    panel->setParent (where);
-    panel->setLevel (level);
-
-    expList.push_back (panel->getExpander());
-    where->pack_start (*panel->getExpander(), false, false);
-    toolPanels.push_back (panel);
+    panel->setParent(where);
+    panel->setLevel(level);
+/*  
+    // this is performed by handle panel
+    expList.push_back(panel->getExpander());
+    where->pack_start(*panel->getExpander(), false, false);
+    toolPanels.push_back(panel);
+*/
+}
+void ToolPanelCoordinator::addfavoritePanel(Gtk::Box* where, FoldableToolPanel* panel, int level)
+{
+  if (useRtFav){
+    auto name = panel->getToolName();
+    auto it = std::find(options.favorites.begin(), options.favorites.end(), name);
+    if (it != options.favorites.end()) {
+        int index = std::distance(options.favorites.begin(), it);
+        favorites[index] = panel;
+    } else {
+        addPanel(where, panel, level);
+    }
+  }
+  else
+    addPanel(where, panel, level);
 }
 
 ToolPanelCoordinator::~ToolPanelCoordinator ()
@@ -436,18 +456,17 @@ ToolPanelCoordinator::~ToolPanelCoordinator ()
 
     // When deleting toolPanelNotebook, pages removal activates notebookPageChanged function
     // which is responsible of segfault if listener isn't deactivated before
-    // not in my version? -- esby
-    // notebookconn.block(true);
+    notebookconn.block(true);
+
     env->disableSwitchPageReaction = true;
     delete toolPanelNotebook;
     delete toolBar;
     delete env;
 }
 
-
 void ToolPanelCoordinator::doDeploy()
 {
-    for (auto toolPanel : toolPanels) 
+    for(auto toolPanel : toolPanels) 
     {
 //      printf("panel nb=%i \n",  i);
         toolPanel->deploy();
@@ -456,9 +475,9 @@ void ToolPanelCoordinator::doDeploy()
 
 void ToolPanelCoordinator::doDeployLate()
 {
-//    if( options.rtSettings.verbose )
+//    if ( options.rtSettings.verbose )
       printf("late panel deployment for env=#%i \n", env->getEnvRef());
-    for (auto toolPanel : toolPanels) 
+    for(auto toolPanel : toolPanels) 
     {   
 //      printf("panel nb=%i \n",  i);
       toolPanel->deployLate();
@@ -469,17 +488,17 @@ void ToolPanelCoordinator::doDeployLate()
 
 void ToolPanelCoordinator::doReact(FakeProcEvent ev)
 {
-    if( options.rtSettings.verbose ) 
+    if ( options.rtSettings.verbose ) 
       printf("enabling panel reac for envId=%i\n", env->getId());
 
     if (!isReaction)
     {
       isReaction = true;
 
-      for (auto toolPanel : toolPanels) 
+      for(auto toolPanel : toolPanels) 
         toolPanel->setReacted(false);
 
-      for (auto toolPanel : toolPanels) 
+      for(auto toolPanel : toolPanels) 
       {
 //      printf("panel nb=%i \n",  i);
         if (!toolPanel->getReacted())
@@ -493,9 +512,9 @@ void ToolPanelCoordinator::doReact(FakeProcEvent ev)
 }
 
 void ToolPanelCoordinator::handlePanel(Gtk::VBox* vbox, Gtk::ScrolledWindow* panelSW, int panelIterator, int spacing) {
-   panelSW->add (*vbox);
-   vbox->pack_start (*hsPanelEnd[panelIterator], Gtk::PACK_SHRINK,0);
-   vbox->pack_start (*vbPanelEnd[panelIterator], Gtk::PACK_SHRINK,spacing);
+   panelSW->add(*vbox);
+   vbox->pack_start(*hsPanelEnd[panelIterator], Gtk::PACK_SHRINK,0);
+   vbox->pack_start(*vbPanelEnd[panelIterator], Gtk::PACK_SHRINK,spacing);
    vbPanel[panelIterator] = vbox;
    ToolVBox* box =  static_cast<ToolVBox*>(vbox);
    box->setParent(toolPanelNotebook);
@@ -503,7 +522,7 @@ void ToolPanelCoordinator::handlePanel(Gtk::VBox* vbox, Gtk::ScrolledWindow* pan
 }
 
 
-void ToolPanelCoordinator::imageTypeChanged (bool isRaw, bool isBayer, bool isXtrans, bool isMono)
+void ToolPanelCoordinator::imageTypeChanged(bool isRaw, bool isBayer, bool isXtrans, bool isMono)
 {
     if (isRaw) {
         if (isBayer) {
@@ -651,8 +670,9 @@ void ToolPanelCoordinator::panelChanged(const rtengine::ProcEvent& event, const 
 
     ProcParams* params = ipc->beginUpdateParams();
 
-    for (auto toolPanel : toolPanels) 
-        toolPanel->write (params);
+    for (auto toolPanel : toolPanels) {
+        toolPanel->write(params);
+    }
 
     // Compensate rotation on flip
     if (event == rtengine::EvCTHFlip || event == rtengine::EvCTVFlip) {
@@ -866,9 +886,11 @@ if (event == rtengine::EvPhotoLoaded) {
 
 void ToolPanelCoordinator::setDefaults(const ProcParams* defparams)
 {
-    if (defparams)
-       for (auto toolPanel : toolPanels) 
+    if (defparams) {
+        for (auto toolPanel : toolPanels) {
             toolPanel->setDefaults(defparams);
+        }
+    }
 }
 
 CropGUIListener* ToolPanelCoordinator::getCropGUIListener()
@@ -880,9 +902,9 @@ CropGUIListener* ToolPanelCoordinator::getCropGUIListener()
 void parseDirectory(rtexif::TagDirectory* d, Glib::ustring prefix, Environment* env)
 {
   if (d)
-    for (int i = 0; i < d->getCount(); ++i)
+    for(int i = 0; i < d->getCount(); ++i)
     {
-       rtexif::Tag* t = d->getTagByIndex (i);
+       rtexif::Tag* t = d->getTagByIndex(i);
 
        Glib::ustring prefixedName = prefix + ':' + t->nameToString();
        if (prefix=="")
@@ -903,8 +925,7 @@ void parseDirectory(rtexif::TagDirectory* d, Glib::ustring prefix, Environment* 
    }
 }
 
-
-void ToolPanelCoordinator::initImage (rtengine::StagedImageProcessor* ipc_, bool raw)
+void ToolPanelCoordinator::initImage(rtengine::StagedImageProcessor* ipc_, bool raw)
 {
 
     ipc = ipc_;
@@ -932,7 +953,7 @@ void ToolPanelCoordinator::initImage (rtengine::StagedImageProcessor* ipc_, bool
         printf("partial exif values transmitted by variables \n");
 
         printf("transmitting full exif data via rtvar \n");
-        if (pMetaData->hasExif()) 
+        if (pMetaData->hasExif ()) 
         {
           rtexif::TagDirectory* root = pMetaData->getRootExifData() ;
           parseDirectory(root,ROOT_EXIF_PREFIX,env);
@@ -940,11 +961,10 @@ void ToolPanelCoordinator::initImage (rtengine::StagedImageProcessor* ipc_, bool
           doReact(FakeEvFullExifTransmitted);
         }
 
-
-        ipc->setAutoExpListener (toneCurve);
-        ipc->setAutoCamListener (colorappearance);
-        ipc->setAutoBWListener (blackwhite);
-        ipc->setFrameCountListener (bayerprocess);
+        ipc->setAutoExpListener(toneCurve);
+        ipc->setAutoCamListener(colorappearance);
+        ipc->setAutoBWListener(blackwhite);
+        ipc->setFrameCountListener(bayerprocess);
         ipc->setFlatFieldAutoClipListener (flatfield);
         ipc->setBayerAutoContrastListener (bayerprocess);
         ipc->setXtransAutoContrastListener (xtransprocess);
@@ -1312,8 +1332,8 @@ void ToolPanelCoordinator::foldAllButOne(Gtk::Box* parent, FoldableToolPanel* op
             ToolPanel* currentTP = toolPanel;
 
             if ((env->state == ENV_STATE_IN_FAV)
-            || ((currentTP->getParent() == parent) 
-            && (!currentTP->canBeIgnored()))) {
+            ||((currentTP->getParent() == parent) 
+            &&(!currentTP->canBeIgnored()))) {
                 // Section in the same tab, we unfold it if it's not the one that has been clicked
                 if (currentTP != openedSection) {
                     currentTP->setExpanded(false);
@@ -1336,9 +1356,9 @@ bool ToolPanelCoordinator::handleShortcutKey(GdkEventKey* event)
 
     if (alt) {
         switch (event->keyval) {
-            case GDK_KEY_u:
-                if (favoritePanelSW) {
-                    toolPanelNotebook->set_current_page (toolPanelNotebook->page_num (*favoritePanelSW));
+            case GDK_KEY_f:
+                if ((!useRtFav) || (favoriteCount > 0 )) {
+                toolPanelNotebook->set_current_page (toolPanelNotebook->page_num(*favoritePanelSW));
                 }
                 return true;
 
@@ -1375,15 +1395,11 @@ bool ToolPanelCoordinator::handleShortcutKey(GdkEventKey* event)
                 return true;
 
             case GDK_KEY_p:
-                toolPanelNotebook->set_current_page (toolPanelNotebook->page_num(*trashPanelSW));
-                return true;
-
-            case GDK_KEY_f:
-                toolPanelNotebook->set_current_page (toolPanelNotebook->page_num(*favoritePanelSW));
+                toolPanelNotebook->set_current_page(toolPanelNotebook->page_num(*trashPanelSW));
                 return true;
 
             case GDK_KEY_u:
-                 toolPanelNotebook->set_current_page (toolPanelNotebook->page_num(*usefulPanelSW));
+                 toolPanelNotebook->set_current_page(toolPanelNotebook->page_num(*usefulPanelSW));
                  return true;
         }
     }
@@ -1395,11 +1411,9 @@ void ToolPanelCoordinator::updateVScrollbars(bool hide)
 {
     GThreadLock lock; // All GUI access from idle_add callbacks or separate thread HAVE to be protected
     Gtk::PolicyType policy = hide ? Gtk::POLICY_NEVER : Gtk::POLICY_AUTOMATIC;
-/**
-    if (favoritePanelSW) {
-        favoritePanelSW->set_policy     (Gtk::POLICY_AUTOMATIC, policy);
+    if ((!useRtFav) || (favoriteCount > 0)) {
+          favoritePanelSW->set_policy    (Gtk::POLICY_AUTOMATIC, policy);
     }
-**/
     exposurePanelSW->set_policy     (Gtk::POLICY_AUTOMATIC, policy);
     detailsPanelSW->set_policy      (Gtk::POLICY_AUTOMATIC, policy);
     colorPanelSW->set_policy        (Gtk::POLICY_AUTOMATIC, policy);
@@ -1407,9 +1421,9 @@ void ToolPanelCoordinator::updateVScrollbars(bool hide)
     rawPanelSW->set_policy          (Gtk::POLICY_AUTOMATIC, policy);
     advancedPanelSW->set_policy      (Gtk::POLICY_AUTOMATIC, policy);
     locallabPanelSW->set_policy(Gtk::POLICY_AUTOMATIC, policy);
-    favoritePanelSW->set_policy     (Gtk::POLICY_AUTOMATIC, policy);
-    trashPanelSW->set_policy        (Gtk::POLICY_AUTOMATIC, policy);
-    usefulPanelSW->set_policy       (Gtk::POLICY_AUTOMATIC, policy);
+    trashPanelSW->set_policy       (Gtk::POLICY_AUTOMATIC, policy);
+    usefulPanelSW->set_policy      (Gtk::POLICY_AUTOMATIC, policy);
+
 
     for (auto currExp : expList) {
         currExp->updateVScrollbars(hide);
@@ -1434,12 +1448,14 @@ void ToolPanelCoordinator::toolSelected(ToolMode tool)
     notebookconn.block(true); // "signal_switch_page" event is blocked to avoid unsubscribing Locallab (allows a correct behavior when switching to another tool using toolbar)
 
     auto checkFavorite = [this](FoldableToolPanel* tool) {
+    if (!useRtFav) {
         for (auto fav : favorites) {
             if (fav == tool) {
                 return true;
             }
         }
         return false;
+      }
     };
 
     switch (tool) {
@@ -1521,6 +1537,9 @@ bool ToolPanelCoordinator::getFilmNegativeSpot(rtengine::Coord spot, int spotSiz
 }
 
 void ToolPanelCoordinator::on_notebook_switch_page(Gtk::Widget* /* page */, guint page_num){
+  printf(" on_notebook_switch_page called\n");
+   if (options.rtSettings.verbose)
+     printf("options.rtSettings.verbose sets to true\n");
   if (!env->disableSwitchPageReaction)
     {
 
@@ -1534,7 +1553,7 @@ void ToolPanelCoordinator::on_notebook_switch_page(Gtk::Widget* /* page */, guin
        env->state = ENV_STATE_IN_FAV;      
     }
     else 
-    if(toolPanelNotebook->get_current_page() == toolPanelNotebook->page_num(*trashPanelSW)) 
+    if (toolPanelNotebook->get_current_page() == toolPanelNotebook->page_num(*trashPanelSW)) 
     {
        if (options.rtSettings.verbose)
          printf(" -> trash panel\n");
@@ -1548,7 +1567,7 @@ void ToolPanelCoordinator::on_notebook_switch_page(Gtk::Widget* /* page */, guin
 
    // we only checks outside of fav <> fav or trash <> trash interactions
    if (!((env->state == env->prevState)
-    && (env->state != ENV_STATE_IN_NORM)))
+    &&(env->state != ENV_STATE_IN_NORM)))
    {
 
      // todo: fix the performance issue.
@@ -1575,21 +1594,23 @@ void ToolPanelCoordinator::on_notebook_switch_page(Gtk::Widget* /* page */, guin
     if (env->state == ENV_STATE_IN_TRASH) dc+= 3;
     if (env->state == ENV_STATE_IN_NORM) dc+= 2;
 
-    for (auto toolPanel : toolPanels) 
+    for(auto toolPanel : toolPanels) 
         toolPanel->favorite_others_tabs_switch(dc);
 
     //putting the ending panels and separator to the end
-    for (int i=0; i< NB_PANEL; i++){
+    for(int i=0; i< NB_PANEL; i++){
       int pos = toolPanels.size()-1;
       Gtk::Widget* w = static_cast<Gtk::Widget*>(vbPanelEnd[i]);
-      vbPanel[i]->reorder_child (*w, pos);
-      w = (Gtk::Widget*)hsPanelEnd[i];
-      vbPanel[i]->reorder_child (*w, pos-1);
+      vbPanel[i]->reorder_child(*w, pos);
+      w =(Gtk::Widget*)hsPanelEnd[i];
+      vbPanel[i]->reorder_child(*w, pos-1);
      }
    }
     // we update label info all the time
-    // updating the label info (currently the position number)
-    for (auto toolPanel : toolPanels) 
+    // updating the label info(currently the position number)
+    for(auto toolPanel : toolPanels) 
         toolPanel->updateLabelInfo();
   }
 }
+
+

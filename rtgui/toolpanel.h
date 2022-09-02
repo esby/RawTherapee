@@ -16,29 +16,35 @@
  *  You should have received a copy of the GNU General Public License
  *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef __TOOLPANEL__
-#define __TOOLPANEL__
 #pragma once
 
 #include <gtkmm.h>
-
 #include <glibmm/ustring.h>
-
+#include "../rtengine/rtengine.h"
+#include "../rtengine/noncopyable.h"
 #include "guiutils.h"
 #include "multilangmgr.h"
 #include "paramsedited.h"
-#include "edit.h"
-#include "../rtengine/noncopyable.h"
-#include "../rtengine/rtengine.h"
+#include "editcallbacks.h"
 #include "toolvboxdef.h"
 #include "rtdef.h"
 #include "environment.h"
 #include "movabletoolpanel.h"
 
-
 class ToolPanel;
 class FoldableToolPanel;
 
+namespace rtengine
+{
+    class ProcEvent;
+
+namespace procparams
+{
+
+class ProcParams;
+}
+}
+class EditDataProvider;
 
 class ToolPanelListener
 {
@@ -56,20 +62,23 @@ public:
 };
 
 /// @brief This class control the space around the group of tools inside a tab, as well as the space separating each tool. */
-class ToolVBox : public Gtk::VBox, public ToolVBoxDef 
+class ToolVBox :
+    public Gtk::VBox, public ToolVBoxDef 
 {
 public:
     ToolVBox();
 };
 
 /// @brief This class control the space around a tool's block of parameter. */
-class ToolParamBlock : public Gtk::VBox, public ToolVBoxDef
+class ToolParamBlock :
+    public Gtk::VBox, public ToolVBoxDef
 {
 public:
     ToolParamBlock();
 };
 
-class ToolPanel : public MovableToolPanel
+class ToolPanel :
+    public MovableToolPanel
 {
 
 protected:
@@ -79,10 +88,9 @@ protected:
     bool multiImage; // True if more than one image are being edited at the same time (also imply that batchMode=true), false otherwise
     bool need100Percent;
 
-
-
 public:
-    ToolPanel (Glib::ustring _toolName = "", bool need11 = false) :  MovableToolPanel(_toolName), listener(nullptr), tmp(nullptr), batchMode(false), multiImage(false), need100Percent(need11) { 
+
+    ToolPanel (Glib::ustring _toolName = "", bool need11 = false) :  MovableToolPanel(_toolName), listener(nullptr), tmp(nullptr), batchMode(false), multiImage(false), need100Percent(need11) {
           setToolName(_toolName);
           labelBox = nullptr;
           buttonBox = nullptr;
@@ -95,6 +103,13 @@ public:
     {
         return nullptr;
     }
+/**    
+// this is defined in MovableToolPanel
+virtual MyExpander*    getExpander     ()
+    {
+        return nullptr;
+    } 
+**/
     virtual void           setExpanded     (bool expanded) {}
     virtual bool           getExpanded     ()
     {
@@ -117,10 +132,9 @@ public:
     }
     virtual void           setDefaults     (const rtengine::procparams::ProcParams* defParams, const ParamsEdited* pedited = nullptr) {}
     virtual void           autoOpenCurve   () {}
-
-    virtual bool                 canBeIgnored()      { return true; } // useful for determining if the panel is skippable or not.
-    void                setNeed100Percent(bool b) { need100Percent = b; }
-    bool                getNeed100Percent() { return need100Percent; }
+    virtual bool           canBeIgnored()      { return true; } // useful for determining if the panel is skippable or not.
+    void                   setNeed100Percent(bool b) { need100Percent = b; }
+    bool                   getNeed100Percent() { return need100Percent; }
 
     /** @brief Disable the event broadcasting mechanism
      *
@@ -244,8 +258,3 @@ public:
     }
 };
 
-
-
-
-
-#endif

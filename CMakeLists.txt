@@ -11,6 +11,10 @@ if(APPLE)
     cmake_policy(SET CMP0037 NEW)
 endif()
 
+add_definitions(
+    -Wfatal-errors
+    )
+
 # Must stay before the project() command:
 if(${CMAKE_EXTRA_GENERATOR} MATCHES "Eclipse CDT4")
     set(CMAKE_CXX_COMPILER_ARG1

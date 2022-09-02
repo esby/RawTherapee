@@ -26,7 +26,7 @@
 #include "guiutils.h"
 #include "multilangmgr.h"
 #include "paramsedited.h"
-#include "edit.h"
+//#include "edit.h"
 #include "rtdef.h"
 #include "environment.h"
 #include "movabletoolpanel.h"
