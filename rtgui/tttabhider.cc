@@ -29,7 +29,7 @@ using namespace rtengine;
 using namespace rtengine::procparams;
 
 
-TTTabHider::TTTabHider () : FoldableToolPanel(this,"tttabhider",M("TP_THEMETOOL__TAB_HIDDER"),false,false)
+TTTabHider::TTTabHider () : FoldableToolPanel(this,"tttabhider",M("TP_TT_TAB_HIDDER"),false,false)
 {
   themeBox1 = Gtk::manage(new Gtk::HBox());
   themeBox1->set_spacing(4);
@@ -50,38 +50,44 @@ TTTabHider::TTTabHider () : FoldableToolPanel(this,"tttabhider",M("TP_THEMETOOL_
   themeBox8->set_spacing(4);
   themeBox9 = Gtk::manage(new Gtk::HBox());
   themeBox9->set_spacing(4);
+  themeBox10 = Gtk::manage(new Gtk::HBox());
+  themeBox10->set_spacing(4);
+
 
   buttonSave = Gtk::manage(new Gtk::Button());
   buttonSave->set_image (*Gtk::manage(new RTImage ("save.png")));
 
-  lbHideFavorite = Gtk::manage(new Gtk::Label(M("TP_THEMETOOL_HIDE_FAVORITE")));
+  lbHideFavorite = Gtk::manage(new Gtk::Label(M("TP_TT_HIDE_FAVORITE")));
   cbHideFavorite = Gtk::manage(new Gtk::CheckButton());
 
-  lbHideExposure = Gtk::manage(new Gtk::Label(M("TP_THEMETOOL_HIDE_EXPOSURE")));
+  lbHideExposure = Gtk::manage(new Gtk::Label(M("TP_TT_HIDE_EXPOSURE")));
   cbHideExposure = Gtk::manage(new Gtk::CheckButton());
 
-  lbHideDetails = Gtk::manage(new Gtk::Label(M("TP_THEMETOOL_HIDE_DETAIL")));
+  lbHideDetails = Gtk::manage(new Gtk::Label(M("TP_TT_HIDE_DETAIL")));
   cbHideDetails = Gtk::manage(new Gtk::CheckButton());
 
-  lbHideColor = Gtk::manage(new Gtk::Label(M("TP_THEMETOOL_HIDE_COLOR")));
+  lbHideColor = Gtk::manage(new Gtk::Label(M("TP_TT_HIDE_COLOR")));
   cbHideColor = Gtk::manage(new Gtk::CheckButton());
 
-  lbHideAdvanced = Gtk::manage(new Gtk::Label(M("TP_THEMETOOL_HIDE_ADVANCED")));
+  lbHideAdvanced = Gtk::manage(new Gtk::Label(M("TP_TT_HIDE_ADVANCED")));
   cbHideAdvanced = Gtk::manage(new Gtk::CheckButton());
 
-  lbHideTransform = Gtk::manage(new Gtk::Label(M("TP_THEMETOOL_HIDE_TRANSFORM")));
+  lbHideLocal = Gtk::manage(new Gtk::Label(M("TP_TT_HIDE_LOCAL")));
+  cbHideLocal = Gtk::manage(new Gtk::CheckButton());
+
+  lbHideTransform = Gtk::manage(new Gtk::Label(M("TP_TT_HIDE_TRANSFORM")));
   cbHideTransform = Gtk::manage(new Gtk::CheckButton());
 
-  lbHideRaw = Gtk::manage(new Gtk::Label(M("TP_THEMETOOL_HIDE_RAW")));
+  lbHideRaw = Gtk::manage(new Gtk::Label(M("TP_TT_HIDE_RAW")));
   cbHideRaw = Gtk::manage(new Gtk::CheckButton());
 
-  lbHideMetadata = Gtk::manage(new Gtk::Label(M("TP_THEMETOOL_HIDE_METADATA")));
+  lbHideMetadata = Gtk::manage(new Gtk::Label(M("TP_TT_HIDE_METADATA")));
   cbHideMetadata = Gtk::manage(new Gtk::CheckButton());
 
-  lbHideUseful = Gtk::manage(new Gtk::Label(M("TP_THEMETOOL_HIDE_USEFUL")));
+  lbHideUseful = Gtk::manage(new Gtk::Label(M("TP_TT_HIDE_USEFUL")));
   cbHideUseful = Gtk::manage(new Gtk::CheckButton());
 
-  lbHideTrash = Gtk::manage(new Gtk::Label(M("TP_THEMETOOL_HIDE_TRASH")));
+  lbHideTrash = Gtk::manage(new Gtk::Label(M("TP_TT_HIDE_TRASH")));
   cbHideTrash = Gtk::manage(new Gtk::CheckButton());
 
   themeBox1->pack_start(*cbHideFavorite, Gtk::PACK_SHRINK, 0);
@@ -94,14 +100,16 @@ TTTabHider::TTTabHider () : FoldableToolPanel(this,"tttabhider",M("TP_THEMETOOL_
   themeBox4->pack_start(*lbHideColor, Gtk::PACK_SHRINK, 0);
   themeBox5->pack_start(*cbHideAdvanced, Gtk::PACK_SHRINK, 0);
   themeBox5->pack_start(*lbHideAdvanced, Gtk::PACK_SHRINK, 0);
-  themeBox6->pack_start(*cbHideTransform, Gtk::PACK_SHRINK, 0);
-  themeBox6->pack_start(*lbHideTransform, Gtk::PACK_SHRINK, 0);
-  themeBox7->pack_start(*cbHideRaw, Gtk::PACK_SHRINK, 0);
-  themeBox7->pack_start(*lbHideRaw, Gtk::PACK_SHRINK, 0);
-  themeBox8->pack_start(*lbHideUseful, Gtk::PACK_SHRINK, 0);
-  themeBox8->pack_end(*cbHideUseful, Gtk::PACK_SHRINK, 0);  // we invert the order because it will make the tool invisible...
-  themeBox9->pack_start(*cbHideTrash, Gtk::PACK_SHRINK, 0);
-  themeBox9->pack_start(*lbHideTrash, Gtk::PACK_SHRINK, 0);
+  themeBox6->pack_start(*cbHideLocal, Gtk::PACK_SHRINK, 0);
+  themeBox6->pack_start(*lbHideLocal, Gtk::PACK_SHRINK, 0);
+  themeBox7->pack_start(*cbHideTransform, Gtk::PACK_SHRINK, 0);
+  themeBox7->pack_start(*lbHideTransform, Gtk::PACK_SHRINK, 0);
+  themeBox8->pack_start(*cbHideRaw, Gtk::PACK_SHRINK, 0);
+  themeBox8->pack_start(*lbHideRaw, Gtk::PACK_SHRINK, 0);
+  themeBox9->pack_start(*lbHideUseful, Gtk::PACK_SHRINK, 0);
+  themeBox9->pack_end(*cbHideUseful, Gtk::PACK_SHRINK, 0);  // we invert the order because it will make the tool invisible...
+  themeBox10->pack_start(*cbHideTrash, Gtk::PACK_SHRINK, 0);
+  themeBox10->pack_start(*lbHideTrash, Gtk::PACK_SHRINK, 0);
 
 
   pack_start(*buttonSave, Gtk::PACK_SHRINK, 0);
@@ -114,6 +122,9 @@ TTTabHider::TTTabHider () : FoldableToolPanel(this,"tttabhider",M("TP_THEMETOOL_
   pack_start(*themeBox7, Gtk::PACK_SHRINK, 0);
   pack_start(*themeBox8, Gtk::PACK_SHRINK, 0);
   pack_start(*themeBox9, Gtk::PACK_SHRINK, 0);
+  pack_start(*themeBox10, Gtk::PACK_SHRINK, 0);
+
+  reacted = false;
 
 }
 
@@ -121,11 +132,17 @@ void TTTabHider::deploy()
 {
   getExpander()->signal_enabled_toggled().connect(sigc::mem_fun(this, &TTTabHider::enabledChanged));
 
+  buttonSave->signal_button_release_event().connect_notify( sigc::mem_fun(*this, &TTTabHider::save_clicked) );
+}
+
+void TTTabHider::deployLate()
+{
   cbHideFavorite->set_active (options.TTPHideFavorite);
   cbHideExposure->set_active (options.TTPHideExposure);
   cbHideDetails->set_active (options.TTPHideDetails);
   cbHideColor->set_active (options.TTPHideColor);
   cbHideAdvanced->set_active (options.TTPHideAdvanced);
+  cbHideLocal->set_active (options.TTPHideLocal);
   cbHideTransform->set_active (options.TTPHideTransform);
   cbHideRaw->set_active (options.TTPHideRaw);
   cbHideMetadata->set_active (options.TTPHideMetadata);
@@ -137,28 +154,39 @@ void TTTabHider::deploy()
   cbHideDetails->signal_clicked().connect( sigc::mem_fun(this, &TTTabHider::hide_details_clicked));
   cbHideColor->signal_clicked().connect( sigc::mem_fun(this, &TTTabHider::hide_color_clicked));
   cbHideAdvanced->signal_clicked().connect( sigc::mem_fun(this, &TTTabHider::hide_advanced_clicked));
+  cbHideLocal->signal_clicked().connect( sigc::mem_fun(this, &TTTabHider::hide_local_clicked));
   cbHideTransform->signal_clicked().connect( sigc::mem_fun(this, &TTTabHider::hide_transform_clicked));
   cbHideRaw->signal_clicked().connect( sigc::mem_fun(this, &TTTabHider::hide_raw_clicked));
   cbHideMetadata->signal_clicked().connect( sigc::mem_fun(this, &TTTabHider::hide_metadata_clicked));
   cbHideUseful->signal_clicked().connect( sigc::mem_fun(this, &TTTabHider::hide_useful_clicked));
   cbHideTrash->signal_clicked().connect( sigc::mem_fun(this, &TTTabHider::hide_trash_clicked));
 
-  buttonSave->signal_button_release_event().connect_notify( sigc::mem_fun(*this, &TTTabHider::save_clicked) );
 }
 
-void TTTabHider::deployLate()
+
+void TTTabHider::react(FakeProcEvent ev)
 {
-  hide_favorite_clicked ();
-  hide_exposure_clicked ();
-  hide_details_clicked ();
-  hide_color_clicked ();
-  hide_advanced_clicked ();
-  hide_transform_clicked ();
-  hide_raw_clicked ();
-  hide_metadata_clicked ();
-  hide_useful_clicked ();
-  hide_trash_clicked ();
+        if (ev == FakeEvExifTransmitted)
+        {  
+          if (reacted == false)
+          {             
+            hide_favorite_clicked ();
+            hide_exposure_clicked ();
+            hide_details_clicked ();
+            hide_color_clicked ();
+            hide_advanced_clicked ();
+            hide_local_clicked ();
+            hide_transform_clicked ();
+            hide_raw_clicked ();
+            hide_metadata_clicked ();
+            hide_useful_clicked ();
+            hide_trash_clicked ();
+            reacted=true;
+          }
+        }
+
 }
+
 void TTTabHider::enabled_changed()
 {
 
@@ -201,20 +229,27 @@ void TTTabHider::hide_color_clicked ()
 
 void TTTabHider::hide_advanced_clicked ()
 { 
-//  printf("hiding wavelet\n"); 
   env->getToolPanelNotebook()->get_nth_page(4)->set_visible(not cbHideAdvanced->get_active() );
   options.TTPHideAdvanced = cbHideAdvanced->get_active();
 }
 
+void TTTabHider::hide_local_clicked ()
+{
+  printf("hiding local clicked, cbHideLocal=%d options.TTPHideLocal=%d \n",   
+    cbHideLocal->get_active(), options.TTPHideLocal );
+  env->getToolPanelNotebook()->get_nth_page(5)->set_visible(not cbHideLocal->get_active() );
+  options.TTPHideLocal = cbHideLocal->get_active();
+}
+
 void TTTabHider::hide_transform_clicked ()
 { 
-  env->getToolPanelNotebook()->get_nth_page(5)->set_visible(not cbHideTransform->get_active() );
+  env->getToolPanelNotebook()->get_nth_page(6)->set_visible(not cbHideTransform->get_active() );
   options.TTPHideTransform = cbHideTransform->get_active();
 }
 
 void TTTabHider::hide_raw_clicked ()
 { 
-  env->getToolPanelNotebook()->get_nth_page(6)->set_visible(not cbHideRaw->get_active() );
+  env->getToolPanelNotebook()->get_nth_page(7)->set_visible(not cbHideRaw->get_active() );
   options.TTPHideRaw = cbHideRaw->get_active();
 }
 
@@ -222,7 +257,7 @@ void TTTabHider::hide_metadata_clicked ()
 { 
   if (env->getMetadataState()) 
   {
-    env->getToolPanelNotebook()->get_nth_page(7)->set_visible(not cbHideMetadata->get_active() );
+    env->getToolPanelNotebook()->get_nth_page(8)->set_visible(not cbHideMetadata->get_active() );
   }
   options.TTPHideMetadata= cbHideMetadata->get_active();
 }
@@ -232,7 +267,7 @@ void TTTabHider::hide_useful_clicked ()
   int increment = 0;
   if (env->getMetadataState()) 
      increment = 1;
-  env->getToolPanelNotebook()->get_nth_page(7+increment)->set_visible(not cbHideUseful->get_active() );
+  env->getToolPanelNotebook()->get_nth_page(8+increment)->set_visible(not cbHideUseful->get_active() );
   options.TTPHideUseful = cbHideUseful->get_active();
 }
 
@@ -242,7 +277,7 @@ void TTTabHider::hide_trash_clicked()
   int increment = 0;
   if (env->getMetadataState()) 
      increment = 1;
-  env->getToolPanelNotebook()->get_nth_page(8+increment)->set_visible(not cbHideTrash->get_active() );
+  env->getToolPanelNotebook()->get_nth_page(9+increment)->set_visible(not cbHideTrash->get_active() );
   options.TTPHideTrash = cbHideTrash->get_active();
 
 /* old code
@@ -282,6 +317,7 @@ void TTTabHider::hide_trash_clicked()
 Glib::ustring TTTabHider::themeExport()
 {
 //todo: this needs to be recoded to take all panels into account
+//TODO : missing other panels definitions
   Glib::ustring favSettings = getToolName() + ":"  + "favorite:";
   Glib::ustring traSettings = getToolName() + ":"  + "trash:";
 

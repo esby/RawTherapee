@@ -288,6 +288,7 @@ public:
     bool TTPHideDetails;
     bool TTPHideColor;
     bool TTPHideAdvanced;
+    bool TTPHideLocal;
     bool TTPHideTransform;
     bool TTPHideRaw;
     bool TTPHideMetadata;

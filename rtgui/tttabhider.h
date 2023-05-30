@@ -39,7 +39,7 @@ protected:
     Gtk::HBox* themeBox7;
     Gtk::HBox* themeBox8;
     Gtk::HBox* themeBox9;
-
+    Gtk::HBox* themeBox10;
 
     Gtk::Label* lbHideFavorite;
     Gtk::CheckButton* cbHideFavorite;
@@ -49,6 +49,8 @@ protected:
     Gtk::CheckButton* cbHideDetails;
     Gtk::Label* lbHideColor;
     Gtk::CheckButton* cbHideColor;
+    Gtk::Label* lbHideLocal;
+    Gtk::CheckButton* cbHideLocal;
     Gtk::Label* lbHideAdvanced;
     Gtk::CheckButton* cbHideAdvanced;
     Gtk::Label* lbHideTransform;
@@ -63,6 +65,7 @@ protected:
     Gtk::CheckButton* cbHideTrash;
 
     Gtk::Button* buttonSave;
+    bool reacted;
 
 
 
@@ -71,12 +74,14 @@ public:
     TTTabHider ();
     void deploy();
     void deployLate();
+    void react(FakeProcEvent ev);
     void enabled_changed ();
     void hide_favorite_clicked ();
     void hide_exposure_clicked ();
     void hide_details_clicked ();
     void hide_color_clicked ();
     void hide_advanced_clicked ();
+    void hide_local_clicked ();
     void hide_transform_clicked ();
     void hide_raw_clicked ();
     void hide_metadata_clicked ();

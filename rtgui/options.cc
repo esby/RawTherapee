@@ -1039,6 +1039,10 @@ void Options::readFromFile(Glib::ustring fname)
                     TTPHideAdvanced       = keyFile.get_boolean ("TTP", "HideAdvanced");
                 }
 
+                if (keyFile.has_key ("TTP", "HideLocal")) {
+                    TTPHideLocal       = keyFile.get_boolean ("TTP", "HideLocal");
+                }
+
                 if (keyFile.has_key ("TTP", "HideTransform")) {
                     TTPHideTransform       = keyFile.get_boolean ("TTP", "HideTransform");
                 }
@@ -2329,6 +2333,7 @@ void Options::saveToFile(Glib::ustring fname)
         keyFile.set_boolean ("TTP", "HideDetails", TTPHideDetails);
         keyFile.set_boolean ("TTP", "HideColor", TTPHideColor);
         keyFile.set_boolean ("TTP", "HideAdvanced", TTPHideAdvanced);
+        keyFile.set_boolean ("TTP", "HideLocal", TTPHideLocal);
         keyFile.set_boolean ("TTP", "HideTransform", TTPHideTransform);
         keyFile.set_boolean ("TTP", "HideRaw", TTPHideRaw);
         keyFile.set_boolean ("TTP", "HideMetadata", TTPHideMetadata);
