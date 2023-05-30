@@ -1458,6 +1458,8 @@ void ToolPanelCoordinator::toolSelected(ToolMode tool)
       }
     };
 
+   //todo: the code is never called ?
+
     switch (tool) {
         case TMCropSelect: {
             toolBar->blockEditDeactivation(false); // To allow deactivating Locallab when switching to another tool using toolbar
