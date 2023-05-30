@@ -23,6 +23,7 @@
 #include "rtdef.h"
 #include "guiutils.h"
 #include <fstream>
+#include <regex>
 
 #include "ttudlrhider.h"
 
@@ -69,7 +70,7 @@ void TTVarDisplayer::react(FakeProcEvent ev)
 			hbox->pack_start(*lbl,  Gtk::PACK_SHRINK,0);
 
 			Gtk::Entry* entry = Gtk::manage (new Gtk::Entry ());
-			entry->set_width_chars(25);
+			entry->set_width_chars(8);
 			hbox->pack_start(*entry, Gtk::PACK_SHRINK,0);
 
 			vbox1->pack_start(*hbox, Gtk::PACK_SHRINK,0);
@@ -90,7 +91,9 @@ void TTVarDisplayer::react(FakeProcEvent ev)
 				varEntry[i]->set_text(d->toString());
                                 if (false)
                                 {
-   				  printf("variable : %s ", d->getName().c_str());
+                                  std::string name = d->getName().c_str();
+                                  name = std::regex_replace(name, std::regex("rti:Exif:"), "exif:");
+   				  printf("variable : %s ", name.c_str());
   				  printf("value: %s \n", d->toString().c_str());
                                 }
 			}
