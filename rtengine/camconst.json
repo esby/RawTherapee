@@ -2388,6 +2388,19 @@ Camera constants:
         }
     },
 
+  { // Quality C
+        "make_model": "Panasonic DC-GH6",
+        "dcraw_matrix": [ 7641,-2336,-605,-3218,11298,2187,-485,1338,5121 ], // DNG v13.2
+        "ranges": {
+            "black": 15, // 16 is BL offset. dcraw/RT read the base BL from Exif and calculates total BL = BLbase+BLoffset
+            "white": [
+                { "iso": 100, "levels": 4080 }, // Exif_linearitylimit 2111
+                { "iso": 125, "levels": 4080 }, // Exif_linearitylimit 2626
+                { "iso": [ 160, 200, 250, 320, 400,500, 640, 800, 1000, 1250, 1600, 2000, 2500, 3200, 4000, 5000, 6400, 12800, 25600 ], "levels": 4080 } // nominal 4095
+            ]
+        }
+    },
+
     { // Quality A
         "make_model": "Panasonic DMC-GM1",
         "dcraw_matrix": [ 6770,-1895,-744,-5232,13145,2303,-1664,2691,5703 ],
