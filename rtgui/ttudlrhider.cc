@@ -109,6 +109,7 @@ void  TTUDLRHider::actOnPanel(ToolPanel* panel)
 {  
   if (panel != NULL)
   {
+//   printf("DEBUG panel.name=%s \n",panel->getToolName().c_str());
 /*    if (panel->getToolName() == "rotate")
     {
       printf("DEBUG expander enabled=%i \n",getExpander()->getEnabled());
@@ -122,8 +123,8 @@ void  TTUDLRHider::actOnPanel(ToolPanel* panel)
     {
       if ( cbHideArrow->get_active())
       {        
-        if (panel->getToolName() == "rotate")
-          printf("DEBUG: hiding move Arrows  \n");
+//        if (panel->getToolName() == "ttvardisplayer")
+//          printf("DEBUG: hiding move Arrows for %s \n", panel->getToolName().c_str());
         panel->getMoveRButton()->hide();
         panel->getMoveLButton()->hide();
         panel->getMoveUButton()->hide();
@@ -131,8 +132,8 @@ void  TTUDLRHider::actOnPanel(ToolPanel* panel)
       }   
       else
       {
-        if (panel->getToolName() == "rotate")
-          printf("DEBUG: showing move Arrows \n");
+//        if (panel->getToolName() == "ttvardisplayer")
+//          printf("DEBUG: showing move Arrows for %s \n", panel->getToolName().c_str());
         panel->getMoveRButton()->show();
         panel->getMoveLButton()->show();
         panel->getMoveUButton()->show();
@@ -152,7 +153,7 @@ void  TTUDLRHider::actOnPanel(ToolPanel* panel)
     }
     else
     { 
-//      printf("loading the config by default  \n");
+      printf("loading the config by default for %s \n", panel->getToolName().c_str());
       panel->getMoveRButton()->show();
       panel->getMoveLButton()->show();
       panel->getMoveUButton()->show();
