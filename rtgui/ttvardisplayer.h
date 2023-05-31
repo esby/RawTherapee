@@ -35,7 +35,7 @@ class TTVarDisplayer : public ToolParamBlock, public FoldableToolPanel {
 
 		// displaying variables
 		std::vector<Gtk::HBox*>  varBox;
-		std::vector<Gtk::Label*> varLabel;
+		std::vector<Gtk::Entry*> varLabel;
 		std::vector<Gtk::Entry*> varEntry;
 
 

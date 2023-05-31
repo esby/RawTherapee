@@ -31,12 +31,12 @@ using namespace rtengine::procparams;
 extern void exit(int exit_code);
 
 
-TTTweaker::TTTweaker() : FoldableToolPanel(this,"TTTweaker",M("TT_TWEAKER_LABEL"),false,false)
+TTTweaker::TTTweaker() : FoldableToolPanel(this,"TTTweaker",M("TTTW_LABEL"),false,false)
 {
   themeBox1 = Gtk::manage(new Gtk::HBox());
   themeBox1->set_spacing(4);
 
-  lbAutoDistortionCorrect = Gtk::manage(new Gtk::Label(M("TT_TWEAKER_AUTO_DISTORTION_CORRECTION")));
+  lbAutoDistortionCorrect = Gtk::manage(new Gtk::Label(M("TTTW_AUTO_DISTOR_CORR")));
   cbAutoDistortionCorrect = Gtk::manage(new Gtk::CheckButton());
 
   themeBox1->pack_start(*lbAutoDistortionCorrect, Gtk::PACK_SHRINK, 0);
@@ -47,7 +47,7 @@ TTTweaker::TTTweaker() : FoldableToolPanel(this,"TTTweaker",M("TT_TWEAKER_LABEL"
   themeBox2 = Gtk::manage(new Gtk::HBox());
   themeBox2->set_spacing(4);
 
-  lbCloseAfterSave = Gtk::manage(new Gtk::Label(M("TT_TWEAKER_CLOSE_AFTER_SAVE_IN_SE")));
+  lbCloseAfterSave = Gtk::manage(new Gtk::Label(M("TTTW_CLOSE_AFTER_SAVE_SE")));
   cbCloseAfterSave = Gtk::manage(new Gtk::CheckButton());
 
   themeBox2->pack_start(*lbCloseAfterSave, Gtk::PACK_SHRINK, 0);
@@ -58,7 +58,7 @@ TTTweaker::TTTweaker() : FoldableToolPanel(this,"TTTweaker",M("TT_TWEAKER_LABEL"
   themeBox3 = Gtk::manage(new Gtk::HBox());
   themeBox3->set_spacing(4);
 
-  lbReduceAfterSave = Gtk::manage(new Gtk::Label(M("TT_TWEAKER_REDUCE_AFTER_SAVE_IN_ME")));
+  lbReduceAfterSave = Gtk::manage(new Gtk::Label(M("TTTW_MIN_AFTER_SAVE_ME")));
   cbReduceAfterSave = Gtk::manage(new Gtk::CheckButton());
 
   pack_start(*themeBox3, Gtk::PACK_SHRINK, 0);
@@ -69,7 +69,7 @@ TTTweaker::TTTweaker() : FoldableToolPanel(this,"TTTweaker",M("TT_TWEAKER_LABEL"
   themeBox4 = Gtk::manage(new Gtk::HBox());
   themeBox4->set_spacing(4);
 
-  lbResetWBForRt4Profiles = Gtk::manage(new Gtk::Label(M("TT_TWEAKER_RESET_WB_FOR_RT4_PP_FILES")));
+  lbResetWBForRt4Profiles = Gtk::manage(new Gtk::Label(M("TTTW_RESET_WB_RT4_PPT")));
   cbResetWBForRt4Profiles = Gtk::manage(new Gtk::CheckButton());
 
   themeBox4->pack_start(*lbResetWBForRt4Profiles, Gtk::PACK_SHRINK, 0);
@@ -79,7 +79,7 @@ TTTweaker::TTTweaker() : FoldableToolPanel(this,"TTTweaker",M("TT_TWEAKER_LABEL"
 
   themeBox5 = Gtk::manage(new Gtk::HBox());
 
-  lbAutoRotateCorrect = Gtk::manage(new Gtk::Label(M("TT_TWEAKER_AUTO_HORIZON_CORRECTION")));
+  lbAutoRotateCorrect = Gtk::manage(new Gtk::Label(M("TTTW_AUTO_HORI_CORR")));
   cbAutoRotateCorrect = Gtk::manage(new Gtk::CheckButton());
 
   themeBox5->pack_start(*lbAutoRotateCorrect, Gtk::PACK_SHRINK, 0);

@@ -37,11 +37,12 @@ TTVarDisplayer::TTVarDisplayer () : FoldableToolPanel(this,"ttvardisplayer",M("T
 	pack_start(*hboxr, Gtk::PACK_SHRINK, 0);
 
 	vbox1 = Gtk::manage(new Gtk::VBox());
-	vbox1->set_spacing(4);
+	vbox1->set_spacing(1);
         Gtk::Label* labelVar = Gtk::manage(new Gtk::Label (M("TT_VAR_DISPLAYER_LABEL_VARIABLES")));
         vbox1->pack_start(*labelVar, Gtk::PACK_SHRINK, 0);
 
 	hboxr->pack_start(*vbox1, Gtk::PACK_EXPAND_WIDGET ,0);
+        pack_start(*hboxr, Gtk::PACK_SHRINK, 0);
 }
 
 void TTVarDisplayer::deploy()
@@ -63,10 +64,10 @@ void TTVarDisplayer::react(FakeProcEvent ev)
 		for (size_t i=varBox.size(); i<env->countVar(); i++)
 		{
 			Gtk::HBox* hbox = Gtk::manage(new Gtk::HBox());
-			hbox->set_spacing(4);
+			hbox->set_spacing(1);
 
-			Gtk::Label* lbl = Gtk::manage(new Gtk::Label ());
-			lbl->set_width_chars(6);
+			Gtk::Entry* lbl = Gtk::manage(new Gtk::Entry ());
+			lbl->set_width_chars(20);
 			hbox->pack_start(*lbl,  Gtk::PACK_SHRINK,0);
 
 			Gtk::Entry* entry = Gtk::manage (new Gtk::Entry ());
@@ -74,6 +75,8 @@ void TTVarDisplayer::react(FakeProcEvent ev)
 			hbox->pack_start(*entry, Gtk::PACK_SHRINK,0);
 
 			vbox1->pack_start(*hbox, Gtk::PACK_SHRINK,0);
+                        vbox1->show_all();
+
 
 			varBox.push_back(hbox);
 			varLabel.push_back(lbl);
@@ -87,12 +90,12 @@ void TTVarDisplayer::react(FakeProcEvent ev)
 			RtVariable* d = env->getVariable(i);
 			if (d != nullptr)
 			{
-				varLabel[i]->set_text(d->getName());
+                                std::string name = d->getName().c_str();
+                                name = std::regex_replace(name, std::regex("rti:Exif:"), "exif:");
+				varLabel[i]->set_text(name);
 				varEntry[i]->set_text(d->toString());
-                                if (false)
+                                if (false) // todo remove this horrible debug switch
                                 {
-                                  std::string name = d->getName().c_str();
-                                  name = std::regex_replace(name, std::regex("rti:Exif:"), "exif:");
    				  printf("variable : %s ", name.c_str());
   				  printf("value: %s \n", d->toString().c_str());
                                 }
@@ -101,7 +104,8 @@ void TTVarDisplayer::react(FakeProcEvent ev)
 
 
 		// we display the entries
-		getExpander()->show_all();
+                // todo the current code shows arrows while they should be not displayed
+		// getExpander()->show_all();
 
 // debugging code if needed
 /*
