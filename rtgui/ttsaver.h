@@ -44,7 +44,7 @@ protected:
     Gtk::Label* lbAutoloadSettings;
     Gtk::CheckButton* cbAutoloadSettings;
 
-    Gtk::Label* lbAutoloadSettingsLine;
+    Gtk::Entry* enAutoloadSettingsLine;;
 
     std::vector<Glib::ustring> entries;
 
@@ -68,8 +68,6 @@ public:
 
     void profileBoxChanged();
     void deploy();
-
-
 
     void themeImport(std::ifstream& myfile);
     Glib::ustring themeExport();

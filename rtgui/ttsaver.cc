@@ -37,14 +37,21 @@ TTSaver::TTSaver () : FoldableToolPanel(this,"ttsaver",M("TP_SAVER_LABEL"),false
         buttonSave = Gtk::manage(new Gtk::Button());
         buttonSave->set_image (*Gtk::manage(new RTImage ("save.png")));
 
-	themeBox1->pack_start(*themeLabel, Gtk::PACK_SHRINK, 0);
+	themeBox1->pack_start(*themeLabel, Gtk::PACK_SHRINK, 4);
 
         profilbox = Gtk::manage (new MyComboBoxText ());
-        profilbox->set_tooltip_text (M("TP_WAVELET_TILES_TOOLTIP"));
-        themeBox1->pack_start(*profilbox); //, Gtk::PACK_SHRINK, 0);
-        themeBox1->pack_start(*buttonSave, Gtk::PACK_SHRINK, 0);
+
+        profilbox->set_tooltip_text (M("TP_SAVER_TOOLTIP"));
+        themeBox1->pack_start(*profilbox, Gtk::PACK_EXPAND_WIDGET, 4); //, Gtk::PACK_SHRINK, 0);
+
+//        auto v_cellRenderer = (Gtk::CellRendererText*)profilbox->get_first_cell();
+//        v_cellRenderer->property_width_chars() = 1;
+//        v_cellRenderer->property_ellipsize() = Pango::ELLIPSIZE_END;
+//        v_cellRenderer->set_fixed_size(40, -1);;  
+
+        themeBox1->pack_start(*buttonSave, Gtk::PACK_SHRINK, 4);
      
-	pack_start( *themeBox1, Gtk::PACK_SHRINK, 0);
+	pack_start( *themeBox1, Gtk::PACK_SHRINK, 4);
 
         themeBox2 = Gtk::manage(new Gtk::HBox());
         themeBox2->set_spacing(4);
@@ -53,17 +60,18 @@ TTSaver::TTSaver () : FoldableToolPanel(this,"ttsaver",M("TP_SAVER_LABEL"),false
         cbAutoloadSettings = Gtk::manage(new Gtk::CheckButton());
 
 
-       themeBox2->pack_start(*lbAutoloadSettings, Gtk::PACK_SHRINK, 0);
-       themeBox2->pack_end(*cbAutoloadSettings, Gtk::PACK_SHRINK, 0);
-       pack_start( *themeBox2, Gtk::PACK_SHRINK, 0);
+       themeBox2->pack_start(*lbAutoloadSettings, Gtk::PACK_SHRINK, 4);
+       themeBox2->pack_end(*cbAutoloadSettings, Gtk::PACK_SHRINK, 4);
+       pack_start( *themeBox2, Gtk::PACK_SHRINK, 4);
 
        themeBox3 = Gtk::manage(new Gtk::HBox());
        themeBox2->set_spacing(4);
        
-       lbAutoloadSettingsLine = Gtk::manage(new Gtk::Label(options.TTPAutoloadValue));
+       enAutoloadSettingsLine = Gtk::manage(new Gtk::Entry ()); //options.TTPAutoloadValue));
+       enAutoloadSettingsLine->set_width_chars(25);
 
-       themeBox3->pack_start(*lbAutoloadSettingsLine, Gtk::PACK_SHRINK, 0);
-       pack_start( *themeBox3, Gtk::PACK_SHRINK, 0);
+       themeBox3->pack_start(*enAutoloadSettingsLine, Gtk::PACK_SHRINK, 4);
+       pack_start( *themeBox3, Gtk::PACK_SHRINK, 4);
 
        parseProfileFolder();
 
@@ -153,7 +161,9 @@ void TTSaver::parseProfileFolder()
                     }
 
                     Glib::ustring name = currDir.substr(0, lastdot);
-//                    printf("name=%s\n",name.c_str());
+                    printf("name=[%s]\n",name.c_str());
+                    printf("fname=[%s]\n",fname.c_str());
+
                     profilbox->append(name);
                     entries.push_back(fname);
 
@@ -316,7 +326,7 @@ void TTSaver::autoload_clicked (GdkEventButton* event)
   }
 
   options.TTPAutoloadValue =  fname;
-  lbAutoloadSettingsLine->set_text(fname);
+  enAutoloadSettingsLine->set_text(fname);
   options.save();
 }
 
@@ -379,6 +389,9 @@ void TTSaver::save_clicked (GdkEventButton* event)
         
         if ( std::find(entries.begin(),entries.end(),fname) == entries.end() )
         {
+          printf("name=[%s]\n",name.c_str());
+          printf("fname=[%s]\n",fname.c_str());
+
           profilbox->append(name);
           entries.push_back(fname);
         }
