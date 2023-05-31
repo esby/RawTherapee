@@ -296,7 +296,7 @@ void TTIsoProfiler::affect_profiles()
        entryName = Gtk::manage (new Gtk::Entry ());
        entryIso = Gtk::manage (new Gtk::Entry ());
 
-       entryName->set_width_chars(25);
+       entryName->set_width_chars(15);
        entryIso->set_width_chars(6);
 
        entryName->set_text(listNames[i]);
