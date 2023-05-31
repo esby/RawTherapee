@@ -1,0 +1,17 @@
+ttsaver:favorite:tonecurve whitebalance 
+ttsaver:original:vibrance(colorPanel:0) chmixer(colorPanel:1) blackwhite(colorPanel:2) hsvequalizer(colorPanel:3) filmsimulation(colorPanel:4) colortoning(colorPanel:6) icm(colorPanel:7) whitebalance(colorPanel:8) rgbcurves(colorPanel:8) sharpening(detailsPanel:0) sharpenedge(detailsPanel:1) sharpenmicro(detailsPanel:2) impulsedenoise(detailsPanel:3) dirpyrdenoise(detailsPanel:4) defringe(detailsPanel:5) dirpyrequalizer(detailsPanel:6) shadowshighlights(exposurePanel:0) epd(exposurePanel:1) pcvignette(exposurePanel:2) gradient(exposurePanel:3) labcurves(exposurePanel:4) colorappearance(exposurePanel:5) retinex(exposurePanel:7) tonecurve(exposurePanel:7) rotate(lensgeom:0) perspective(lensgeom:1) lensprof(lensgeom:2) distortion(lensgeom:3) cacorrection(lensgeom:4) vignetting(lensgeom:5) sensorbayer(rawPanel:0) sensorxtrans(rawPanel:1) rawexposure(rawPanel:2) preprocess(rawPanel:3) darkframe(rawPanel:4) flatfield(rawPanel:5) prsharpening(resize:0) bayerprocess(sensorbayer:0) bayerrawexposure(sensorbayer:1) bayerpreprocess(sensorbayer:2) rawcacorrection(sensorbayer:3) xtransprocess(sensorxtrans:0) xtransrawexposure(sensorxtrans:1) lensgeom(transformPanel:4) crop(transformPanel:0) resize(transformPanel:1) ttsaver(usefulPanel:0) tttabhider(usefulPanel:1) ttfavoritecolorer(usefulPanel:2) ttpanelcolorer(usefulPanel:3) ttudlrhider(usefulPanel:4) TTTweaker(usefulPanel:7) ttvardisplayer(usefulPanel:8) wavelet(waveletPanel:0) 
+ttsaver:trash:
+tttabhider:favorite:1
+tttabhider:trash:1
+ttfavoritecolorer:active 1
+ttfavoritecolorer:favorite_color rgb(0,0,255)
+ttfavoritecolorer:trash_color rgb(255,0,0)
+ttpanelcolorer:active 1
+ttpanelcolorer:always_color rgb(136,138,133)
+ttpanelcolorer:clicked_color rgb(114,159,207)
+ttudlrhider:active 1
+ttudlrhider:hide_arrows 0
+ttudlrhider:lock_fav 0
+TTTweaker:active 0
+TTTweaker:enable_auto_distortion_correction 1
+TTTweaker:enable_close_after_save 1
