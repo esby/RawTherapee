@@ -279,7 +279,7 @@ ToolPanelCoordinator::ToolPanelCoordinator(bool batch, bool benchmark) : ipc(nul
     handlePanel(advancedPanel, advancedPanelSW, panelIter++,4);
     handlePanel(transformPanel, transformPanelSW, panelIter++, 4);
     handlePanel(locallabPanel, locallabPanelSW, panelIter++, 4);
-    handlePanel(rawPanel, rawPanelSW, panelIter++, 0);
+    handlePanel(rawPanel, rawPanelSW, panelIter++, 4);
     handlePanel(usefulPanel, usefulPanelSW, panelIter++, 4);
     handlePanel(trashPanel, trashPanelSW, panelIter++, 4);
 
@@ -1414,13 +1414,13 @@ void ToolPanelCoordinator::updateVScrollbars(bool hide)
     if ((!useRtFav) || (favoriteCount > 0)) {
           favoritePanelSW->set_policy    (Gtk::POLICY_AUTOMATIC, policy);
     }
-    exposurePanelSW->set_policy     (Gtk::POLICY_AUTOMATIC, policy);
-    detailsPanelSW->set_policy      (Gtk::POLICY_AUTOMATIC, policy);
-    colorPanelSW->set_policy        (Gtk::POLICY_AUTOMATIC, policy);
-    transformPanelSW->set_policy    (Gtk::POLICY_AUTOMATIC, policy);
-    rawPanelSW->set_policy          (Gtk::POLICY_AUTOMATIC, policy);
-    advancedPanelSW->set_policy      (Gtk::POLICY_AUTOMATIC, policy);
-    locallabPanelSW->set_policy(Gtk::POLICY_AUTOMATIC, policy);
+    exposurePanelSW->set_policy    (Gtk::POLICY_AUTOMATIC, policy);
+    detailsPanelSW->set_policy     (Gtk::POLICY_AUTOMATIC, policy);
+    colorPanelSW->set_policy       (Gtk::POLICY_AUTOMATIC, policy);
+    transformPanelSW->set_policy   (Gtk::POLICY_AUTOMATIC, policy);
+    rawPanelSW->set_policy         (Gtk::POLICY_AUTOMATIC, policy);
+    advancedPanelSW->set_policy    (Gtk::POLICY_AUTOMATIC, policy);
+    locallabPanelSW->set_policy    (Gtk::POLICY_AUTOMATIC, policy);
     trashPanelSW->set_policy       (Gtk::POLICY_AUTOMATIC, policy);
     usefulPanelSW->set_policy      (Gtk::POLICY_AUTOMATIC, policy);
 
