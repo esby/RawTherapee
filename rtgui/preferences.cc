@@ -1655,6 +1655,11 @@ Gtk::Widget* Preferences::getTTPanel ()
   themeBox8->set_spacing(4);
   themeBox9 = Gtk::manage(new Gtk::HBox());
   themeBox9->set_spacing(4);
+  themeBox10 = Gtk::manage(new Gtk::HBox());
+  themeBox10->set_spacing(4);
+  themeBox11 = Gtk::manage(new Gtk::HBox());
+  themeBox11->set_spacing(4);
+
 
   lbHideFavorite = Gtk::manage(new Gtk::Label(M("TP_THEMETOOL_HIDE_FAVORITE")));
   cbHideFavorite = Gtk::manage(new Gtk::CheckButton());
@@ -1670,6 +1675,9 @@ Gtk::Widget* Preferences::getTTPanel ()
 
   lbHideAdvanced = Gtk::manage(new Gtk::Label(M("TP_THEMETOOL_HIDE_ADVANCED")));
   cbHideAdvanced = Gtk::manage(new Gtk::CheckButton());
+
+  lbHideLocal = Gtk::manage(new Gtk::Label(M("TP_THEMETOOL_HIDE_LOCAL")));
+  cbHideLocal = Gtk::manage(new Gtk::CheckButton());
 
   lbHideTransform = Gtk::manage(new Gtk::Label(M("TP_THEMETOOL_HIDE_TRANSFORM")));
   cbHideTransform = Gtk::manage(new Gtk::CheckButton());
@@ -1696,14 +1704,18 @@ Gtk::Widget* Preferences::getTTPanel ()
   themeBox4->pack_start(*lbHideColor, Gtk::PACK_SHRINK, 0);
   themeBox5->pack_start(*cbHideAdvanced, Gtk::PACK_SHRINK, 0);
   themeBox5->pack_start(*lbHideAdvanced, Gtk::PACK_SHRINK, 0);
-  themeBox6->pack_start(*cbHideTransform, Gtk::PACK_SHRINK, 0);
-  themeBox6->pack_start(*lbHideTransform, Gtk::PACK_SHRINK, 0);
-  themeBox7->pack_start(*cbHideRaw, Gtk::PACK_SHRINK, 0);
-  themeBox7->pack_start(*lbHideRaw, Gtk::PACK_SHRINK, 0);
-  themeBox8->pack_start(*cbHideUseful, Gtk::PACK_SHRINK, 0);  
-  themeBox8->pack_start(*lbHideUseful, Gtk::PACK_SHRINK, 0);
-  themeBox9->pack_start(*cbHideTrash, Gtk::PACK_SHRINK, 0);
-  themeBox9->pack_start(*lbHideTrash, Gtk::PACK_SHRINK, 0);
+  themeBox6->pack_start(*cbHideLocal, Gtk::PACK_SHRINK, 0);
+  themeBox6->pack_start(*lbHideLocal, Gtk::PACK_SHRINK, 0);
+  themeBox7->pack_start(*cbHideTransform, Gtk::PACK_SHRINK, 0);
+  themeBox7->pack_start(*lbHideTransform, Gtk::PACK_SHRINK, 0);
+  themeBox8->pack_start(*cbHideRaw, Gtk::PACK_SHRINK, 0);
+  themeBox8->pack_start(*lbHideRaw, Gtk::PACK_SHRINK, 0);
+  themeBox9->pack_start(*cbHideMetadata, Gtk::PACK_SHRINK, 0);  
+  themeBox9->pack_start(*lbHideMetadata, Gtk::PACK_SHRINK, 0);
+  themeBox10->pack_start(*cbHideUseful, Gtk::PACK_SHRINK, 0);  
+  themeBox10->pack_start(*lbHideUseful, Gtk::PACK_SHRINK, 0);
+  themeBox11->pack_start(*cbHideTrash, Gtk::PACK_SHRINK, 0);
+  themeBox11->pack_start(*lbHideTrash, Gtk::PACK_SHRINK, 0);
 
   pTTP->pack_start(*themeBox1, Gtk::PACK_SHRINK, 0);
   pTTP->pack_start(*themeBox2, Gtk::PACK_SHRINK, 0);
@@ -1714,6 +1726,8 @@ Gtk::Widget* Preferences::getTTPanel ()
   pTTP->pack_start(*themeBox7, Gtk::PACK_SHRINK, 0);
   pTTP->pack_start(*themeBox8, Gtk::PACK_SHRINK, 0);
   pTTP->pack_start(*themeBox9, Gtk::PACK_SHRINK, 0);
+  pTTP->pack_start(*themeBox10, Gtk::PACK_SHRINK, 0);
+  pTTP->pack_start(*themeBox11, Gtk::PACK_SHRINK, 0);
 
   pTTP->set_border_width (4);
 
@@ -2060,6 +2074,7 @@ void Preferences::storePreferences()
    moptions.TTPHideDetails =  cbHideDetails->get_active ();
    moptions.TTPHideColor =  cbHideColor->get_active ();
    moptions.TTPHideAdvanced =  cbHideAdvanced->get_active ();
+   moptions.TTPHideLocal =  cbHideLocal->get_active ();
    moptions.TTPHideTransform =  cbHideTransform->get_active ();
    moptions.TTPHideRaw =  cbHideRaw->get_active ();
    moptions.TTPHideMetadata =  cbHideMetadata->get_active ();
@@ -2335,6 +2350,7 @@ void Preferences::fillPreferences()
    cbHideDetails->set_active (moptions.TTPHideDetails);
    cbHideColor->set_active (moptions.TTPHideColor);
    cbHideAdvanced->set_active (moptions.TTPHideAdvanced);
+   cbHideLocal->set_active (moptions.TTPHideLocal);
    cbHideTransform->set_active (moptions.TTPHideTransform);
    cbHideRaw->set_active (moptions.TTPHideRaw);
    cbHideMetadata->set_active (moptions.TTPHideMetadata);

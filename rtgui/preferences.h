@@ -244,6 +244,8 @@ class Preferences final :
     Gtk::HBox* themeBox7;
     Gtk::HBox* themeBox8;
     Gtk::HBox* themeBox9;
+    Gtk::HBox* themeBox10;
+    Gtk::HBox* themeBox11;
 
     Gtk::Label* lbHideFavorite;
     Gtk::CheckButton* cbHideFavorite;
@@ -255,6 +257,8 @@ class Preferences final :
     Gtk::CheckButton* cbHideColor;
     Gtk::Label* lbHideAdvanced;
     Gtk::CheckButton* cbHideAdvanced;
+    Gtk::Label* lbHideLocal;
+    Gtk::CheckButton* cbHideLocal;
     Gtk::Label* lbHideTransform;
     Gtk::CheckButton* cbHideTransform;
     Gtk::Label* lbHideRaw;
