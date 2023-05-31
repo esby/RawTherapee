@@ -40,6 +40,7 @@ protected:
     Gtk::HBox* themeBox8;
     Gtk::HBox* themeBox9;
     Gtk::HBox* themeBox10;
+    Gtk::HBox* themeBox11;
 
     Gtk::Label* lbHideFavorite;
     Gtk::CheckButton* cbHideFavorite;

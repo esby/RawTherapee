@@ -52,6 +52,8 @@ TTTabHider::TTTabHider () : FoldableToolPanel(this,"tttabhider",M("TP_TT_TAB_HID
   themeBox9->set_spacing(4);
   themeBox10 = Gtk::manage(new Gtk::HBox());
   themeBox10->set_spacing(4);
+  themeBox11 = Gtk::manage(new Gtk::HBox());
+  themeBox11->set_spacing(4);
 
 
   buttonSave = Gtk::manage(new Gtk::Button());
@@ -106,10 +108,12 @@ TTTabHider::TTTabHider () : FoldableToolPanel(this,"tttabhider",M("TP_TT_TAB_HID
   themeBox7->pack_start(*lbHideTransform, Gtk::PACK_SHRINK, 0);
   themeBox8->pack_start(*cbHideRaw, Gtk::PACK_SHRINK, 0);
   themeBox8->pack_start(*lbHideRaw, Gtk::PACK_SHRINK, 0);
-  themeBox9->pack_start(*lbHideUseful, Gtk::PACK_SHRINK, 0);
-  themeBox9->pack_end(*cbHideUseful, Gtk::PACK_SHRINK, 0);  // we invert the order because it will make the tool invisible...
-  themeBox10->pack_start(*cbHideTrash, Gtk::PACK_SHRINK, 0);
-  themeBox10->pack_start(*lbHideTrash, Gtk::PACK_SHRINK, 0);
+  themeBox9->pack_start(*cbHideMetadata, Gtk::PACK_SHRINK, 0); 
+  themeBox9->pack_start(*lbHideMetadata, Gtk::PACK_SHRINK, 0);
+  themeBox10->pack_start(*lbHideUseful, Gtk::PACK_SHRINK, 0);
+  themeBox10->pack_end(*cbHideUseful, Gtk::PACK_SHRINK, 0);  // we invert the order because it will make the tool invisible...
+  themeBox11->pack_start(*cbHideTrash, Gtk::PACK_SHRINK, 0);
+  themeBox11->pack_start(*lbHideTrash, Gtk::PACK_SHRINK, 0);
 
 
   pack_start(*buttonSave, Gtk::PACK_SHRINK, 0);
