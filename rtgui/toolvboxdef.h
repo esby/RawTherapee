@@ -82,6 +82,7 @@ class ToolVBoxDef
       virtual Gtk::VBox* getPrevBox();
       // return the box a panel should be moved to when using right arrow.
       virtual Gtk::VBox* getNextBox();
+      virtual void swapPanels(int pos1, int pos2);
 
       virtual void remPanel(MovableToolPanel* t);
       virtual void addPanel(MovableToolPanel* t, int pos);

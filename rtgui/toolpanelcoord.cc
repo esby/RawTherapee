@@ -30,6 +30,7 @@
 #include "../rtengine/procevents.h"
 #include "../rtengine/refreshmap.h"
 #include "../rtexif/rtexif.h"
+#include "ttdep.h"
 
 using namespace rtengine::procparams;
 
@@ -45,7 +46,6 @@ ToolPanelCoordinator::ToolPanelCoordinator(bool batch, bool benchmark) : ipc(nul
     rawPanel        = Gtk::manage(new ToolVBox());
     advancedPanel   = Gtk::manage(new ToolVBox());
     locallabPanel   = Gtk::manage(new ToolVBox());
-    favoritePanel   = Gtk::manage(new ToolVBox());
     trashPanel      = Gtk::manage(new ToolVBox());
     usefulPanel     = Gtk::manage(new ToolVBox());
 
@@ -57,8 +57,8 @@ ToolPanelCoordinator::ToolPanelCoordinator(bool batch, bool benchmark) : ipc(nul
     locallabPanel->setBoxName(PANEL_NAME_LOCALLAB);
     transformPanel->setBoxName(PANEL_NAME_TRANSFORM);
     rawPanel->setBoxName(PANEL_NAME_RAW);
-    trashPanel->setBoxName(PANEL_NAME_TRASH);
     usefulPanel->setBoxName(PANEL_NAME_USEFUL);
+    trashPanel->setBoxName(PANEL_NAME_TRASH);
 
     env =  new Environment(toolPanels, expList);
     isReaction = false;
@@ -183,7 +183,7 @@ ToolPanelCoordinator::ToolPanelCoordinator(bool batch, bool benchmark) : ipc(nul
 
     addfavoritePanel(transformPanel, crop);
     addfavoritePanel(transformPanel, resize);
-    addPanel(resize->getPackBox(), prsharpening, 2);
+    addPanel(resize->getPackBox(), prsharpening, 2); // todo why addPanel and not addfavorite?
     addfavoritePanel(transformPanel, lensgeom);
     addfavoritePanel(lensgeom->getPackBox(), rotate, 2);
     addfavoritePanel(lensgeom->getPackBox(), perspective, 2);
@@ -272,16 +272,16 @@ ToolPanelCoordinator::ToolPanelCoordinator(bool batch, bool benchmark) : ipc(nul
 
     int panelIter = 0;
     if ((!useRtFav) || favoriteCount > 0 )
-      handlePanel(favoritePanel, favoritePanelSW, panelIter++, 4);
-    handlePanel(exposurePanel, exposurePanelSW, panelIter++, 4);
-    handlePanel(detailsPanel, detailsPanelSW, panelIter++, 4);
-    handlePanel(colorPanel, colorPanelSW, panelIter++, 4);
-    handlePanel(advancedPanel, advancedPanelSW, panelIter++,4);
-    handlePanel(transformPanel, transformPanelSW, panelIter++, 4);
-    handlePanel(locallabPanel, locallabPanelSW, panelIter++, 4);
-    handlePanel(rawPanel, rawPanelSW, panelIter++, 4);
-    handlePanel(usefulPanel, usefulPanelSW, panelIter++, 4);
-    handlePanel(trashPanel, trashPanelSW, panelIter++, 4);
+      handlePanel(favoritePanel, favoritePanelSW, panelIter++, 4); //0
+    handlePanel(exposurePanel, exposurePanelSW, panelIter++, 4);   //1
+    handlePanel(detailsPanel, detailsPanelSW, panelIter++, 4);     //2
+    handlePanel(colorPanel, colorPanelSW, panelIter++, 4);         //3
+    handlePanel(advancedPanel, advancedPanelSW, panelIter++,4);    //4
+    handlePanel(transformPanel, transformPanelSW, panelIter++, 4); //5
+    handlePanel(locallabPanel, locallabPanelSW, panelIter++, 4);   //6
+    handlePanel(rawPanel, rawPanelSW, panelIter++, 4);             //7
+    handlePanel(usefulPanel, usefulPanelSW, panelIter++, 4);       //8
+    handlePanel(trashPanel, trashPanelSW, panelIter++, 4);         //9
 
     if ( options.rtSettings.verbose )
       printf("panel handling performed. \n");
@@ -298,6 +298,7 @@ ToolPanelCoordinator::ToolPanelCoordinator(bool batch, bool benchmark) : ipc(nul
       box1->setNextBox(box2);
       env->addVBox(box1);
     }
+    env->doLog=true;
 
   //allowing those filters to be extracted from their entity
 
@@ -1459,7 +1460,7 @@ void ToolPanelCoordinator::toolSelected(ToolMode tool)
     };
 
    //todo: the code is never called ?
-
+   
     switch (tool) {
         case TMCropSelect: {
             toolBar->blockEditDeactivation(false); // To allow deactivating Locallab when switching to another tool using toolbar
@@ -1546,25 +1547,25 @@ void ToolPanelCoordinator::on_notebook_switch_page(Gtk::Widget* /* page */, guin
     {
 
     env->prevState = env->state;
-    if (options.rtSettings.verbose)     
-      printf("notebook switch page");
+//    if (options.rtSettings.verbose)     
+      printf("notebook switch page %c-> ", env->prevState);
     if (toolPanelNotebook->get_current_page() == toolPanelNotebook->page_num(*favoritePanelSW))
     {
-       if (options.rtSettings.verbose)
-         printf(" -> favorite panel\n");
        env->state = ENV_STATE_IN_FAV;      
+       //if (options.rtSettings.verbose)
+         printf("%c -> favorite panel\n", env->state);
     }
     else 
     if (toolPanelNotebook->get_current_page() == toolPanelNotebook->page_num(*trashPanelSW)) 
     {
-       if (options.rtSettings.verbose)
-         printf(" -> trash panel\n");
        env->state = ENV_STATE_IN_TRASH;
+       //if (options.rtSettings.verbose)
+         printf("%c -> trash panel\n", env->state);
     }else
     {
-      if (options.rtSettings.verbose)
-        printf(" -> normal panel\n");
       env->state = ENV_STATE_IN_NORM;
+      //if (options.rtSettings.verbose)
+        printf("%c -> normal panel\n", env->state);
     }
 
    // we only checks outside of fav <> fav or trash <> trash interactions
@@ -1596,8 +1597,94 @@ void ToolPanelCoordinator::on_notebook_switch_page(Gtk::Widget* /* page */, guin
     if (env->state == ENV_STATE_IN_TRASH) dc+= 3;
     if (env->state == ENV_STATE_IN_NORM) dc+= 2;
 
+// done: this was splitted into three parts
+/*
     for(auto toolPanel : toolPanels) 
         toolPanel->favorite_others_tabs_switch(dc);
+*/
+
+    // first: favorite
+    // then each normal panel in order
+    // then trash panel
+
+    // handling favorite panels
+    std::vector<ToolPanel*> panels = env->getToolPanels();
+
+    std::sort (panels.begin(), panels.end(), sortByFav);
+
+    for (std::vector<ToolPanel*>::iterator it = panels.begin() ; it != panels.end(); ++it)
+    {
+     ToolPanel* p = static_cast<ToolPanel*>(*it);  
+
+      if (p->getFavoriteButton()->get_active() == true)
+      {
+        printf("Parsing VBox switch todo FAV %s pos=%i \n", p->getToolName().c_str(), p->getPosFav());
+        p->favorite_others_tabs_switch(dc);
+      }
+    }
+
+    panels = env->getToolPanels();
+    std::sort (panels.begin(), panels.end(), sortByFav);
+
+    for (std::vector<ToolPanel*>::iterator it1 = panels.begin() ; it1 != panels.end(); ++it1)
+    {
+     ToolPanel* p1 = static_cast<ToolPanel*>(*it1);
+     printf("%s.getPLocation= %i \n",p1->getToolName().c_str(),p1->getPLocation());
+
+     for (std::vector<ToolPanel*>::iterator it2 = it1+1 ; it2 != panels.end(); ++it2)
+    {
+     ToolPanel* p2 = static_cast<ToolPanel*>(*it2);
+     if ((p1->getFavoriteButton()->get_active() == true)
+     && (p2->getFavoriteButton()->get_active() == true))
+     {
+     int pp1 = favoritePanel->getPos(p1);
+     int pp2 = favoritePanel->getPos(p2);
+ 
+      printf("A: %s.ps %i  vs %s.ps %i \n", p1->getToolName().c_str(), pp1, p2->getToolName().c_str(), pp2);
+     if (pp1 > pp2)
+     {
+        printf("Anomaly: %s.getPosFav() %i  > %s.getPosFav() %i \n", p1->getToolName().c_str(), p1->getPosFav(), p2->getToolName().c_str(), p2->getPosFav());
+
+     }
+     }
+     }
+
+    }
+
+
+    // second part normal panels are handled
+    panels = env->getToolPanels();
+
+    std::sort (panels.begin(), panels.end(), sortByOri);
+
+    for (std::vector<ToolPanel*>::iterator it = panels.begin() ; it != panels.end(); ++it)
+    {
+     ToolPanel* p = static_cast<ToolPanel*>(*it);
+
+      if ((p->getFavoriteButton()->get_active() == false)
+         && (p->getTrashButton()->get_active() == false))
+      {
+        printf("Parsing VBox switch todo NORM %s \n", p->getToolName().c_str());
+        p->favorite_others_tabs_switch(dc);
+      }
+    }
+
+    // third part trash panels
+    for (std::vector<ToolPanel*>::iterator it = panels.begin() ; it != panels.end(); ++it)
+    {
+     ToolPanel* p = static_cast<ToolPanel*>(*it);
+
+      if (p->getTrashButton()->get_active() == true)
+      {
+        printf("Parsing VBox switch todo TRASH %s \n", p->getToolName().c_str());
+        p->favorite_others_tabs_switch(dc);
+      }
+    }
+
+/*
+    for(auto toolPanel : toolPanels) 
+        toolPanel->favorite_others_tabs_switch(dc);
+*/
 
     //putting the ending panels and separator to the end
     for(int i=0; i< NB_PANEL; i++){

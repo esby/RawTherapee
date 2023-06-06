@@ -23,6 +23,26 @@
 using namespace rtengine;
 using namespace rtengine::procparams;
 
+
+/*
+bool sortByFavW(Gtk::Widget* t1, Gtk::Widget* t2)
+{
+ ToolVBox* p1 = static_cast<ToolVBox*>(t1);
+  ToolVBox* p2 = static_cast<ToolVBox*>(t2);
+
+ return sortByFav(p1,p2);
+}
+
+bool sortByOriW(Gtk::Widget* t1, Gtk::Widget* t2)
+{
+  ToolVBox* p1 = static_cast<ToolVBox*>(t1);
+  ToolVBox* p2 = static_cast<ToolVBox*>(t2);
+
+  return sortByOri(p1,p2);
+}
+*/
+
+
 bool sortByFav(ToolPanel* t1, ToolPanel* t2)
 {
   if (t1->canBeIgnored()

@@ -30,9 +30,15 @@
 #include "variable.h"
 #include "profilepanel.h"
 
-#define ENV_STATE_IN_FAV    1
-#define ENV_STATE_IN_NORM   2
-#define ENV_STATE_IN_TRASH  3
+#define ENV_STATE_IN_FAV    'F'
+#define ENV_STATE_IN_NORM   'N'
+#define ENV_STATE_IN_TRASH  'T'
+
+#define PANEL_ON_UNDEF -1
+#define PANEL_ON_FAVORITE 0
+#define PANEL_ON_NORMAL 1
+#define PANEL_ON_TRASH 2
+
 
 // Nomenclature note:
 // a "box" is either a tab containing toolpanels or a tool(panel) containing other tool(panel)s.
@@ -63,13 +69,14 @@ class Environment {
 
   public:
      int envId;
-     int state;
+     char state;
      int prevState;
      // this can be customized in theory - panel can be moved to bottom instead of top when moving left.
      bool moveLeftToBottom;
      bool moveRightToTop;
      bool disableSwitchPageReaction;
      bool metadataState;
+     bool doLog;
 
      Environment(std::vector<ToolPanel*>& _toolPanels,  std::vector<MyExpander*>& _expList); 
 

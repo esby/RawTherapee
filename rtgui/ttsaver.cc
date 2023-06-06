@@ -200,7 +200,9 @@ void TTSaver::resetFavoriteAndTrashState()
 void TTSaver::themeSplitter(std::ifstream& myfile)
 {
   env->disableSwitchPageReaction = true;
-  env->state = ENV_STATE_IN_NORM;
+  printf("setting env_state to favorite");
+  //todo this is wrong, it should be unchanged: either is it set to favorite at start, either to tool if executed from tool
+  env->state = ENV_STATE_IN_FAV;
   env->prevState = ENV_STATE_IN_NORM;
   
   bool condition = true;
@@ -434,7 +436,7 @@ Glib::ustring TTSaver::themeExport()
     if ((p != nullptr)
     && (!p->canBeIgnored()))
     {
-      int posOri = p->getPosOri();
+      int posOri = p->getOriginalBox()->getPos(p); // maybe todo getPos()
       if (!(p->getTrashButton()->get_active()))
          oriSettings += p->getToolName()+ "(" + p->getOriginalBox()->getBoxName() + ":" + IntToString(posOri) + ") ";
 
@@ -551,7 +553,8 @@ void TTSaver::themeImport(std::ifstream& myfile)
           {
             mapVBox[vname]->addPanel(map[fname],pos);
             map[fname]->setOriginalBox(mapVBox[vname]);
-            map[fname]->setLocation(1);// 1 is for normal panel.
+            map[fname]->setPLocation(PANEL_ON_NORMAL);// 
+            map[fname]->setPosOri(pos);
           }
         }
       }
@@ -562,6 +565,7 @@ void TTSaver::themeImport(std::ifstream& myfile)
   for (size_t i=0; i<favoriteItems.size(); i++)
   if (map[favoriteItems.at(i)])
   {
+    printf("parsing panel=%s\n",map[favoriteItems.at(i)]->getToolName().c_str());
     map[favoriteItems.at(i)]->getFavoriteButton()->set_active(true);
  //   printf("favorite:%s at:%i \n",map[favoriteItems.at(i)]->getToolName().c_str(), i);
     if (map.count( map[favoriteItems.at(i)]->getOriginalBox()->getBoxName())>0)
@@ -573,8 +577,12 @@ void TTSaver::themeImport(std::ifstream& myfile)
       map.at(map[favoriteItems.at(i)]->getOriginalBox()->getBoxName())->getExpander()->set_expanded(state);
     }
 // element from toolPanel will not be sorted out - because of side effects in the tt panel 
-if (map[favoriteItems.at(i)]->getOriginalBox()->getBoxName() != "favoritePanel" )
+if (true) //map[favoriteItems.at(i)]->getOriginalBox()->getBoxName() == "favoritePanel" )
+   {
+    printf("Setting favorite pos=%zu for %s\n",i, map[favoriteItems.at(i)]->getToolName().c_str());
     env->setFavoritePos( map[favoriteItems.at(i)], i);
+    map[favoriteItems.at(i)]->updateLabelInfo();
+   }
   }
 
  // initializing trash status
@@ -591,11 +599,11 @@ if (map[favoriteItems.at(i)]->getOriginalBox()->getBoxName() != "favoritePanel" 
       FoldableToolPanel* p = static_cast<FoldableToolPanel*> (env->getPanel(i));
       if ( (p != nullptr)
       && (!(p->canBeIgnored()))
-      && (p->getLocation() ==-1))
+      && (p->getPLocation() == PANEL_ON_UNDEF))
       {
         if (options.rtSettings.verbose)
           printf("panel %s has a non correct location - it is probably absent from the ttp profile - correcting this\n", p->getToolName().c_str());
-        p->moveToOriginal(-1,-1);
+        p->moveToOriginal();
       }
   }
 

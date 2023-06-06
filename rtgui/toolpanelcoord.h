@@ -108,6 +108,7 @@
 #define NB_PANEL 10
 #define NB_PANEL_SWITCHABLE 9
 #define PANEL_SWITCHABLE_START 1
+#define PANEL_START 0
 
 class ImageEditorCoordinator;
 class MetaDataPanel;

@@ -94,7 +94,7 @@ public:
           setToolName(_toolName);
           labelBox = nullptr;
           buttonBox = nullptr;
-          location = 1; // normal panel location
+          plocation = PANEL_ON_NORMAL; // normal panel location
     }
     virtual ~ToolPanel() {}
 

@@ -99,6 +99,13 @@ void TTTweaker::deploy()
     ToolPanel* p = static_cast<ToolPanel*> (env->getPanel(i));
     if ( (p != NULL))
     {
+
+      auto udlrbox = p->getFUDLRBox();
+ 
+      auto ptoolname = p->getToolName();
+      Gtk::Label* lbToolName = Gtk::manage(new Gtk::Label(ptoolname));
+      udlrbox->pack_start(*lbToolName, Gtk::PACK_SHRINK, 0);
+ 
        if (p->getToolName() == "rotate")
          rotate = static_cast<Rotate*> (p);
        if (p->getToolName() == "whitebalance")
@@ -217,7 +224,7 @@ void TTTweaker::react(FakeProcEvent ev)
           {
             d = -90-d;
             d = checkCoarse(d, coarse);
-            printf("rotate CCW detected d adjusted to d=%f \n",d);
+            printf("rotate CCW detected d adjusted to d=%i \n",d);
           }
           //other cases not handled
           rtengine::procparams::ProcParams* pp;
@@ -229,7 +236,7 @@ void TTTweaker::react(FakeProcEvent ev)
             pp->rotate.degree = d;
             rotate->read(pp);
             rotate->adjusterChanged(nullptr, d);
-            printf("%s auto rotating by degree=%f \n",getToolName().c_str(),d);
+            printf("%s auto rotating by degree=%i \n",getToolName().c_str(),d);
           }
         }
       }

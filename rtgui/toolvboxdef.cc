@@ -42,9 +42,18 @@ int ToolVBoxDef::getPos(MovableToolPanel* panel) {
   Gtk::Widget *w = panel->getExpander();
   auto it = std::find(panelList.begin(), panelList.end(), w);
   if (it == panelList.end())
+  {
+//   if (panel->getToolName()=="tonecurve")
+//     printf("pos=-1 found for tonecurve\n");
     return -1;
+  }
   else
-    return  std::distance(panelList.begin(), it);
+  {
+    auto d = std::distance(panelList.begin(), it);
+//    if (panel->getToolName()=="tonecurve")
+//      printf("using std:distance=%lu\n",d);
+    return d;
+ }
 }
 
 MovableToolPanel* ToolVBoxDef::getPanel(int pos) {
@@ -52,6 +61,18 @@ MovableToolPanel* ToolVBoxDef::getPanel(int pos) {
  MovableToolPanel* p = static_cast<MyExpander*>(panelList[pos])->getPanel();
    return p;
 }
+
+void ToolVBoxDef::swapPanels(int pos1, int pos2)
+{
+ MovableToolPanel* t = getPanel(pos1);
+ MyExpander* exp = t->getExpander();
+
+ panelList = box->get_children ();
+ panelList[pos1] = panelList[pos2];
+ panelList[pos2] = exp;
+
+}
+
 
 // we initiate the nextBox too sinec it's circular
 void ToolVBoxDef::setPrevBox(Gtk::VBox* _box) {
@@ -84,7 +105,6 @@ void ToolVBoxDef::remPanel(MovableToolPanel* t)
   }
 }
 
-
 void ToolVBoxDef::addPanel(MovableToolPanel* t, int pos)
 {
   ToolVBox* v = (ToolVBox*) this;
@@ -92,10 +112,12 @@ void ToolVBoxDef::addPanel(MovableToolPanel* t, int pos)
   int i = getPos(t);
   if (i==-1)
   {
-//    printf("adding Panel: %s to %s \n", t->getToolName().c_str(), this->getBoxName().c_str());
+//    printf("ToolVBoxDef adding Panel: %s to %s \n", t->getToolName().c_str(), this->getBoxName().c_str());
     v->pack_start(*exp, false,false);
     if (pos !=-1)
       v->reorder_child(*exp, pos);
   }
+  else
+   printf("ToolVBoxDef::addPanel getPos non negative encountered %i",i);
 }
 

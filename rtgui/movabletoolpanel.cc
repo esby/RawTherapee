@@ -25,7 +25,7 @@ using namespace rtengine::procparams;
 MovableToolPanel::MovableToolPanel (Glib::ustring _toolName )  
 {
     setToolName(_toolName);
-    location = 1; // normal panel location
+    plocation = PANEL_ON_NORMAL; // normal panel location
 
     labelInfo = Gtk::manage (new Gtk::Label("Infos"));
     labelInfoNotifier = Gtk::manage (new Gtk::Button());
@@ -56,6 +56,9 @@ MovableToolPanel::MovableToolPanel (Glib::ustring _toolName )
     fudlrBox->pack_end( *moveUButton,       Gtk::PACK_SHRINK, true, 0);
     fudlrBox->pack_end( *moveDButton,       Gtk::PACK_SHRINK, true, 0);
     fudlrBox->pack_end( *favoriteButton,  Gtk::PACK_SHRINK, true, 0);
+
+   fPosFav = -1;
+   fPosOri = -1;
             
 }
 
@@ -82,15 +85,22 @@ void MovableToolPanel::updateLabelInfo() {
  if ((this->getExpander() != nullptr)
   && ((!this->canBeIgnored()))) {
 
-//    printf("toolName=%s \n",this->getToolName().c_str());
+    auto dtn = "tonecurve";
+    if (env->doLog && (this->getToolName() == dtn))
+    {
+      printf("env->state=%c ",env->state);
+      printf("toolName=%s ",this->getToolName().c_str());
+    }
 
-    int pos = originalBox->getPos(this);
+    int pos = fPosOri; // originalBox->getPos(this);
+    if (plocation == PANEL_ON_FAVORITE)
+      pos = fPosFav;
+    if (env->doLog && (this->getToolName() == dtn))
+      printf(" pos=%i",pos);
 
-    if (env->state == ENV_STATE_IN_FAV ) // favorite panel is visible
-         pos = favoriteBox->getPos(this);
+   if (env->doLog && (this->getToolName() == dtn))
+        printf("\n");
 
-   if (env->state == ENV_STATE_IN_TRASH ) // favorite panel is visible
-         pos = trashBox->getPos(this);
 
     char buffer[50];
 
@@ -124,10 +134,10 @@ void MovableToolPanel::moveUp () {
   ToolVBox* box;
 
   if (env->state == ENV_STATE_IN_FAV) {
-//     printf("moveTop favorite - ");
+//     printf("moveTo favorite - ");
      box = favoriteBox;
   }else {
-//     printf("moveTop nopefav  - ");
+//     printf("moveTo original  - ");
      box = originalBox;
   }
   pos = box->getPos(this);
@@ -250,60 +260,70 @@ void MovableToolPanel::moveRight() {
   }
 }
 
+// the function remove the panel from the three potential box
 void MovableToolPanel::cleanBox() {
-  location = -1;
+  plocation = PANEL_ON_UNDEF; // undetermined location - note should it really be undef ?
   favoriteBox->remPanel(this);
   originalBox->remPanel(this);
   trashBox->remPanel(this);
 }
 
-void MovableToolPanel::moveToFavorite(int posFav, int posOri)
+void MovableToolPanel::moveToFavorite()//(int posFav, int posOri)
 {
-  printf("location %i\n",location);
-  if (location != 0)
+  if (getToolName() == "tonecurve")
+    printf("%s.moveToFavorite plocation=%i fPosOri=%i fPosFav=%i  \n", getToolName().c_str(),plocation, fPosOri, fPosFav);
+  if (true) //if (plocation != PANEL_ON_FAVORITE) // not in favorite
   {
     cleanBox();
-    fPosOri = posOri;
-    favoriteBox->addPanel(this, posFav);
-    location = 0;
+//    fPosOri = posOri;
+    favoriteBox->addPanel(this, fPosFav);
+    plocation = PANEL_ON_FAVORITE; // favorite
   }
 }
 
-void MovableToolPanel::moveToOriginal(int posFav, int posOri)
+void MovableToolPanel::moveToOriginal()
 {
-  if (location != 1)
+  auto name = this->getToolName();
+//    printf("moving %s to its original panel\n", name.c_str());
+  if (name == "tonecurve" )
+    printf("%s.moveToOriginal plocation=%i fPosFav=%i posOri=%i \n", 
+      getToolName().c_str(),
+      plocation,  fPosFav, fPosOri);
+  if (true) //if (plocation != PANEL_ON_NORMAL) // not in original / normal panels
   {
     cleanBox();
-    if (posFav > -1)
-       fPosFav = posFav;
-    originalBox->addPanel(this, posOri);
-    location = 1;
+    originalBox->addPanel(this, fPosOri);
+    plocation = PANEL_ON_NORMAL; // original
   }
 }
 
-void MovableToolPanel::moveToTrash(int posFav, int posOri)
+void MovableToolPanel::moveToTrash()//(int posFav, int posOri)
 {
- if (location != 2)
+ if (true) //if (plocation != PANEL_ON_TRASH)
   {
     cleanBox();
-    if (posFav>-1)
-      fPosFav = posFav;
-    fPosOri = posOri;      
+//    if (posFav>-1)
+//      fPosFav = posFav;
     trashBox->addPanel(this, -1); // there is no pos saved for this one
-    location =2;
+    plocation = PANEL_ON_TRASH; // trash
   }
 }
 
+/*
 int  MovableToolPanel::getPosOri()
 {
   if (originalBox == nullptr)
     return -1;
   int posOri = originalBox->getPos(this);
+  if (this->getToolName() == "tonecurve" )
+   printf("posOri=%i \n",posOri);
   if (posOri == -1) posOri = fPosOri;
   if (posOri == -1) posOri = originalBox->size()-2;
   return posOri;
 }
+*/
 
+/*
 int  MovableToolPanel::getPosFav()
 {
   if (favoriteBox == nullptr)
@@ -312,7 +332,9 @@ int  MovableToolPanel::getPosFav()
   if (posFav == -1) posFav = fPosFav;
   return posFav;
 }
+*/
 
+/*
 int  MovableToolPanel::getPosTra()
 {
   if (trashBox == nullptr) 
@@ -320,10 +342,16 @@ int  MovableToolPanel::getPosTra()
   int posTra = trashBox->getPos(this);
   return posTra;
 }
+*/
 
 
 void MovableToolPanel::favorite_others_tabs_switch(int dc) 
 {
+//todo
+  auto name = this->getToolName();
+  if (name == "tonecurve")
+    printf("favorite_others_tabs_switch toolname %s \n", name.c_str());
+
 
   if ((this->getExpander() != nullptr)
     && ((!this->canBeIgnored())))
@@ -340,10 +368,12 @@ void MovableToolPanel::favorite_others_tabs_switch(int dc)
     // 32 t -> n
     // 33 t -> t
 
-    int posOri = getPosOri();
-    int posFav = getPosFav();
+//    int posOri = getPosOri();
+//    int posFav = getPosFav();
+//    if (getToolName() == "tonecurve")
+//      printf("posOri=%i posFav=%i \n", fPosOri, fPosFav);
     //int posTra = getPosTra();
-    //    printf("dc=%i\n",dc);
+    //printf("dc=%i\n",dc);
 
     // handling all the possible cases
     switch(dc)
@@ -356,22 +386,22 @@ void MovableToolPanel::favorite_others_tabs_switch(int dc)
         {
           if (trashButton->get_active())
           {
-            moveToTrash(posFav,posOri);
+            moveToTrash();
           }
           else
           {
-            moveToOriginal(posFav,posOri);
+            moveToOriginal();
           }
         }
         else
         {
           if (trashButton->get_active())
           {
-            moveToTrash(posFav,posOri);
+            moveToTrash();
           }
           else
           {
-            moveToOriginal(posFav,posOri);
+            moveToOriginal();
           }
         }
         break;
@@ -380,11 +410,11 @@ void MovableToolPanel::favorite_others_tabs_switch(int dc)
         {
           if(trashButton->get_active())
           {
-            moveToTrash(posFav,posOri);
+            moveToTrash();
           }
           else
           {
-            moveToOriginal(posFav,posOri);
+            moveToOriginal();
           }
 
         }
@@ -392,44 +422,44 @@ void MovableToolPanel::favorite_others_tabs_switch(int dc)
         {
           if(trashButton->get_active())
           {
-            moveToTrash(posFav,posOri);
+            moveToTrash();
           }
           else
           {
-            moveToOriginal(posFav,posOri);
+            moveToOriginal();
           }
         }
         break;
       case 21:                   // normal to favorite
         if (favoriteButton->get_active())
         {
-          moveToFavorite(posFav,posOri);
+          moveToFavorite();
         }
         else
         {
-          moveToOriginal(posFav, posOri);
+          moveToOriginal();
         }
         break;
 
       case 22:                   // normal to normal
         if (trashButton->get_active())
         {
-          moveToTrash(posFav,posOri);
+          moveToTrash();
         }
         else
         {
-          moveToOriginal(posFav,posOri);
+          moveToOriginal();
         }
         break;
 
       case 23:                   // normal -> trash
         if (trashButton->get_active())
         {
-          moveToTrash(posFav,posOri);
+          moveToTrash();
         }
         else                     // resume check here
         {
-          moveToOriginal(posFav, posOri);
+          moveToOriginal();
         }
         break;
 
@@ -438,22 +468,22 @@ void MovableToolPanel::favorite_others_tabs_switch(int dc)
         {
           if (favoriteButton->get_active())
           {
-            moveToFavorite(posFav,posOri);
+            moveToFavorite();
           }
           else
           {
-            moveToOriginal(posFav,posOri);
+            moveToOriginal();
           }
         }
         else                     // not trash
         {
           if (favoriteButton->get_active())
           {
-            moveToFavorite(posFav,posOri);
+            moveToFavorite();
           }
           else
           {
-            moveToOriginal(posFav,posOri);
+            moveToOriginal();
           }
         }
         break;
@@ -461,7 +491,7 @@ void MovableToolPanel::favorite_others_tabs_switch(int dc)
       case 32:                   // trash -> normal
         if (!trashButton->get_active())
         {
-          moveToOriginal(posFav,posOri);
+          moveToOriginal();
         }
         break;
 

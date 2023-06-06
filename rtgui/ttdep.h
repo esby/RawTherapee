@@ -22,7 +22,10 @@
 
 
 
-bool sortByFav(ToolPanel* t1, ToolPanel* t2);
-bool sortByOri(ToolPanel* t1, ToolPanel* t2);
+//bool sortByFavW(Gtk::Widget* t1, Gtk::Widget* t2);
+//bool sortByOriW(Gtk::Widget* t1, Gtk::Widget* t2);
+bool sortByFav(ToolPanel* p1, ToolPanel* p2);
+bool sortByOri(ToolPanel* p1, ToolPanel* p2);
+
 
 #endif

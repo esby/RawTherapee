@@ -31,12 +31,6 @@
 #include "guiutils.h"
 #include "environment.h"
 
-#define ENV_STATE_IN_FAV    1
-#define ENV_STATE_IN_NORM   2
-#define ENV_STATE_IN_TRASH  3
-
-
-
 class MovableToolPanel
 {
     protected:
@@ -44,8 +38,8 @@ class MovableToolPanel
     // 1 for normal tabs.
     // 2 for trash tabs.
     // this integer should be used to speed-up moveTo() methods that are not necessary.
+    int plocation;
     Environment* env;
-    int location;
     Glib::ustring toolName;
     bool reacted;
 
@@ -85,9 +79,12 @@ class MovableToolPanel
 
 
     virtual bool                 canBeIgnored()      { return true; } // useful for determining if the panel is skippable or not.
-    int                  getPosOri();
-    int                  getPosFav();
-    int                  getPosTra();
+    int                  getPosOri(){ return fPosOri;};
+    int                  getPosFav(){ return fPosFav;};
+    void setPosOri(int pos){ fPosOri = pos;};
+    void setPosFav(int pos){ fPosFav = pos;};
+
+//    int                  getPosTra();
     virtual Gtk::ToggleButton*   getFavoriteButton() { return favoriteButton;}
     virtual Gtk::ToggleButton*   getTrashButton()    { return trashButton;}
     virtual Gtk::HBox*           getLabelBox()       { return labelBox;}
@@ -101,7 +98,6 @@ class MovableToolPanel
     void                 setOriginalBox(ToolVBox* tc) {originalBox = tc; }
 //    ToolPanel*      getFavoriteDummy() { return favoriteDummy; }
 //    ToolPanel*      getOriginalDummy() { return originalDummy; }
-//    ToolVBoxDef*         getOriginalBox() { return originalBox; }
     ToolVBox*         getOriginalBox() { return originalBox; }
     ToolVBox*            getFavoriteBox() { return favoriteBox;}
 
@@ -128,16 +124,16 @@ class MovableToolPanel
     Glib::ustring               getToolName() { return toolName; } 
     void setLevel (int level);
 
-    virtual int getLocation() {return location;}
-    void setLocation(int _location) { location = _location;}
+    virtual int getPLocation() {return plocation;}
+    void setPLocation(int _location) { plocation = _location;}
 
     virtual void deploy();
     virtual void deployLate();
     virtual void react(FakeProcEvent ev);
 
-    virtual void moveToFavorite(int posFav, int posOri);
-    virtual void moveToTrash(int posFav, int posOri);
-    virtual void moveToOriginal(int posFav, int posOri);
+    virtual void moveToFavorite(); //(int posFav, int posOri);
+    virtual void moveToTrash(); //int posFav, int posOri);
+    virtual void moveToOriginal(); //(int posFav, int posOri);
 
     bool getReacted();
     void setReacted(bool _reacted);

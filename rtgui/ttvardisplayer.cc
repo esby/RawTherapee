@@ -34,7 +34,6 @@ TTVarDisplayer::TTVarDisplayer () : FoldableToolPanel(this,"ttvardisplayer",M("T
 {
         //todo: find a f!cking way to set a minimum size for a tool
 	hboxr = Gtk::manage(new Gtk::HBox());
-	pack_start(*hboxr, Gtk::PACK_SHRINK, 0);
 
 	vbox1 = Gtk::manage(new Gtk::VBox());
 	vbox1->set_spacing(1);
