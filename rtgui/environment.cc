@@ -152,7 +152,7 @@ void Environment::reAttachPanel(ToolPanel *panel, ToolVBox* box, int pos)
 void Environment::setFavoritePos(ToolPanel *panel, int pos)
 {
   panel->getOriginalBox()->remPanel(panel);
-  printf("panel:%s box:%s \n", panel->getToolName().c_str(), panel->getOriginalBox()->getBoxName().c_str());
+//  printf("panel:%s box:%s \n", panel->getToolName().c_str(), panel->getOriginalBox()->getBoxName().c_str());
   if (pos > -1)
     panel->getFavoriteBox()->addPanel(panel, pos);
   panel->setPosFav(pos);

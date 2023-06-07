@@ -286,8 +286,10 @@ ToolPanelCoordinator::ToolPanelCoordinator(bool batch, bool benchmark) : ipc(nul
     if ( options.rtSettings.verbose )
       printf("panel handling performed. \n");
 
+     printf("panel");
+
     for(int i=PANEL_SWITCHABLE_START; i< PANEL_SWITCHABLE_START + NB_PANEL_SWITCHABLE; i++) { //last panel is trash thus ignored
-      printf("panel %i \n",i);
+      printf(" %i",i);
       int modOp  = NB_PANEL_SWITCHABLE ; //-2 because we ignore first panel and trash panel
       // I really don't want to know how modulo negative number is h@ndled 
       // so i am adding nbPanel to the values
@@ -299,6 +301,7 @@ ToolPanelCoordinator::ToolPanelCoordinator(bool batch, bool benchmark) : ipc(nul
       env->addVBox(box1);
     }
     env->doLog=true;
+    printf(" done.\n");
 
   //allowing those filters to be extracted from their entity
 
@@ -939,6 +942,7 @@ void ToolPanelCoordinator::initImage(rtengine::StagedImageProcessor* ipc_, bool 
         metadata->setImageData(pMetaData);
 
        const rtengine::FramesMetaData* idata = ipc->getInitialImage()->getMetaData();
+       if( options.rtSettings.verbose ) 
        printf("transmiting some data via rtvar \n");
        //todo add idata to rtvar?
         env->setVar("Iso", idata->getISOSpeed());
@@ -1540,31 +1544,30 @@ bool ToolPanelCoordinator::getFilmNegativeSpot(rtengine::Coord spot, int spotSiz
 }
 
 void ToolPanelCoordinator::on_notebook_switch_page(Gtk::Widget* /* page */, guint page_num){
-  printf(" on_notebook_switch_page called\n");
-   if (options.rtSettings.verbose)
-     printf("options.rtSettings.verbose sets to true\n");
+  if (options.rtSettings.verbose)
+    printf(" on_notebook_switch_page called\n");
   if (!env->disableSwitchPageReaction)
     {
 
     env->prevState = env->state;
-//    if (options.rtSettings.verbose)     
+    if (options.rtSettings.verbose)     
       printf("notebook switch page %c-> ", env->prevState);
     if (toolPanelNotebook->get_current_page() == toolPanelNotebook->page_num(*favoritePanelSW))
     {
        env->state = ENV_STATE_IN_FAV;      
-       //if (options.rtSettings.verbose)
+       if (options.rtSettings.verbose)
          printf("%c -> favorite panel\n", env->state);
     }
     else 
     if (toolPanelNotebook->get_current_page() == toolPanelNotebook->page_num(*trashPanelSW)) 
     {
        env->state = ENV_STATE_IN_TRASH;
-       //if (options.rtSettings.verbose)
+       if (options.rtSettings.verbose)
          printf("%c -> trash panel\n", env->state);
     }else
     {
       env->state = ENV_STATE_IN_NORM;
-      //if (options.rtSettings.verbose)
+      if (options.rtSettings.verbose)
         printf("%c -> normal panel\n", env->state);
     }
 
@@ -1598,6 +1601,7 @@ void ToolPanelCoordinator::on_notebook_switch_page(Gtk::Widget* /* page */, guin
     if (env->state == ENV_STATE_IN_NORM) dc+= 2;
 
 // done: this was splitted into three parts
+// as it was causing positionning issues with favorite / normal panels, with position not loaded correctly
 /*
     for(auto toolPanel : toolPanels) 
         toolPanel->favorite_others_tabs_switch(dc);
@@ -1618,38 +1622,39 @@ void ToolPanelCoordinator::on_notebook_switch_page(Gtk::Widget* /* page */, guin
 
       if (p->getFavoriteButton()->get_active() == true)
       {
-        printf("Parsing VBox switch todo FAV %s pos=%i \n", p->getToolName().c_str(), p->getPosFav());
+//        printf("Parsing VBox switch todo FAV %s pos=%i \n", p->getToolName().c_str(), p->getPosFav());
         p->favorite_others_tabs_switch(dc);
       }
     }
 
     panels = env->getToolPanels();
     std::sort (panels.begin(), panels.end(), sortByFav);
-
+ 
+    /* - unused debug code
     for (std::vector<ToolPanel*>::iterator it1 = panels.begin() ; it1 != panels.end(); ++it1)
     {
-     ToolPanel* p1 = static_cast<ToolPanel*>(*it1);
-     printf("%s.getPLocation= %i \n",p1->getToolName().c_str(),p1->getPLocation());
+      ToolPanel* p1 = static_cast<ToolPanel*>(*it1);
+//      printf("%s.getPLocation= %i \n",p1->getToolName().c_str(),p1->getPLocation());
 
-     for (std::vector<ToolPanel*>::iterator it2 = it1+1 ; it2 != panels.end(); ++it2)
-    {
-     ToolPanel* p2 = static_cast<ToolPanel*>(*it2);
-     if ((p1->getFavoriteButton()->get_active() == true)
-     && (p2->getFavoriteButton()->get_active() == true))
-     {
-     int pp1 = favoritePanel->getPos(p1);
-     int pp2 = favoritePanel->getPos(p2);
+      for (std::vector<ToolPanel*>::iterator it2 = it1+1 ; it2 != panels.end(); ++it2)
+      {
+        ToolPanel* p2 = static_cast<ToolPanel*>(*it2);
+        if ((p1->getFavoriteButton()->get_active() == true)
+        && (p2->getFavoriteButton()->get_active() == true))
+        {
+          int pp1 = favoritePanel->getPos(p1);
+          int pp2 = favoritePanel->getPos(p2);
  
-      printf("A: %s.ps %i  vs %s.ps %i \n", p1->getToolName().c_str(), pp1, p2->getToolName().c_str(), pp2);
-     if (pp1 > pp2)
-     {
-        printf("Anomaly: %s.getPosFav() %i  > %s.getPosFav() %i \n", p1->getToolName().c_str(), p1->getPosFav(), p2->getToolName().c_str(), p2->getPosFav());
+//      printf("A: %s.ps %i  vs %s.ps %i \n", p1->getToolName().c_str(), pp1, p2->getToolName().c_str(), pp2);
+          if (pp1 > pp2)
+          {
+             printf("Anomaly: %s.getPosFav() %i  > %s.getPosFav() %i \n", p1->getToolName().c_str(), p1->getPosFav(), p2->getToolName().c_str(), p2->getPosFav());
 
-     }
-     }
-     }
-
+          }
+        }
+      }
     }
+    */
 
 
     // second part normal panels are handled
@@ -1664,7 +1669,7 @@ void ToolPanelCoordinator::on_notebook_switch_page(Gtk::Widget* /* page */, guin
       if ((p->getFavoriteButton()->get_active() == false)
          && (p->getTrashButton()->get_active() == false))
       {
-        printf("Parsing VBox switch todo NORM %s \n", p->getToolName().c_str());
+//        printf("Parsing VBox switch todo NORM %s \n", p->getToolName().c_str());
         p->favorite_others_tabs_switch(dc);
       }
     }
@@ -1676,7 +1681,7 @@ void ToolPanelCoordinator::on_notebook_switch_page(Gtk::Widget* /* page */, guin
 
       if (p->getTrashButton()->get_active() == true)
       {
-        printf("Parsing VBox switch todo TRASH %s \n", p->getToolName().c_str());
+//        printf("Parsing VBox switch todo TRASH %s \n", p->getToolName().c_str());
         p->favorite_others_tabs_switch(dc);
       }
     }

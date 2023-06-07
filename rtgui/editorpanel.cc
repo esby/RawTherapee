@@ -1075,7 +1075,8 @@ void EditorPanel::open (Thumbnail* tmb, rtengine::InitialImage* isrc)
     navigator->setInvalid(ipc->getFullWidth(),ipc->getFullHeight());
     int pp3version = tmb->getpp3version();
     tpc->getEnv()->setVar("pp3version", pp3version );
-    printf("pp3version transmitted by variables = %i \n", pp3version);
+    if( options.rtSettings.verbose ) 
+      printf("pp3version transmitted by variables = %i \n", pp3version);
 
     // we react to the data added
     tpc->doReact(FakeEvExifTransmitted);
@@ -1362,7 +1363,8 @@ void EditorPanel::info_toggled ()
                                               Glib::ustring::format (std::setw (3), std::fixed, std::setprecision (2), idata->getFocalLen(selectedFrame)));
 
         // note: we will react later, on pp3 version tranmission
-        printf("filename value transmitted by variables \n");
+        if( options.rtSettings.verbose ) 
+          printf("filename value transmitted by variables \n");
         Environment* env = tpc->getEnv();
         env->setVar("Fname",openThm->getFileName());
 

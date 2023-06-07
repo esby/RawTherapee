@@ -85,7 +85,7 @@ void MovableToolPanel::updateLabelInfo() {
  if ((this->getExpander() != nullptr)
   && ((!this->canBeIgnored()))) {
 
-    auto dtn = "tonecurve";
+    auto dtn = "nofiltertodebug";
     if (env->doLog && (this->getToolName() == dtn))
     {
       printf("env->state=%c ",env->state);

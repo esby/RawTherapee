@@ -89,7 +89,7 @@ TTSaver::~TTSaver()
 
 void TTSaver::deploy()
 {
-   printf("DEBUG: TTSaver::deploy\n");
+//   printf("DEBUG: TTSaver::deploy\n");
   if (options.TTPAutoload)
   {
     auto it = std::find(entries.begin(), entries.end(), options.TTPAutoloadValue ) ;
@@ -161,8 +161,8 @@ void TTSaver::parseProfileFolder()
                     }
 
                     Glib::ustring name = currDir.substr(0, lastdot);
-                    printf("name=[%s]\n",name.c_str());
-                    printf("fname=[%s]\n",fname.c_str());
+//                    printf("name=[%s]\n",name.c_str());
+//                    printf("fname=[%s]\n",fname.c_str());
 
                     profilbox->append(name);
                     entries.push_back(fname);
@@ -565,7 +565,7 @@ void TTSaver::themeImport(std::ifstream& myfile)
   for (size_t i=0; i<favoriteItems.size(); i++)
   if (map[favoriteItems.at(i)])
   {
-    printf("parsing panel=%s\n",map[favoriteItems.at(i)]->getToolName().c_str());
+ //   printf("parsing panel=%s\n",map[favoriteItems.at(i)]->getToolName().c_str());
     map[favoriteItems.at(i)]->getFavoriteButton()->set_active(true);
  //   printf("favorite:%s at:%i \n",map[favoriteItems.at(i)]->getToolName().c_str(), i);
     if (map.count( map[favoriteItems.at(i)]->getOriginalBox()->getBoxName())>0)
@@ -579,7 +579,7 @@ void TTSaver::themeImport(std::ifstream& myfile)
 // element from toolPanel will not be sorted out - because of side effects in the tt panel 
 if (true) //map[favoriteItems.at(i)]->getOriginalBox()->getBoxName() == "favoritePanel" )
    {
-    printf("Setting favorite pos=%zu for %s\n",i, map[favoriteItems.at(i)]->getToolName().c_str());
+//    printf("Setting favorite pos=%zu for %s\n",i, map[favoriteItems.at(i)]->getToolName().c_str());
     env->setFavoritePos( map[favoriteItems.at(i)], i);
     map[favoriteItems.at(i)]->updateLabelInfo();
    }
