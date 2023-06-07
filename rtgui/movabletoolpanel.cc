@@ -270,8 +270,8 @@ void MovableToolPanel::cleanBox() {
 
 void MovableToolPanel::moveToFavorite()//(int posFav, int posOri)
 {
-  if (getToolName() == "tonecurve")
-    printf("%s.moveToFavorite plocation=%i fPosOri=%i fPosFav=%i  \n", getToolName().c_str(),plocation, fPosOri, fPosFav);
+//  if (getToolName() == "tonecurve")
+//    printf("%s.moveToFavorite plocation=%i fPosOri=%i fPosFav=%i  \n", getToolName().c_str(),plocation, fPosOri, fPosFav);
   if (true) //if (plocation != PANEL_ON_FAVORITE) // not in favorite
   {
     cleanBox();
@@ -285,10 +285,10 @@ void MovableToolPanel::moveToOriginal()
 {
   auto name = this->getToolName();
 //    printf("moving %s to its original panel\n", name.c_str());
-  if (name == "tonecurve" )
-    printf("%s.moveToOriginal plocation=%i fPosFav=%i posOri=%i \n", 
-      getToolName().c_str(),
-      plocation,  fPosFav, fPosOri);
+//    if (name == "tonecurve" )
+//      printf("%s.moveToOriginal plocation=%i fPosFav=%i posOri=%i \n", 
+//      getToolName().c_str(),
+//      plocation,  fPosFav, fPosOri);
   if (true) //if (plocation != PANEL_ON_NORMAL) // not in original / normal panels
   {
     cleanBox();
@@ -349,8 +349,8 @@ void MovableToolPanel::favorite_others_tabs_switch(int dc)
 {
 //todo
   auto name = this->getToolName();
-  if (name == "tonecurve")
-    printf("favorite_others_tabs_switch toolname %s \n", name.c_str());
+//  if (name == "tonecurve")
+//    printf("favorite_others_tabs_switch toolname %s \n", name.c_str());
 
 
   if ((this->getExpander() != nullptr)
