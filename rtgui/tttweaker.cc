@@ -99,12 +99,11 @@ void TTTweaker::deploy()
     ToolPanel* p = static_cast<ToolPanel*> (env->getPanel(i));
     if ( (p != NULL))
     {
-
-      auto udlrbox = p->getFUDLRBox();
- 
-      auto ptoolname = p->getToolName();
-      Gtk::Label* lbToolName = Gtk::manage(new Gtk::Label(ptoolname));
-      udlrbox->pack_start(*lbToolName, Gtk::PACK_SHRINK, 0);
+//todo display this information as an option
+//      auto udlrbox = p->getFUDLRBox();
+//      auto ptoolname = p->getToolName();
+//      Gtk::Label* lbToolName = Gtk::manage(new Gtk::Label(ptoolname));
+//      udlrbox->pack_start(*lbToolName, Gtk::PACK_SHRINK, 0);
  
        if (p->getToolName() == "rotate")
          rotate = static_cast<Rotate*> (p);
