@@ -24,6 +24,7 @@
 #include "../rtengine/procparams.h"
 #include "rtimage.h"
 #include "multilangmgr.h"
+#include "toolpanel.h"
 
 #include <assert.h>
 
@@ -629,6 +630,7 @@ MyExpander::MyExpander(bool useEnabled, Gtk::Widget* titleWidget, ToolPanel* _pa
     set_spacing(0);
     set_name("MyExpander");
     set_can_focus(false);
+    setExpandAlignProperties(this, true, false, Gtk::ALIGN_FILL, Gtk::ALIGN_FILL);
 
     panel = _panel;
 
@@ -737,6 +739,8 @@ MyExpander::MyExpander(bool useEnabled, Glib::ustring titleLabel, ToolPanel* _pa
     label = Gtk::manage(new Gtk::Label());
     setExpandAlignProperties(label, true, false, Gtk::ALIGN_START, Gtk::ALIGN_CENTER);
     label->set_markup(escapeHtmlChars(titleLabel));
+   // showing untranslated toolname as a tooltip
+    label->set_tooltip_markup(escapeHtmlChars( panel->getToolName()));
     headerHBox->pack_start(*label, Gtk::PACK_EXPAND_WIDGET, 0);
 
     titleEvBox = Gtk::manage(new Gtk::EventBox());
