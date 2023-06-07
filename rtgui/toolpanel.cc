@@ -64,6 +64,8 @@ FoldableToolPanel::FoldableToolPanel(Gtk::Box* content, Glib::ustring toolName, 
         Gtk::Label *label = Gtk::manage(new Gtk::Label());
         label->set_markup(escapeHtmlChars(UILabel));
         label->set_alignment(Gtk::ALIGN_START, Gtk::ALIGN_CENTER);
+        //showing untranslated toolname as a tooltip
+        label->set_tooltip_markup(escapeHtmlChars(toolName));
         titleHBox->pack_start(*label, Gtk::PACK_EXPAND_WIDGET, 0);
 
         RTImage *image = Gtk::manage (new RTImage("one-to-one-small.png"));
