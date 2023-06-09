@@ -65,6 +65,7 @@ class MovableToolPanel
     Gtk::Button* moveDButton;
     Gtk::Button* moveLButton;
     Gtk::Button* moveRButton;
+    Glib::ustring originalUILabel;
 
     public:
 
@@ -122,6 +123,9 @@ class MovableToolPanel
 
     void                setToolName(Glib::ustring _name) { toolName = _name; }
     Glib::ustring               getToolName() { return toolName; } 
+
+    void setOriginalUILabel(Glib::ustring _originalUILabel) { originalUILabel = _originalUILabel; }
+    Glib::ustring getOriginalUILabel() { return originalUILabel; }
     void setLevel (int level);
 
     virtual int getPLocation() {return plocation;}

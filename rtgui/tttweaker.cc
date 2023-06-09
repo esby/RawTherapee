@@ -86,7 +86,27 @@ TTTweaker::TTTweaker() : FoldableToolPanel(this,"TTTweaker",M("TTTW_LABEL"),fals
   themeBox5->pack_end(*cbAutoRotateCorrect, Gtk::PACK_SHRINK, 0);
 
   pack_start(*themeBox5, Gtk::PACK_SHRINK, 0);
- 
+
+  themeBox6 = Gtk::manage(new Gtk::HBox());
+
+  lbToolNameAsToolTip = Gtk::manage(new Gtk::Label(M("TTTW_TOOLNAME_AS_TOOLTIP")));
+  cbToolNameAsToolTip = Gtk::manage(new Gtk::CheckButton());
+
+  themeBox6->pack_start(*lbToolNameAsToolTip, Gtk::PACK_SHRINK, 0);
+  themeBox6->pack_end(*cbToolNameAsToolTip, Gtk::PACK_SHRINK, 0);
+
+  pack_start(*themeBox6, Gtk::PACK_SHRINK, 0);
+
+  themeBox7 = Gtk::manage(new Gtk::HBox());
+
+  lbToolNameUntranslated = Gtk::manage(new Gtk::Label(M("TTTW_TOOLNAME_UNTRANSLATED")));
+  cbToolNameUntranslated = Gtk::manage(new Gtk::CheckButton());
+
+  themeBox7->pack_start(*lbToolNameUntranslated, Gtk::PACK_SHRINK, 0);
+  themeBox7->pack_end(*cbToolNameUntranslated, Gtk::PACK_SHRINK, 0);
+
+  pack_start(*themeBox7, Gtk::PACK_SHRINK, 0);
+
 }
 
 void TTTweaker::deploy()
@@ -99,12 +119,6 @@ void TTTweaker::deploy()
     ToolPanel* p = static_cast<ToolPanel*> (env->getPanel(i));
     if ( (p != NULL))
     {
-//todo display this information as an option
-//      auto udlrbox = p->getFUDLRBox();
-//      auto ptoolname = p->getToolName();
-//      Gtk::Label* lbToolName = Gtk::manage(new Gtk::Label(ptoolname));
-//      udlrbox->pack_start(*lbToolName, Gtk::PACK_SHRINK, 0);
- 
        if (p->getToolName() == "rotate")
          rotate = static_cast<Rotate*> (p);
        if (p->getToolName() == "whitebalance")
@@ -121,7 +135,8 @@ void TTTweaker::deploy()
 
 //   getExpander()->signal_enabled_toggled().connect(sigc::mem_fun(this, &TTTweaker::enabledChanged));
 //   cbAutoDistortionCorrect->signal_clicked().connect( sigc::mem_fun(this, &TTTweaker::enabledChanged));
-
+   cbToolNameAsToolTip->signal_clicked().connect( sigc::mem_fun(this, &TTTweaker::enabledChanged));
+   cbToolNameUntranslated->signal_clicked().connect( sigc::mem_fun(this, &TTTweaker::enabledChanged));
 }
 
 float normalizeRotation(float f)
@@ -280,6 +295,39 @@ void TTTweaker::react(FakeProcEvent ev)
 
 void TTTweaker::enabledChanged  () 
 {  
+ for (size_t i=0; i< env->getToolPanels().size() ; i++)
+  {
+    ToolPanel* p = static_cast<ToolPanel*> (env->getPanel(i));
+    if ( (p != NULL))
+    {
+//      auto udlrbox = p->getFUDLRBox();
+      auto ptoolname = p->getToolName();
+
+      MyExpander* e = p->getExpander();
+      if (e)
+      {
+        Gtk::Widget* w = e->getLabelWidget();
+        if (w)
+        {
+          Gtk::Label* l = static_cast<Gtk::Label*>(w);
+          if (l)
+          {
+             if (cbToolNameUntranslated->get_active())
+                l->set_label(ptoolname);
+             else
+                l->set_label(p->getOriginalUILabel());
+              
+            if (cbToolNameAsToolTip->get_active())
+            {
+              l->set_tooltip_markup(escapeHtmlChars(ptoolname));
+            }
+            else 
+              l->set_tooltip_markup("");
+          }
+        }
+      }
+    }
+  }
 }
 
 Glib::ustring TTTweaker::themeExport()
@@ -290,6 +338,8 @@ Glib::ustring TTTweaker::themeExport()
   Glib::ustring s_reduce_after_save = getToolName() + ":"  + "enable_reduce_after_save " + std::string( cbReduceAfterSave->get_active() ? "1" : "0" ) ;
   Glib::ustring s_reset_wb = getToolName() + ":"  + "enable_reset_wb " + std::string( cbResetWBForRt4Profiles->get_active() ? "1" : "0" ) ;
   Glib::ustring s_auto_rotate = getToolName() + ":"  + "enable_auto_rotate " + std::string( cbAutoRotateCorrect->get_active() ? "1" : "0" ) ;
+  Glib::ustring s_toolname_as_tooltip = getToolName() + ":"  + "enable_toolname_as_tooltip " + std::string( cbToolNameAsToolTip->get_active() ? "1" : "0" ) ;
+  Glib::ustring s_toolname_on_right = getToolName() + ":"  + "enable_toolname_untranslated " + std::string( cbToolNameUntranslated->get_active() ? "1" : "0" ) ;
 
 
   return s_active + "\n" \
@@ -298,6 +348,8 @@ Glib::ustring TTTweaker::themeExport()
        + s_reduce_after_save + "\n" \
        + s_reset_wb + "\n" \
        + s_auto_rotate + "\n" \
+       + s_toolname_as_tooltip + "\n" \
+       + s_toolname_on_right \
 ;
 }
 
@@ -372,6 +424,21 @@ void TTTweaker::themeImport(std::ifstream& myfile)
             }
           }
 
+          if (token == "enable_toolname_as_tooltip")
+          {
+            if(getline(tokensplitter, token, ' '))
+            { 
+              cbToolNameAsToolTip->set_active((token == "1") ? true: false);
+            }
+          }
+
+          if (token == "enable_toolname_untranslated")
+          {
+            if(getline(tokensplitter, token, ' '))
+            { 
+              cbToolNameUntranslated->set_active((token == "1") ? true: false);
+            }
+          }
 
        }
      }

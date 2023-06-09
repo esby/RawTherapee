@@ -39,7 +39,8 @@ protected:
     Gtk::HBox* themeBox3;
     Gtk::HBox* themeBox4;
     Gtk::HBox* themeBox5;
-
+    Gtk::HBox* themeBox6;
+    Gtk::HBox* themeBox7;
 
     Gtk::Label* lbAutoDistortionCorrect;
     Gtk::CheckButton* cbAutoDistortionCorrect; 
@@ -55,6 +56,12 @@ protected:
 
     Gtk::Label* lbAutoRotateCorrect;
     Gtk::CheckButton* cbAutoRotateCorrect;
+
+    Gtk::Label* lbToolNameAsToolTip;
+    Gtk::CheckButton* cbToolNameAsToolTip;
+
+    Gtk::Label* lbToolNameUntranslated;
+    Gtk::CheckButton* cbToolNameUntranslated;
 
     CoarsePanel* coarse;
     Rotate* rotate;

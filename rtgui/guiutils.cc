@@ -739,8 +739,6 @@ MyExpander::MyExpander(bool useEnabled, Glib::ustring titleLabel, ToolPanel* _pa
     label = Gtk::manage(new Gtk::Label());
     setExpandAlignProperties(label, true, false, Gtk::ALIGN_START, Gtk::ALIGN_CENTER);
     label->set_markup(escapeHtmlChars(titleLabel));
-   // showing untranslated toolname as a tooltip
-    label->set_tooltip_markup(escapeHtmlChars( panel->getToolName()));
     headerHBox->pack_start(*label, Gtk::PACK_EXPAND_WIDGET, 0);
 
     titleEvBox = Gtk::manage(new Gtk::EventBox());
