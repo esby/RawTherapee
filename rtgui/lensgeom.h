@@ -22,23 +22,28 @@
 
 #include "lensgeomlistener.h"
 #include "toolpanel.h"
+#include "adjuster.h"
 
 class LensGeometry final :
     public ToolParamBlock,
-    public FoldableToolPanel
+    public FoldableToolPanel,
+    public AdjusterListener
 {
 
 protected:
     MyComboBoxText*     method;
     Gtk::Button*        autoCrop;
     LensGeomListener*   rlistener;
+    Adjuster*           scale;
     Gtk::CheckButton*   fill;
     bool                lastFill;
     sigc::connection    fillConn;
     ToolParamBlock*     packBox;
 
     rtengine::ProcEvent EvTransMethod;
+    rtengine::ProcEvent EvTransScale;
 public:
+    static const Glib::ustring TOOL_NAME;
 
     LensGeometry ();
     ~LensGeometry () override;
@@ -59,6 +64,8 @@ public:
     {
         rlistener = l;
     }
+
+    void adjusterChanged (Adjuster* a, double newval) override;
 
 private:
     IdleRegister idle_register;

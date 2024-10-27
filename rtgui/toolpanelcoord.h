@@ -18,6 +18,7 @@
  */
 #pragma once
 
+#include <unordered_set>
 #include <vector>
 
 #include <gtkmm.h>
@@ -80,6 +81,7 @@
 #include "softlight.h"
 #include "spot.h"
 #include "tonecurve.h"
+#include "toneequalizer.h"
 #include "toolbar.h"
 #include "toolpanel.h"
 #include "vibrance.h"
@@ -158,6 +160,7 @@ protected:
     Crop* crop;
     ToneCurve* toneCurve;
     ShadowsHighlights* shadowshighlights;
+    ToneEqualizer* toneEqualizer;
     LocalContrast *localContrast;
     Spot* spot;
     Defringe* defringe;
@@ -194,6 +197,8 @@ protected:
     FilmNegative* filmNegative;
     PdSharpening* pdSharpening;
     std::vector<PParamsChangeListener*> paramcListeners;
+    std::unordered_map<Gtk::Widget *, FoldableToolPanel *>
+        expanderToToolPanelMap;
 
     rtengine::StagedImageProcessor* ipc;
 
@@ -214,6 +219,7 @@ protected:
 
     ToolBar* toolBar;
 
+//    std::unique_ptr<TextOrIcon> toiF;
     TextOrIcon* toiF;
     TextOrIcon* toiE;
     TextOrIcon* toiD;
@@ -249,11 +255,12 @@ protected:
     Gtk::Image* imgIconU;
 
     Gtk::Image* imgPanelEnd[NB_PANEL]; 
-    Gtk::VBox* vbPanelEnd[NB_PANEL];
+    Gtk::Box* vbPanelEnd[NB_PANEL];
     Gtk::HSeparator* hsPanelEnd[NB_PANEL]; 
     Gtk::VBox* vbPanel[NB_PANEL]; // 
 
-    Gtk::ScrolledWindow* favoritePanelSW;
+    //std::unique_ptr<Gtk::ScrolledWindow> favoritePanelSW;
+    Gtk::ScrolledWindow* favoritePanelSW;;
     Gtk::ScrolledWindow* exposurePanelSW;
     Gtk::ScrolledWindow* detailsPanelSW;
     Gtk::ScrolledWindow* colorPanelSW;
@@ -267,6 +274,7 @@ protected:
     std::vector<MyExpander*> expList;
 
     bool hasChanged;
+    bool batch;
 
     void handlePanel(Gtk::VBox* vbox, Gtk::ScrolledWindow* panelSW, int panelIterator, int spacing);
     void addPanel(Gtk::Box* where, FoldableToolPanel* panel, int level = 1);
@@ -274,19 +282,120 @@ protected:
     void updateVScrollbars(bool hide);
     void addfavoritePanel (Gtk::Box* where, FoldableToolPanel* panel, int level = 1);
     void notebookPageChanged(Gtk::Widget* page, guint page_num);
+    void updatePanelTools(
+        Gtk::Widget *page,
+        const std::vector<Glib::ustring> &favorites,
+        bool cloneFavoriteTools);
 
 private:
     EditDataProvider *editDataProvider;
     sigc::connection notebookconn;
     bool photoLoadedOnce; // Used to indicated that a photo has been loaded yet
+    std::shared_ptr<RTSurface> ornamentSurface;
     Gtk::Widget* prevPage;
 
 public:
+    enum class Panel {
+        FAVORITE,
+        EXPOSURE,
+        DETAILS,
+        COLOR,
+        ADVANCED,
+        LOCALLAB,
+        TRANSFORM_PANEL,
+        RAW,
+    };
+
+    enum class Tool {
+        TONE_CURVE,
+        SHADOWS_HIGHLIGHTS,
+        TONE_EQUALIZER,
+        IMPULSE_DENOISE,
+        DEFRINGE_TOOL,
+        SPOT,
+        DIR_PYR_DENOISE,
+        EPD,
+        SHARPENING_TOOL,
+        LOCAL_CONTRAST,
+        SHARPEN_EDGE,
+        SHARPEN_MICRO,
+        L_CURVE,
+        RGB_CURVES,
+        COLOR_TONING,
+        LENS_GEOM,
+        LENS_PROF,
+        DISTORTION,
+        ROTATE,
+        VIBRANCE,
+        COLOR_APPEARANCE,
+        WHITE_BALANCE,
+        VIGNETTING,
+        RETINEX_TOOL,
+        GRADIENT,
+        LOCALLAB,
+        PC_VIGNETTE,
+        PERSPECTIVE,
+        CA_CORRECTION,
+        CH_MIXER,
+        BLACK_WHITE,
+        RESIZE_TOOL,
+        PR_SHARPENING,
+        CROP_TOOL,
+        ICM,
+        WAVELET,
+        DIR_PYR_EQUALIZER,
+        HSV_EQUALIZER,
+        FILM_SIMULATION,
+        SOFT_LIGHT,
+        DEHAZE,
+        SENSOR_BAYER,
+        SENSOR_XTRANS,
+        BAYER_PROCESS,
+        XTRANS_PROCESS,
+        BAYER_PREPROCESS,
+        PREPROCESS,
+        DARKFRAME_TOOL,
+        FLATFIELD_TOOL,
+        RAW_CA_CORRECTION,
+        RAW_EXPOSURE,
+        PREPROCESS_WB,
+        BAYER_RAW_EXPOSURE,
+        XTRANS_RAW_EXPOSURE,
+        FATTAL,
+        FILM_NEGATIVE,
+        PD_SHARPENING,
+    };
+
+    struct ToolTree {
+        Tool id;
+        std::vector<ToolTree> children;
+    };
+
+    using ToolLayout = std::unordered_map<Panel, const std::vector<ToolTree> &, ScopedEnumHash>;
+
     CoarsePanel* coarse;
     Gtk::Notebook* toolPanelNotebook;
 
     ToolPanelCoordinator (bool batch = false, bool benchmark=false);
     virtual ~ToolPanelCoordinator () override;
+
+    static const ToolLayout &getDefaultToolLayout();
+    /**
+     * Gets the tool with the provided tool name.
+     *
+     * @param name The tool name as a raw string.
+     * @return The tool.
+     * @throws std::out_of_range If the name is not recognized.
+     */
+    static Tool getToolFromName(const std::string &name);
+    /**
+     * Gets the tool name for the tool's ToolPanel as a string.
+     *
+     * @param tool The name as a raw string, or an empty string if the tool is
+     * unknown.
+     */
+    static std::string getToolName(Tool tool);
+    static bool isFavoritable(Tool tool);
 
     bool getChangedState()
     {
@@ -308,6 +417,8 @@ public:
         const LUTu& histLRETI
     );
     void foldAllButOne(Gtk::Box* parent, FoldableToolPanel* openedSection);
+    void updateToolLocations(
+        const std::vector<Glib::ustring> &favorites, bool cloneFavoriteTools);
 
     // multiple listeners can be added that are notified on changes (typical: profile panel and the history)
     void addPParamsChangeListener(PParamsChangeListener* pp)
@@ -330,7 +441,7 @@ public:
     void unsetTweakOperator (rtengine::TweakOperator *tOperator) override;
 
     // FilmNegProvider interface
-    void imageTypeChanged (bool isRaw, bool isBayer, bool isXtrans, bool isMono = false) override;
+    void imageTypeChanged (bool isRaw, bool isBayer, bool isXtrans, bool isMono = false, bool isGainMapSupported = false) override;
 
     // profilechangelistener interface
     void profileChange(
@@ -363,21 +474,21 @@ public:
     void updateShowtooltipVisibility (bool showtooltip);
 
     // wbprovider interface
-    void getAutoWB (double& temp, double& green, double equal, double tempBias) override
+    void getAutoWB (double& temp, double& green, double equal, rtengine::StandardObserver observer, double tempBias) override
     {
         if (ipc) {
-            ipc->getAutoWB(temp, green, equal, tempBias);
+            ipc->getAutoWB(temp, green, equal, observer, tempBias);
         }
     }
-    void getCamWB (double& temp, double& green) override
+    void getCamWB (double& temp, double& green, rtengine::StandardObserver observer) override
     {
         if (ipc) {
-            ipc->getCamWB(temp, green);
+            ipc->getCamWB(temp, green, observer);
         }
     }
 
     //DFProvider interface
-    rtengine::RawImage* getDF() override;
+    const rtengine::RawImage* getDF() override;
 
     //FFProvider interface
     rtengine::RawImage* getFF() override;
@@ -423,6 +534,27 @@ public:
 
     void setEditProvider(EditDataProvider *provider);
     void on_notebook_switch_page(Gtk::Widget* page, guint page_num);
+
+    void setProgressListener(rtengine::ProgressListener *pl);
+
+protected:
+    static std::unordered_map<std::string, Tool> toolNamesReverseMap;
+
+    std::unordered_map<Tool, const ToolTree *, ScopedEnumHash>
+        toolToDefaultToolTreeMap;
+
+    FoldableToolPanel *getFoldableToolPanel(Tool tool) const;
+    FoldableToolPanel *getFoldableToolPanel(const ToolTree &tool) const;
+    void updateFavoritesPanel(
+        const std::vector<Glib::ustring> &favorites, bool cloneFavoriteTools);
+    template <typename T>
+    typename std::enable_if<std::is_convertible<T, const ToolTree>::value, void>::type
+    updateToolPanel(
+        Gtk::Box *panelBox,
+        const std::vector<T> &children,
+        int level,
+        const std::unordered_set<Tool, ScopedEnumHash> &favorites,
+        bool cloneFavoriteTools);
 
 private:
     IdleRegister idle_register;

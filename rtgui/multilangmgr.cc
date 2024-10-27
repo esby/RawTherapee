@@ -20,13 +20,17 @@
 
 #include <fstream>
 #include <glib.h>
-#ifdef WIN32
+#include <iostream>
+#include <utility>
+#ifdef _WIN32
 #include <windows.h>
 #include <winnls.h>
 #endif
 #ifdef __APPLE__
 #include <CoreFoundation/CoreFoundation.h>
 #endif
+
+#include "../rtengine/settings.h"
 
 namespace
 {
@@ -44,33 +48,34 @@ struct LocaleToLang : private std::map<std::pair<Glib::ustring, Glib::ustring>, 
         emplace (key ("ca", "ES"), "Catala");
         emplace (key ("cs", "CZ"), "Czech");
         emplace (key ("da", "DK"), "Dansk");
-        emplace (key ("de", "DE"), "Deutsch");
+        emplace (key ("de", ""  ), "Deutsch");
 #ifdef __APPLE__
         emplace (key ("en", "UK"), "English (UK)");
 #else
         emplace (key ("en", "GB"), "English (UK)");
 #endif
         emplace (key ("en", "US"), "English (US)");
-        emplace (key ("es", "ES"), "Espanol");
+        emplace (key ("es", ""  ), "Espanol (Latin America)");
+        emplace (key ("es", "ES"), "Espanol (Castellano)");
         emplace (key ("eu", "ES"), "Euskara");
-        emplace (key ("fr", "FR"), "Francais");
+        emplace (key ("fr", ""  ), "Francais");
         emplace (key ("el", "GR"), "Greek");
         emplace (key ("he", "IL"), "Hebrew");
-        emplace (key ("it", "IT"), "Italiano");
+        emplace (key ("it", ""  ), "Italiano");
         emplace (key ("ja", "JP"), "Japanese");
-        emplace (key ("lv", "LV"), "Latvian");
-        emplace (key ("hu", "HU"), "Magyar");
-        emplace (key ("nl", "NL"), "Nederlands");
+        emplace (key ("lv", ""  ), "Latvian");
+        emplace (key ("hu", ""  ), "Magyar");
+        emplace (key ("nl", ""  ), "Nederlands");
         emplace (key ("nn", "NO"), "Norsk BM");
         emplace (key ("nb", "NO"), "Norsk BM");
-        emplace (key ("pl", "PL"), "Polish");
-        emplace (key ("pt", "PT"), "Portugues (Brasil)");
-        emplace (key ("ru", "RU"), "Russian");
+        emplace (key ("pl", ""  ), "Polish");
+        emplace (key ("pt", ""  ), "Portugues (Brasil)");
+        emplace (key ("ru", ""  ), "Russian");
         emplace (key ("sr", "RS"), "Serbian (Cyrilic Characters)");
-        emplace (key ("sk", "SK"), "Slovak");
-        emplace (key ("fi", "FI"), "Suomi");
+        emplace (key ("sk", ""  ), "Slovak");
+        emplace (key ("fi", ""  ), "Suomi");
         emplace (key ("sv", "SE"), "Swedish");
-        emplace (key ("tr", "TR"), "Turkish");
+        emplace (key ("tr", ""  ), "Turkish");
         emplace (key ("zh", "CN"), "Chinese (Simplified)");
         emplace (key ("zh", "SG"), "Chinese (Traditional)");
     }
@@ -79,12 +84,15 @@ struct LocaleToLang : private std::map<std::pair<Glib::ustring, Glib::ustring>, 
     {
         Glib::ustring major, minor;
 
+        // TODO: Support 3 character language code when needed.
         if (locale.length () >= 2) {
             major = locale.substr (0, 2).lowercase ();
         }
 
         if (locale.length () >= 5) {
-            minor = locale.substr (3, 2).uppercase ();
+            const Glib::ustring::size_type length =
+                locale.length() > 5 && g_unichar_isalnum(locale[5]) ? 3 : 2;
+            minor = locale.substr (3, length).uppercase ();
         }
 
         // Look for matching language and country.
@@ -95,7 +103,7 @@ struct LocaleToLang : private std::map<std::pair<Glib::ustring, Glib::ustring>, 
         }
 
         // Look for matching language only.
-        iterator = find (key (major, major.uppercase()));
+        iterator = find (key (major, ""));
 
         if (iterator != end ()) {
             return iterator->second;
@@ -158,6 +166,25 @@ void setGtkLanguage(const Glib::ustring &language)
 
 }
 
+TranslationMetadata::TranslationMetadata(std::map<std::string, std::string> &&metadata) :
+    metadata(std::move(metadata))
+{
+}
+
+std::string TranslationMetadata::get(const std::string &key, const std::string &default_value) const
+{
+    const auto found_entry = metadata.find(key);
+    if (found_entry == metadata.end()) {
+        return default_value;
+    }
+    return found_entry->second;
+}
+
+std::string TranslationMetadata::getLanguageName(const std::string &default_name) const
+{
+    return get("LANGUAGE_DISPLAY_NAME", default_name);
+}
+
 MultiLangMgr langMgr;
 
 MultiLangMgr::MultiLangMgr ()
@@ -215,9 +242,80 @@ Glib::ustring MultiLangMgr::getStr (const std::string& key) const
     return key;
 }
 
+const TranslationMetadata *MultiLangMgr::getMetadata(const Glib::ustring &fname) const
+{
+    static const char comment_symbol = '#';
+    static const char *space_chars = " \t";
+    static const char var_symbol = '@';
+    static const char key_value_separator = '=';
+
+    // Look for the metadata in the cache.
+    const auto &found_metadata = lang_files_metadata.find(fname);
+    if (found_metadata != lang_files_metadata.end()) {
+        return &found_metadata->second;
+    }
+
+    std::ifstream file(fname.c_str());
+    if (!file.is_open()) {
+        if (rtengine::settings->verbose) {
+            std::cerr << "Unable to open language file " << fname << " to get metadata." << std::endl;
+        }
+        return nullptr;
+    }
+
+    if (rtengine::settings->verbose) {
+        std::cout << "Reading metadata from language file " << fname << std::endl;
+    }
+    std::map<std::string, std::string> raw_metadata;
+    const auto read_key_value = [&raw_metadata](const std::string &meta_line) {
+        // One metadata key-value pair per line. The format is as follows:
+        // #001 @KEY=VALUE
+        // The line must begin with the comment symbol (#). After the first
+        // sequence of whitespace characters, the metadata variable symbol (@)
+        // must appear. It is followed immediately with the key name. The end of
+        // the key name is marked with the equal sign (=). All remaining
+        // characters until the end of the line make up the metadata value.
+        if (meta_line.empty() || meta_line.front() != comment_symbol) {
+            return;
+        }
+        const auto first_space = meta_line.find_first_of(space_chars, 1);
+        if (first_space == std::string::npos) {
+            return;
+        }
+        const auto definition_start = meta_line.find_first_not_of(space_chars, first_space + 1);
+        if (definition_start == std::string::npos || meta_line[definition_start] != var_symbol) {
+            return;
+        }
+        const auto separator_pos = meta_line.find(key_value_separator, definition_start + 1);
+        if (separator_pos == std::string::npos) {
+            return;
+        }
+        std::string key = meta_line.substr(definition_start + 1, separator_pos - definition_start - 1);
+        std::string value = meta_line.substr(separator_pos + 1);
+        if (rtengine::settings->verbose) {
+            std::cout << "Found metadata key " << key << " with value " << value << std::endl;
+        }
+        raw_metadata.emplace(std::move(key), std::move(value));
+    };
+
+    // Read lines in order. Metadata only appear in the first section of each
+    // file.
+    for (
+        std::string line;
+        std::getline(file, line) && (line.empty() ||
+                                        line.front() == comment_symbol ||
+                                        line.find_first_not_of(space_chars) == std::string::npos);) {
+        read_key_value(line);
+    }
+
+    // Add metadata to cache and return.
+    lang_files_metadata[fname] = TranslationMetadata(std::move(raw_metadata));
+    return &lang_files_metadata[fname];
+}
+
 bool MultiLangMgr::isOSLanguageDetectSupported ()
 {
-#if defined (WIN32) || defined (__linux__) || defined (__APPLE__)
+#if defined (_WIN32) || defined (__linux__) || defined (__APPLE__)
     return true;
 #else
     return false;
@@ -228,7 +326,7 @@ Glib::ustring MultiLangMgr::getOSUserLanguage ()
 {
     Glib::ustring langName ("default");
 
-#if defined (WIN32)
+#if defined (_WIN32)
 
     const LCID localeID = GetUserDefaultLCID ();
     TCHAR localeName[18];

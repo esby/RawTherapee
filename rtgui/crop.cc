@@ -29,6 +29,8 @@
 using namespace rtengine;
 using namespace rtengine::procparams;
 
+const Glib::ustring Crop::TOOL_NAME = "crop";
+
 namespace
 {
 
@@ -124,7 +126,7 @@ private:
 };
 
 Crop::Crop():
-    FoldableToolPanel(this, "crop", M("TP_CROP_LABEL"), false, true),
+    FoldableToolPanel(this, TOOL_NAME, M("TP_CROP_LABEL"), false, true),
     crop_ratios(new CropRatios),
     opt(0),
     wDirty(true),
@@ -174,12 +176,12 @@ Crop::Crop():
     selectCrop = Gtk::manage (new Gtk::Button (M("TP_CROP_SELECTCROP")));
     setExpandAlignProperties(selectCrop, true, false, Gtk::ALIGN_FILL, Gtk::ALIGN_CENTER);
     selectCrop->get_style_context()->add_class("independent");
-    selectCrop->set_image (*Gtk::manage (new RTImage ("crop-small.png")));
+    selectCrop->set_image (*Gtk::manage (new RTImage ("crop-small", Gtk::ICON_SIZE_BUTTON)));
 
     resetCrop = Gtk::manage (new Gtk::Button (M("TP_CROP_RESETCROP")));
     setExpandAlignProperties(resetCrop, true, false, Gtk::ALIGN_FILL, Gtk::ALIGN_CENTER);
     resetCrop->get_style_context()->add_class("independent");
-    resetCrop->set_image (*Gtk::manage (new RTImage ("undo-small.png")));
+    resetCrop->set_image (*Gtk::manage (new RTImage ("undo-small", Gtk::ICON_SIZE_BUTTON)));
 
     methodgrid->attach (*xlab, 0, 0, 1, 1);
     methodgrid->attach (*x, 1, 0, 1, 1);
@@ -592,11 +594,11 @@ void Crop::doresetCrop ()
     yDirty = true;
     wDirty = true;
     hDirty = true;
-    
+
     // Reset ratio, ratio lock and orientation as well
     ratio->set_active(0);
     orientation->set_active(2);
-    fixr->set_active(true); 
+    fixr->set_active(true);
 
     int X = 0;
     int Y = 0;

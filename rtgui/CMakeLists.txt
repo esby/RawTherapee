@@ -64,6 +64,7 @@ set(NONCLISOURCEFILES
     environment.cc
     toolvboxdef.cc 
     exportpanel.cc
+    externaleditorpreferences.cc
     extprog.cc
     fattaltonemap.cc
     filebrowser.cc
@@ -136,6 +137,7 @@ set(NONCLISOURCEFILES
     retinex.cc
     rgbcurves.cc
     rotate.cc
+    rtappchooserdialog.cc
     rtimage.cc
     rtscalable.cc
     rtsurface.cc
@@ -161,7 +163,9 @@ set(NONCLISOURCEFILES
     thumbimageupdater.cc
     thumbnail.cc
     tonecurve.cc
+    toneequalizer.cc
     toolbar.cc
+    toollocationpref.cc
     toolpanel.cc
     movabletoolpanel.cc
     toolpanelcoord.cc
@@ -208,7 +212,7 @@ if(WIN32)
         ${RSVG_INCLUDE_DIRS}
         ${TIFF_INCLUDE_DIRS}
         )
-    link_directories(. "${PROJECT_SOURCE_DIR}/rtexif"
+    link_directories(.
         ${EXTRA_LIBDIR}
         ${GIOMM_LIBRARY_DIRS}
         ${GIO_LIBRARY_DIRS}
@@ -260,9 +264,10 @@ else()
 endif()
 
 # Excluding libatomic needed by Clang/FreeBSD, #3636
-if(OPENMP_FOUND AND NOT APPLE AND NOT ${CMAKE_SYSTEM_NAME} STREQUAL "FreeBSD")
-    set(EXTRA_LIB_RTGUI "${EXTRA_LIB_RTGUI}" "atomic")
-endif()
+# Now handled in cmake/modules/findATOMIC.cmake, #6821
+# if(OPENMP_FOUND AND NOT APPLE AND NOT ${CMAKE_SYSTEM_NAME} STREQUAL "FreeBSD")
+#     set(EXTRA_LIB_RTGUI "${EXTRA_LIB_RTGUI}" "atomic")
+# endif()
 
 # Create config.h which defines where data are stored
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/config.h.in" "${CMAKE_CURRENT_BINARY_DIR}/config.h")

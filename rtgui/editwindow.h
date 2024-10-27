@@ -24,6 +24,7 @@
 #include "guiutils.h"
 
 class EditorPanel;
+struct ExternalEditor;
 class RTWindow;
 
 class EditWindow :
@@ -31,7 +32,6 @@ class EditWindow :
 {
 
 private:
-    double resolution;
     RTWindow* parent;
     RTImage appIcon;
 
@@ -39,13 +39,13 @@ private:
     std::set<Glib::ustring> filesEdited;
     std::map<Glib::ustring, EditorPanel*> epanels;
 
+    sigc::signal<void> externalEditorChangedSignal;
+
     bool isFullscreen;
     bool isClosed;
     bool isMinimized;
     sigc::connection onConfEventConn;
     void toggleFullscreen ();
-    bool updateResolution();
-    void setAppIcon();
 
     IdleRegister idle_register;
 
@@ -64,6 +64,9 @@ public:
     bool selectEditorPanel(const std::string &name);
     bool closeOpenEditors();
     bool isProcessing();
+    void updateExternalEditorWidget(int selectedIndex, const std::vector<ExternalEditor> &editors);
+    void updateToolPanelToolLocations(
+        const std::vector<Glib::ustring> &favorites, bool cloneFavoriteTools);
 
     void toFront();
     bool keyPressed (GdkEventKey* event);

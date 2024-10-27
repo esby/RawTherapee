@@ -35,7 +35,7 @@ TTSaver::TTSaver () : FoldableToolPanel(this,"ttsaver",M("TP_SAVER_LABEL"),false
 	themeBox1->set_spacing(4);
 	themeLabel = Gtk::manage(new Gtk::Label(M("GENERAL_FILE")));
         buttonSave = Gtk::manage(new Gtk::Button());
-        buttonSave->set_image (*Gtk::manage(new RTImage ("save.png")));
+        buttonSave->set_image (*Gtk::manage(new RTImage ("save")));
 
 	themeBox1->pack_start(*themeLabel, Gtk::PACK_SHRINK, 4);
 

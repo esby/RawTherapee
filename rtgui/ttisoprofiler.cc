@@ -42,7 +42,7 @@ TTIsoProfiler::TTIsoProfiler () : FoldableToolPanel(this,"TTIsoProfiler",M("TT_I
 
 
         buttonSave = Gtk::manage(new Gtk::Button());
-        buttonSave->set_image (*Gtk::manage(new RTImage ("spiral.png")));
+        buttonSave->set_image (*Gtk::manage(new RTImage ("spiral")));
 
 	entry = Gtk::manage (new Gtk::Entry ());
         entry->set_width_chars(6);
@@ -305,7 +305,7 @@ void TTIsoProfiler::affect_profiles()
 
 
        Gtk::Button *buttonDel = Gtk::manage(new Gtk::Button());
-       buttonDel->set_image (*Gtk::manage(new RTImage ("trash.png")));
+       buttonDel->set_image (*Gtk::manage(new RTImage ("trash")));
 
        entryNames.push_back(entryName);
        entryIsos.push_back(entryIso);

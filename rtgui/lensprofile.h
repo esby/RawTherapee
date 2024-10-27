@@ -22,12 +22,15 @@
 
 #include "guiutils.h"
 #include "toolpanel.h"
+#include "../rtengine/lensmetadata.h"
 
 class LensProfilePanel final :
     public ToolParamBlock,
     public FoldableToolPanel
 {
 public:
+    static const Glib::ustring TOOL_NAME;
+
     LensProfilePanel();
 
     void read(const rtengine::procparams::ProcParams* pp, const ParamsEdited* pedited = nullptr) override;
@@ -87,7 +90,8 @@ private:
         void fillLensfunLenses();
     };
 
-    void updateDisabled(bool enable);
+    void updateLCPDisabled(bool enable);
+    void updateMetadataDisabled();
 
     bool setLensfunCamera(const Glib::ustring& make, const Glib::ustring& model);
     bool setLensfunLens(const Glib::ustring& lens);
@@ -111,12 +115,14 @@ private:
     bool allowFocusDep;
     bool isRaw;
     const rtengine::FramesMetaData* metadata;
+    std::unique_ptr<rtengine::MetadataLensCorrection> metadataCorrection;
 
     Gtk::Grid* const modesGrid;
     Gtk::Grid* const distGrid;
     Gtk::RadioButton* const corrUnchangedRB;
     Gtk::RadioButton::Group corrGroup;
     Gtk::RadioButton* const corrOffRB;
+    Gtk::RadioButton* const corrMetadata;
     Gtk::RadioButton* const corrLensfunAutoRB;
     Gtk::RadioButton* const corrLensfunManualRB;
     Gtk::RadioButton* const corrLcpFileRB;

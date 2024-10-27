@@ -57,7 +57,7 @@ TTTabHider::TTTabHider () : FoldableToolPanel(this,"tttabhider",M("TP_TT_TAB_HID
 
 
   buttonSave = Gtk::manage(new Gtk::Button());
-  buttonSave->set_image (*Gtk::manage(new RTImage ("save.png")));
+  buttonSave->set_image (*Gtk::manage(new RTImage ("save")));
 
   lbHideFavorite = Gtk::manage(new Gtk::Label(M("TP_TT_HIDE_FAVORITE")));
   cbHideFavorite = Gtk::manage(new Gtk::CheckButton());
@@ -335,7 +335,7 @@ Glib::ustring TTTabHider::themeExport()
   Glib::ustring metadataSettings = getToolName() + ":"  + "metadata:";
   Glib::ustring usefulSettings = getToolName() + ":"  + "useful:";
 */
-  favSettings       += "visible " + env->getToolPanelNotebook()->get_nth_page(0)->get_visible() ?  "1": "0"; 
+  favSettings       += "visible " + (env->getToolPanelNotebook()->get_nth_page(0)->get_visible()) ?  "1": "0"; 
 /*  exposureSettings  += "visible " + cbHideExposure->get_active()  ?  "1": "0";  
   detailsSettings   += "visible " + cbHideDetails->get_active()  ?  "1": "0";
   colorSettings     += "visible " + cbHideColor->get_active()  ?  "1": "0";

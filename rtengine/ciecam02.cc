@@ -229,7 +229,7 @@ float Ciecam02::achromatic_response_to_whitefloat ( float x, float y, float z, f
     gpa = nonlinear_adaptationfloat ( gp, fl );
     bpa = nonlinear_adaptationfloat ( bp, fl );
 
-    return ((2.0f * rpa) + gpa + ((1.0f / 20.0f) * bpa) - 0.305f) * nbb;
+    return ((2.0f * rpa) + gpa + (0.05f * bpa) - 0.305f) * nbb;
 }
 
 void Ciecam02::xyz_to_cat02float ( float &r, float &g, float &b, float x, float y, float z, int c16, float plum)
@@ -738,7 +738,7 @@ void Ciecam02::jzczhzxyz (double &x, double &y, double &z, double jz, double az,
     Lp = Iz + 0.138605043271539 * az + 0.0580473161561189 * bz;
     Mp = Iz - 0.138605043271539 * az - 0.0580473161561189 * bz;
     Sp = Iz - 0.0960192420263189 * az - 0.811891896056039 * bz;
-    //I change optionnaly 10000 for pl function of la(absolute luminance) default 10000
+    //I change optionally 10000 for pl function of la(absolute luminance) default 10000
    
     tmp = pow(Lp, Jzazbz_pi);
     if(std::isnan(tmp)) {//to avoid crash
