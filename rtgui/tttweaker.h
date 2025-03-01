@@ -81,6 +81,8 @@ public:
 // implement these to load / save ttp profiles
     void themeImport(std::ifstream& myfile);
     Glib::ustring themeExport();
+
+    void check_exif();
 };
 
 #endif

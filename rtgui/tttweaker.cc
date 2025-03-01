@@ -24,6 +24,7 @@
 #include <chrono>
 #include <thread>
 #include <fstream>
+#include <exiv2/exiv2.hpp>
 
 using namespace rtengine;
 using namespace rtengine::procparams;
@@ -204,6 +205,7 @@ void TTTweaker::react(FakeProcEvent ev)
     if ((rotate != nullptr)
     && (coarse != nullptr))
     {
+      check_exif(); 
       Glib::ustring s_burst = env->getExifVariable("Exif:MakerNote:BurstMode");
       printf("DEBUG: Exif:MakerNote:BurstMode= %s \n", s_burst.c_str());
       if (s_burst == "0")
@@ -453,5 +455,96 @@ void TTTweaker::themeImport(std::ifstream& myfile)
      }
     }
   }
+}
+
+std::string getOrientationDescription(int orientation) {
+    switch (orientation) {
+        case 1: return "Horizontal (normal)";
+        case 2: return "Mirrored horizontal";
+        case 3: return "Upside-down (180°)";
+        case 4: return "Mirrored vertical";
+        case 5: return "Mirrored horizontal + 90° CW";
+        case 6: return "Rotated 90° CW";
+        case 7: return "Mirrored horizontal + 270° CW";
+        case 8: return "Rotated 270° CW";
+        default: return "Unknown orientation"; 
+    }
+}
+
+void TTTweaker::check_exif()
+{
+ std::string cheminImage = env->getVarAsString("Fname");
+ try {
+        Exiv2::Image::AutoPtr image = Exiv2::ImageFactory::open(cheminImage);
+        image->readMetadata();
+        Exiv2::ExifData &exifData = image->exifData();
+
+        if (exifData.empty()) {
+            std::cerr << "Pas de données EXIF trouvées !" << std::endl;
+            return ;
+        }
+
+
+// this code is used to find the exif tag to seek if needed
+/*
+ // tthis code
+         for (const auto& exif : exifData) {
+            std::cout << exif.key() << " = " << exif.value() << std::endl;
+        }
+*/
+
+//todo
+        // Recherche des tags Pitch et Roll
+
+        auto burstmode = exifData.findKey(Exiv2::ExifKey("Exif.Panasonic.BurstMode"));
+//       auto cameraorientation = exifData.findKey(Exiv2::ExifKey("Exif.Panasonic.CameraOrientation"));
+        auto cameraorientation = exifData.findKey(Exiv2::ExifKey("Exif.Image.Orientation"));
+        auto pitch = exifData.findKey(Exiv2::ExifKey("Exif.Panasonic.PitchAngle"));
+        auto roll = exifData.findKey(Exiv2::ExifKey("Exif.Panasonic.RollAngle"));
+
+        if (burstmode != exifData.end()) {
+            Glib::ustring s = burstmode->value().toString();
+            env->setVar(ROOT_EXIF_PREFIX + ":" + "Exif:MakerNote:BurstMode", s);
+
+            std::cout << "burstmode : " << burstmode->value() << std::endl;
+        } else {
+            std::cout << "bustmode non trouvé !" << std::endl;
+        } 
+
+        if (cameraorientation != exifData.end()) {  
+            int i = atoi(cameraorientation->value().toString().c_str());
+            std::string s =  getOrientationDescription (i);
+
+            std::cout << "cameraorientation r: " << cameraorientation->value() << std::endl;
+            std::cout << "cameraorientation i: " << i << std::endl;
+            std::cout << "cameraorientation s: " << s << std::endl;
+            env->setVar(ROOT_EXIF_PREFIX + ":" + "Exif:MakerNote:CameraOrientation", s);
+        } else {
+            std::cout << "cameraorientation non trouvé !" << std::endl;
+        }
+
+        if (pitch != exifData.end()) {
+            uint16_t u = exifData["Exif.Panasonic.PitchAngle"].toLong();  // Lecture en unsigned
+            int16_t v = static_cast<int16_t>(u);  // Conversion en signé
+            std::string s = std::to_string(v);
+            env->setVar(ROOT_EXIF_PREFIX + ":" +"Exif:MakerNote:PicthAngle", s);
+            std::cout << "Pitch Angle (s) : " << s << std::endl; // la valeur est multipliée par 10
+
+        } else {
+            std::cout << "Pitch Angle non trouvé !" << std::endl;
+        }
+
+        if (roll != exifData.end()) {
+            uint16_t u = exifData["Exif.Panasonic.RollAngle"].toLong();  // Lecture en unsigned
+            int16_t v = static_cast<int16_t>(u);  // Conversion en signé
+            std::string s = std::to_string(v);
+            env->setVar(ROOT_EXIF_PREFIX + ":" +"Exif:MakerNote:RollAngle", s);
+            std::cout << "Roll Angle (s) : " << s << std::endl; // la valeur est multipliée par 10
+        } else {
+            std::cout << "Roll Angle non trouvé !" << std::endl;
+        }
+    } catch (Exiv2::Error &e) {
+        std::cerr << "Erreur Exiv2 : " << e.what() << std::endl;
+    }
 }
 
