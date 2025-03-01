@@ -461,12 +461,12 @@ std::string getOrientationDescription(int orientation) {
     switch (orientation) {
         case 1: return "Horizontal (normal)";
         case 2: return "Mirrored horizontal";
-        case 3: return "Upside-down (180°)";
+        case 3: return "Rotate 180";
         case 4: return "Mirrored vertical";
         case 5: return "Mirrored horizontal + 90° CW";
-        case 6: return "Rotated 90° CW";
+        case 6: return "Rotate CW";
         case 7: return "Mirrored horizontal + 270° CW";
-        case 8: return "Rotated 270° CW";
+        case 8: return "Rotate CCW";
         default: return "Unknown orientation"; 
     }
 }
@@ -484,9 +484,8 @@ void TTTweaker::check_exif()
             return ;
         }
 
-
-// this code is used to find the exif tag to seek if needed
 /*
+// this code is used to find the exif tag to seek if needed
  // tthis code
          for (const auto& exif : exifData) {
             std::cout << exif.key() << " = " << exif.value() << std::endl;
