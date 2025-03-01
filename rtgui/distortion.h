@@ -67,4 +67,6 @@ public:
     void defishChanged (void);
 
     void setCamBasedEventsActive(bool active = true);
+    void setDistorValue(double value);
+    double getDistorValue();
 };

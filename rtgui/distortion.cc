@@ -160,6 +160,22 @@ void Distortion::idPressed ()
     }
 }
 
+void Distortion::setDistorValue(double value) 
+{       
+  if (!batchMode) {
+    if (rlistener) {
+      distor->setValue(value);
+      adjusterChanged (distor, value);
+    }
+  }
+}
+
+double Distortion::getDistorValue()
+{
+  return distor->getValue();
+}
+
+
 void Distortion::defishChanged()
 {
     if (listener) {

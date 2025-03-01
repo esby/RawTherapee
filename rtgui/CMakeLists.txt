@@ -184,6 +184,7 @@ set(NONCLISOURCEFILES
     ttudlrhider.cc 
     tttabhider.cc 
     tttweaker.cc
+    ttlenscorrector.cc
     ttvardisplayer.cc
     ttisoprofiler.cc
     )

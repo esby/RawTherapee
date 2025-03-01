@@ -101,6 +101,7 @@
 #include "ttudlrhider.h"
 #include "tttabhider.h"
 #include "tttweaker.h"
+#include "ttlenscorrector.h"
 #include "ttvardisplayer.h"
 #include "ttisoprofiler.h"
 #include "toolbar.h"

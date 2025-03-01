@@ -501,6 +501,7 @@ for (const auto &panel_tool_layout : getDefaultToolLayout()) {
     addPanel(usefulPanel, Gtk::manage(new TTFavoriteColorChooser()));
     addPanel(usefulPanel, Gtk::manage(new TTPanelColorChooser()));
     addPanel(usefulPanel, Gtk::manage(new TTUDLRHider()));
+    addPanel(usefulPanel, Gtk::manage(new TTLensCorrector()));
     addPanel(usefulPanel, Gtk::manage(new TTTweaker()));
     addPanel(usefulPanel, Gtk::manage(new TTVarDisplayer()));
 
@@ -1551,6 +1552,8 @@ void ToolPanelCoordinator::initImage(rtengine::StagedImageProcessor* ipc_, bool 
         env->setVar("Speed", Glib::ustring(idata->shutterToString(idata->getShutterSpeed())));
         env->setVar("FLen", idata->getFocalLen());
         env->setVar("Ecomp", Glib::ustring(idata->expcompToString(idata->getExpComp(),true)));
+        env->setVar("Lens", idata->getLens());
+        env->setVar("Camera", idata->getCamera());
 //        env->setVar("Fname", openThm->getFileName());
 //todo search another way of loading it
         env->setVar("Width", ipc->getFullWidth());
