@@ -113,6 +113,7 @@ void TTTweaker::deploy()
 {
   FoldableToolPanel::deploy();
 
+  env->setVar("disableAutoDistortionCorrection",false);
 
   for (size_t i=0; i< env->getToolPanels().size() ; i++)
   {
@@ -181,8 +182,6 @@ void TTTweaker::react(FakeProcEvent ev)
     printf("exiting the application for benchmark purpose\n");
     exit(0); // because gtk_main_quit() will not work here...
   }
-   
-
   
   if (cbAutoDistortionCorrect->get_active())
   {
@@ -190,8 +189,12 @@ void TTTweaker::react(FakeProcEvent ev)
    || (ev == FakeEvProfileChanged))
       if (distortion != nullptr)
       {
-          printf("Clicking on auto distorsion correction button.\n");
-          distortion->idPressed();
+          bool d = env->getVarAsBool("disableAutoDistortionCorrection");
+          if ( !d )
+          {
+            printf("Clicking on auto distorsion correction button.\n");
+            distortion->idPressed();
+          }
       }
   }
 
