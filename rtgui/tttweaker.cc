@@ -475,7 +475,7 @@ void TTTweaker::check_exif()
 {
  std::string cheminImage = env->getVarAsString("Fname");
  try {
-        Exiv2::Image::AutoPtr image = Exiv2::ImageFactory::open(cheminImage);
+        std::unique_ptr<Exiv2::Image> image = Exiv2::ImageFactory::open(cheminImage);
         image->readMetadata();
         Exiv2::ExifData &exifData = image->exifData();
 
@@ -523,7 +523,13 @@ void TTTweaker::check_exif()
         }
 
         if (pitch != exifData.end()) {
-            uint16_t u = exifData["Exif.Panasonic.PitchAngle"].toLong();  // Lecture en unsigned
+           auto datum = exifData["Exif.Panasonic.PitchAngle"];
+           uint16_t u = 0;
+
+           if (datum.count() > 0) {
+             // Récupère la première valeur convertie en int
+             u = static_cast<uint16_t>(datum.toInt64());   // ou datum.toInt64() si Exiv2 < 0.28
+            }
             int16_t v = static_cast<int16_t>(u);  // Conversion en signé
             std::string s = std::to_string(v);
             env->setVar(ROOT_EXIF_PREFIX + ":" +"Exif:MakerNote:PicthAngle", s);
@@ -534,7 +540,14 @@ void TTTweaker::check_exif()
         }
 
         if (roll != exifData.end()) {
-            uint16_t u = exifData["Exif.Panasonic.RollAngle"].toLong();  // Lecture en unsigned
+            auto datum = exifData["Exif.Panasonic.RollAngle"];
+           uint16_t u = 0;
+
+           if (datum.count() > 0) {
+             // Récupère la première valeur convertie en int
+             u = static_cast<uint16_t>(datum.toInt64());   // ou datum.toInt64() si Exiv2 < 0.28
+            }
+
             int16_t v = static_cast<int16_t>(u);  // Conversion en signé
             std::string s = std::to_string(v);
             env->setVar(ROOT_EXIF_PREFIX + ":" +"Exif:MakerNote:RollAngle", s);
