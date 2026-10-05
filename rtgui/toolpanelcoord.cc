@@ -276,7 +276,18 @@ const ToolPanelCoordinator::ToolLayout PANEL_TOOLS = {
 
 std::unordered_map<std::string, Tool> ToolPanelCoordinator::toolNamesReverseMap;
 
-ToolPanelCoordinator::ToolPanelCoordinator (bool batch, bool benchmark) : ipc (nullptr), favoritePanelSW(nullptr), hasChanged (false), editDataProvider (nullptr), photoLoadedOnce(false)
+ToolPanelCoordinator::ToolPanelCoordinator (bool batch, bool benchmark) :
+    env(nullptr),
+    isReaction(false),
+    useRtFav(false),
+    favoriteCount(0),
+    ipc (nullptr),
+    favoritePanelSW(nullptr),
+    hasChanged (false),
+    batch(batch), // was lost during a merge: the member stayed uninitialized
+    editDataProvider (nullptr),
+    photoLoadedOnce(false),
+    prevPage(nullptr)
 {
     useRtFav = false;
 
@@ -451,7 +462,8 @@ ToolPanelCoordinator::ToolPanelCoordinator (bool batch, bool benchmark) : ipc (n
     addfavoritePanel (rawPanel, flatfield);
     addfavoritePanel (rawPanel, pdSharpening);
 
-    int favoriteCount = 0;
+//    int favoriteCount = 0; // this local variable was hiding the class member
+    favoriteCount = 0;
     if (useRtFav){
       for(auto it = favorites.begin(); it != favorites.end(); ++it) {
         if (*it) {
@@ -676,6 +688,7 @@ for (const auto &panel_tool_layout : getDefaultToolLayout()) {
 
     toolBar = new ToolBar();
     toolBar->setToolBarListener(this);
+    prevPage = toolPanelNotebook->get_nth_page(0); // restored from upstream, used by notebookPageChanged
     toolPanelNotebook->signal_switch_page().connect(sigc::mem_fun(*this,  &ToolPanelCoordinator::on_notebook_switch_page) );
 }
 
