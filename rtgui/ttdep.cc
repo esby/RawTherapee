@@ -43,10 +43,13 @@ bool sortByOriW(Gtk::Widget* t1, Gtk::Widget* t2)
 */
 
 
+// note: std::sort requires a strict weak ordering.
+// ignorable panels are equivalent between themselves and sorted after the others.
 bool sortByFav(ToolPanel* t1, ToolPanel* t2)
 {
-  if (t1->canBeIgnored()
-  || t2->canBeIgnored()) return false;
+  const bool i1 = t1->canBeIgnored();
+  const bool i2 = t2->canBeIgnored();
+  if (i1 || i2) return (!i1 && i2);
 
   return (t1->getPosFav() < t2->getPosFav());
 }
@@ -54,8 +57,9 @@ bool sortByFav(ToolPanel* t1, ToolPanel* t2)
 
 bool sortByOri(ToolPanel* t1, ToolPanel* t2)
 {
-  if (t1->canBeIgnored()
-  || t2->canBeIgnored()) return false;
+  const bool i1 = t1->canBeIgnored();
+  const bool i2 = t2->canBeIgnored();
+  if (i1 || i2) return (!i1 && i2);
   
   
   if (t1->getOriginalBox()->getBoxName() == t2->getOriginalBox()->getBoxName())

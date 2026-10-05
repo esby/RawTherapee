@@ -414,7 +414,7 @@ Glib::ustring TTSaver::themeExport()
 
   std::vector<ToolPanel*> panels = env->getToolPanels();
 
-  std::sort (panels.begin(), panels.end(), sortByFav);
+  std::stable_sort (panels.begin(), panels.end(), sortByFav);
 
   for (size_t i=0; i<panels.size(); i++)
   {
@@ -428,7 +428,7 @@ Glib::ustring TTSaver::themeExport()
     }
   }
 
-  std::sort (panels.begin(), panels.end(), sortByOri);
+  std::stable_sort (panels.begin(), panels.end(), sortByOri);
 
   for (size_t i=0; i<panels.size(); i++)
   {

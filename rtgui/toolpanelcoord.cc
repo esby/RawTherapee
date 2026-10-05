@@ -2279,7 +2279,7 @@ void ToolPanelCoordinator::on_notebook_switch_page(Gtk::Widget* /* page */, guin
     // handling favorite panels
     std::vector<ToolPanel*> panels = env->getToolPanels();
 
-    std::sort (panels.begin(), panels.end(), sortByFav);
+    std::stable_sort (panels.begin(), panels.end(), sortByFav);
 
     for (std::vector<ToolPanel*>::iterator it = panels.begin() ; it != panels.end(); ++it)
     {
@@ -2293,7 +2293,7 @@ void ToolPanelCoordinator::on_notebook_switch_page(Gtk::Widget* /* page */, guin
     }
 
     panels = env->getToolPanels();
-    std::sort (panels.begin(), panels.end(), sortByFav);
+    std::stable_sort (panels.begin(), panels.end(), sortByFav);
  
     /* - unused debug code
     for (std::vector<ToolPanel*>::iterator it1 = panels.begin() ; it1 != panels.end(); ++it1)
@@ -2325,7 +2325,7 @@ void ToolPanelCoordinator::on_notebook_switch_page(Gtk::Widget* /* page */, guin
     // second part normal panels are handled
     panels = env->getToolPanels();
 
-    std::sort (panels.begin(), panels.end(), sortByOri);
+    std::stable_sort (panels.begin(), panels.end(), sortByOri);
 
     for (std::vector<ToolPanel*>::iterator it = panels.begin() ; it != panels.end(); ++it)
     {
