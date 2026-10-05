@@ -58,7 +58,13 @@ int ToolVBoxDef::getPos(MovableToolPanel* panel) {
 
 MovableToolPanel* ToolVBoxDef::getPanel(int pos) {
  panelList = box->get_children ();
- MovableToolPanel* p = static_cast<MyExpander*>(panelList[pos])->getPanel();
+ // pos can be -1 (panel not found) or point to a non-expander child
+ // (separator, panel ending), so it is checked before being used.
+ if ((pos < 0) || (pos >= (int)panelList.size()))
+   return nullptr;
+// MovableToolPanel* p = static_cast<MyExpander*>(panelList[pos])->getPanel();
+ MyExpander* exp = dynamic_cast<MyExpander*>(panelList[pos]);
+ MovableToolPanel* p = (exp != nullptr) ? exp->getPanel() : nullptr;
    return p;
 }
 

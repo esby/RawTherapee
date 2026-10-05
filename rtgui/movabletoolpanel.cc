@@ -141,14 +141,19 @@ void MovableToolPanel::moveUp () {
      box = originalBox;
   }
   pos = box->getPos(this);
+  if (pos < 0) // the panel is not in this box (trash tab, or env->state not in sync)
+    return;
   npos = pos-1;
 // count = box->size();
 
-  if (npos > -1){
+//  if (npos > -1){
+  if ((npos > -1) && (box->getPanel(npos) != nullptr)){
 //     printf("- realized.\n");
      box->reorder_child(*getExpander(), npos); 
      updateLabelInfo();
-     box->getPanel(pos)->updateLabelInfo(); // since we swapped it's pos and not npos
+     MovableToolPanel* other = box->getPanel(pos); // since we swapped it's pos and not npos
+     if (other != nullptr)
+       other->updateLabelInfo();
   }//else  printf("- canceled.\n");
 }
 
@@ -166,14 +171,21 @@ void MovableToolPanel::moveDown () {
      box = originalBox;
   }
   pos = box->getPos(this);
+  if (pos < 0) // the panel is not in this box (trash tab, or env->state not in sync)
+    return;
   npos = pos+1;
   count = box->size();
 
-  if (npos < count-2){ // since there are two elements at the end...
+//  if (npos < count-2){ // since there are two elements at the end...
+  // the next child must be a panel: main tabs end with a separator and an ornament,
+  // sub-blocks (lensgeom, sensorbayer...) end with a panel.
+  if ((npos < count) && (box->getPanel(npos) != nullptr)){
 //     printf("- realized.\n");
      box->reorder_child(*getExpander(), npos);     
      updateLabelInfo();
-     box->getPanel(pos)->updateLabelInfo(); // since we swapped it's pos and not npos
+     MovableToolPanel* other = box->getPanel(pos); // since we swapped it's pos and not npos
+     if (other != nullptr)
+       other->updateLabelInfo();
   }//else  printf("- canceled.\n");
 
 }
