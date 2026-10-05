@@ -325,6 +325,7 @@ ToolPanelCoordinator::ToolPanelCoordinator (bool batch, bool benchmark) : ipc (n
     coarse              = Gtk::manage(new CoarsePanel ());
     toneCurve           = Gtk::manage(new ToneCurve ());
     shadowshighlights   = Gtk::manage(new ShadowsHighlights ());
+    toneEqualizer       = Gtk::manage(new ToneEqualizer ());
     impulsedenoise      = Gtk::manage(new ImpulseDenoise ());
     defringe            = Gtk::manage(new Defringe ());
     spot                = Gtk::manage(new Spot ());
@@ -397,6 +398,7 @@ ToolPanelCoordinator::ToolPanelCoordinator (bool batch, bool benchmark) : ipc (n
     addfavoritePanel (colorPanel, chmixer);
     addfavoritePanel (colorPanel, blackwhite);
     addfavoritePanel (exposurePanel, shadowshighlights);
+    addfavoritePanel (exposurePanel, toneEqualizer);
     addfavoritePanel (detailsPanel, spot);
     addfavoritePanel (detailsPanel, sharpening);
     addfavoritePanel (detailsPanel, localContrast);
