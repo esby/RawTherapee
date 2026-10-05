@@ -92,6 +92,11 @@ public:
     void save_clicked (GdkEventButton* event);
 
     void themeImport(std::ifstream& myfile);
+
+    // the tabs are located by the name of their box instead of a hardcoded index,
+    // since Locallab and Metadata are not present in the batch editor.
+    Gtk::Widget* getTabPage(const Glib::ustring& boxName);
+    void setTabVisible(const Glib::ustring& boxName, bool visible);
     Glib::ustring themeExport();
 };
 

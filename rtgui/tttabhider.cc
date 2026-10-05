@@ -127,6 +127,7 @@ TTTabHider::TTTabHider () : FoldableToolPanel(this,"tttabhider",M("TP_TT_TAB_HID
   pack_start(*themeBox8, Gtk::PACK_SHRINK, 0);
   pack_start(*themeBox9, Gtk::PACK_SHRINK, 0);
   pack_start(*themeBox10, Gtk::PACK_SHRINK, 0);
+  pack_start(*themeBox11, Gtk::PACK_SHRINK, 0); // was missing since themeBox11 was introduced
 
   reacted = false;
 
@@ -207,33 +208,71 @@ if (event->button != 1) {
 
 }
 
+Gtk::Widget* TTTabHider::getTabPage(const Glib::ustring& boxName)
+{
+  ToolVBox* box = nullptr;
+  if (boxName == PANEL_NAME_FAVORITE)
+    box = env->getFavoritePanel();
+  else
+  {
+    for (auto b : env->getVBoxList())
+    {
+      if (b->getBoxName() == boxName)
+      {
+        box = b;
+        break;
+      }
+    }
+  }
+  if ((box == nullptr) || (box->getParentSW() == nullptr))
+    return nullptr;
+
+  Gtk::Notebook* notebook = env->getToolPanelNotebook();
+  int page_num = notebook->page_num(*box->getParentSW());
+  if (page_num < 0) // the tab is not in the notebook (ex: locallab in batch mode)
+    return nullptr;
+  return notebook->get_nth_page(page_num);
+}
+
+void TTTabHider::setTabVisible(const Glib::ustring& boxName, bool visible)
+{
+  Gtk::Widget* page = getTabPage(boxName);
+  if (page != nullptr)
+    page->set_visible(visible);
+}
+
 void TTTabHider::hide_favorite_clicked()
 { 
-  env->getToolPanelNotebook()->get_nth_page(0)->set_visible(not cbHideFavorite->get_active() );
+//  env->getToolPanelNotebook()->get_nth_page(0)->set_visible(not cbHideFavorite->get_active() );
+  setTabVisible(PANEL_NAME_FAVORITE, not cbHideFavorite->get_active());
   options.TTPHideFavorite = cbHideFavorite->get_active();
 }
 
 void TTTabHider::hide_exposure_clicked ()
 { 
-  env->getToolPanelNotebook()->get_nth_page(1)->set_visible(not cbHideExposure->get_active() );
+//  env->getToolPanelNotebook()->get_nth_page(1)->set_visible(not cbHideExposure->get_active() );
+  setTabVisible(PANEL_NAME_EXPOSURE, not cbHideExposure->get_active());
   options.TTPHideExposure = cbHideExposure->get_active();
 }
 
 void TTTabHider::hide_details_clicked ()
 { 
-  env->getToolPanelNotebook()->get_nth_page(2)->set_visible(not cbHideDetails->get_active() );
+//  env->getToolPanelNotebook()->get_nth_page(2)->set_visible(not cbHideDetails->get_active() );
+  setTabVisible(PANEL_NAME_DETAILS, not cbHideDetails->get_active());
   options.TTPHideDetails = cbHideDetails->get_active();
 }
 
 void TTTabHider::hide_color_clicked ()
 { 
-  env->getToolPanelNotebook()->get_nth_page(3)->set_visible(not cbHideColor->get_active() );
+//  env->getToolPanelNotebook()->get_nth_page(3)->set_visible(not cbHideColor->get_active() );
+  setTabVisible(PANEL_NAME_COLOR, not cbHideColor->get_active());
   options.TTPHideColor = cbHideColor->get_active();
 }
 
 void TTTabHider::hide_advanced_clicked ()
 { 
-  env->getToolPanelNotebook()->get_nth_page(4)->set_visible(not cbHideAdvanced->get_active() );
+//  env->getToolPanelNotebook()->get_nth_page(4)->set_visible(not cbHideAdvanced->get_active() );
+  setTabVisible(PANEL_NAME_WAVELET, not cbHideAdvanced->get_active());
   options.TTPHideAdvanced = cbHideAdvanced->get_active();
 }
 
@@ -241,19 +280,22 @@ void TTTabHider::hide_local_clicked ()
 {
   printf("hiding local clicked, cbHideLocal=%d options.TTPHideLocal=%d \n",   
     cbHideLocal->get_active(), options.TTPHideLocal );
-  env->getToolPanelNotebook()->get_nth_page(5)->set_visible(not cbHideLocal->get_active() );
+//  env->getToolPanelNotebook()->get_nth_page(5)->set_visible(not cbHideLocal->get_active() );
+  setTabVisible(PANEL_NAME_LOCALLAB, not cbHideLocal->get_active()); // absent in batch mode: nothing done
   options.TTPHideLocal = cbHideLocal->get_active();
 }
 
 void TTTabHider::hide_transform_clicked ()
 { 
-  env->getToolPanelNotebook()->get_nth_page(6)->set_visible(not cbHideTransform->get_active() );
+//  env->getToolPanelNotebook()->get_nth_page(6)->set_visible(not cbHideTransform->get_active() );
+  setTabVisible(PANEL_NAME_TRANSFORM, not cbHideTransform->get_active());
   options.TTPHideTransform = cbHideTransform->get_active();
 }
 
 void TTTabHider::hide_raw_clicked ()
 { 
-  env->getToolPanelNotebook()->get_nth_page(7)->set_visible(not cbHideRaw->get_active() );
+//  env->getToolPanelNotebook()->get_nth_page(7)->set_visible(not cbHideRaw->get_active() );
+  setTabVisible(PANEL_NAME_RAW, not cbHideRaw->get_active());
   options.TTPHideRaw = cbHideRaw->get_active();
 }
 
@@ -261,27 +303,37 @@ void TTTabHider::hide_metadata_clicked ()
 { 
   if (env->getMetadataState()) 
   {
-    env->getToolPanelNotebook()->get_nth_page(8)->set_visible(not cbHideMetadata->get_active() );
+//    env->getToolPanelNotebook()->get_nth_page(8)->set_visible(not cbHideMetadata->get_active() );
+    // the metadata tab has no ToolVBox: it is the page following the raw tab.
+    Gtk::Widget* rawPage = getTabPage(PANEL_NAME_RAW);
+    if (rawPage != nullptr)
+    {
+      Gtk::Widget* page = env->getToolPanelNotebook()->get_nth_page(env->getToolPanelNotebook()->page_num(*rawPage) + 1);
+      if (page != nullptr)
+        page->set_visible(not cbHideMetadata->get_active() );
+    }
   }
   options.TTPHideMetadata= cbHideMetadata->get_active();
 }
 
 void TTTabHider::hide_useful_clicked ()
 { 
-  int increment = 0;
-  if (env->getMetadataState()) 
-     increment = 1;
-  env->getToolPanelNotebook()->get_nth_page(8+increment)->set_visible(not cbHideUseful->get_active() );
+//  int increment = 0;
+//  if (env->getMetadataState()) 
+//     increment = 1;
+//  env->getToolPanelNotebook()->get_nth_page(8+increment)->set_visible(not cbHideUseful->get_active() );
+  setTabVisible(PANEL_NAME_USEFUL, not cbHideUseful->get_active());
   options.TTPHideUseful = cbHideUseful->get_active();
 }
 
 
 void TTTabHider::hide_trash_clicked()
 {
-  int increment = 0;
-  if (env->getMetadataState()) 
-     increment = 1;
-  env->getToolPanelNotebook()->get_nth_page(9+increment)->set_visible(not cbHideTrash->get_active() );
+//  int increment = 0;
+//  if (env->getMetadataState()) 
+//     increment = 1;
+//  env->getToolPanelNotebook()->get_nth_page(9+increment)->set_visible(not cbHideTrash->get_active() );
+  setTabVisible(PANEL_NAME_TRASH, not cbHideTrash->get_active());
   options.TTPHideTrash = cbHideTrash->get_active();
 
 /* old code
@@ -335,7 +387,10 @@ Glib::ustring TTTabHider::themeExport()
   Glib::ustring metadataSettings = getToolName() + ":"  + "metadata:";
   Glib::ustring usefulSettings = getToolName() + ":"  + "useful:";
 */
-  favSettings       += "visible " + (env->getToolPanelNotebook()->get_nth_page(0)->get_visible()) ?  "1": "0"; 
+//  favSettings       += "visible " + (env->getToolPanelNotebook()->get_nth_page(0)->get_visible()) ?  "1": "0"; 
+  // note: without parenthesis, the ternary operator was applied to ("visible " + bool), a pointer, so "1" was always written.
+  Gtk::Widget* favPage = getTabPage(PANEL_NAME_FAVORITE);
+  favSettings       += "visible " + Glib::ustring(((favPage != nullptr) && favPage->get_visible()) ? "1" : "0");
 /*  exposureSettings  += "visible " + cbHideExposure->get_active()  ?  "1": "0";  
   detailsSettings   += "visible " + cbHideDetails->get_active()  ?  "1": "0";
   colorSettings     += "visible " + cbHideColor->get_active()  ?  "1": "0";
@@ -345,7 +400,9 @@ Glib::ustring TTTabHider::themeExport()
   metadataSettings  += "visible " + cbHideMetadata->get_active()  ?  "1": "0";
   usefulSettings    += "visible " + cbHideUseful->get_active()  ?  "1": "0";
 */
-  traSettings       += "visible " + cbHideTrash->get_active()  ?  "1": "0";
+//  traSettings       += "visible " + cbHideTrash->get_active()  ?  "1": "0";
+  Gtk::Widget* traPage = getTabPage(PANEL_NAME_TRASH);
+  traSettings       += "visible " + Glib::ustring(((traPage != nullptr) && traPage->get_visible()) ? "1" : "0");
 
   return favSettings + "\n" 
 /*      +  exposureSettings + "\n"
@@ -383,18 +440,30 @@ void TTTabHider::themeImport(std::ifstream& myfile)
           //todo this needs a recode to take all panels into account
           if (token == "favorite")
           {
+            // old profiles contain "favorite:1", new ones "favorite:visible 1": the last token is the value.
+            std::string value;
             while(getline(tokensplitter, token, ' '))
             {
-              env->getToolPanelNotebook()->get_nth_page(0)->set_visible(token == "1"); 
+//              env->getToolPanelNotebook()->get_nth_page(0)->set_visible(token == "1"); 
+              if (!token.empty())
+                value = token;
             }
+            if (!value.empty())
+              cbHideFavorite->set_active(value != "1"); // triggers hide_favorite_clicked()
           }
 
           if (token == "trash")
           { 
+            // NB_PANEL-1 was the useful tab when the metadata tab is present.
+            std::string value;
             while(getline(tokensplitter, token, ' '))
             {
-              env->getToolPanelNotebook()->get_nth_page(NB_PANEL-1)->set_visible(token== "1");
+//              env->getToolPanelNotebook()->get_nth_page(NB_PANEL-1)->set_visible(token== "1");
+              if (!token.empty())
+                value = token;
             }
+            if (!value.empty())
+              cbHideTrash->set_active(value != "1"); // triggers hide_trash_clicked()
           }
         }
       }else

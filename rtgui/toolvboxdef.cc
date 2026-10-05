@@ -29,6 +29,9 @@ ToolVBoxDef::ToolVBoxDef()
    prevBox = nullptr;
    nextBox = nullptr;
    boxName = "undefined";
+   envTC = nullptr;
+   parentContainer = nullptr;
+   parentSWContainer = nullptr;
 }
 
 int ToolVBoxDef::size() {
