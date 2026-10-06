@@ -48,7 +48,9 @@ TTSeriesWB::TTSeriesWB() : FoldableToolPanel(this, "TTSeriesWB", M("TT_SERIESWB_
   whitebalance = nullptr;
 
   // positive shift: lower temperature, cooler rendering (ex: 5044 K + 15.4 mireds = 4679 K)
-  adjMired = Gtk::manage(new Adjuster(M("TT_SERIESWB_MIRED"), SERIESWB_MIN_MIRED, SERIESWB_MAX_MIRED, 0.5, 0.0));
+//  adjMired = Gtk::manage(new Adjuster(M("TT_SERIESWB_MIRED"), SERIESWB_MIN_MIRED, SERIESWB_MAX_MIRED, 0.5, 0.0));
+  // step 0.1: with 0.5, a learned shift was rounded enough to change the reference image itself
+  adjMired = Gtk::manage(new Adjuster(M("TT_SERIESWB_MIRED"), SERIESWB_MIN_MIRED, SERIESWB_MAX_MIRED, 0.1, 0.0));
   adjMired->setAdjusterListener(this);
   adjMired->set_tooltip_text(M("TT_SERIESWB_MIRED_TOOLTIP"));
   pack_start(*adjMired, Gtk::PACK_SHRINK, 0);
@@ -367,9 +369,14 @@ void TTSeriesWB::computeTarget(double camTemp, double camGreen, int& temp, doubl
   green = std::max(SERIESWB_MINGREEN, std::min(SERIESWB_MAXGREEN, camGreen * adjGreen->getValue()));
 }
 
+// compared in mireds: the rounding of the shift (0.1 mired) and of the temperature (1 K) must not
+// make an image, for instance the reference of a learned shift, look different from its series
 bool TTSeriesWB::sameWB(int t1, double g1, int t2, double g2)
 {
-  return (std::abs(t1 - t2) <= 1) && (std::fabs(g1 - g2) <= 0.001);
+//  return (std::abs(t1 - t2) <= 1) && (std::fabs(g1 - g2) <= 0.001);
+  if ((t1 <= 0) || (t2 <= 0) || (g2 <= 0.0))
+    return false;
+  return (std::fabs(1000000.0 / t1 - 1000000.0 / t2) <= 0.15) && (std::fabs(g1 / g2 - 1.0) <= 0.002);
 }
 
 void TTSeriesWB::setInfo(const Glib::ustring& text)
@@ -467,6 +474,11 @@ void TTSeriesWB::learnFromCurrentImage()
   double mired = 1000000.0 / wb.temperature - 1000000.0 / camTemp;
 //  double green = wb.green / camGreen;
   double green = cbLearnTint->get_active() ? wb.green / camGreen : 1.0;
+
+  // rounded to the precision of the adjusters: the tool, the server and the reference image use the
+  // same value (the reference keeps its white balance, see sameWB)
+  mired = std::round(mired * 10.0) / 10.0;
+  green = std::round(green * 1000.0) / 1000.0;
 
   // the values of the current and camera white balances are shown, so the result can be checked
   Glib::ustring values = Glib::ustring::compose(M("TT_SERIESWB_VALUES"),
