@@ -838,3 +838,42 @@ void ToolPanelCoordinator::esbyConnectSignals()
 {
     toolPanelNotebook->signal_switch_page().connect(sigc::mem_fun(*this,  &ToolPanelCoordinator::on_notebook_switch_page) );
 }
+
+// ---------------------------------------------------------------------------------------
+// hooks called by EditorPanel (the code was moved from editorpanel.cc)
+// ---------------------------------------------------------------------------------------
+
+// EditorPanel::open(): image opened
+void ToolPanelCoordinator::esbyImageOpened(int pp3versionFromThumbnail)
+{
+    int pp3version = pp3versionFromThumbnail;
+    env->setVar("pp3version", pp3version );
+    if( options.rtSettings.verbose )
+      printf("pp3version transmitted by variables = %i \n", pp3version);
+
+    // we react to the data added
+    doReact(FakeEvExifTransmitted);
+    doReact(FakeEvPP3Transmitted);
+}
+
+// EditorPanel::procParamsChanged()
+void ToolPanelCoordinator::esbyEventReceived(const rtengine::ProcEvent& ev)
+{
+//  printf("ev=%i %s\n",ev, descr.c_str());
+// we avoid transmitting all events to the structure.
+// ideally we should maintain a list of event monitored and check against it.
+//todo
+    if (ev == rtengine::EvPhotoLoaded)
+      doReact(FakeEvPhotoLoaded);
+    if (ev == rtengine::EvProfileChanged)
+      doReact(FakeEvProfileChanged);
+}
+
+// EditorPanel::info_toggled()
+void ToolPanelCoordinator::esbySetFileName(const Glib::ustring& fileName)
+{
+    // note: we will react later, on pp3 version tranmission
+    if( options.rtSettings.verbose )
+      printf("filename value transmitted by variables \n");
+    env->setVar("Fname",fileName);
+}

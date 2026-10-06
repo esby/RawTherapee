@@ -539,6 +539,9 @@ public:
     void linkPanelRing();
     void registerToolsFromLayout();
     void esbyTransmitImageData(const rtengine::FramesMetaData* pMetaData);
+    void esbyImageOpened(int pp3versionFromThumbnail);
+    void esbyEventReceived(const rtengine::ProcEvent& ev);
+    void esbySetFileName(const Glib::ustring& fileName);
     void esbyCreatePanels(bool benchmark);
     void esbyRegisterTools();
     void esbyCreateUsefulTools();

@@ -42,8 +42,6 @@
 #include "rtappchooserdialog.h"
 #include "thumbnail.h"
 #include "toolpanelcoord.h"
-#include "environment.h"
-#include "rtdef.h"
 
 #ifdef _WIN32
 #include "windows.h"
@@ -1312,14 +1310,7 @@ void EditorPanel::open (Thumbnail* tmb, rtengine::InitialImage* isrc)
 
     history->resetSnapShotNumber();
     navigator->setInvalid(ipc->getFullWidth(),ipc->getFullHeight());
-    int pp3version = tmb->getpp3version();
-    tpc->getEnv()->setVar("pp3version", pp3version );
-    if( options.rtSettings.verbose ) 
-      printf("pp3version transmitted by variables = %i \n", pp3version);
-
-    // we react to the data added
-    tpc->doReact(FakeEvExifTransmitted);
-    tpc->doReact(FakeEvPP3Transmitted);
+    tpc->esbyImageOpened(tmb->getpp3version()); // esby-hook: pp3 version, exif and pp3 reactions
 }
 
 void EditorPanel::close ()
@@ -1406,14 +1397,7 @@ void EditorPanel::procParamsChanged(
 
 //    if (ev!=EvPhotoLoaded)
 //        saveLabel->set_markup (Glib::ustring("<span foreground=\"#AA0000\" weight=\"bold\">") + M("MAIN_BUTTON_SAVE") + "</span>");
-//  printf("ev=%i %s\n",ev, descr.c_str());
-// we avoid transmitting all events to the structure.
-// ideally we should maintain a list of event monitored and check against it.
-//todo
-    if (ev == rtengine::EvPhotoLoaded)
-      tpc->doReact(FakeEvPhotoLoaded);
-    if (ev == rtengine::EvProfileChanged)
-      tpc->doReact(FakeEvProfileChanged);
+    tpc->esbyEventReceived(ev); // esby-hook: reactions of the esby tools to some events
 
     rtengine::eSensorType sensorType = isrc->getImageSource()->getSensorType();
 
@@ -1602,11 +1586,7 @@ void EditorPanel::info_toggled ()
                                               M ("QINFO_ISO"), idata->getISOSpeed(),
                                               Glib::ustring::format (std::setw (3), std::fixed, std::setprecision (2), idata->getFocalLen()));
 
-        // note: we will react later, on pp3 version tranmission
-        if( options.rtSettings.verbose ) 
-          printf("filename value transmitted by variables \n");
-        Environment* env = tpc->getEnv();
-        env->setVar("Fname",openThm->getFileName());
+        tpc->esbySetFileName(openThm->getFileName()); // esby-hook
 
         expcomp = Glib::ustring (idata->expcompToString (idata->getExpComp(), true)); // maskZeroexpcomp
 
