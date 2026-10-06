@@ -1,0 +1,3 @@
+# files compiled by Python when running esbywb.py or the tests
+__pycache__/
+*.pyc
