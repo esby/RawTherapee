@@ -41,7 +41,43 @@ TTVarDisplayer::TTVarDisplayer () : FoldableToolPanel(this,"ttvardisplayer",M("T
         vbox1->pack_start(*labelVar, Gtk::PACK_SHRINK, 0);
 
 	hboxr->pack_start(*vbox1, Gtk::PACK_EXPAND_WIDGET ,0);
+
+	// copies every transmitted variable to the clipboard
+	copyButton = Gtk::manage(new Gtk::Button(M("TT_VAR_DISPLAYER_COPY")));
+	copyButton->set_image(*Gtk::manage(new RTImage("copy")));
+	copyButton->set_always_show_image(true);
+	copyButton->set_tooltip_text(M("TT_VAR_DISPLAYER_COPY_TOOLTIP"));
+	copyButton->signal_clicked().connect(sigc::mem_fun(*this, &TTVarDisplayer::copy_clicked));
+	pack_start(*copyButton, Gtk::PACK_SHRINK, 0);
+
         pack_start(*hboxr, Gtk::PACK_SHRINK, 0);
+}
+
+void TTVarDisplayer::copy_clicked ()
+{
+	// one "name = value" line per variable, read from the environment at click time.
+	// empty variables are skipped (ex: exif values emptied when the previous image was replaced).
+	Glib::ustring text;
+	int count = 0;
+
+	for (size_t i=0; i<env->countVar(); i++)
+	{
+		RtVariable* d = env->getVariable(i);
+		if (d == nullptr)
+			continue;
+
+		Glib::ustring value = d->toString();
+		if (value.empty())
+			continue;
+
+		text += d->getName() + " = " + value + "\n";
+		count++;
+	}
+
+	Gtk::Clipboard::get()->set_text(text);
+
+	if (options.rtSettings.verbose)
+		printf("TTVarDisplayer: %i variables copied to the clipboard\n", count);
 }
 
 void TTVarDisplayer::deploy()

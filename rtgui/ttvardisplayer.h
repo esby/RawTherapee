@@ -30,6 +30,7 @@ class TTVarDisplayer : public ToolParamBlock, public FoldableToolPanel {
 
 	protected:
 		Gtk::HBox* hboxr;
+		Gtk::Button* copyButton;
 		Gtk::VBox* vbox1;
 		Gtk::VBox* vbox2;
 
@@ -48,6 +49,7 @@ class TTVarDisplayer : public ToolParamBlock, public FoldableToolPanel {
 		void deployLate();
 		void react(FakeProcEvent ev);
 		void enabledChanged  ();
+		void copy_clicked ();
 
     bool canBeEnabled() {return true;}
 };

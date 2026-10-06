@@ -4418,6 +4418,8 @@ TP_WBALANCE_WATER2;UnderWater 2
 TP_WBALANCE_WATER_HEADER;UnderWater
 TT_LABELPICKER_FAVORITE;Color of the checked favorite button.
 TT_LABELPICKER_TRASH;Color of the checked trash button.
+TT_VAR_DISPLAYER_COPY;Copy to clipboard
+TT_VAR_DISPLAYER_COPY_TOOLTIP;Copies every transmitted variable (name = value) to the clipboard.
 TT_VAR_DISPLAYER_LABEL_VARIABLES;Variables
 TT_VAR_DISPLAYER_LABEL_OPERATORS;Operators
 ZOOMPANEL_100;(100%)
