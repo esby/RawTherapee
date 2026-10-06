@@ -300,8 +300,8 @@ ToolPanelCoordinator::ToolPanelCoordinator (bool batch, bool benchmark) :
     colorPanel      = Gtk::manage (new ToolVBox ());
     transformPanel  = Gtk::manage (new ToolVBox ());
     rawPanel        = Gtk::manage (new ToolVBox ());
-    advancedPanel   = Gtk::manage (new ToolVBox ());
-    locallabPanel   = Gtk::manage (new ToolVBox());
+    advancedPanel    = Gtk::manage (new ToolVBox ());
+    locallabPanel    = Gtk::manage(new ToolVBox());
     trashPanel      = Gtk::manage (new ToolVBox());
     usefulPanel     = Gtk::manage (new ToolVBox());
 
@@ -340,16 +340,16 @@ ToolPanelCoordinator::ToolPanelCoordinator (bool batch, bool benchmark) :
     });
     env->setTrashPanel(trashPanel);
 
-    coarse              = Gtk::manage(new CoarsePanel ());
-    toneCurve           = Gtk::manage(new ToneCurve ());
-    shadowshighlights   = Gtk::manage(new ShadowsHighlights ());
-    toneEqualizer       = Gtk::manage(new ToneEqualizer ());
-    impulsedenoise      = Gtk::manage(new ImpulseDenoise ());
-    defringe            = Gtk::manage(new Defringe ());
-    spot                = Gtk::manage(new Spot ());
-    dirpyrdenoise       = Gtk::manage(new DirPyrDenoise ());
-    epd                 = Gtk::manage(new EdgePreservingDecompositionUI ());
-    sharpening          = Gtk::manage(new Sharpening ());
+    coarse              = Gtk::manage (new CoarsePanel ());
+    toneCurve           = Gtk::manage (new ToneCurve ());
+    shadowshighlights   = Gtk::manage (new ShadowsHighlights ());
+    toneEqualizer       = Gtk::manage (new ToneEqualizer ());
+    impulsedenoise      = Gtk::manage (new ImpulseDenoise ());
+    defringe            = Gtk::manage (new Defringe ());
+    spot                = Gtk::manage (new Spot ());
+    dirpyrdenoise       = Gtk::manage (new DirPyrDenoise ());
+    epd                 = Gtk::manage (new EdgePreservingDecompositionUI ());
+    sharpening          = Gtk::manage (new Sharpening ());
     localContrast       = Gtk::manage(new LocalContrast());
     sharpenEdge         = Gtk::manage(new SharpenEdge());
     sharpenMicro        = Gtk::manage(new SharpenMicro());
@@ -393,16 +393,16 @@ ToolPanelCoordinator::ToolPanelCoordinator (bool batch, bool benchmark) :
     flatfield           = Gtk::manage(new FlatField());
     rawcacorrection     = Gtk::manage(new RAWCACorr());
     rawexposure         = Gtk::manage(new RAWExposure());
-    preprocessWB        = Gtk::manage(new PreprocessWB());
+    preprocessWB        = Gtk::manage (new PreprocessWB ());
     bayerrawexposure    = Gtk::manage(new BayerRAWExposure());
     xtransrawexposure   = Gtk::manage(new XTransRAWExposure());
     fattal              = Gtk::manage(new FattalToneMapping());
-    filmNegative        = Gtk::manage(new FilmNegative());
-    pdSharpening        = Gtk::manage(new PdSharpening());
-    // So Demosaic, Line noise filter, Green Equilibration, Ca-Correction(garder le nom de section identique!) and Black-Level will be moved in a "Bayer sensor" tool,
+    filmNegative        = Gtk::manage (new FilmNegative());
+    pdSharpening        = Gtk::manage (new PdSharpening());
+    // So Demosaic, Line noise filter, Green Equilibration, Ca-Correction (garder le nom de section identique!) and Black-Level will be moved in a "Bayer sensor" tool,
     // and a separate Demosaic and Black Level tool will be created in an "X-Trans sensor" tool
 
-    // X-Trans demozaic methods: "3-pass(best), 1-pass(medium), fast"
+    // X-Trans demozaic methods: "3-pass (best), 1-pass (medium), fast"
     // Mettre  jour les profils fournis pour inclure les nouvelles section Raw, notamment pour "Default High ISO"
     // Valeurs par dfaut:
     //     Best -> low ISO
@@ -488,7 +488,7 @@ ToolPanelCoordinator::ToolPanelCoordinator (bool batch, bool benchmark) :
 }
 
 /*
-for (const auto &panel_tool_layout : getDefaultToolLayout()) {
+    for (const auto &panel_tool_layout : getDefaultToolLayout()) {
         const auto &panel_tools = panel_tool_layout.second;
         std::vector<const ToolTree *> unprocessed_tools(panel_tools.size());
 
@@ -518,7 +518,7 @@ for (const auto &panel_tool_layout : getDefaultToolLayout()) {
             }
 */
 
-    toolPanels.push_back(coarse);
+    toolPanels.push_back (coarse);
     toolPanels.push_back(metadata);
     coarse->setToolName("coarse"); // coarse does not have a name.
 
@@ -544,7 +544,7 @@ for (const auto &panel_tool_layout : getDefaultToolLayout()) {
     transformPanelSW   = Gtk::manage (new MyScrolledWindow ());
     rawPanelSW         = Gtk::manage (new MyScrolledWindow ());
     advancedPanelSW    = Gtk::manage (new MyScrolledWindow ());
-    locallabPanelSW    = Gtk::manage(new MyScrolledWindow());    
+    locallabPanelSW     = Gtk::manage(new MyScrolledWindow());
 
     trashPanelSW       = Gtk::manage(new MyScrolledWindow());
     usefulPanelSW      = Gtk::manage(new MyScrolledWindow());
@@ -640,7 +640,7 @@ for (const auto &panel_tool_layout : getDefaultToolLayout()) {
 
 
     if ((!useRtFav) || (favoriteCount>0))
-        toolPanelNotebook->append_page(*favoritePanelSW,  *toiF);
+        toolPanelNotebook->append_page(*favoritePanelSW, *toiF);
 
 // configured by registerToolsFromLayout() (sub-tools container of the tool)
 //    box =  static_cast<ToolVBox*>(sensorbayer->getPackBox());
@@ -673,9 +673,9 @@ for (const auto &panel_tool_layout : getDefaultToolLayout()) {
         toolPanelNotebook->append_page(*locallabPanelSW,   *toiL);
     }
 
-    toolPanelNotebook->append_page(*transformPanelSW, *toiT);
-    toolPanelNotebook->append_page(*rawPanelSW,       *toiR);
-    toolPanelNotebook->append_page(*metadata,         *toiM);
+    toolPanelNotebook->append_page (*transformPanelSW, *toiT);
+    toolPanelNotebook->append_page (*rawPanelSW,       *toiR);
+    toolPanelNotebook->append_page (*metadata,    *toiM);
     toolPanelNotebook->append_page(*usefulPanelSW,    *toiU);
     toolPanelNotebook->append_page(*trashPanelSW,     *toiP);
 
@@ -941,7 +941,7 @@ void ToolPanelCoordinator::updateFavoritesPanel(
         favoritePanel, favorites_tool_tree, 1, favorites_set, cloneFavoriteTools);
 }
 
- void ToolPanelCoordinator::updatePanelTools(
+void ToolPanelCoordinator::updatePanelTools(
     Gtk::Widget *page,
     const std::vector<Glib::ustring> &favorites,
     bool cloneFavoriteTools)
@@ -1099,7 +1099,7 @@ ToolPanelCoordinator::~ToolPanelCoordinator ()
 }
 
 
-void ToolPanelCoordinator::imageTypeChanged(bool isRaw, bool isBayer, bool isXtrans, bool isMono, bool isGainMapSupported )
+void ToolPanelCoordinator::imageTypeChanged(bool isRaw, bool isBayer, bool isXtrans, bool isMono, bool isGainMapSupported)
 {
     if (isRaw) {
         if (isBayer) {
@@ -1997,7 +1997,7 @@ void ToolPanelCoordinator::updateVScrollbars(bool hide)
     GThreadLock lock; // All GUI access from idle_add callbacks or separate thread HAVE to be protected
     Gtk::PolicyType policy = hide ? Gtk::POLICY_NEVER : Gtk::POLICY_AUTOMATIC;
     if ((!useRtFav) || (favoriteCount > 0)) {
-        favoritePanelSW->set_policy     (Gtk::POLICY_AUTOMATIC, policy);
+    favoritePanelSW->set_policy     (Gtk::POLICY_AUTOMATIC, policy);
     }
     exposurePanelSW->set_policy     (Gtk::POLICY_AUTOMATIC, policy);
     detailsPanelSW->set_policy      (Gtk::POLICY_AUTOMATIC, policy);
