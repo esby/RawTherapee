@@ -106,6 +106,8 @@ void TTSaver::profileBoxChanged()
 {
    Glib::ustring filename =  profilbox->get_active_text() + paramFileGuiExtension;
    int row = profilbox->get_active_row_number();
+   if ((row < 0) || ((size_t)row >= entries.size())) // no selection
+     return;
    Glib::ustring fname = entries[row];
 //   printf("preparing to load Filename : %s - %s\n", filename.c_str(), fname.c_str());
    load_ttp_profile(fname);
@@ -139,7 +141,24 @@ void TTSaver::parseProfileFolder()
         else 
           realPath = p2;
 
-        dir = new Glib::Dir (realPath);
+//        dir = new Glib::Dir (realPath);
+        // Glib::Dir throws when the folder does not exist (ex: no global profile folder),
+        // this happened in the constructor and stopped RawTherapee at startup.
+        if (!file_test(realPath, Glib::FILE_TEST_IS_DIR))
+        {
+          nbpass++;
+          continue;
+        }
+        try
+        {
+          dir = new Glib::Dir (realPath);
+        }
+        catch (const Glib::Error& e)
+        {
+          printf("TTSaver: unable to read %s: %s\n", realPath.c_str(), e.what().c_str());
+          nbpass++;
+          continue;
+        }
 
         for (Glib::DirIterator i = dir->begin(); i != dir->end(); ++i) {
             currDir = *i;
