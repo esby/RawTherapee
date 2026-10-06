@@ -29,6 +29,7 @@ struct EsbyWBRule
 {
     double mired = 0.0;
     double green = 1.0;
+    double equal = 1.0; // factor of the blue/red equalizer
     bool flashOnly = true;
     Glib::ustring comment;
     Glib::ustring source;
@@ -40,6 +41,7 @@ struct EsbyWBFileState
     bool known = false;
     int temperature = 0;
     double green = 1.0;
+    double equal = 1.0;
     Glib::ustring source;
 };
 
@@ -63,10 +65,10 @@ public:
     bool isConnected() const { return connected; }
 
     void get(const Glib::ustring& folder, RuleCallback callback);
-    void set(const Glib::ustring& folder, double mired, double green, bool flashOnly, DoneCallback callback);
+    void set(const Glib::ustring& folder, double mired, double green, double equal, bool flashOnly, DoneCallback callback);
     void unset(const Glib::ustring& folder, DoneCallback callback);
     void fileState(const Glib::ustring& file, FileCallback callback);
-    void applied(const Glib::ustring& file, int temperature, double green, const Glib::ustring& source);
+    void applied(const Glib::ustring& file, int temperature, double green, double equal, const Glib::ustring& source);
 
     void setEventCallback(EventCallback callback) { onEvent = callback; }
     void setStatusCallback(StatusCallback callback) { onStatus = callback; }

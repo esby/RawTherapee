@@ -36,6 +36,7 @@ class TTSeriesWB : public ToolParamBlock, public AdjusterListener, public Foldab
 protected:
     Adjuster* adjMired;
     Adjuster* adjGreen;
+    Adjuster* adjEqual; // factor of the blue/red equalizer
     Gtk::CheckButton* cbFlashOnly;
     Gtk::Label* lbLearnTint;
     Gtk::CheckButton* cbLearnTint;
@@ -60,16 +61,24 @@ protected:
     // precision, they only show these values (moving an adjuster sets them to its value)
     double exactMired;
     double exactGreen;
+    double exactEqual;
 
     // white balance applied by this tool, per file (session only, the server will keep it later)
-    std::map<Glib::ustring, std::pair<int, double>> applied;
+    struct AppliedWB
+    {
+        int temperature;
+        double green;
+        double equal;
+    };
+    std::map<Glib::ustring, AppliedWB> applied;
 
     bool getCameraWB(const rtengine::procparams::WBParams& wb, double& temp, double& green);
     bool getCurrentWB(rtengine::procparams::WBParams& wb);
     bool flashFired();
     Glib::ustring currentFile();
-    void computeTarget(double camTemp, double camGreen, int& temp, double& green);
-    bool sameWB(int t1, double g1, int t2, double g2);
+    void computeTarget(double camTemp, double camGreen, int& temp, double& green, double& equal);
+    bool sameWB(int t1, double g1, double e1, int t2, double g2, double e2);
+    void setWhiteBalance(int temp, double green, double equal);
     void applyToCurrentImage(bool force, const EsbyWBFileState* serverState = nullptr);
     void requestForCurrentImage();
     void setFolderValue(bool parent);

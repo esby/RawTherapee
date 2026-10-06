@@ -32,7 +32,19 @@ class StateTest(unittest.TestCase):
         rule = self.state.resolve(self.group)
         self.assertEqual(rule["mired"], 0.0)
         self.assertEqual(rule["green"], 1.0)
+        self.assertEqual(rule["equal"], 1.0)
         self.assertIsNone(rule["source"])
+
+    def test_equalizer(self):
+        self.state.set_rule(self.lucca, 15, green=0.95, equal=1.08)
+        self.assertEqual(self.state.resolve(self.group)["equal"], 1.08)
+        self.state.record_applied(os.path.join(self.hall, "P1.RW2"), 4679, 0.856, self.lucca, equal=1.08)
+        self.assertEqual(self.state.file_state(os.path.join(self.hall, "P1.RW2"))["E"], 1.08)
+
+    def test_rule_without_equal(self):
+        # rules written before the equalizer was handled: the default factor applies
+        self.state.rules[self.lucca] = {"mired": 15.0, "green": 1.0, "flash_only": True, "comment": ""}
+        self.assertEqual(self.state.resolve(self.group)["equal"], 1.0)
 
     def test_inheritance(self):
         self.state.set_rule(self.lucca, 15)
@@ -127,9 +139,9 @@ class ServerTest(unittest.TestCase):
     def test_protocol(self):
         client = self.client()
         self.assertEqual(client.request("hello")["version"], esbywb.PROTOCOL_VERSION)
-        client.request("set", path=self.folder, mired=15, comment="hall")
+        client.request("set", path=self.folder, mired=15, equal=1.05, comment="hall")
         rule = client.request("get", path=os.path.join(self.folder, "Samedi"))
-        self.assertEqual((rule["mired"], rule["source"]), (15, self.folder))
+        self.assertEqual((rule["mired"], rule["equal"], rule["source"]), (15, 1.05, self.folder))
         self.assertEqual(len(client.request("list")["rules"]), 1)
         client.request("applied", file=os.path.join(self.folder, "P1.RW2"), T=4679, G=1.058, source=self.folder)
         self.assertEqual(client.request("file_state", file=os.path.join(self.folder, "P1.RW2"))["state"]["T"], 4679)

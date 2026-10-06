@@ -26,8 +26,9 @@ ou en service systemd utilisateur, voir `esbywb.service`.
 ./esbywb.py orphans
 ```
 
-`set` accepte `--green` (facteur de teinte, 1.0 par défaut) et `--all` (aussi pour les photos
-sans flash). Un décalage positif refroidit le rendu.
+`set` accepte `--green` (facteur de teinte, 1.0 par défaut), `--equal` (facteur de l'égaliseur
+bleu/rouge, 1.0 par défaut) et `--all` (aussi pour les photos sans flash). Un décalage positif
+refroidit le rendu.
 
 ## Tests
 

@@ -36,6 +36,7 @@ Une règle associe à un dossier :
 |---|---|---|---|
 | `mired` | réel | 0 | décalage de température en mireds |
 | `green` | réel | 1.0 | facteur appliqué à la teinte (`Green` de RawTherapee) |
+| `equal` | réel | 1.0 | facteur appliqué à l'égaliseur bleu/rouge (`Equal`, 1.0 pour le boîtier) |
 | `flash_only` | booléen | true | n'appliquer qu'aux photos dont le flash s'est déclenché |
 | `comment` | texte | vide | note libre (lieu, éclairage…) |
 

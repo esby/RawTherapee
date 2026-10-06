@@ -276,6 +276,7 @@ void EsbyWBClient::get(const Glib::ustring& folder, RuleCallback callback)
         {
             rule.mired = jsonNumber(answer, "mired", 0.0);
             rule.green = jsonNumber(answer, "green", 1.0);
+            rule.equal = jsonNumber(answer, "equal", 1.0);
             rule.flashOnly = jsonBool(answer, "flash_only", true);
             rule.comment = jsonString(answer, "comment");
             rule.source = jsonString(answer, "source"); // null for the default value
@@ -284,13 +285,14 @@ void EsbyWBClient::get(const Glib::ustring& folder, RuleCallback callback)
     });
 }
 
-void EsbyWBClient::set(const Glib::ustring& folder, double mired, double green, bool flashOnly, DoneCallback callback)
+void EsbyWBClient::set(const Glib::ustring& folder, double mired, double green, double equal, bool flashOnly, DoneCallback callback)
 {
     cJSON* request = cJSON_CreateObject();
     cJSON_AddStringToObject(request, "op", "set");
     cJSON_AddStringToObject(request, "path", folder.c_str());
     cJSON_AddNumberToObject(request, "mired", mired);
     cJSON_AddNumberToObject(request, "green", green);
+    cJSON_AddNumberToObject(request, "equal", equal);
     cJSON_AddBoolToObject(request, "flash_only", flashOnly);
     send(request, [callback](cJSON* answer) {
         if (callback)
@@ -324,6 +326,7 @@ void EsbyWBClient::fileState(const Glib::ustring& file, FileCallback callback)
                 state.known = true;
                 state.temperature = (int) jsonNumber(s, "T", 0);
                 state.green = jsonNumber(s, "G", 1.0);
+                state.equal = jsonNumber(s, "E", 1.0);
                 state.source = jsonString(s, "source");
             }
         }
@@ -331,13 +334,14 @@ void EsbyWBClient::fileState(const Glib::ustring& file, FileCallback callback)
     });
 }
 
-void EsbyWBClient::applied(const Glib::ustring& file, int temperature, double green, const Glib::ustring& source)
+void EsbyWBClient::applied(const Glib::ustring& file, int temperature, double green, double equal, const Glib::ustring& source)
 {
     cJSON* request = cJSON_CreateObject();
     cJSON_AddStringToObject(request, "op", "applied");
     cJSON_AddStringToObject(request, "file", file.c_str());
     cJSON_AddNumberToObject(request, "T", temperature);
     cJSON_AddNumberToObject(request, "G", green);
+    cJSON_AddNumberToObject(request, "E", equal);
     if (source.empty())
         cJSON_AddNullToObject(request, "source");
     else

@@ -50,6 +50,7 @@ public:
     bool SeriesWBEnabled = false;
     double SeriesWBMired = 0.0;
     double SeriesWBGreen = 1.0;
+    double SeriesWBEqual = 1.0;
     bool SeriesWBFlashOnly = true;
     bool SeriesWBLearnTint = false;
 

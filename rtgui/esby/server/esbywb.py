@@ -35,7 +35,8 @@ import tempfile
 
 PROTOCOL_VERSION = 1
 
-DEFAULT_RULE = {"mired": 0.0, "green": 1.0, "flash_only": True, "comment": ""}
+# equal: factor applied to the blue/red equalizer of the white balance (1.0 for the camera)
+DEFAULT_RULE = {"mired": 0.0, "green": 1.0, "equal": 1.0, "flash_only": True, "comment": ""}
 
 
 # ---------------------------------------------------------------------------------------
@@ -127,9 +128,9 @@ class State:
         rule["source"] = None
         return rule
 
-    def set_rule(self, folder, mired, green=1.0, flash_only=True, comment=""):
+    def set_rule(self, folder, mired, green=1.0, flash_only=True, comment="", equal=1.0):
         folder = normalize(folder)
-        self.rules[folder] = {"mired": float(mired), "green": float(green),
+        self.rules[folder] = {"mired": float(mired), "green": float(green), "equal": float(equal),
                               "flash_only": bool(flash_only), "comment": str(comment)}
         self.save()
         return folder
@@ -161,9 +162,9 @@ class State:
         self.save()
         return old, new, count
 
-    def record_applied(self, filename, temperature, green, source):
+    def record_applied(self, filename, temperature, green, source, equal=1.0):
         filename = normalize(filename)
-        self.files[filename] = {"T": int(temperature), "G": float(green), "source": source}
+        self.files[filename] = {"T": int(temperature), "G": float(green), "E": float(equal), "source": source}
         self.save()
 
     def file_state(self, filename):
@@ -201,7 +202,8 @@ class Server:
             return self.state.resolve(request["path"])
         if op == "set":
             folder = self.state.set_rule(request["path"], request["mired"], request.get("green", 1.0),
-                                         request.get("flash_only", True), request.get("comment", ""))
+                                         request.get("flash_only", True), request.get("comment", ""),
+                                         request.get("equal", 1.0))
             await self.broadcast(folder)
             return {"path": folder}
         if op == "unset":
@@ -216,7 +218,8 @@ class Server:
             await self.broadcast(new)
             return {"from": old, "to": new, "moved": count}
         if op == "applied":
-            self.state.record_applied(request["file"], request["T"], request["G"], request.get("source"))
+            self.state.record_applied(request["file"], request["T"], request["G"], request.get("source"),
+                                      request.get("E", 1.0))
             return {}
         if op == "file_state":
             return {"state": self.state.file_state(request["file"])}
@@ -356,7 +359,7 @@ class Client:
 
 
 def format_rule(rule):
-    text = "%+.1f mireds, tint x%.3f" % (rule["mired"], rule["green"])
+    text = "%+.1f mireds, tint x%.3f, blue/red x%.3f" % (rule["mired"], rule["green"], rule.get("equal", 1.0))
     if not rule.get("flash_only", True):
         text += ", all photos"
     if rule.get("comment"):
@@ -378,6 +381,7 @@ def main(argv=None):
     p.add_argument("folder")
     p.add_argument("mired", type=float, help="shift in mireds (positive: cooler rendering)")
     p.add_argument("--green", type=float, default=1.0, help="tint factor (default 1.0)")
+    p.add_argument("--equal", type=float, default=1.0, help="blue/red equalizer factor (default 1.0)")
     p.add_argument("--all", action="store_true", help="also for the photos without flash")
     p.add_argument("--comment", default="")
     p = sub.add_parser("unset", help="remove the value of a folder (back to the inherited one)")
@@ -412,7 +416,7 @@ def run_command(client, args):
         print("%s\n  source: %s" % (format_rule(rule), source))
     elif args.command == "set":
         answer = client.request("set", path=normalize(args.folder), mired=args.mired, green=args.green,
-                                flash_only=not args.all, comment=args.comment)
+                                equal=args.equal, flash_only=not args.all, comment=args.comment)
         print("set: " + answer["path"])
     elif args.command == "unset":
         print("unset: " + client.request("unset", path=normalize(args.folder))["path"])
