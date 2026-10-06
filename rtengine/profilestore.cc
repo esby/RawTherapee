@@ -470,6 +470,9 @@ const Glib::ustring ProfileStore::getPathFromId (int folderId) const
   }
   else
   {
+    // note: this test protects from folders.at() throwing std::out_of_range (crash),
+    // the message is only displayed in verbose mode.
+    if (settings->verbose)
     printf("issue encountered %i\n", folderId);
 
     return "";
