@@ -82,6 +82,26 @@ void EsbySettings::readFromFile(Glib::KeyFile& keyFile)
                 if (keyFile.has_key ("TTP", "HideTrash")) {
                     TTPHideTrash          = keyFile.get_boolean ("TTP", "HideTrash");
                 }
+
+                if (keyFile.has_key ("TTP", "SeriesWBEnabled")) {
+                    SeriesWBEnabled       = keyFile.get_boolean ("TTP", "SeriesWBEnabled");
+                }
+
+                if (keyFile.has_key ("TTP", "SeriesWBMired")) {
+                    SeriesWBMired         = keyFile.get_double ("TTP", "SeriesWBMired");
+                }
+
+                if (keyFile.has_key ("TTP", "SeriesWBGreen")) {
+                    SeriesWBGreen         = keyFile.get_double ("TTP", "SeriesWBGreen");
+                }
+
+                if (keyFile.has_key ("TTP", "SeriesWBFlashOnly")) {
+                    SeriesWBFlashOnly     = keyFile.get_boolean ("TTP", "SeriesWBFlashOnly");
+                }
+
+                if (keyFile.has_key ("TTP", "SeriesWBLearnTint")) {
+                    SeriesWBLearnTint     = keyFile.get_boolean ("TTP", "SeriesWBLearnTint");
+                }
             }
 }
 
@@ -101,4 +121,9 @@ void EsbySettings::saveToFile(Glib::KeyFile& keyFile) const
         keyFile.set_boolean ("TTP", "HideMetadata", TTPHideMetadata);
         keyFile.set_boolean ("TTP", "HideUseful", TTPHideUseful);
         keyFile.set_boolean ("TTP", "HideTrash", TTPHideTrash);
+        keyFile.set_boolean ("TTP", "SeriesWBEnabled", SeriesWBEnabled);
+        keyFile.set_double  ("TTP", "SeriesWBMired", SeriesWBMired);
+        keyFile.set_double  ("TTP", "SeriesWBGreen", SeriesWBGreen);
+        keyFile.set_boolean ("TTP", "SeriesWBFlashOnly", SeriesWBFlashOnly);
+        keyFile.set_boolean ("TTP", "SeriesWBLearnTint", SeriesWBLearnTint);
 }

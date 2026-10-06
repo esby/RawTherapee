@@ -57,6 +57,9 @@ protected:
     void applyToCurrentImage(bool force);
     void learnFromCurrentImage();
     void setInfo(const Glib::ustring& text);
+    void loadSettings();
+    void saveSettings();
+    bool loading;
 
 public:
     TTSeriesWB();

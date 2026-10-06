@@ -46,6 +46,13 @@ public:
     bool TTPHideUseful = false;
     bool TTPHideTrash = false;
 
+    // TTSeriesWB: kept between sessions without saving a ttp profile
+    bool SeriesWBEnabled = false;
+    double SeriesWBMired = 0.0;
+    double SeriesWBGreen = 1.0;
+    bool SeriesWBFlashOnly = true;
+    bool SeriesWBLearnTint = false;
+
     void readFromFile(Glib::KeyFile& keyFile);
     void saveToFile(Glib::KeyFile& keyFile) const;
 };

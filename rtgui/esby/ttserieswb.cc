@@ -16,6 +16,7 @@
  */
 #include "ttserieswb.h"
 #include "ttlog.h"
+#include "esbyoptions.h"
 #include "multilangmgr.h"
 #include "variable.h"
 #include "wbprovider.h"
@@ -94,6 +95,41 @@ TTSeriesWB::TTSeriesWB() : FoldableToolPanel(this, "TTSeriesWB", M("TT_SERIESWB_
 
   btApply->signal_clicked().connect([this]() { applyToCurrentImage(true); });
   btLearn->signal_clicked().connect([this]() { learnFromCurrentImage(); });
+  cbFlashOnly->signal_toggled().connect([this]() { saveSettings(); });
+  cbLearnTint->signal_toggled().connect([this]() { saveSettings(); });
+
+  // the values of the last session; a ttp profile loaded afterwards has the priority
+  loading = false;
+  loadSettings();
+}
+
+void TTSeriesWB::loadSettings()
+{
+  loading = true;
+  const EsbySettings& s = esbySettings();
+  adjMired->block(true);
+  adjGreen->block(true);
+  adjMired->setValue(s.SeriesWBMired);
+  adjGreen->setValue(s.SeriesWBGreen);
+  adjMired->block(false);
+  adjGreen->block(false);
+  cbFlashOnly->set_active(s.SeriesWBFlashOnly);
+  cbLearnTint->set_active(s.SeriesWBLearnTint);
+  getExpander()->setEnabled(s.SeriesWBEnabled);
+  loading = false;
+}
+
+// kept in the options (written when RawTherapee is closed, or right away by "learn")
+void TTSeriesWB::saveSettings()
+{
+  if (loading)
+    return;
+  EsbySettings& s = esbySettings();
+  s.SeriesWBEnabled = getExpander()->getEnabled();
+  s.SeriesWBMired = adjMired->getValue();
+  s.SeriesWBGreen = adjGreen->getValue();
+  s.SeriesWBFlashOnly = cbFlashOnly->get_active();
+  s.SeriesWBLearnTint = cbLearnTint->get_active();
 }
 
 void TTSeriesWB::deploy()
@@ -114,6 +150,9 @@ void TTSeriesWB::deployLate()
 
 void TTSeriesWB::enabledChanged()
 {
+  saveSettings();
+  if (env == nullptr) // the tool is not deployed yet (settings loaded in the constructor)
+    return;
   if (getExpander()->getEnabled())
     applyToCurrentImage(false);
 }
@@ -281,6 +320,11 @@ void TTSeriesWB::learnFromCurrentImage()
   adjGreen->block(false);
 
   applied[file] = std::make_pair(wb.temperature, wb.green);
+
+  // an explicit action: written right away, it must not be lost if RawTherapee is not closed properly
+  saveSettings();
+  Options::save();
+
   setInfo(Glib::ustring::compose(M("TT_SERIESWB_LEARNED"),
                                  Glib::ustring::format(std::fixed, std::setprecision(1), mired),
                                  Glib::ustring::format(std::fixed, std::setprecision(3), green))
@@ -289,6 +333,7 @@ void TTSeriesWB::learnFromCurrentImage()
 
 void TTSeriesWB::adjusterChanged(Adjuster* a, double newval)
 {
+  saveSettings();
   // the current image is updated only if it follows the series (see applyToCurrentImage)
   applyToCurrentImage(false);
 }
@@ -358,4 +403,5 @@ void TTSeriesWB::themeImport(std::ifstream& myfile)
       }
     }
   }
+  saveSettings();
 }
