@@ -327,7 +327,13 @@ void TTSaver::save_ttp_profile(Glib::ustring filename)
     if ((p != nullptr)
     && (!p->canBeIgnored()))
     { 
-       lines += p->themeExport();
+//       lines += p->themeExport();
+       // every tool must end its lines with a newline: otherwise the first line of the next tool
+       // was glued to its last line, and lost (ex: TTTweaker, then TTSeriesWB:active)
+       Glib::ustring toolLines = p->themeExport();
+       if (!toolLines.empty() && (toolLines[toolLines.size() - 1] != '\n'))
+         toolLines += "\n";
+       lines += toolLines;
     }
 
   }

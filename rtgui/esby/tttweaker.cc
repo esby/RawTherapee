@@ -384,7 +384,8 @@ Glib::ustring TTTweaker::themeExport()
        + s_reset_wb + "\n" \
        + s_auto_rotate + "\n" \
        + s_toolname_as_tooltip + "\n" \
-       + s_toolname_on_right \
+       // was: + s_toolname_on_right (no newline: the next tool line was glued to this one)
+       + s_toolname_on_right + "\n" \
 ;
 }
 
