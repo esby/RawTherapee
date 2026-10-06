@@ -213,7 +213,7 @@ ICMPanel::ICMPanel() : FoldableToolPanel(this, TOOL_NAME, M("TP_ICM_LABEL")), iu
 
     //-----------------gamma TRC working
 //    Gtk::Frame *trcFrame = Gtk::manage(new Gtk::Frame(M("TP_ICM_TRCFRAME")));
-    trcExp = Gtk::manage(new MyExpander(true, M("TP_ICM_TRCFRAME"),this));
+    trcExp = Gtk::manage(new MyExpander(true, M("TP_ICM_TRCFRAME")));
     setExpandAlignProperties(trcExp, true, false, Gtk::ALIGN_FILL, Gtk::ALIGN_START);
 //    trcFrame->set_label_align(0.025, 0.5);
     Gtk::Box *trcProfVBox = Gtk::manage(new Gtk::Box(Gtk::ORIENTATION_VERTICAL));

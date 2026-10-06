@@ -251,13 +251,15 @@ public:
      * @param useEnabled Set whether to handle an enabled/disabled toggle button and display the appropriate image
      * @param titleLabel A string to display in the header. Warning: you won't be able to switch to a widget label.
      */
-    MyExpander(bool useEnabled, Glib::ustring titleLabel, ToolPanel* _panel);
+    // _panel: the tool panel of the main expander of a tool (used by the esby code),
+    // nullptr for the expanders inside a tool, so the upstream calls are kept unchanged
+    MyExpander(bool useEnabled, Glib::ustring titleLabel, ToolPanel* _panel = nullptr);
 
     /** Create a custom expander with a custom - and responsive - widget
      * @param useEnabled Set whether to handle an enabled/disabled toggle button and display the appropriate image
      * @param titleWidget A widget to display in the header. Warning: you won't be able to switch to a string label.
      */
-    MyExpander(bool useEnabled, Gtk::Widget* titleWidget,  ToolPanel* _panel);
+    MyExpander(bool useEnabled, Gtk::Widget* titleWidget,  ToolPanel* _panel = nullptr);
 
     /** Retrieve the panel associated with the expander
     *
