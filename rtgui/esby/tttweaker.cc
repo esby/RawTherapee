@@ -303,6 +303,24 @@ void TTTweaker::react(FakeProcEvent ev)
 
 }
 
+// returns the label of a tool header: the header itself, or the first label inside it
+static Gtk::Label* findTitleLabel(Gtk::Widget* w)
+{
+  if (w == nullptr)
+    return nullptr;
+  if (Gtk::Label* l = dynamic_cast<Gtk::Label*>(w))
+    return l;
+  if (Gtk::Container* c = dynamic_cast<Gtk::Container*>(w))
+  {
+    for (Gtk::Widget* child : c->get_children())
+    {
+      if (Gtk::Label* l = findTitleLabel(child))
+        return l;
+    }
+  }
+  return nullptr;
+}
+
 void TTTweaker::enabledChanged  () 
 {  
  for (size_t i=0; i< env->getToolPanels().size() ; i++)
@@ -319,7 +337,10 @@ void TTTweaker::enabledChanged  ()
         Gtk::Widget* w = e->getLabelWidget();
         if (w)
         {
-          Gtk::Label* l = static_cast<Gtk::Label*>(w);
+//          Gtk::Label* l = static_cast<Gtk::Label*>(w);
+          // the header is not always a label: the tools with the 1:1 icon (need11) use a box
+          // holding the label and the icon. static_cast gave a non-label widget to GTK.
+          Gtk::Label* l = findTitleLabel(w);
           if (l)
           {
              if (cbToolNameUntranslated->get_active())
