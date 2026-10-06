@@ -524,7 +524,23 @@ void TTSeriesWB::learnFromCurrentImage()
   // an explicit action: written right away, it must not be lost if RawTherapee is not closed properly
   saveSettings();
   Options::save();
-  modified = client && client->isConnected(); // to send with "set for this folder"
+  // with the server, the learned value becomes the value of the folder of the image (the shift of
+  // a series is what is learned), and the image follows it. It was only a preview before, and the
+  // value of the folder replaced it when the image was opened again.
+  modified = false;
+  if (client && client->isConnected())
+  {
+    Glib::ustring folder = currentFolder();
+    client->set(folder, mired, green, cbFlashOnly->get_active(), nullptr);
+    client->applied(realPath(file), wb.temperature, wb.green, folder);
+    currentSource = folder;
+    setInfo(Glib::ustring::compose(M("TT_SERIESWB_LEARNED"),
+                                   Glib::ustring::format(std::fixed, std::setprecision(1), mired),
+                                   Glib::ustring::format(std::fixed, std::setprecision(3), green))
+            + "\n" + Glib::ustring::compose(M("TT_SERIESWB_SET_DONE"), folder)
+            + "\n" + values);
+    return;
+  }
 
   setInfo(Glib::ustring::compose(M("TT_SERIESWB_LEARNED"),
                                  Glib::ustring::format(std::fixed, std::setprecision(1), mired),

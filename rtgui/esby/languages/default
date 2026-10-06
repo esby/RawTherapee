@@ -75,7 +75,7 @@ TT_SERIESWB_LABEL;Series White Balance
 TT_SERIESWB_LEARN;Learn from this image
 TT_SERIESWB_LEARNED;Shift learned: %1 mireds, tint factor %2.
 TT_SERIESWB_LEARN_TINT;Learn the tint too (green / magenta cast)
-TT_SERIESWB_LEARN_TOOLTIP;Sets the shift from the white balance of the current image, compared to the camera white balance.
+TT_SERIESWB_LEARN_TOOLTIP;Sets the shift from the white balance of the current image, compared to the camera white balance. With the server, it becomes the value of the folder of the image.
 TT_SERIESWB_MANUAL;White balance changed by hand (%1 K): left untouched.
 TT_SERIESWB_MIRED;Shift (mireds)
 TT_SERIESWB_MIRED_TOOLTIP;Shift applied to the camera white balance, in mireds (1000000 / kelvins). A positive value lowers the temperature, for a cooler rendering.
