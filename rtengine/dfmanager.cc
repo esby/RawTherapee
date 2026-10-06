@@ -36,7 +36,7 @@
 #include "rawimage.h"
 #include "utils.h"
 
-#include "../rtgui/options.h"
+#include "rtgui/options.h"
 
 namespace
 {
@@ -528,6 +528,8 @@ const std::vector<rtengine::badPix>* rtengine::DFManager::Implementation::getBad
 
 dfInfo* rtengine::DFManager::Implementation::addFileInfo(const Glib::ustring& filename, bool pool)
 {
+    const Options& options = App::get().options();
+
     const auto ext = getFileExtension(filename);
 
     if (ext.empty() || !options.is_extention_enabled(ext)) {

@@ -18,18 +18,16 @@
  *  2018 Pierre Cabrera <pierre.cab@gmail.com>
  */
 
-#include "../rtengine/rt_math.h"
+#include "rtengine/rt_math.h"
 #include "controlspotpanel.h"
 #include "editwidgets.h"
 #include "options.h"
-#include "../rtengine/procparams.h"
+#include "rtengine/procparams.h"
 #include "rtimage.h"
 #include "eventmapper.h"
 
 using namespace rtengine;
 using namespace procparams;
-
-extern Options options;
 
 //-----------------------------------------------------------------------------
 // ControlSpotPanel
@@ -86,6 +84,7 @@ ControlSpotPanel::ControlSpotPanel():
 
     hishow_(Gtk::manage(new Gtk::CheckButton(M("TP_LOCALLAB_PREVSHOW")))),
     activ_(Gtk::manage(new Gtk::CheckButton(M("TP_LOCALLAB_ACTIVSPOT")))),
+    avoidneg_(Gtk::manage(new Gtk::CheckButton(M("TP_LOCALLAB_AVOIDNEG")))),
     blwh_(Gtk::manage(new Gtk::CheckButton(M("TP_LOCALLAB_BLWH")))),
     recurs_(Gtk::manage(new Gtk::CheckButton(M("TP_LOCALLAB_RECURS")))),
     laplac_(Gtk::manage(new Gtk::CheckButton(M("TP_LOCALLAB_LAPLACC")))),
@@ -118,7 +117,9 @@ ControlSpotPanel::ControlSpotPanel():
 {
     auto m = ProcEventMapper::getInstance();
     EvLocallabavoidgamutMethod = m->newEvent(AUTOEXP, "HISTORY_MSG_LOCAL_GAMUTMUNSEL");
-    const bool showtooltip = options.showtooltip;
+    EvLocallabavoidnegative =  m->newEvent(AUTOEXP, "HISTORY_MSG_LOCAL_AVOIDNEGATIVE");
+    const bool showtooltip = App::get().options().showtooltip;
+
 //    pack_start(*hishow_);
 
     Gtk::Box* const ctboxprevmethod = Gtk::manage(new Gtk::Box());
@@ -388,8 +389,6 @@ ControlSpotPanel::ControlSpotPanel():
     artifBox->pack_start(*balan_);
     artifBox->pack_start(*balanh_);
     artifBox->pack_start(*colorde_);
-//    artifBox->pack_start(*preview_);
-//    artifBox->pack_start(*colorscope_);
     expShapeDetect_->add(*artifBox, false);
     pack_start(*expShapeDetect_, false, false);
 //    ToolParamBlock* const artifBox2 = Gtk::manage(new ToolParamBlock());
@@ -430,6 +429,8 @@ ControlSpotPanel::ControlSpotPanel():
     avFrame->add(*avbox);
     specCaseBox->pack_start(*avFrame);
 
+    avoidnegConn_  = avoidneg_->signal_toggled().connect(
+                     sigc::mem_fun(*this, &ControlSpotPanel::avoidnegChanged));
 
     blwhConn_  = blwh_->signal_toggled().connect(
                      sigc::mem_fun(*this, &ControlSpotPanel::blwhChanged));
@@ -439,6 +440,7 @@ ControlSpotPanel::ControlSpotPanel():
     }
 
     specCaseBox->pack_start(*blwh_);
+    specCaseBox->pack_start(*avoidneg_);
 
     recursConn_  = recurs_->signal_toggled().connect(
                        sigc::mem_fun(*this, &ControlSpotPanel::recursChanged));
@@ -463,6 +465,7 @@ ControlSpotPanel::ControlSpotPanel():
     wavMethod_->append(M("TP_WAVELET_DAUB6"));
     wavMethod_->append(M("TP_WAVELET_DAUB10"));
     wavMethod_->append(M("TP_WAVELET_DAUB14"));
+    wavMethod_->append(M("TP_WAVELET_DAUB20"));
     wavMethod_->set_active(1);
     wavMethodconn_ = wavMethod_->signal_changed().connect(
                          sigc::mem_fun(
@@ -862,14 +865,18 @@ void ControlSpotPanel::load_ControlSpot_param()
     feather_->setValue((double)row[spots_.feather]);
     struc_->setValue((double)row[spots_.struc]);
     thresh_->setValue((double)row[spots_.thresh]);
-    iter_->setValue((double)row[spots_.iter]);
+
+    iter_->setValue((double)row[spots_.iter]);    
     balan_->setValue((double)row[spots_.balan]);
     balanh_->setValue((double)row[spots_.balanh]);
     colorde_->setValue((double)row[spots_.colorde]);
+
+    
     colorscope_->setValue((double)row[spots_.colorscope]);
     avoidrad_->setValue((double)row[spots_.avoidrad]);
     hishow_->set_active(row[spots_.hishow]);
     activ_->set_active(row[spots_.activ]);
+    avoidneg_->set_active(row[spots_.avoidneg]);
     blwh_->set_active(row[spots_.blwh]);
     recurs_->set_active(row[spots_.recurs]);
    // laplac_->set_active(row[spots_.laplac]);
@@ -1767,6 +1774,31 @@ void ControlSpotPanel::activChanged()
     }
 }
 
+void ControlSpotPanel::avoidnegChanged()
+{
+
+    // Get selected control spot
+    const auto s = treeview_->get_selection();
+
+    if (!s->count_selected_rows()) {
+        return;
+    }
+
+    const auto iter = s->get_selected();
+    Gtk::TreeModel::Row row = *iter;
+    row[spots_.avoidneg] = avoidneg_->get_active();
+
+    // Raise event
+    if (listener) {
+        if (avoidneg_->get_active()) {
+            listener->panelChanged(EvLocallabavoidnegative, M("GENERAL_ENABLED"));
+        } else {
+            listener->panelChanged(EvLocallabavoidnegative, M("GENERAL_DISABLED"));
+        }
+    }
+}
+
+
 
 void ControlSpotPanel::blwhChanged()
 {
@@ -1962,6 +1994,7 @@ void ControlSpotPanel::disableParamlistener(bool cond)
     avoidrad_->block(cond);
     hishowconn_.block(cond);
     activConn_.block(cond);
+    avoidnegConn_.block(cond);
     blwhConn_.block(cond);
     recursConn_.block(cond);
     laplacConn_.block(cond);
@@ -2009,6 +2042,7 @@ void ControlSpotPanel::setParamEditable(bool cond)
     avoidrad_->set_sensitive(cond);
     hishow_->set_sensitive(cond);
     activ_->set_sensitive(cond);
+    avoidneg_->set_sensitive(cond);
     blwh_->set_sensitive(cond);
     recurs_->set_sensitive(cond);
     laplac_->set_sensitive(cond);
@@ -2697,6 +2731,7 @@ std::unique_ptr<ControlSpotPanel::SpotRow> ControlSpotPanel::getSpot(const int i
             r->lumask = row[spots_.lumask];
             r->hishow = row[spots_.hishow];
             r->activ = row[spots_.activ];
+            r->avoidneg = row[spots_.avoidneg];
             r->blwh = row[spots_.blwh];
             r->recurs = row[spots_.recurs];
             r->laplac = row[spots_.laplac];
@@ -2829,6 +2864,7 @@ void ControlSpotPanel::addControlSpot(const SpotRow &newSpot)
     row[spots_.avoidrad] = newSpot.avoidrad;
     row[spots_.hishow] = newSpot.hishow;
     row[spots_.activ] = newSpot.activ;
+    row[spots_.avoidneg] = newSpot.avoidneg;
     row[spots_.blwh] = newSpot.blwh;
     row[spots_.recurs] = newSpot.recurs;
     row[spots_.laplac] = newSpot.laplac;
@@ -2874,21 +2910,21 @@ void ControlSpotPanel::deleteControlSpot(const int index)
 }
 
 //new function linked to Global and options 
-void ControlSpotPanel::updateguiset(int spottype, bool iscolor, bool issh, bool isvib, bool isexpos, bool issoft, bool isblur, bool istom, bool isret, bool issharp, bool iscont, bool iscbdl, bool islog, bool ismas, bool iscie)
+void ControlSpotPanel::updateguiset(int spottype, bool iscolor, bool issh, bool isvib, bool isexpos, bool issoft, bool isblur, bool istom, bool isret, bool issharp, bool iscont, bool iscbdl, bool islog, bool ismas, bool isci)
 {
     {  //with this function we can 1) activate Settings SpotMethod
         // also if need GUI for mask ,  todo...
         idle_register.add(
-        [this, spottype, iscolor, issh , isvib, isexpos, issoft, isblur, istom, isret, issharp, iscont, iscbdl, islog, ismas, iscie]() -> bool {
+        [this, spottype, iscolor, issh , isvib, isexpos, issoft, isblur, istom, isret, issharp, iscont, iscbdl, islog, ismas, isci]() -> bool {
             GThreadLock lock; // All GUI access from idle_add callbacks or separate thread HAVE to be protected
 
             // Update GUI fullimage or main
             disableListener();
-            if(spottype >= 2  && options.spotmet >= 2) {//optimize update
+            if(spottype >= 2  && App::get().options().spotmet >= 2) {//optimize update
                 spotMethodChanged();
             }
             
-            if((iscolor || issh || isvib || isexpos || istom || iscont || islog || ismas || iscie)
+            if((iscolor || issh || isvib || isexpos || istom || iscont || islog || ismas || isci)
                 && !issharp && !issoft && !isret && !isblur  & !iscbdl) {
                 preview_->hide();               
             } else if (issoft || isblur || isret || issharp || iscbdl) {
@@ -2998,6 +3034,7 @@ ControlSpotPanel::ControlSpots::ControlSpots()
     add(avoidrad);
     add(hishow);
     add(activ);
+    add(avoidneg);
     add(blwh);
     add(recurs);
     add(laplac);

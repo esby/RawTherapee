@@ -45,9 +45,9 @@
 #include "rtengine.h"
 #include "rtlensfun.h"
 #include "lensmetadata.h"
-#include "../rtgui/options.h"
+#include "rtgui/options.h"
 
-#define BENCHMARK
+//#define BENCHMARK
 #include "StopWatch.h"
 
 #ifdef _OPENMP
@@ -116,7 +116,7 @@ void transLineFuji(const float* const red, const float* const green, const float
     int start = std::abs(fw - i);
     int w = fw * 2 + 1;
     int h = (imheight - fw) * 2 + 1;
-    int end = min(h + fw - i, w - fw + i);
+    int end = std::min(h + fw - i, w - fw + i);
 
     switch (tran & TR_ROT) {
         case TR_R180:
@@ -504,14 +504,6 @@ RawImageSource::~RawImageSource()
     delete redCache;
     delete greenCache;
     delete blueCache;
-
-    for (size_t i = 0; i < numFrames; ++i) {
-        delete riFrames[i];
-    }
-
-    for (size_t i = 0; i + 1 < numFrames; ++i) {
-        delete rawDataBuffer[i];
-    }
 
     if (camProfile) {
         cmsCloseProfile(camProfile);
@@ -1219,11 +1211,13 @@ int RawImageSource::load(const Glib::ustring &fname, bool firstFrameOnly)
         return errCode;
     }
 
-    numFrames = firstFrameOnly ? (numFrames < 7 ? 1 : ri->getFrameCount()) : ri->getFrameCount();
+    const bool isHasselblad = ri->get_maker() == "Hasselblad";
+
+    numFrames = firstFrameOnly && (numFrames < 7 || !isHasselblad) ? 1 : ri->getFrameCount();
 
     errCode = 0;
 
-    if (numFrames >= 7) {
+    if (numFrames >= 7 && isHasselblad) {
         // special case to avoid crash when loading Hasselblad H6D-100cMS pixelshift files
         // limit to 6 frames and skip first frame, as first frame is not bayer
         if (firstFrameOnly) {
@@ -1231,6 +1225,9 @@ int RawImageSource::load(const Glib::ustring &fname, bool firstFrameOnly)
         } else {
             numFrames = 6;
         }
+
+        riFrames.clear();
+        riFrames.resize(numFrames);
 
 #ifdef _OPENMP
         #pragma omp parallel
@@ -1243,10 +1240,10 @@ int RawImageSource::load(const Glib::ustring &fname, bool firstFrameOnly)
 
             for (unsigned int i = 0; i < numFrames; ++i) {
                 if (i == 0) {
-                    riFrames[i] = ri;
+                    riFrames[i].reset(ri);
                     errCodeThr = riFrames[i]->loadRaw(true, i + 1, true, plistener, 0.8);
                 } else {
-                    riFrames[i] = new RawImage(fname);
+                    riFrames[i].reset(new RawImage(fname));
                     errCodeThr = riFrames[i]->loadRaw(true, i + 1);
                 }
             }
@@ -1259,6 +1256,9 @@ int RawImageSource::load(const Glib::ustring &fname, bool firstFrameOnly)
             }
         }
     } else if (numFrames > 1) {
+        riFrames.clear();
+        riFrames.resize(numFrames);
+
 #ifdef _OPENMP
         #pragma omp parallel
 #endif
@@ -1271,10 +1271,10 @@ int RawImageSource::load(const Glib::ustring &fname, bool firstFrameOnly)
             for (unsigned int i = 0; i < numFrames; ++i)
             {
                 if (i == 0) {
-                    riFrames[i] = ri;
+                    riFrames[i].reset(ri);
                     errCodeThr = riFrames[i]->loadRaw(true, i, true, plistener, 0.8);
                 } else {
-                    riFrames[i] = new RawImage(fname);
+                    riFrames[i].reset(new RawImage(fname));
                     errCodeThr = riFrames[i]->loadRaw(true, i);
                 }
             }
@@ -1287,9 +1287,13 @@ int RawImageSource::load(const Glib::ustring &fname, bool firstFrameOnly)
             }
         }
     } else {
-        riFrames[0] = ri;
-        errCode = riFrames[0]->loadRaw(true, 0, true, plistener, 0.8);
+        riFrames.clear();
+        riFrames.emplace_back(ri);
+        errCode = riFrames.back()->loadRaw(true, 0, true, plistener, 0.8);
     }
+    rawDataFrames.resize(riFrames.size());
+    rawDataBuffer.clear();
+    rawDataBuffer.resize(riFrames.size() - 1);
 
     if (!errCode) {
         for (unsigned int i = 0; i < numFrames; ++i) {
@@ -1514,21 +1518,21 @@ void RawImageSource::preprocess(const RAWParams &raw, const LensProfParams &lens
                 rawDataFrames[i] = &rawData;
             } else {
                 if (!rawDataBuffer[bufferNumber]) {
-                    rawDataBuffer[bufferNumber] = new array2D<float>;
+                    rawDataBuffer[bufferNumber].reset(new array2D<float>);
                 }
 
-                rawDataFrames[i] = rawDataBuffer[bufferNumber];
+                rawDataFrames[i] = rawDataBuffer[bufferNumber].get();
                 ++bufferNumber;
-                copyOriginalPixels(raw, riFrames[i], rid, rif, *rawDataFrames[i], reddeha, greendeha, bluedeha);
+                copyOriginalPixels(raw, riFrames[i].get(), rid, rif, *rawDataFrames[i], reddeha, greendeha, bluedeha);
             }
         }
     } else if (numFrames == 2 && currFrame == 2) { // average the frames
         if (!rawDataBuffer[0]) {
-            rawDataBuffer[0] = new array2D<float>;
+            rawDataBuffer[0].reset(new array2D<float>);
         }
 
-        rawDataFrames[1] = rawDataBuffer[0];
-        copyOriginalPixels(raw, riFrames[1], rid, rif, *rawDataFrames[1], reddeha, greendeha, bluedeha);
+        rawDataFrames[1] = rawDataBuffer[0].get();
+        copyOriginalPixels(raw, riFrames[1].get(), rid, rif, *rawDataFrames[1], reddeha, greendeha, bluedeha);
         copyOriginalPixels(raw, ri, rid, rif, rawData, reddeha, greendeha, bluedeha);
 
         for (int i = 0; i < H; ++i) {
@@ -1755,6 +1759,7 @@ void RawImageSource::preprocess(const RAWParams &raw, const LensProfParams &lens
             plistener->setProgress(0.0);
         }
 
+        const auto& options = App::get().options();
         if (numFrames == 4) {
             double fitParams[64];
             float *buffer = CA_correct_RT(raw.ca_autocorrect, raw.caautoiterations, raw.cared, raw.cablue, raw.ca_avoidcolourshift, raw.bayersensor.border, *rawDataFrames[0], fitParams, false, true, nullptr, false, options.chunkSizeCA, options.measure);
@@ -1795,6 +1800,7 @@ void RawImageSource::demosaic(const RAWParams &raw, bool autoContrast, double &c
     MyTime t1, t2;
     t1.set();
 
+    const auto& options = App::get().options();
     if (ri->getSensorType() == ST_BAYER) {
         if (raw.bayersensor.method == RAWParams::BayerSensor::getMethodString(RAWParams::BayerSensor::Method::HPHD)) {
             hphd_demosaic();
@@ -2062,7 +2068,7 @@ void RawImageSource::retinexPrepareBuffers(const ColorManagementParams& cmp, con
                 lhist16RETIThr.clear();
             }
 
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
             vfloat c32768 = F2V(32768.f);
 #endif
 #ifdef _OPENMP
@@ -2072,7 +2078,7 @@ void RawImageSource::retinexPrepareBuffers(const ColorManagementParams& cmp, con
             for (int i = border; i < H - border; i++)
             {
                 int j = border;
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
 
                 for (; j < W - border - 3; j += 4) {
                     vfloat H, S, L;
@@ -2374,7 +2380,7 @@ void RawImageSource::retinex(const ColorManagementParams& cmp, const RetinexPara
 
         for (int i = border; i < H - border; i++) {
             int j = border;
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
             vfloat c32768 = F2V(32768.f);
 
             for (; j < W - border - 3; j += 4) {
@@ -2407,7 +2413,7 @@ void RawImageSource::retinex(const ColorManagementParams& cmp, const RetinexPara
         #pragma omp parallel
 #endif
         {
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
             // we need some line buffers to precalculate some expensive stuff using SSE
             float atan2Buffer[W] ALIGNED16;
             float sqrtBuffer[W] ALIGNED16;
@@ -2421,7 +2427,7 @@ void RawImageSource::retinex(const ColorManagementParams& cmp, const RetinexPara
 #endif
 
             for (int i = border; i < H - border; i++) {
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
                 // vectorized precalculation
                 {
                     int j = border;
@@ -2463,7 +2469,7 @@ void RawImageSource::retinex(const ColorManagementParams& cmp, const RetinexPara
 
                 for (int j = border; j < W - border; j++) {
                     float Lprov1 = (LBuffer[i - border][j - border]) / 327.68f;
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
                     float Chprov1 = sqrtBuffer[j - border];
                     float  HH = atan2Buffer[j - border];
                     float2 sincosval;
@@ -2505,7 +2511,7 @@ void RawImageSource::retinex(const ColorManagementParams& cmp, const RetinexPara
             }
         }
         //end gamut control
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
         vfloat wipv[3][3];
 
         for (int i = 0; i < 3; i++)
@@ -2520,7 +2526,7 @@ void RawImageSource::retinex(const ColorManagementParams& cmp, const RetinexPara
 
         for (int i = border; i < H - border; i++) {
             int j = border;
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
 
             for (; j < W - border - 3; j += 4) {
                 vfloat x_, y_, z_;
@@ -2581,9 +2587,8 @@ void RawImageSource::retinex(const ColorManagementParams& cmp, const RetinexPara
 
 void RawImageSource::flush()
 {
-    for (size_t i = 0; i + 1 < numFrames; ++i) {
-        delete rawDataBuffer[i];
-        rawDataBuffer[i] = nullptr;
+    for (auto &buffer : rawDataBuffer) {
+        buffer.reset();
     }
 
     if (rawData) {
@@ -2687,14 +2692,14 @@ void RawImageSource::copyOriginalPixels(const RAWParams &raw, RawImage *src, con
 */
         
         if (ri->getSensorType() == ST_BAYER) {
-            getMinValsBayer(ri->zeroIsBad());
+            getMinValsBayer(rawData, ri->zeroIsBad());
         } else {
-            getMinValsXtrans();
+            getMinValsXtrans(rawData);
         }
         //
-        reddeha = minVals[0];
-        greendeha = minVals[1]; 
-        bluedeha = minVals[2];
+        reddeha = minVals[0] == std::numeric_limits<float>::max() ? 0.f : minVals[0];
+        greendeha = minVals[1] == std::numeric_limits<float>::max() ? 0.f : minVals[1];
+        bluedeha = minVals[2] == std::numeric_limits<float>::max() ? 0.f : minVals[2];
         if (riFlatFile && W == riFlatFile->get_width() && H == riFlatFile->get_height()) {
             processFlatField(raw, riFlatFile, rawData, black);
         }  // flatfield
@@ -2980,7 +2985,7 @@ void RawImageSource::processFalseColorCorrectionThread(Imagefloat* im, array2D<f
     const int W = im->getWidth();
     constexpr float onebynine = 1.f / 9.f;
 
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
     vfloat buffer[12];
     vfloat* pre1 = &buffer[0];
     vfloat* pre2 = &buffer[3];
@@ -3012,7 +3017,7 @@ void RawImageSource::processFalseColorCorrectionThread(Imagefloat* im, array2D<f
 
         convert_row_to_YIQ(im->r(i + 1), im->g(i + 1), im->b(i + 1), rbconv_Y[nx], rbconv_I[nx], rbconv_Q[nx], W);
 
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
         pre1[0] = _mm_setr_ps(rbconv_I[px][0], rbconv_Q[px][0], 0, 0), pre1[1] = _mm_setr_ps(rbconv_I[cx][0], rbconv_Q[cx][0], 0, 0), pre1[2] = _mm_setr_ps(rbconv_I[nx][0], rbconv_Q[nx][0], 0, 0);
         pre2[0] = _mm_setr_ps(rbconv_I[px][1], rbconv_Q[px][1], 0, 0), pre2[1] = _mm_setr_ps(rbconv_I[cx][1], rbconv_Q[cx][1], 0, 0), pre2[2] = _mm_setr_ps(rbconv_I[nx][1], rbconv_Q[nx][1], 0, 0);
 
@@ -8381,7 +8386,7 @@ void RawImageSource::getRawValues(int x, int y, int rotate, int &R, int &G, int 
 /*
     Copyright (c) Ingo Weyrich  2020 (heckflosse67@gmx.de)
 */
-void RawImageSource::getMinValsXtrans() {
+void RawImageSource::getMinValsXtrans(const array2D<float> &rawData) {
 #ifdef _OPENMP
     #pragma omp parallel for reduction (min:minVals)
 #endif
@@ -8406,16 +8411,30 @@ void RawImageSource::getMinValsXtrans() {
         float m5 = minVals[c5];
         int col = 0;
         for (; col < W - 5; col += 6) {
-            m0 = rtengine::min(m0, rawData[row][col] - cb0);
-            m1 = rtengine::min(m1, rawData[row][col + 1] - cb1);
-            m2 = rtengine::min(m2, rawData[row][col + 2] - cb2);
-            m3 = rtengine::min(m3, rawData[row][col + 3] - cb3);
-            m4 = rtengine::min(m4, rawData[row][col + 4] - cb4);
-            m5 = rtengine::min(m5, rawData[row][col + 5] - cb5);
+            if (LIKELY(rawData[row][col] >= cb0)) {
+                m0 = rtengine::min(m0, rawData[row][col] - cb0);
+            }
+            if (LIKELY(rawData[row][col + 1] >= cb1)) {
+                m1 = rtengine::min(m1, rawData[row][col + 1] - cb1);
+            }
+            if (LIKELY(rawData[row][col + 2] >= cb2)) {
+                m2 = rtengine::min(m2, rawData[row][col + 2] - cb2);
+            }
+            if (LIKELY(rawData[row][col + 3] >= cb3)) {
+                m3 = rtengine::min(m3, rawData[row][col + 3] - cb3);
+            }
+            if (LIKELY(rawData[row][col + 4] >= cb4)) {
+                m4 = rtengine::min(m4, rawData[row][col + 4] - cb4);
+            }
+            if (LIKELY(rawData[row][col + 5] >= cb5)) {
+                m5 = rtengine::min(m5, rawData[row][col + 5] - cb5);
+            }
         }
         for (; col < W; ++col) {
             const int c = ri->XTRANSFC(row,col);
-            minVals[c] = rtengine::min(minVals[c], rawData[row][col] - c_black[c]);
+            if (LIKELY(rawData[row][col] >= c_black[c])) {
+                minVals[c] = rtengine::min(minVals[c], rawData[row][col] - c_black[c]);
+            }
         }
         minVals[c0] = rtengine::min(m0, minVals[c0]);
         minVals[c1] = rtengine::min(m1, minVals[c1]);
@@ -8527,7 +8546,7 @@ void RawImageSource::applyDngGainMap(const float black[4], const std::vector<Gai
 /*
     Copyright (c) Ingo Weyrich  2020 (heckflosse67@gmx.de)
 */
-void RawImageSource::getMinValsBayer(bool zeroIsBad) {
+void RawImageSource::getMinValsBayer(const array2D<float> &rawData, bool zeroIsBad) {
 BENCHFUN
     if (!zeroIsBad) {
 #ifdef _OPENMP
@@ -8542,10 +8561,14 @@ BENCHFUN
             float m1 = minVals[c1];
             int col = 0;
             for (; col < W - 1; col += 2) {
-                m0 = rtengine::min(m0, rawData[row][col] - cb0);
-                m1 = rtengine::min(m1, rawData[row][col + 1] - cb1);
+                if (LIKELY(rawData[row][col] >= cb0)) {
+                    m0 = rtengine::min(m0, rawData[row][col] - cb0);
+                }
+                if (LIKELY(rawData[row][col + 1] >= cb1)) {
+                    m1 = rtengine::min(m1, rawData[row][col + 1] - cb1);
+                }
             }
-            if (col < W) {
+            if (col < W && LIKELY(rawData[row][col] >= cb0)) {
                 m0 = rtengine::min(m0, rawData[row][col] - cb0);
             }
             minVals[c0] = m0;
@@ -8564,14 +8587,14 @@ BENCHFUN
             float m1 = minVals[c1];
             int col = 0;
             for (; col < W - 1; col += 2) {
-                if (LIKELY(rawData[row][col] > 0.f)) {
+                if (LIKELY(rawData[row][col] >= cb0 && rawData[row][col] > 0.f)) {
                     m0 = rtengine::min(m0, rawData[row][col] - cb0);
                 }
-                if (LIKELY(rawData[row][col + 1] > 0.f)) {
+                if (LIKELY(rawData[row][col + 1] >= cb1 && rawData[row][col + 1] > 0.f)) {
                     m1 = rtengine::min(m1, rawData[row][col + 1] - cb1);
                 }
             }
-            if (col < W && LIKELY(rawData[row][col] > 0.f)) {
+            if (col < W && LIKELY(rawData[row][col] >= cb0 && rawData[row][col] > 0.f)) {
                 m0 = rtengine::min(m0, rawData[row][col] - cb0);
             }
             minVals[c0] = m0;

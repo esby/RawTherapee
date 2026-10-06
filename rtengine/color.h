@@ -79,7 +79,7 @@ private:
     static void initMunsell ();
     static double hue2rgb(double p, double q, double t);
     static float hue2rgbfloat(float p, float q, float t);
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
     static vfloat hue2rgb(vfloat p, vfloat q, vfloat t);
 #endif
 
@@ -107,6 +107,10 @@ public:
         ID_UP,       /// Interpolate color by increasing the hue value, crossing the upper limit
         ID_DOWN      /// Interpolate color by decreasing the hue value, crossing the lower limit
     } eInterpolationDirection;
+
+    using Triple = std::array<double, 3>;
+
+    using Matrix = std::array<Triple, 3>;
 
     // Wikipedia sRGB: Unlike most other RGB color spaces, the sRGB gamma cannot be expressed as a single numerical value.
     // The overall gamma is approximately 2.2, consisting of a linear (gamma 1.0) section near black, and a non-linear section elsewhere involving a 2.4 exponent
@@ -211,7 +215,7 @@ public:
         return r * workingspace[0] + g * workingspace[1] + b * workingspace[2];
     }
 
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
     static vfloat rgbLuminance(vfloat r, vfloat g, vfloat b, const vfloat workingspace[3])
     {
         return r * workingspace[0] + g * workingspace[1] + b * workingspace[2];
@@ -302,7 +306,7 @@ public:
         }
     }
 
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
     static void rgb2hsl (vfloat r, vfloat g, vfloat b, vfloat &h, vfloat &s, vfloat &l);
 #endif
 
@@ -339,7 +343,7 @@ public:
         }
     }
 
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
     static void hsl2rgb (vfloat h, vfloat s, vfloat l, vfloat &r, vfloat &g, vfloat &b);
 #endif
 
@@ -582,7 +586,7 @@ public:
         b = ((rgb_xyz[2][0] * x + rgb_xyz[2][1] * y + rgb_xyz[2][2] * z)) ;
     }
 
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
     static inline void xyz2rgb (vfloat x, vfloat y, vfloat z, vfloat &r, vfloat &g, vfloat &b, const vfloat rgb_xyz[3][3])
     {
         r = ((rgb_xyz[0][0] * x + rgb_xyz[0][1] * y + rgb_xyz[0][2] * z)) ;
@@ -606,7 +610,7 @@ public:
     static void rgbxyz (float r, float g, float b, float &x, float &y, float &z, const double xyz_rgb[3][3]);
     static void rgbxyY(float r, float g, float b, float &x, float &y, float &Y, const float xyz_rgb[3][3]);
     static void rgbxyz (float r, float g, float b, float &x, float &y, float &z, const float xyz_rgb[3][3]);
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
     static void rgbxyz (vfloat r, vfloat g, vfloat b, vfloat &x, vfloat &y, vfloat &z, const vfloat xyz_rgb[3][3]);
 #endif
 
@@ -635,7 +639,7 @@ public:
     static void L2XYZ(float L, float &x, float &y, float &z);
     static float L2Y(float L);
 
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
 static inline void Lab2XYZ(vfloat L, vfloat a, vfloat b, vfloat &x, vfloat &y, vfloat &z)
 {
     vfloat c327d68 = F2V(327.68f);
@@ -701,7 +705,7 @@ static inline void Lab2XYZ(vfloat L, vfloat a, vfloat b, vfloat &x, vfloat &y, v
     * @param h 'h' channel return value, in [-PI ; +PI] (return value)
     */
     static void Lab2Lch(float a, float b, float &c, float &h);
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
     static void Lab2Lch(float *a, float *b, float *c, float *h, int w);
 #endif
 
@@ -751,7 +755,7 @@ static inline void Lab2XYZ(vfloat L, vfloat a, vfloat b, vfloat &x, vfloat &y, v
     {
         return (f > epsilonExpInv3f) ? f * f * f : (116.f * f - 16.f) * kappaInvf;
     }
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
     static inline vfloat f2xyz(vfloat f)
     {
         const vfloat epsilonExpInv3v = F2V(epsilonExpInv3f);
@@ -1071,7 +1075,7 @@ static inline void Lab2XYZ(vfloat L, vfloat a, vfloat b, vfloat &x, vfloat &y, v
     * @param gammabwb gamma value for red channel [>0]
     */
     static void trcGammaBW (float &r, float &g, float &b, float gammabwr, float gammabwg, float gammabwb);
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
     static void trcGammaBWRow (float *r, float *g, float *b, int width, float gammabwr, float gammabwg, float gammabwb);
 #endif
 
@@ -1885,6 +1889,24 @@ static inline void Lab2XYZ(vfloat L, vfloat a, vfloat b, vfloat &x, vfloat &y, v
     static void primaries_to_xyz (double p[6], double Wx, double Wz, double *pxyz, int cat);
 
     /**
+    * @brief Gamut compress from ACES
+    */
+    // transpose, multip, mult3 used by ACES
+    static void  transpose(const Matrix &ma, Matrix &R);
+    static void  multip(const Matrix &ma, const Matrix &mb, Matrix &R);
+    static void  mult3(std::array<float, 3> &in, const Matrix &ma, std::array<float, 3> &out);
+    //conversion RGB data with Agx matrix and inverse
+    static void agx_trans(const std::array<float, 3> &rgb_in, const Matrix &to_agx, float &R, float &G, float &B);
+
+    static void aces_reference_gamut_compression(
+        const std::array<float, 3> &rgb_in,
+        const std::array<float, 3> &threshold,
+        const std::array<float, 3> &distance_limit,
+        const Matrix &to_out, const Matrix &from_out,
+        float pwr, bool rolloff,
+        float &R, float &G, float &B, float &ac, float &ac0, float &ac1, float &ac2);
+
+    /**
     * @brief Get HSV's hue from the Lab's hue
     * @param HH Lab's hue value, in radians [-PI ; +PI]
     * @return HSV's hue value [0 ; 1]
@@ -1980,7 +2002,7 @@ static inline void Lab2XYZ(vfloat L, vfloat a, vfloat b, vfloat &x, vfloat &y, v
 
     static inline void RGB2Y(const float* R, const float* G, const float* B, float* Y1, float * Y2, int W) {
         int i = 0;
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
         const vfloat c1v = F2V(0.2627f);
         const vfloat c2v = F2V(0.6780f);
         const vfloat c3v = F2V(0.0593f);

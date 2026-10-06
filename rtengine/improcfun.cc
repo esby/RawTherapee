@@ -49,7 +49,7 @@
 #include "StopWatch.h"
 #include "utils.h"
 
-#include "../rtgui/editcallbacks.h"
+#include "rtgui/editcallbacks.h"
 
 #pragma GCC diagnostic warning "-Wextra"
 #pragma GCC diagnostic warning "-Wdouble-promotion"
@@ -64,7 +64,7 @@ using namespace rtengine;
 void shadowToneCurve(const LUTf &shtonecurve, float *rtemp, float *gtemp, float *btemp, int istart, int tH, int jstart, int tW, int tileSize)
 {
 
-#if defined( __SSE2__ ) && defined( __x86_64__ )
+#if (defined( __SSE2__ ) && defined( __x86_64__ )) || defined(RT_SIMDE)
     vfloat cr = F2V(0.299f);
     vfloat cg = F2V(0.587f);
     vfloat cb = F2V(0.114f);
@@ -72,7 +72,7 @@ void shadowToneCurve(const LUTf &shtonecurve, float *rtemp, float *gtemp, float 
 
     for (int i = istart, ti = 0; i < tH; i++, ti++) {
         int j = jstart, tj = 0;
-#if defined( __SSE2__ ) && defined( __x86_64__ )
+#if (defined( __SSE2__ ) && defined( __x86_64__ )) || defined(RT_SIMDE)
 
         for (; j < tW - 3; j += 4, tj += 4) {
 
@@ -109,14 +109,14 @@ void shadowToneCurve(const LUTf &shtonecurve, float *rtemp, float *gtemp, float 
 void highlightToneCurve(const LUTf &hltonecurve, float *rtemp, float *gtemp, float *btemp, int istart, int tH, int jstart, int tW, int tileSize, float exp_scale, float comp, float hlrange)
 {
 
-#if defined( __SSE2__ ) && defined( __x86_64__ )
+#if (defined( __SSE2__ ) && defined( __x86_64__ )) || defined(RT_SIMDE)
     vfloat threev = F2V(3.f);
     vfloat maxvalfv = F2V(MAXVALF);
 #endif
 
     for (int i = istart, ti = 0; i < tH; i++, ti++) {
         int j = jstart, tj = 0;
-#if defined( __SSE2__ ) && defined( __x86_64__ )
+#if (defined( __SSE2__ ) && defined( __x86_64__ )) || defined(RT_SIMDE)
 
         for (; j < tW - 3; j += 4, tj += 4) {
 
@@ -178,7 +178,7 @@ void proPhotoBlue(float *rtemp, float *gtemp, float *btemp, int istart, int tH, 
     // this is a hack to avoid the blue=>black bug (Issue 2141)
     for (int i = istart, ti = 0; i < tH; i++, ti++) {
         int j = jstart, tj = 0;
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
 
         for (; j < tW - 3; j += 4, tj += 4) {
             vfloat rv = LVF(rtemp[ti * tileSize + tj]);
@@ -514,10 +514,10 @@ void ImProcFunctions::firstAnalysis(const Imagefloat* const original, const Proc
 }
 
 
-// Copyright (c) 2012 Jacques Desmis <jdesmis@gmail.com>
+// Copyright (c) 2012 -2020 - 2026 Jacques Desmis <jdesmis@gmail.com>
 
 void ImProcFunctions::ciecam_02float(CieImage* ncie, float adap, int pW, int pwb, LabImage* lab, const ProcParams* params,
-                                     const ColorAppearance & customColCurve1, const ColorAppearance & customColCurve2, const ColorAppearance & customColCurve3,
+                                     const ColorAppearance & customColCurve1, const ColorAppearance & customColCurvered, const ColorAppearance & customColCurvegreen, const ColorAppearance & customColCurveblue, const ColorAppearance & customColCurve2, const ColorAppearance & customColCurve3,
                                      LUTu & histLCAM, LUTu & histCCAM, LUTf & CAMBrightCurveJ, LUTf & CAMBrightCurveQ, float &mean, int Iterates, int scale, bool execsharp, float &d, float &dj, float &yb, int rtt,
                                      bool showSharpMask)
 {
@@ -553,10 +553,10 @@ void ImProcFunctions::ciecam_02float(CieImage* ncie, float adap, int pW, int pwb
                        || (params->impulseDenoise.enabled && settings->autocielab) || (params->colorappearance.badpixsl > 0 && settings->autocielab));
 
         ColorTemp::temp2mulxyz(params->wb.temperature, params->wb.method, params->wb.observer, Xw, Zw);  //compute white Xw Yw Zw  : white current WB
-        ColorTemp::temp2mulxyz(params->colorappearance.tempout, "Custom", params->wb.observer, Xwout, Zwout);
-        ColorTemp::temp2mulxyz(params->colorappearance.tempsc, "Custom", params->wb.observer, Xwsc, Zwsc);
+        ColorTemp::temp2mulxyz(params->colorappearance.tempout, "Custom", params->wb.observer, Xwout, Zwout);//compute white Xw Yw Zw viewing : white current WB
+        ColorTemp::temp2mulxyz(params->colorappearance.tempsc, "Custom", params->wb.observer, Xwsc, Zwsc);//compute white Xw Yw Zw source : white current WB
 
-        //viewing condition for surrsrc
+        //viewing condition for surrsrc - Surround
         if (params->colorappearance.surrsrc == "Average") {
             f  = 1.00f;
             c  = 0.69f;
@@ -576,9 +576,11 @@ void ImProcFunctions::ciecam_02float(CieImage* ncie, float adap, int pW, int pwb
         }
 
 
-        //viewing condition for surround
+        //viewing condition for surround Viewing
         if (params->colorappearance.surround == "Average") {
-            f2 = 1.0f, c2 = 0.69f, nc2 = 1.0f;
+            f2  = 1.0f;
+            c2  = 0.69f;
+            nc2 = 1.0f;
         } else if (params->colorappearance.surround == "Dim") {
             f2  = 0.9f;
             c2  = 0.59f;
@@ -601,7 +603,7 @@ void ImProcFunctions::ciecam_02float(CieImage* ncie, float adap, int pW, int pwb
                     nc = 0.85f;
                 }
         */
-        //with which algorithm
+        //with which algorithm  JC, JS, QM, ALL
         if (params->colorappearance.algo == "JC") {
             alg = 0;
         } else if (params->colorappearance.algo == "JS") {
@@ -694,17 +696,17 @@ void ImProcFunctions::ciecam_02float(CieImage* ncie, float adap, int pW, int pwb
         */
         const float la2 = float (params->colorappearance.adaplum);
 
-        // level of adaptation
+        // level of chromatic adaptation scene
         const float deg = (params->colorappearance.degree) / 100.0f;
         const float pilot = params->colorappearance.autodegree ? 2.0f : deg;
 
-
+        // level of chromatic adaptation viewing
         const float degout = (params->colorappearance.degreeout) / 100.0f;
         const float pilotout = params->colorappearance.autodegreeout ? 2.0f : degout;
 
         //algoritm's params
         float chr = 0.f;
-
+        //Various adaptation between chroma, saturation, colorfulness
         if (alg == 0 || alg == 3) {
             chr = params->colorappearance.chroma;
 
@@ -752,12 +754,33 @@ void ImProcFunctions::ciecam_02float(CieImage* ncie, float adap, int pW, int pwb
         }
 
         const float hue = params->colorappearance.colorh;
+        const float huered = params->colorappearance.colorhred;
+        const float schrred = params->colorappearance.schromared;
+        const float huegreen = params->colorappearance.colorhgreen;
+        const float schrgreen = params->colorappearance.schromagreen;
+        const float hueblue = params->colorappearance.colorhblue;
+        const float schrblue = params->colorappearance.schromablue;
+        float brighthres = params->colorappearance.brighthres;
+
+        // Creates a transition to mitigate the effects of "brightness" (red green blue) curves on artifacts
+        constexpr float klimb = 0.5f;//ponderation
+        brighthres = std::min(brighthres, 99.9f);
+        const float limb = brighthres + klimb * (100.f - brighthres);//intermediate zone where the application of the curve is progressive
+        
+        constexpr float mink = 0.01f;//minimum curve factor
+        const float kam = (1.f - mink) / (limb - brighthres);//linear interpolation
+        const float kbm = mink - kam * brighthres;//linear interpolation
+        constexpr float attenuation_hue = 0.555f;//Hue attenuation factor of 100/180. I find the changes too significant. It's just a convention.
+
         const float rstprotection = 100. - params->colorappearance.rstprotection;
 
         // extracting data from 'params' to avoid cache flush (to be confirmed)
         const ColorAppearanceParams::TcMode curveMode = params->colorappearance.curveMode;
         const bool hasColCurve1 = bool (customColCurve1);
         const bool t1L = hasColCurve1 && curveMode == ColorAppearanceParams::TcMode::LIGHT;
+        const bool hasColCurvered = bool (customColCurvered);
+        const bool hasColCurvegreen = bool (customColCurvegreen);
+        const bool hasColCurveblue = bool (customColCurveblue);
 
         const ColorAppearanceParams::TcMode curveMode2 = params->colorappearance.curveMode2;
         const bool hasColCurve2 = bool (customColCurve2);
@@ -767,8 +790,8 @@ void ImProcFunctions::ciecam_02float(CieImage* ncie, float adap, int pW, int pwb
 
         bool needJ = (alg == 0 || alg == 1 || alg == 3);
         bool needQ = (alg == 2 || alg == 3);
-        LUTu hist16J;
-        LUTu hist16Q;
+        LUTu hist16J;//histogram J
+        LUTu hist16Q;;//histogram Q
 
         if ((needJ && CAMBrightCurveJ.dirty) || (needQ && CAMBrightCurveQ.dirty) || (std::isnan(mean) && settings->viewinggreySc != 0)) {
 
@@ -805,7 +828,7 @@ void ImProcFunctions::ciecam_02float(CieImage* ncie, float adap, int pW, int pwb
 #ifdef _OPENMP
                 #pragma omp for reduction(+:sum)
 #endif
-
+//rough correspondence between L and J - It's an approximation, but at this stage I haven't found anything simple.
 
                 for (int i = 0; i < height; i++) {
                     for (int j = 0; j < width; j++) { //rough correspondence between L and J
@@ -901,9 +924,8 @@ void ImProcFunctions::ciecam_02float(CieImage* ncie, float adap, int pW, int pwb
 
 
 
-        //  if (settings->viewinggreySc == 0) { //auto
         if (params->colorappearance.autoybscen  &&  pwb == 2) {//auto
-
+            //Evaluate mean luminance scene Yb%
             if (mean < 15.f) {
                 yb = 3.0f;
             } else if (mean < 30.f) {
@@ -928,7 +950,6 @@ void ImProcFunctions::ciecam_02float(CieImage* ncie, float adap, int pW, int pwb
                 yb = 90.0f;
             }
 
-//        } else if (settings->viewinggreySc == 1) {
         } else {
             yb = (float) params->colorappearance.ybscen;
         }
@@ -968,7 +989,7 @@ void ImProcFunctions::ciecam_02float(CieImage* ncie, float adap, int pW, int pwb
 
         float cz, wh, pfl;
         int c16 = 1;
-
+        //choice between CIECAM02 or CIECAM16
         if (params->colorappearance.modelmethod == "02") {
             c16 = 1;
         } else if (params->colorappearance.modelmethod == "16") {
@@ -977,28 +998,27 @@ void ImProcFunctions::ciecam_02float(CieImage* ncie, float adap, int pW, int pwb
 
         float plum = 100.f;
         Ciecam02::initcam1float(yb, pilot, f, la, xw, yw, zw, n, d, nbb, ncb, cz, aw, wh, pfl, fl, c, c16, plum);
-        //printf ("wh=%f \n", wh);
 
         const float pow1 = pow_F(1.64f - pow_F(0.29f, n), 0.73f);
         float nj, nbbj, ncbj, czj, awj, flj;
+        //initialize CAM for scene
         Ciecam02::initcam2float(yb2, pilotout, f2,  la2,  xw2,  yw2,  zw2, nj, dj, nbbj, ncbj, czj, awj, flj, c16, plum);
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
         const float reccmcz = 1.f / (c2 * czj);
 #endif
         const float pow1n = pow_F(1.64f - pow_F(0.29f, nj), 0.73f);
-
+        //initialize conversion coefficient between J and Q, with White point differences
         const float epsil = 0.0001f;
-        const float coefQ = 32767.f / wh;
-        const float a_w = aw;
-        const float c_ = c;
-        const float f_l = fl;
+        const float coefQ = 32767.f / wh;//conversion coeeficient taking into account 'achromatic response to white' and absolute luminance
+        const float a_w = aw;//achromatic response to white
+        const float c_ = c;//surround  background
+        const float f_l = fl;//models the increase in brightness and colorfulness
         const float coe = pow_F(fl, 0.25f);
         const float QproFactor = (0.4f / c) * (aw + 4.0f) ;
         const bool LabPassOne = !((params->colorappearance.tonecie && (epdEnabled)) || (params->sharpening.enabled && settings->autocielab && execsharp)
                                   || (params->dirpyrequalizer.enabled && settings->autocielab) || (params->defringe.enabled && settings->autocielab)  || (params->sharpenMicro.enabled && settings->autocielab)
                                   || (params->impulseDenoise.enabled && settings->autocielab) || (params->colorappearance.badpixsl > 0 && settings->autocielab));
-        //printf("coQ=%f\n", coefQ);
-
+        //Sliders J and Q
         if (needJ) {
             if (!CAMBrightCurveJ) {
                 CAMBrightCurveJ(32768, LUT_CLIP_ABOVE);
@@ -1032,7 +1052,7 @@ void ImProcFunctions::ciecam_02float(CieImage* ncie, float adap, int pW, int pwb
             { (float)wiprof[2][0], (float)wiprof[2][1], (float)wiprof[2][2]}
         };
 
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
         int bufferLength = ((width + 3) / 4) * 4; // bufferLength has to be a multiple of 4
 #endif
 #ifdef _OPENMP
@@ -1041,7 +1061,7 @@ void ImProcFunctions::ciecam_02float(CieImage* ncie, float adap, int pW, int pwb
         {
             float minQThr = 10000.f;
             float maxQThr = -1000.f;
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
             // one line buffer per channel and thread
             float Jbuffer[bufferLength] ALIGNED16;
             float Cbuffer[bufferLength] ALIGNED16;
@@ -1055,7 +1075,7 @@ void ImProcFunctions::ciecam_02float(CieImage* ncie, float adap, int pW, int pwb
 #endif
 
             for (int i = 0; i < height; i++) {
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
                 // vectorized conversion from Lab to jchqms
                 int k;
                 vfloat x, y, z;
@@ -1064,12 +1084,14 @@ void ImProcFunctions::ciecam_02float(CieImage* ncie, float adap, int pW, int pwb
                 vfloat c655d35 = F2V(655.35f);
 
                 for (k = 0; k < width - 3; k += 4) {
+                    //convert from Lab to XYZ
                     Color::Lab2XYZ(LVFU(lab->L[i][k]), LVFU(lab->a[i][k]), LVFU(lab->b[i][k]), x, y, z);
                     x = x / c655d35;
                     y = y / c655d35;
                     z = z / c655d35;
                     float plum = 100.f;
                     vfloat plumv = F2V(plum);
+                    //convert from XYZ to LMS Cat02/16
                     Ciecam02::xyz2jchqms_ciecam02float(J, C,  h,
                                                        Q,  M,  s, F2V(aw), F2V(fl), F2V(wh),
                                                        x,  y,  z,
@@ -1112,7 +1134,7 @@ void ImProcFunctions::ciecam_02float(CieImage* ncie, float adap, int pW, int pwb
                 for (int j = 0; j < width; j++) {
                     float J, C, h, Q, M, s;
 
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
                     // use precomputed values from above
                     J = Jbuffer[j];
                     C = Cbuffer[j];
@@ -1139,6 +1161,7 @@ void ImProcFunctions::ciecam_02float(CieImage* ncie, float adap, int pW, int pwb
                                                        c,  nc, pow1, nbb, ncb, pfl, cz, d, c16, plum);
 #endif
                     float Jpro, Cpro, hpro, Qpro, Mpro, spro;
+                    //now we have the CIECAM variables pixel by pixel
                     Jpro = J;
                     Cpro = C;
                     hpro = h;
@@ -1146,7 +1169,11 @@ void ImProcFunctions::ciecam_02float(CieImage* ncie, float adap, int pW, int pwb
                     Mpro = M;
                     spro = s;
                     bool jp = false;
-
+                    bool jpred = false;
+                    bool jpgreen = false;
+                    bool jpblue = false;
+                    //the order in which each treatment is processed is very important. Otherwise, the variables are not up to date
+                    //first main Curves Q
                     if ((hasColCurve1) && (curveMode == ColorAppearanceParams::TcMode::BRIGHT)) {
                         jp = true;
                         float Qq = Qpro * coefQ;
@@ -1170,22 +1197,130 @@ void ImProcFunctions::ciecam_02float(CieImage* ncie, float adap, int pW, int pwb
                     if (jp) {
                         Jpro = SQR((10.f * Qpro) / wh);
                     }
+                    //Red Green Blue variations
+                    //I haven't addressed the transitions or spillovers during other hue modifications, to keep things simple... The effects are marginal and minor.
+                    //It's possible to set a Hue equalizer for each color range (Red, Green, Blue), which is more purist but complicates the interface and usage.
+
+
+                    // Creates a transition to mitigate the effects of "brightness" (red green blue) curves on artifacts
+                    constexpr float klimb = 0.5f;//ponderation
+                    const float limb = brighthres + klimb * (100.f - brighthres);//intermediate zone where the application of the curve is progressive
+                    constexpr float mink = 0.01f;//minimum curve factor
+                    const float kam = (1.f - mink) / (limb - brighthres);//linear interpolation
+                    const float kbm = mink - kam * brighthres;//linear interpolation
+                    if((hpro > 340.f && hpro <= 360.f) || (hpro > 0.f && hpro <= 100.f)) {//Red CIECAM
+                        if ((hasColCurvered)) {
+                            jpred = true;
+                            float Qq = Qpro * coefQ;
+                            float Qold = Qpro;
+                            const Brightcurve& userColCurveBred = static_cast<const Brightcurve&>(customColCurvered);
+                            const float kreduc = Cpro * kam + kbm;//calculates the reduction in the applied force of the curve as a function of Cpro
+                            if (Cpro  > brighthres) {
+                                userColCurveBred.Apply(Qq);
+                            }
+                            Qq = Qq / coefQ;
+                            Qpro = 0.2f * kreduc * (Qq - Qold) + Qold;
+                        }
+                        if (jpred) {
+                            Jpro = SQR((10.f * Qpro) / wh);
+                        }
+
+                    
+                        hpro = hpro + attenuation_hue * huered;//rotation Red
+                        spro = spro * (1.f + (schrred / 100.f));//change Red saturation 
+                        float Cp = (spro * spro * Qpro) / (1000000.f);//recalculate Chroma
+                        Mpro = SQR(spro) * Qpro / 10000.f;//recalculate Mpro Colorfulness
+                        Cpro = Cp * 100.f;
+
+
+                        if (hpro < 0.0f) {
+                            hpro += 360.0f;    //hue
+                        }
+                    }
+
+                    if((hpro > 100.f && hpro <= 190)) {//Green CIECAM 
+                        if ((hasColCurvegreen)) {
+                            jpgreen = true;
+                            float Qq = Qpro * coefQ;
+                            float Qold = Qpro;
+                            const Brightcurve& userColCurveBgreen = static_cast<const Brightcurve&>(customColCurvegreen);
+                            if (Cpro  > brighthres) {
+                                userColCurveBgreen.Apply(Qq);
+                            }
+                            const float kreduc = Cpro * kam + kbm;
+
+                            Qq = Qq / coefQ;
+                            Qpro = 0.2f * kreduc * (Qq - Qold) + Qold;
+                        }
+                        if (jpgreen) {
+                            Jpro = SQR((10.f * Qpro) / wh);
+                        }
+                    
+                        hpro = hpro + attenuation_hue * huegreen;//Rotation Green
+                        spro = spro * (1.f + (schrgreen / 100.f));//change Green saturation 
+                        float Cp = (spro * spro * Qpro) / (1000000.f);//Evaluate Chroma with Brightness Q and saturation
+                        Mpro = SQR(spro) * Qpro / 10000.f;//recalculate Mpro Colorfulness
+                        Cpro = Cp * 100.f;
+
+                        if (hpro < 0.0f) {
+                            hpro += 360.0f;    //hue
+                        }
+                    }
+
+                    if((hpro > 190.f && hpro <= 340)) {//blue CIECAM
+                        if ((hasColCurveblue)) {
+                            jpblue = true;
+                            float Qq = Qpro * coefQ;
+                            float Qold = Qpro;
+                            const Brightcurve& userColCurveBblue = static_cast<const Brightcurve&>(customColCurveblue);
+                            if (Cpro  > brighthres) {
+                                userColCurveBblue.Apply(Qq);
+                            }
+                            const float kreduc = Cpro * kam + kbm;
+
+                            Qq = Qq / coefQ;
+                            Qpro = 0.2f * kreduc * (Qq - Qold) + Qold;
+                        }
+                        if (jpblue) {
+                            Jpro = SQR((10.f * Qpro) / wh);
+                        }
+
+                        hpro = hpro + attenuation_hue * hueblue;//Rotation Blue
+                        spro = spro * (1.f + (schrblue / 100.f));//change Blue saturation 
+                        float Cp = (spro * spro * Qpro) / (1000000.f);
+                        Mpro = SQR(spro) * Qpro / 10000.f;//recalculate Mpro Colorfulness
+                        Cpro = Cp * 100.f;
+
+                        if (hpro < 0.0f) {
+                            hpro += 360.0f;    //hue
+                        }
+                    }
+                    //We could have introduced Yellow, more in line with the CIECAM concept...but that would have confused (I think) users 'used' to R, G, B
+                    //red CIECAM 340 - 100
+                    //green CIECAM 100 - 190
+                    //blue CIECAM 190 - 340
 
                     // we cannot have all algorithms with all chroma curves
                     if (alg == 0) {
                         Jpro = CAMBrightCurveJ[Jpro * 327.68f]; //lightness CIECAM02 + contrast
-                        Qpro = QproFactor * sqrtf(Jpro);
-                        float Cp = (spro * spro * Qpro) / (1000000.f);
+                        Qpro = QproFactor * sqrtf(Jpro);//calculate Q brightness
+                        float Cp = (spro * spro * Qpro) / (1000000.f);//Chroma
                         Cpro = Cp * 100.f;
                         float sres;
-                        Ciecam02::curvecolorfloat(chr, Cp, sres, 1.8f);
+                        Ciecam02::curvecolorfloat(chr, Cp, sres, 1.8f);//calculate parameters to master Red (here with saturation)
                         Color::skinredfloat(Jpro, hpro, sres, Cp, 55.f, 30.f, 1, rstprotection, 100.f, Cpro);
+                        hpro = hpro + hue;
+
+                        if (hpro < 0.0f) {
+                            hpro += 360.0f;    //hue
+                        }
+                        
                     } else if (alg == 1)  {
                         // Lightness saturation
                         Jpro = CAMBrightCurveJ[Jpro * 327.68f]; //lightness CIECAM02 + contrast
                         float sres;
                         float Sp = spro / 100.0f;
-                        float parsat = 1.5f; //parsat=1.5 =>saturation  ; 1.8 => chroma ; 2.5 => colorfullness (personal evaluation)
+                        float parsat = 1.5f; //parsat=1.5 =>saturation  ; 1.8 => chroma ; 2.5 => colorfulness (personal evaluation)
                         Ciecam02::curvecolorfloat(schr, Sp, sres, parsat);
                         float dred = 100.f; // in C mode
                         float protect_red = 80.0f; // in C mode
@@ -1194,24 +1329,34 @@ void ImProcFunctions::ciecam_02float(CieImage* ncie, float adap, int pW, int pwb
                         Color::skinredfloat(Jpro, hpro, sres, Sp, dred, protect_red, 0, rstprotection, 100.f, spro);
                         Qpro = QproFactor * sqrtf(Jpro);
                         Cpro = (spro * spro * Qpro) / (10000.0f);
-                    } else if (alg == 2) {
-                        //printf("Qp0=%f ", Qpro);
+                        hpro = hpro + hue;
 
-                        Qpro = CAMBrightCurveQ[(float)(Qpro * coefQ)] / coefQ;   //brightness and contrast
-                        //printf("Qpaf=%f ", Qpro);
+                        if (hpro < 0.0f) {
+                            hpro += 360.0f;    //hue
+                        }
+                        
+                    } else if (alg == 2) {
+
+                        Qpro = CAMBrightCurveQ[(float)(Qpro * coefQ)] / coefQ;//brightness and contrast
 
                         float Mp, sres;
                         Mp = Mpro / 100.0f;
-                        Ciecam02::curvecolorfloat(mchr, Mp, sres, 2.5f);
+                        Ciecam02::curvecolorfloat(mchr, Mp, sres, 2.5f);//calculate parameters to master Red (here with colorfulness)
                         float dred = 100.f; //in C mode
                         float protect_red = 80.0f; // in C mode
                         dred *= coe; //in M mode
                         protect_red *= coe; //M mode
                         Color::skinredfloat(Jpro, hpro, sres, Mp, dred, protect_red, 0, rstprotection, 100.f, Mpro);
-                        Jpro = SQR((10.f * Qpro) / wh);
+                        Jpro = SQR((10.f * Qpro) / wh);//recalculate J lightness
                         Cpro = Mpro / coe;
                         Qpro = (Qpro == 0.f ? epsil : Qpro); // avoid division by zero
-                        spro = 100.0f * sqrtf(Mpro / Qpro);
+                        spro = 100.0f * sqrtf(Mpro / Qpro);//recalculate saturation
+                        hpro = hpro + hue;
+
+                        if (hpro < 0.0f) {
+                            hpro += 360.0f;    //hue
+                        }
+                        
                     } else { /*if(alg == 3) */
                         Qpro = CAMBrightCurveQ[(float)(Qpro * coefQ)] / coefQ;   //brightness and contrast
 
@@ -1228,8 +1373,10 @@ void ImProcFunctions::ciecam_02float(CieImage* ncie, float adap, int pW, int pwb
                         Qpro = (Qpro == 0.f ? epsil : Qpro); // avoid division by zero
                         spro = 100.0f * sqrtf(Mpro / Qpro);
 
-                        if (Jpro > 99.9f) {
-                            Jpro = 99.9f;
+                        if(settings->autocielab) {//avoid artifacts
+                            if (Jpro > 99.9f) {
+                                Jpro = 99.9f;
+                            }
                         }
 
                         Jpro = CAMBrightCurveJ[(float)(Jpro * 327.68f)];   //lightness CIECAM02 + contrast
@@ -1245,18 +1392,13 @@ void ImProcFunctions::ciecam_02float(CieImage* ncie, float adap, int pW, int pwb
                         Cpro = Cp * 100.f;
                         Ciecam02::curvecolorfloat(chr, Cp, sres, 1.8f);
                         Color::skinredfloat(Jpro, hpro, sres, Cp, 55.f, 30.f, 1, rstprotection, 100.f, Cpro);
-// disabled this code, Issue 2690
-//              if(Jpro < 1.f && Cpro > 12.f) Cpro=12.f;//reduce artifacts by "pseudo gamut control CIECAM"
-//              else if(Jpro < 2.f && Cpro > 15.f) Cpro=15.f;
-//              else if(Jpro < 4.f && Cpro > 30.f) Cpro=30.f;
-//              else if(Jpro < 7.f && Cpro > 50.f) Cpro=50.f;
                         hpro = hpro + hue;
 
                         if (hpro < 0.0f) {
                             hpro += 360.0f;    //hue
                         }
                     }
-
+                    //Lightness curves
                     if (hasColCurve1 && (curveMode == ColorAppearanceParams::TcMode::LIGHT)) {
                         float Jj = (float) Jpro * 327.68f;
                         float Jold = Jj;
@@ -1326,8 +1468,8 @@ void ImProcFunctions::ciecam_02float(CieImage* ncie, float adap, int pW, int pwb
                             Jpro = 1.f;
                         }
                     }
-
-                    if (hasColCurve3) {//curve 3 with chroma saturation colorfullness
+                    //curves chroma, saturation, colorfulness
+                    if (hasColCurve3) {//curve 3 with chroma saturation colorfulness
                         if (curveMode3 == ColorAppearanceParams::CtcMode::CHROMA) {
                             float parsat = 0.8f; //0.68;
                             float coef = 327.68f / parsat;
@@ -1340,18 +1482,7 @@ void ImProcFunctions::ciecam_02float(CieImage* ncie, float adap, int pW, int pwb
                             int sk = 1;
                             float ko = 1.f / coef;
                             Color::skinredfloat(Jpro, hpro, Cc, Ccold, dred, protect_red, sk, rstprotection, ko, Cpro);
-                            /*
-                                                        if(Jpro < 1.f && Cpro > 12.f) {
-                                                            Cpro = 12.f;    //reduce artifacts by "pseudo gamut control CIECAM"
-                                                        } else if(Jpro < 2.f && Cpro > 15.f) {
-                                                            Cpro = 15.f;
-                                                        } else if(Jpro < 4.f && Cpro > 30.f) {
-                                                            Cpro = 30.f;
-                                                        } else if(Jpro < 7.f && Cpro > 50.f) {
-                                                            Cpro = 50.f;
-                                                        }
-                            */
-                        } else if (curveMode3 == ColorAppearanceParams::CtcMode::SATUR) { //
+                        } else if (curveMode3 == ColorAppearanceParams::CtcMode::SATUR) {
                             float parsat = 0.8f; //0.6
                             float coef = 327.68f / parsat;
                             float Ss = (float) spro * coef;
@@ -1382,17 +1513,6 @@ void ImProcFunctions::ciecam_02float(CieImage* ncie, float adap, int pW, int pwb
                             int sk = 0;
                             float ko = 1.f / coef;
                             Color::skinredfloat(Jpro, hpro, Mm, Mold, dred, protect_red, sk, rstprotection, ko, Mpro);
-                            /*
-                                                        if(Jpro < 1.f && Mpro > 12.f * coe) {
-                                                            Mpro = 12.f * coe;    //reduce artifacts by "pseudo gamut control CIECAM"
-                                                        } else if(Jpro < 2.f && Mpro > 15.f * coe) {
-                                                            Mpro = 15.f * coe;
-                                                        } else if(Jpro < 4.f && Mpro > 30.f * coe) {
-                                                            Mpro = 30.f * coe;
-                                                        } else if(Jpro < 7.f && Mpro > 50.f * coe) {
-                                                            Mpro = 50.f * coe;
-                                                        }
-                            */
                             Cpro = Mpro / coe;
                         }
                     }
@@ -1450,13 +1570,13 @@ void ImProcFunctions::ciecam_02float(CieImage* ncie, float adap, int pW, int pwb
                             hist16JCAM[posl]++;
 
                             if (curveMode3 == ColorAppearanceParams::CtcMode::CHROMA) {
-                                chsacol = 400.f;//327
+                                chsacol = 400.f;
                                 colch = C;    //450.0 approximative factor for s    320 for M
                             } else if (curveMode3 == ColorAppearanceParams::CtcMode::SATUR) {
                                 chsacol = 450.0f;
                                 colch = s;
                             } else { /*if(curveMode3 == ColorAppearanceParams::CTCMode::COLORF)*/
-                                chsacol = 400.0f;//327
+                                chsacol = 400.0f;
                                 colch = M;
                             }
 
@@ -1466,7 +1586,7 @@ void ImProcFunctions::ciecam_02float(CieImage* ncie, float adap, int pW, int pwb
                         }
 
                         if (LabPassOne) {
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
                             // write to line buffers
                             Jbuffer[j] = J;
                             Cbuffer[j] = C;
@@ -1480,7 +1600,7 @@ void ImProcFunctions::ciecam_02float(CieImage* ncie, float adap, int pW, int pwb
                                 {wprofc[1][0], wprofc[1][1], wprofc[1][2]},
                                 {wprofc[2][0], wprofc[2][1], wprofc[2][2]}
                             };
-
+                            //conversion from CAM to XYZ
                             Ciecam02::jch2xyz_ciecam02float(xx, yy, zz,
                                                             J,  C, h,
                                                             xw2, yw2,  zw2,
@@ -1506,7 +1626,7 @@ void ImProcFunctions::ciecam_02float(CieImage* ncie, float adap, int pW, int pwb
                     }
                 }
 
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
                 // process line buffers
                 float *xbuffer = Qbuffer;
                 float *ybuffer = Mbuffer;
@@ -1527,10 +1647,15 @@ void ImProcFunctions::ciecam_02float(CieImage* ncie, float adap, int pW, int pwb
                 for (int j = 0; j < width; j++) {
                     float Ll, aa, bb;
                     //convert xyz=>lab
+                    constexpr float epsilon = 0.00001f;//To avoid negative values and crashes due to real values(float) ​​that are too low.
+                    xbuffer[j] = std::max(epsilon, xbuffer[j]);
+                    ybuffer[j] = std::max(epsilon, ybuffer[j]);
+                    zbuffer[j] = std::max(epsilon, zbuffer[j]);
+
                     Color::XYZ2Lab(xbuffer[j], ybuffer[j], zbuffer[j], Ll, aa, bb);
 
                     // gamut control in Lab mode; I must study how to do with cIECAM only
-                    if (gamu == 1) {
+                    if (gamu == 1) {//disabled by default - old algorithm
                         float Lprov1, Chprov1;
                         Lprov1 = Ll / 327.68f;
                         Chprov1 = sqrtf(SQR(aa) + SQR(bb)) / 327.68f;
@@ -1600,7 +1725,6 @@ void ImProcFunctions::ciecam_02float(CieImage* ncie, float adap, int pW, int pwb
                         lab->reallocLab();
                     }
 
-//if(params->dirpyrequalizer.enabled) if(execsharp) {
                 if (params->dirpyrequalizer.enabled && params->dirpyrequalizer.gamutlab && rtt) { //remove artifacts by gaussian blur - skin control, but not for thumbs
                     constexpr float artifact = 4.f;
                     constexpr float chrom = 50.f;
@@ -1611,7 +1735,6 @@ void ImProcFunctions::ciecam_02float(CieImage* ncie, float adap, int pW, int pwb
                     lab->reallocLab();
                 }
 
-//if(params->colorappearance.badpixsl > 0) { int mode=params->colorappearance.badpixsl;
                 if (params->colorappearance.badpixsl > 0 && execsharp) {
                     int mode = params->colorappearance.badpixsl;
                     lab->deleteLab();
@@ -1637,10 +1760,7 @@ void ImProcFunctions::ciecam_02float(CieImage* ncie, float adap, int pW, int pwb
                         sharpeningcam(ncie, buffer, showSharpMask);  // sharpening adapted to CIECAM
                     }
 
-//if(params->dirpyrequalizer.enabled) if(execsharp) {
-                if (params->dirpyrequalizer.enabled /*&& execsharp*/)  {
-//  if(params->dirpyrequalizer.algo=="FI") choice=0;
-//  else if(params->dirpyrequalizer.algo=="LA") choice=1;
+                if (params->dirpyrequalizer.enabled)  {
 
                     if (rtt == 1) {
                         float b_l = static_cast<float>(params->dirpyrequalizer.hueskin.getBottomLeft()) / 100.0f;
@@ -1651,12 +1771,6 @@ void ImProcFunctions::ciecam_02float(CieImage* ncie, float adap, int pW, int pwb
                         lab->reallocLab();
                     }
 
-                    /*
-                    if(params->colorappearance.badpixsl > 0) if(execsharp){ int mode=params->colorappearance.badpixsl;
-                    printf("BADPIX");
-                                                                ImProcFunctions::badpixcam (ncie, 8.0, 10, mode);//for bad pixels
-                                                            }
-                                                            */
                 }
 
                 const float Qredi = (4.0f / c_)  * (a_w + 4.0f);
@@ -1694,8 +1808,6 @@ void ImProcFunctions::ciecam_02float(CieImage* ncie, float adap, int pW, int pwb
                 lab->reallocLab();
             }
 
-            //EPDToneMapCIE adated to CIECAM
-
 
             constexpr float eps = 0.0001f;
             const float co_e = (pow_F(f_l, 0.25f)) + eps;
@@ -1704,7 +1816,7 @@ void ImProcFunctions::ciecam_02float(CieImage* ncie, float adap, int pW, int pwb
             #pragma omp parallel
 #endif
             {
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
                 // one line buffer per channel
                 float Jbuffer[bufferLength] ALIGNED16;
                 float Cbuffer[bufferLength] ALIGNED16;
@@ -1721,7 +1833,6 @@ void ImProcFunctions::ciecam_02float(CieImage* ncie, float adap, int pW, int pwb
                 for (int i = 0; i < height; i++) { // update CIECAM with new values after tone-mapping
                     for (int j = 0; j < width; j++) {
 
-                        //  if(epdEnabled) ncie->J_p[i][j]=(100.0f* ncie->Q_p[i][j]*ncie->Q_p[i][j])/(w_h*w_h);
                         if (epdEnabled) {
                             ncie->J_p[i][j] = (100.0f * ncie->Q_p[i][j] * ncie->Q_p[i][j]) / SQR((4.f / c) * (aw + 4.f));
                         }
@@ -1765,7 +1876,7 @@ void ImProcFunctions::ciecam_02float(CieImage* ncie, float adap, int pW, int pwb
 
                         //end histograms
 
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
                         Jbuffer[j] = ncie->J_p[i][j];
                         Cbuffer[j] = ncie_C_p;
                         hbuffer[j] = ncie->h_p[i][j];
@@ -1782,7 +1893,7 @@ void ImProcFunctions::ciecam_02float(CieImage* ncie, float adap, int pW, int pwb
                         //convert xyz=>lab
                         Color::XYZ2Lab(x,  y,  z, Ll, aa, bb);
 
-                        if (gamu == 1) {
+                        if (gamu == 1) {//gamut Lab control - disabled by default (old algorithm maintained by compatibility)
                             float Lprov1, Chprov1;
                             Lprov1 = Ll / 327.68f;
                             Chprov1 = sqrtf(SQR(aa) + SQR(bb)) / 327.68f;
@@ -1812,7 +1923,7 @@ void ImProcFunctions::ciecam_02float(CieImage* ncie, float adap, int pW, int pwb
 #endif
                     }
 
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
                     // process line buffers
                     int k;
                     vfloat x, y, z;
@@ -2039,9 +2150,9 @@ void ImProcFunctions::rgbProc(Imagefloat* working, LabImage* lab, PipetteBuffer 
     };
 
     bool mixchannels = params->chmixer.enabled &&
-                       (params->chmixer.red[0] != 100 || params->chmixer.red[1] != 0     || params->chmixer.red[2] != 0   ||
-                        params->chmixer.green[0] != 0 || params->chmixer.green[1] != 100 || params->chmixer.green[2] != 0 ||
-                        params->chmixer.blue[0] != 0  || params->chmixer.blue[1] != 0    || params->chmixer.blue[2] != 100);
+                       (params->chmixer.red[0] != 1000 || params->chmixer.red[1] != 0     || params->chmixer.red[2] != 0   ||
+                        params->chmixer.green[0] != 0 || params->chmixer.green[1] != 1000 || params->chmixer.green[2] != 0 ||
+                        params->chmixer.blue[0] != 0  || params->chmixer.blue[1] != 0    || params->chmixer.blue[2] != 1000);
 
     FlatCurve* hCurve = nullptr;
     FlatCurve* sCurve = nullptr;
@@ -2101,7 +2212,7 @@ void ImProcFunctions::rgbProc(Imagefloat* working, LabImage* lab, PipetteBuffer 
     std::shared_ptr<HaldCLUT> hald_clut;
     bool clutAndWorkingProfilesAreSame = false;
     TMatrix xyz2clut = {}, clut2xyz = {};
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
     vfloat v_work2xyz[3][3] ALIGNED16;
     vfloat v_xyz2clut[3][3] ALIGNED16;
     vfloat v_clut2xyz[3][3] ALIGNED16;
@@ -2118,7 +2229,7 @@ void ImProcFunctions::rgbProc(Imagefloat* working, LabImage* lab, PipetteBuffer 
                 xyz2clut = ICCStore::getInstance()->workingSpaceInverseMatrix(hald_clut->getProfile());
                 clut2xyz = ICCStore::getInstance()->workingSpaceMatrix(hald_clut->getProfile());
 
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
 
                 for (int i = 0; i < 3; ++i) {
                     for (int j = 0; j < 3; ++j) {
@@ -2463,7 +2574,7 @@ void ImProcFunctions::rgbProc(Imagefloat* working, LabImage* lab, PipetteBuffer 
                 } else {
                     for (int i = istart, ti = 0; i < tH; i++, ti++) {
                         int j = jstart, tj = 0;
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
                         float tmpr[4] ALIGNED16;
                         float tmpg[4] ALIGNED16;
                         float tmpb[4] ALIGNED16;
@@ -2945,7 +3056,7 @@ void ImProcFunctions::rgbProc(Imagefloat* working, LabImage* lab, PipetteBuffer 
 
                                 // --------------------------------------------------
 
-#ifndef __SSE2__
+#if ! defined(__SSE2__) && ! defined(RT_SIMDE)
 
                                 //gamma correction: pseudo TRC curve
                                 if (hasgammabw) {
@@ -2958,7 +3069,7 @@ void ImProcFunctions::rgbProc(Imagefloat* working, LabImage* lab, PipetteBuffer 
                                 btemp[ti * TS + tj] = b;
                             }
 
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
 
                             if (hasgammabw) {
                                 //gamma correction: pseudo TRC curve
@@ -3016,7 +3127,7 @@ void ImProcFunctions::rgbProc(Imagefloat* working, LabImage* lab, PipetteBuffer 
                                 float newRed; // We use the red channel for bw
                                 Color::xyz2r(X, Y, Z, newRed, wip);
                                 rtemp[ti * TS + tj] = gtemp[ti * TS + tj] = btemp[ti * TS + tj] = newRed;
-#ifndef __SSE2__
+#if ! defined(__SSE2__) && ! defined(RT_SIMDE)
 
                                 if (hasgammabw) {
                                     //gamma correction: pseudo TRC curve
@@ -3026,7 +3137,7 @@ void ImProcFunctions::rgbProc(Imagefloat* working, LabImage* lab, PipetteBuffer 
 #endif
                             }
 
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
 
                             if (hasgammabw) {
                                 //gamma correction: pseudo TRC curve
@@ -3048,7 +3159,7 @@ void ImProcFunctions::rgbProc(Imagefloat* working, LabImage* lab, PipetteBuffer 
                             int j = jstart;
                             int tj = 0;
 
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
 
                             for (; j < tW - 3; j += 4, tj += 4) {
                                 vfloat sourceR = LVF(rtemp[ti * TS + tj]);
@@ -3119,7 +3230,7 @@ void ImProcFunctions::rgbProc(Imagefloat* working, LabImage* lab, PipetteBuffer 
                             int j = jstart;
                             int tj = 0;
 
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
 
                             for (; j < tW - 3; j += 4, tj += 4) {
                                 vfloat sourceR = LVF(clutr[tj]);
@@ -3285,7 +3396,7 @@ void ImProcFunctions::rgbProc(Imagefloat* working, LabImage* lab, PipetteBuffer 
                     //mix channel
                     tmpImage->r(i, j) = tmpImage->g(i, j) = tmpImage->b(i, j) = /*CLIP*/ ((bwr * tmpImage->r(i, j) + bwg * tmpImage->g(i, j) + bwb * tmpImage->b(i, j)) * kcorec);
 
-#ifndef __SSE2__
+#if ! defined(__SSE2__) && ! defined(RT_SIMDE)
 
                     //gamma correction: pseudo TRC curve
                     if (hasgammabw) {
@@ -3295,7 +3406,7 @@ void ImProcFunctions::rgbProc(Imagefloat* working, LabImage* lab, PipetteBuffer 
 #endif
                 }
 
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
 
                 if (hasgammabw) {
                     //gamma correction: pseudo TRC curve
@@ -4332,7 +4443,7 @@ void ImProcFunctions::chromiLuminanceCurve(PipetteBuffer *pipetteBuffer, int pW,
     #pragma omp parallel if (multiThread)
 #endif
     {
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
         float HHBuffer[W] ALIGNED16;
         float CCBuffer[W] ALIGNED16;
 #endif
@@ -4348,7 +4459,7 @@ void ImProcFunctions::chromiLuminanceCurve(PipetteBuffer *pipetteBuffer, int pW,
             //       Color::LabGamutMunsell(lold->L[i], lold->a[i], lold->b[i], W, /*corMunsell*/true, /*lumaMuns*/false, params->toneCurve.hrenabled, /*gamut*/true, wip);
             //   }
 
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
 
             // precalculate some values using SSE
             if (bwToning || (!autili && !butili)) {
@@ -4382,7 +4493,7 @@ void ImProcFunctions::chromiLuminanceCurve(PipetteBuffer *pipetteBuffer, int pW,
                 float2 sincosval;
 
                 if (bwToning) { // this values will be also set when bwToning is false some lines down
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
                     // use precalculated values from above
                     HH = HHBuffer[j];
                     CC = CCBuffer[j];
@@ -4438,7 +4549,7 @@ void ImProcFunctions::chromiLuminanceCurve(PipetteBuffer *pipetteBuffer, int pW,
                 }
 
                 if (!bwToning) { //take into account modification of 'a' and 'b'
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
                     if (!autili && !butili) {
                         // use precalculated values from above
                         HH = HHBuffer[j];
@@ -5875,7 +5986,7 @@ void ImProcFunctions::lab2rgb(const LabImage &src, Imagefloat &dst, const Glib::
 
     const int W = dst.getWidth();
     const int H = dst.getHeight();
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
     vfloat wipv[3][3];
 
     for (int i = 0; i < 3; i++) {
@@ -5892,7 +6003,7 @@ void ImProcFunctions::lab2rgb(const LabImage &src, Imagefloat &dst, const Glib::
 
     for (int i = 0; i < H; i++) {
         int j = 0;
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
 
         for (; j < W - 3; j += 4) {
             vfloat X, Y, Z;

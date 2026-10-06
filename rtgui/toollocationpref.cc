@@ -75,6 +75,8 @@ Glib::ustring getToolTitleKey(Tool tool)
             return "TP_IMPULSEDENOISE_LABEL";
         case Tool::DEFRINGE_TOOL:
             return "TP_DEFRINGE_LABEL";
+        case Tool::COMPRESSGAMUT_TOOL:
+            return "TP_COMPRESSGAMUT_LABEL";
         case Tool::SPOT:
             return "TP_SPOT_LABEL";
         case Tool::DIR_PYR_DENOISE:
@@ -131,6 +133,10 @@ Glib::ustring getToolTitleKey(Tool tool)
             return "TP_RESIZE_LABEL";
         case Tool::PR_SHARPENING:
             return "TP_PRSHARPENING_LABEL";
+        case Tool::FRAMING:
+            return "TP_FRAMING_LABEL";
+        case Tool::CROP_GUIDE:
+            return "TP_CROP_GUIDE_LABEL";
         case Tool::CROP_TOOL:
             return "TP_CROP_LABEL";
         case Tool::ICM:

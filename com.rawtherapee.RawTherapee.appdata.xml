@@ -15,13 +15,15 @@
     <content_rating type="oars-1.0" />
     <metadata_license>CC-BY-SA-4.0</metadata_license>
     <project_license>GPL-3.0+</project_license>
-    <url type="bugtracker">https://github.com/Beep6581/RawTherapee/issues</url>
+    <url type="bugtracker">https://github.com/RawTherapee/RawTherapee/issues</url>
     <url type="donation">https://www.paypal.me/rawtherapee</url>
     <url type="help">https://rawpedia.rawtherapee.com</url>
     <url type="homepage">https://www.rawtherapee.com</url>
     <url type="translate">https://rawpedia.rawtherapee.com/Main_Page#Localization</url>
     <launchable type="desktop-id">rawtherapee.desktop</launchable>
     <releases>
+        <release version="5.13" date="2026-07-26" type="stable"></release>
+        <release version="5.12" date="2025-05-28" type="stable"></release>
         <release version="5.11" date="2024-08-25" type="stable"></release>
         <release version="5.10" date="2024-02-16" type="stable"></release>
         <release version="5.9" date="2022-11-27" type="stable"></release>

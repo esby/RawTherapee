@@ -16,6 +16,10 @@
 *  You should have received a copy of the GNU General Public License
 *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
 */
+#include <algorithm>
+#include <array>
+#include <utility>
+
 #include <glibmm/ustring.h>
 
 #include "rtengine.h"
@@ -26,6 +30,7 @@
 #include "iccstore.h"
 #include <iostream>
 #include "linalgebra.h"
+#include "procparams.h"
 
 using namespace std;
 
@@ -620,7 +625,7 @@ void Color::rgb2hsl(float r, float g, float b, float &h, float &s, float &l)
     }
 }
 
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
 void Color::rgb2hsl(vfloat r, vfloat g, vfloat b, vfloat &h, vfloat &s, vfloat &l)
 {
     vfloat maxv = vmaxf(r, vmaxf(g, b));
@@ -683,7 +688,7 @@ float Color::hue2rgbfloat(float p, float q, float t)
     }
 }
 
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
 vfloat Color::hue2rgb(vfloat p, vfloat q, vfloat t)
 {
     vfloat fourv = F2V(4.f);
@@ -725,7 +730,7 @@ void Color::hsl2rgb (float h, float s, float l, float &r, float &g, float &b)
     }
 }
 
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
 void Color::hsl2rgb (vfloat h, vfloat s, vfloat l, vfloat &r, vfloat &g, vfloat &b)
 {
 
@@ -1034,7 +1039,7 @@ void Color::rgbxyz (float r, float g, float b, float &x, float &y, float &z, con
     z = ((xyz_rgb[2][0] * r + xyz_rgb[2][1] * g + xyz_rgb[2][2] * b)) ;
 }
 
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
 void Color::rgbxyz (vfloat r, vfloat g, vfloat b, vfloat &x, vfloat &y, vfloat &z, const vfloat xyz_rgb[3][3])
 {
     x = ((xyz_rgb[0][0] * r + xyz_rgb[0][1] * g + xyz_rgb[0][2] * b)) ;
@@ -1073,7 +1078,7 @@ void Color::xyz2r (float x, float y, float z, float &r, const double rgb_xyz[3][
     r = ((rgb_xyz[0][0] * x + rgb_xyz[0][1] * y + rgb_xyz[0][2] * z)) ;
 }
 
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
 void Color::trcGammaBW (float &r, float &g, float &b, float gammabwr, float gammabwg, float gammabwb)
 {
     // correct gamma for black and white image : pseudo TRC curve of ICC profile
@@ -1617,7 +1622,7 @@ void Color::calcGamma (double pwr, double ts, GammaValues &gamma)
 }
 void Color::gammaf2lut (LUTf &gammacurve, float gamma, float start, float slope, float divisor, float factor)
 {
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
     // SSE2 version is more than 6 times faster than scalar version
     vfloat iv = _mm_set_ps(3.f, 2.f, 1.f, 0.f);
     vfloat fourv = F2V(4.f);
@@ -1661,7 +1666,7 @@ void Color::gammaf2lut (LUTf &gammacurve, float gamma, float start, float slope,
 
 void Color::gammanf2lut (LUTf &gammacurve, float gamma, float divisor, float factor)           //standard gamma without slope...
 {
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
     // SSE2 version is more than 6 times faster than scalar version
     vfloat iv = _mm_set_ps(3.f, 2.f, 1.f, 0.f);
     vfloat fourv = F2V(4.f);
@@ -1721,7 +1726,7 @@ inline float Color::computeXYZ2Lab(float f)
 void Color::RGB2Lab(float *R, float *G, float *B, float *L, float *a, float *b, const float wp[3][3], int width)
 {
 
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
     const vfloat minvalfv = ZEROV;
     const vfloat maxvalfv = F2V(MAXVALF);
     const vfloat c500v = F2V(500.f);
@@ -1729,7 +1734,7 @@ void Color::RGB2Lab(float *R, float *G, float *B, float *L, float *a, float *b, 
 #endif
     int i = 0;
     
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
     for(;i < width - 3; i+=4) {
         const vfloat rv = LVFU(R[i]);
         const vfloat gv = LVFU(G[i]);
@@ -1785,7 +1790,7 @@ void Color::RGB2Lab(float *R, float *G, float *B, float *L, float *a, float *b, 
 void Color::RGB2L(const float *R, const float *G, const float *B, float *L, const float wp[3][3], int width)
 {
 
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
     const vfloat maxvalfv = F2V(MAXVALF);
     const vfloat rmv = F2V(wp[1][0]);
     const vfloat gmv = F2V(wp[1][1]);
@@ -1793,7 +1798,7 @@ void Color::RGB2L(const float *R, const float *G, const float *B, float *L, cons
 #endif
     int i = 0;
     
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
     for(; i < width - 3; i+=4) {
         const vfloat rv = LVFU(R[i]);
         const vfloat gv = LVFU(G[i]);
@@ -1826,7 +1831,7 @@ void Color::Lab2RGBLimit(float *L, float *a, float *b, float *R, float *G, float
 
     int i = 0;
 
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
     const vfloat wpv[3][3] = {
                               {F2V(wp[0][0]), F2V(wp[0][1]), F2V(wp[0][2])},
                               {F2V(wp[1][0]), F2V(wp[1][1]), F2V(wp[1][2])},
@@ -1925,7 +1930,7 @@ void Color::Lab2Lch(float a, float b, float &c, float &h)
     h = xatan2f(b, a);
 }
 
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
 void Color::Lab2Lch(float *a, float *b, float *c, float *h, int w)
 {
     int i = 0;
@@ -2104,6 +2109,195 @@ float Color::eval_ACEScct_curve(float x, bool forward)
 }
 
 // end code take in ART thanks to Alberto Griggio
+
+//functions needs to use ACES
+
+// transpose Matrix
+void Color::transpose(const Matrix &ma, Matrix &R)
+{
+    if (&ma == &R) {
+        std::swap(R[0][1], R[1][0]);
+        std::swap(R[0][2], R[2][0]);
+        std::swap(R[1][0], R[0][1]);
+        std::swap(R[1][2], R[2][1]);
+        std::swap(R[2][0], R[0][2]);
+        std::swap(R[2][1], R[1][2]);
+    } else {
+        R[0][0] = ma[0][0];
+        R[0][1] = ma[1][0];
+        R[0][2] = ma[2][0];
+        R[1][0] = ma[0][1];
+        R[1][1] = ma[1][1];
+        R[1][2] = ma[2][1];
+        R[2][0] = ma[0][2];
+        R[2][1] = ma[1][2];
+        R[2][2] = ma[2][2];
+    }
+}
+
+// multiply Matrix x Matrix
+void Color::multip(const Matrix &ma, const Matrix &mb, Matrix &R)
+{
+    const bool overwrite = &ma == &R || &mb == &R;
+    if (overwrite) {
+        // Use buffer to hold result so the input doesn't get overwritten while
+        // the multiplication is happening.
+        Matrix buf;
+        multip(ma, mb, buf);
+        for (int i = 0; i < 3; ++i) {
+            for (int j = 0; j < 3; ++j) {
+                R[i][j] = buf[i][j];
+            }
+        }
+    } else {
+        for (int i = 0; i < 3; ++i) {
+            for (int j = 0; j < 3; ++j) {
+                double sum = 0.0;
+                for (int k = 0; k < 3; ++k) {
+                    sum += ma[i][k] * mb[k][j];
+                }
+                R[i][j] = sum;
+            }
+        }
+    }
+}
+
+//multiply Matrix
+void Color::mult3(std::array<float, 3> &in, const Matrix &ma, std::array<float, 3> &out)
+{
+    // Use buffer for result in case in and out overlap.
+    std::array<float, 3> buf{0.f, 0.f, 0.f};
+    for (int i = 0; i < 3; ++i) {
+        for( int j = 0; j < 3; ++j){
+            buf[i] += static_cast<float>(in[j] * ma[j][i]);
+        }
+    }
+    std::copy(buf.cbegin(), buf.cend(), out.begin());
+}
+
+//conversion RGB data with Agx matrix and inverse
+void Color::agx_trans(const std::array<float, 3> &rgb_in, const Matrix &to_agx, float &R, float &G, float &B) {
+    std::array<float, 3> rgb{rgb_in[0], rgb_in[1], rgb_in[2]};
+    Color::mult3(rgb, to_agx, rgb);
+    R = rgb[0];
+    G = rgb[1];
+    B = rgb[2];
+}
+
+// ACES-style gamut compression
+//
+// tweaked from the original from https://github.com/jedypod/gamut-compress
+// tweaked from CTL in ART thanks to Alberto Griggio
+
+//from ACES https://docs.acescentral.com/specifications/rgc/#appendix-c-illustrations
+// https://docs.acescentral.com/specifications/rgc/#appendix-d-ctl-reference-implementation
+// https://docs.acescentral.com/specifications/rgc/
+// Distance from achromatic which will be compressed to the gamut boundary
+// Values calculated to encompass the encoding gamuts of common digital cinema cameras
+//const float LIM_CYAN =  1.147;
+//const float LIM_MAGENTA = 1.264;
+//const float LIM_YELLOW = 1.312;
+
+//Percentage of the core gamut to protect
+// Values calculated to protect all the colors of the ColorChecker Classic 24 as given by
+// ISO 17321-1 and Ohta (1997)
+//const float THR_CYAN = 0.815;
+//const float THR_MAGENTA = 0.803;
+//const float THR_YELLOW = 0.880;
+
+// Aggressiveness of the compression curve
+//const float PWR = 1.2;
+//https://www.gujinwei.org/research/camspec/
+
+//Jacques Desmis December 2025
+
+void Color::aces_reference_gamut_compression(
+    const std::array<float, 3> &rgb_in,
+    const std::array<float, 3> &threshold,
+    const std::array<float, 3> &distance_limit,
+    const Matrix &to_out, const Matrix &from_out,
+    float pwr, bool rolloff,
+    float &R, float &G, float &B, float &ac, float &ac0, float &ac1, float &ac2)// ac, ac0, ac1, ac2 achromatic values for Red, Green, Blue
+ {
+    std::array<float, 3> rgb{rgb_in[0], rgb_in[1], rgb_in[2]};
+
+    // Calculate scale so compression function passes through distance limit:
+    // (x=distance_limit, y=1)
+    std::array<float, 3> s;
+    for (unsigned i = 0; i < s.size(); ++i) {
+        // Scale factor: c = (1 - t) / sqrt(l - 1)
+        s[i] = (1.0f  - threshold[i]) / sqrt(fmax(1.001f, distance_limit[i]) - 1.0f);
+    }
+    // target colorspace
+    Color::mult3(rgb, to_out, rgb);
+
+    // Achromatic axis
+
+    ac = fmax(rgb[0], fmax(rgb[1], rgb[2]));
+    ac0 = rgb[0];
+    ac1 = rgb[1];
+    ac2 = rgb[2];
+    // Inverse RGB Ratios: distance from achromatic axis
+    std::array<float, 3> d{0.f, 0.f, 0.f};
+    if (ac != 0) {
+        for (unsigned i = 0; i < d.size(); ++i) {
+            d[i] = (ac - rgb[i]) / fabs(ac);
+        }
+    }
+    std::array<float, 3> cd{d[0], d[1], d[2]}; // Compressed distance
+    if (!rolloff) {
+        // Parabolic compression function:
+        // https://www.desmos.com/calculator/nvhp63hmtj
+        // y = { x < t:  x
+        //       x >= t: c sqrt(x - t + c^2 / 4) - c sqrt(c^2 / 4) + t }
+        // The second piece is equal to
+        // c (sqrt(x - t + c^2 / 4) - |c / 2|) + t
+        for (unsigned i = 0; i < cd.size(); ++i) {
+            if (d[i] >= threshold[i]) {
+                const float c_2 = s[i] / 2.f;
+                const float c2_4 = c_2 * c_2;
+                cd[i] = s[i] * (sqrt(d[i] - threshold[i] + c2_4) - fabs(c_2)) +
+                        threshold[i];
+            }
+        }
+    } else {
+        for (unsigned i = 0; i < cd.size(); ++i) {
+            if (d[i] >= threshold[i]) {
+                if (threshold[i] == 1.f) {
+                    cd[i] = 1.f;
+                } else {
+                    // Calculate scale factor for y = 1 intersect
+                    const float limit = distance_limit[i];
+                    const float thres = threshold[i];
+                    //                     l - t
+                    // Scale s = --------------------------
+                    //           ( ( 1 - t )-p     )(1 / p)
+                    //           ( ( ----- )   - 1 )
+                    //           ( ( l - t )       )
+                    const float scale = (limit - thres) / pow(pow((1.0f - thres) / (limit - thres), - pwr) - 1.0f, 1.0f / pwr);
+                    // Normalize distance outside threshold by scale factor
+                    // x' = (x - t) / s
+                    const float nd = (d[i] - thres) / scale;
+                    //                  x'
+                    // y = t + s ----------------
+                    //           (1 + x'^p)^(1/p)
+                    const float po = pow(nd, pwr);
+                    cd[i] = thres + scale * nd / (pow(1.0f + po, 1.0f / pwr));
+                }
+            }
+        }
+    }
+    // Inverse RGB Ratios to RGB
+
+    for (unsigned i = 0; i < rgb.size(); ++i) {
+        rgb[i] = ac - cd[i] * fabs(ac);
+    }
+    //working colorspace from_out
+    Color::mult3(rgb, from_out, rgb);
+    R = rgb[0];
+    G = rgb[1];
+    B = rgb[2];
+}
 
 
 void Color::primaries_to_xyz(double p[6], double Wx, double Wz, double *pxyz, int cat)
@@ -2998,7 +3192,7 @@ void Color::gamutLchonly (float2 sincosval, float &Lprov1, float &Chprov1, const
  */
 void Color::LabGamutMunsell(float *labL, float *laba, float *labb, const int N, bool corMunsell, bool lumaMuns, bool isHLEnabled, bool gamut, const double wip[3][3])
 {
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
     // precalculate H and C using SSE
     float HHBuffer[N];
     float CCBuffer[N];
@@ -3021,7 +3215,7 @@ void Color::LabGamutMunsell(float *labL, float *laba, float *labb, const int N, 
 #endif // __SSE2__
 
     for (int j = 0; j < N; j++) {
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
         float HH  = HHBuffer[j];
         float Chprov1 = CCBuffer[j];
 #else

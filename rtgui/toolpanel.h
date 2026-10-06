@@ -19,12 +19,17 @@
 #pragma once
 
 #include <gtkmm.h>
+
 #include <glibmm/ustring.h>
-#include "../rtengine/rtengine.h"
-#include "../rtengine/noncopyable.h"
+
 #include "guiutils.h"
 #include "multilangmgr.h"
 #include "paramsedited.h"
+
+#include "rtengine/noncopyable.h"
+#include "rtengine/rtengine.h"
+
+// esby-hook: ToolPanel derives from MovableToolPanel (favorites, trash, tool moves)
 #include "editcallbacks.h"
 #include "toolvboxdef.h"
 #include "rtdef.h"
@@ -251,8 +256,8 @@ public:
     }
     bool getEnabled();  // related to the enabled/disabled state
     void setEnabled(bool isActive);  // related to the enabled/disabled state
-    void setEnabledTooltipMarkup(Glib::ustring tooltipMarkup);
-    void setEnabledTooltipText(Glib::ustring tooltipText);
+    void setEnabledTooltipMarkup(const Glib::ustring& tooltipMarkup);
+    void setEnabledTooltipText(const Glib::ustring& tooltipText);
     bool get_inconsistent();  // related to the enabled/disabled state
     void set_inconsistent(bool isInconsistent);  // related to the enabled/disabled state
     void setGrayedOut(bool doGrayOut); // Set whether the tool should be disabled, collapsed and grayed-out.

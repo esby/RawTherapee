@@ -21,16 +21,14 @@
 #include <iostream>
 #include <cstring>
 
-#ifdef _WIN32_WINNT
-#undef _WIN32_WINNT
-#define _WIN32_WINNT 0x0600
-#include <windows.h>
-#endif
-
 #include "guiutils.h"
 #include "rtsurface.h"
 #include "multilangmgr.h"
 #include "options.h"
+
+#ifdef _WIN32
+#include "rtengine/leanwindows.h"
+#endif // _WIN32
 
 namespace
 {
@@ -54,6 +52,11 @@ std::vector<Glib::ustring> listSubDirs (const Glib::RefPtr<Gio::File>& dir, bool
                 if (!file) {
                     break;
                 }
+#ifdef _WIN32
+                if (!file->has_attribute("standard::type")) {
+                    continue;
+                }
+#endif
                 if (file->get_file_type () != Gio::FILE_TYPE_DIRECTORY) {
                     continue;
                 }
@@ -144,6 +147,7 @@ void DirBrowser::fillDirTree ()
 
     dirtree->append_column(tvc);
 
+    const auto& options = App::get().options();
     tvc.set_sort_order(options.dirBrowserSortType);
     tvc.set_sort_column(dtColumns.filename);
     tvc.set_sort_indicator(true);
@@ -267,6 +271,7 @@ void DirBrowser::fillRoot ()
 
 void DirBrowser::on_sort_column_changed() const
 {
+    auto& options = App::get().mut_options();
     options.dirBrowserSortType = tvc.get_sort_order();
 }
 
@@ -285,13 +290,14 @@ void DirBrowser::row_expanded (const Gtk::TreeModel::iterator& iter, const Gtk::
     dirTreeModel->get_sort_column_id(prevSortColumn, prevSortType);
     dirTreeModel->set_sort_column(Gtk::TreeSortable::DEFAULT_UNSORTED_COLUMN_ID, Gtk::SORT_ASCENDING);
 
+    const auto& options = App::get().options();
     auto dir = Gio::File::create_for_path (iter->get_value (dtColumns.dirname));
     auto subDirs = listSubDirs (dir, options.fbShowHidden);
 
     Gtk::TreeNodeChildren children = iter->children();
     std::list<Gtk::TreeIter> forErase(children.begin(), children.end());
 
-    std::sort (subDirs.begin (), subDirs.end (), [] (const Glib::ustring& firstDir, const Glib::ustring& secondDir)
+    std::sort (subDirs.begin (), subDirs.end (), [&](const Glib::ustring& firstDir, const Glib::ustring& secondDir)
     {
         switch (options.dirBrowserSortType) {
         default:
@@ -319,7 +325,7 @@ void DirBrowser::row_expanded (const Gtk::TreeModel::iterator& iter, const Gtk::
         iter->set_value(dtColumns.icon_name, openfolder);
     }
 
-    Glib::RefPtr<Gio::FileMonitor> monitor = dir->monitor_directory ();
+    Glib::RefPtr<Gio::FileMonitor> monitor = dir->monitor_directory(Gio::FileMonitorFlags::FILE_MONITOR_WATCH_MOVES);
     iter->set_value (dtColumns.monitor, monitor);
     monitor->signal_changed().connect (sigc::bind(sigc::mem_fun(*this, &DirBrowser::file_changed), iter, dir->get_parse_name()));
 }
@@ -353,7 +359,7 @@ void DirBrowser::updateDir (const Gtk::TreeModel::iterator& iter)
 
     // test if new files are created
     auto dir = Gio::File::create_for_path (iter->get_value (dtColumns.dirname));
-    auto subDirs = listSubDirs (dir, options.fbShowHidden);
+    auto subDirs = listSubDirs (dir, App::get().options().fbShowHidden);
 
     for (size_t i = 0; i < subDirs.size(); i++) {
         bool found = false;
@@ -487,8 +493,28 @@ void DirBrowser::open (const Glib::ustring& dirname, const Glib::ustring& fileNa
 
 void DirBrowser::file_changed (const Glib::RefPtr<Gio::File>& file, const Glib::RefPtr<Gio::File>& other_file, Gio::FileMonitorEvent event_type, const Gtk::TreeModel::iterator& iter, const Glib::ustring& dirName)
 {
+    // file is the file that is/was in the monitored directory. other_file is
+    // null if only one file is involved (create/delete events), the file that
+    // is/was in another directory, or the new name for a renamed file. We want
+    // to inspect the file type of the changed file, so we decide which file to
+    // use based on the event type.
+    const Glib::RefPtr<Gio::File> current_file =
+        (event_type == Gio::FILE_MONITOR_EVENT_MOVED ||
+            event_type == Gio::FILE_MONITOR_EVENT_RENAMED ||
+            event_type == Gio::FILE_MONITOR_EVENT_MOVED_OUT)
+            ? other_file
+            : file;
 
-    if (!file || !Glib::file_test (dirName, Glib::FILE_TEST_IS_DIR) || event_type == Gio::FILE_MONITOR_EVENT_ATTRIBUTE_CHANGED) {
+    // No need to update the directory if the even type is not rename, move,
+    // create, or delete, or if the file is not a directory.
+    if (!current_file ||
+        event_type == Gio::FILE_MONITOR_EVENT_CHANGED ||
+        event_type == Gio::FILE_MONITOR_EVENT_CHANGES_DONE_HINT ||
+        event_type == Gio::FILE_MONITOR_EVENT_ATTRIBUTE_CHANGED ||
+        event_type == Gio::FILE_MONITOR_EVENT_PRE_UNMOUNT ||
+        (event_type != Gio::FILE_MONITOR_EVENT_DELETED &&
+            event_type != Gio::FILE_MONITOR_EVENT_UNMOUNTED &&
+            !Glib::file_test(current_file->get_path(), Glib::FILE_TEST_IS_DIR))) {
         return;
     }
 

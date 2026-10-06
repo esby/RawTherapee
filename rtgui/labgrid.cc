@@ -4,7 +4,7 @@
  *
  *  Copyright (c) 2017 Alberto Griggio <alberto.griggio@gmail.com>
  *
- *  Copyright (c) 2021 Jacques Desmis <jdesmis@gmail.com> for CIE xy graph
+ *  Copyright (c) 2021 / 2024 Jacques Desmis <jdesmis@gmail.com> for CIE xy graph and GHS curve
  *
  *  RawTherapee is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -40,7 +40,7 @@
 
 #include "labgrid.h"
 
-#include "../rtengine/color.h"
+#include "rtengine/color.h"
 #include "options.h"
 #include "rtimage.h"
 #include "rtscalable.h"
@@ -52,6 +52,11 @@ using rtengine::Color;
 // LabGridArea
 //-----------------------------------------------------------------------------
 
+bool LabGridArea::FunctionParams::is_valid() const
+{
+    return x_min < x_max && y_min < y_max;
+}
+
 bool LabGridArea::notifyListener()
 {
     if (listener) {
@@ -60,15 +65,16 @@ bool LabGridArea::notifyListener()
             {
                 return int(v * 1000) / 1000.f;
             };
-        if (! ciexy_enabled){
+        if (! ciexy_enabled &&  !ghs_enabled){
             listener->panelChanged(evt, Glib::ustring::compose(evtMsg, round(high_a), round(high_b), round(low_a), round(low_b)));
-        } else {
-            float high_a1 = 0.55f * (high_a + 1.f) - 0.1f;
-            float high_b1 = 0.55f * (high_b + 1.f) - 0.1f;
-            float low_a1 = 0.55f * (low_a + 1.f) - 0.1f;
-            float low_b1 = 0.55f * (low_b + 1.f) - 0.1f;
-            float gre_x1 = 0.55f * (gre_x + 1.f) - 0.1f;
-            float gre_y1 = 0.55f * (gre_y + 1.f) - 0.1f;
+        } else if (ciexy_enabled) {
+            constexpr float INV_OFFSET_MODIFIER = 1.f / rtengine::OFFSET_MODIFIER;
+            float high_a1 = INV_OFFSET_MODIFIER * (high_a + 1.f) - rtengine::CIExy_MARGIN;
+            float high_b1 = INV_OFFSET_MODIFIER * (high_b + 1.f) - rtengine::CIExy_MARGIN;
+            float low_a1 = INV_OFFSET_MODIFIER * (low_a + 1.f) - rtengine::CIExy_MARGIN;
+            float low_b1 = INV_OFFSET_MODIFIER * (low_b + 1.f) - rtengine::CIExy_MARGIN;
+            float gre_x1 = INV_OFFSET_MODIFIER * (gre_x + 1.f) - rtengine::CIExy_MARGIN;
+            float gre_y1 = INV_OFFSET_MODIFIER * (gre_y + 1.f) - rtengine::CIExy_MARGIN;
             listener->panelChanged(evt, Glib::ustring::compose(evtMsg, round(low_a1), round(low_b1), round(gre_x1), round(gre_y1), round(high_a1), round(high_b1)));
         }
     }
@@ -76,17 +82,19 @@ bool LabGridArea::notifyListener()
 }
 
 
-LabGridArea::LabGridArea(rtengine::ProcEvent evt, const Glib::ustring &msg, bool enable_low, bool ciexy, bool mous):
+LabGridArea::LabGridArea(rtengine::ProcEvent evt, const Glib::ustring &msg, bool enable_low, bool ciexy, bool ghs, bool mous):
     Gtk::DrawingArea(),
     evt(evt), evtMsg(msg),
     litPoint(NONE),
-    low_a(0.f), high_a(0.f), low_b(0.f), high_b(0.f), gre_x(0.f), gre_y(0.f), whi_x(0.f), whi_y(0.f), me_x(0.f), me_y(0.f),//these variables are used as xy in Ciexy - no change labels
+    low_a(0.f), high_a(0.f), low_b(0.f), high_b(0.f), gre_x(0.f), gre_y(0.f), whi_x(0.f), whi_y(0.f), me_x(0.f), me_y(0.f),
+      
     defaultLow_a(0.f), defaultHigh_a(0.f), defaultLow_b(0.f), defaultHigh_b(0.f), defaultgre_x(0.f), defaultgre_y(0.f), defaultwhi_x(0.f), defaultwhi_y(0.f), defaultme_x(0.f), defaultme_y(0.f),
     listener(nullptr),
     edited(false),
     isDragged(false),
     low_enabled(enable_low),
     ciexy_enabled(ciexy),
+    ghs_enabled(ghs),
     mous_enabled(mous)
     
 
@@ -98,6 +106,7 @@ LabGridArea::LabGridArea(rtengine::ProcEvent evt, const Glib::ustring &msg, bool
 }
 
 void LabGridArea::getParams(double &la, double &lb, double &ha, double &hb, double &gx, double &gy, double &wx, double &wy, double &mx, double &my) const
+
 {
     la = low_a;
     ha = high_a;
@@ -109,11 +118,11 @@ void LabGridArea::getParams(double &la, double &lb, double &ha, double &hb, doub
     wy = whi_y;
     mx = me_x;
     my = me_y;
- //  printf("la=%f ha=%f lb=%f hb=%f gx=%f gy=%f\n", la, ha, lb, hb, gx, gy);
 }
 
 
 void LabGridArea::setParams(double la, double lb, double ha, double hb, double gx, double gy, double wx, double wy, double mx, double my, bool notify)
+
 {
     const double lo = -1.0;
     const double hi = 1.0;
@@ -127,14 +136,20 @@ void LabGridArea::setParams(double la, double lb, double ha, double hb, double g
     whi_y = rtengine::LIM(wy, lo, hi);
     me_x = rtengine::LIM(mx, lo, hi);
     me_y = rtengine::LIM(my, lo, hi);
-
     queue_draw();
     if (notify) {
         notifyListener();
     }
 }
 
+void LabGridArea::setFunctionParams(const FunctionParams &params)
+{
+    function_params = params;
+    queue_draw();
+}
+
 void LabGridArea::setDefault (double la, double lb, double ha, double hb, double gx, double gy, double wx, double wy, double mx, double my)
+
 {
     defaultLow_a = la;
     defaultLow_b = lb;
@@ -154,7 +169,6 @@ void LabGridArea::reset(bool toInitial)
     if (toInitial) {
         setParams(defaultLow_a, defaultLow_b, defaultHigh_a, defaultHigh_b, defaultgre_x, defaultgre_y, defaultwhi_x, defaultwhi_y, defaultme_x, defaultme_y, true);
     } else {
-   //     printf("RESET \n");
         setParams(0., 0., 0., 0., 0., 0., 0., 0., 0., 0., true);
     }
 }
@@ -224,7 +238,7 @@ bool LabGridArea::on_draw(const ::Cairo::RefPtr<Cairo::Context> &cr)
     cr->translate(0., static_cast<double>(height));
     cr->scale(1., -1.);
 
-    if (! ciexy_enabled) {//draw cells for Labgrid
+    if (! ciexy_enabled && !ghs_enabled) {//draw cells for general Labgrid
         const int cells = 8;
         const float step = 12000.f / static_cast<float>(cells/2);
         const double cellW = static_cast<double>(width) / static_cast<double>(cells);
@@ -257,7 +271,7 @@ bool LabGridArea::on_draw(const ::Cairo::RefPtr<Cairo::Context> &cr)
             cellYMin = cellYMax;
             cellYMax = std::floor(cellH * static_cast<double>(j+2) + 0.01);
         }
-    } else {//cells for CIE xy
+    } else if (ciexy_enabled) {//cells for CIE xy in SE and Abstract profile
         const int cells = 600;
         const float step = 1.f / static_cast<float>(cells);
         const double cellW = static_cast<double>(width) / static_cast<double>(cells);
@@ -326,6 +340,11 @@ bool LabGridArea::on_draw(const ::Cairo::RefPtr<Cairo::Context> &cr)
             cellYMin = cellYMax;
             cellYMax = std::floor(cellH * static_cast<double>(j+2) + 0.001);
         }
+    } else if (ghs_enabled) {//cells for GHS and simulation GHS
+        constexpr double value = 0.7;
+        cr->set_source_rgb(value, value, value);
+        cr->rectangle( 0., 0., width, height);
+        cr->fill();
     }
 
     // Drawing the connection line
@@ -341,21 +360,95 @@ bool LabGridArea::on_draw(const ::Cairo::RefPtr<Cairo::Context> &cr)
     const double why = .5 * (static_cast<double>(height) + static_cast<double>(height) * whi_y);
     double mex = .5 * (static_cast<double>(width) + static_cast<double>(width) * me_x);
     double mey = .5 * (static_cast<double>(height) + static_cast<double>(height) * me_y);
+
+    //primaries default Rec2020 - Draw small dots to retain the RGB values ​​of Rec2020
+    constexpr double REC2020_RED_X = 0.708;
+    constexpr double REC2020_RED_Y = 0.292;
+    constexpr double REC2020_GRE_X = 0.17;
+    constexpr double REC2020_GRE_Y = 0.797;
+    constexpr double REC2020_BLU_X = 0.131;
+    constexpr double REC2020_BLU_Y = 0.046;
+
+    const double r2rx = rtengine::OFFSET_MODIFIER * (REC2020_RED_X + rtengine::CIExy_MARGIN) - 1.;//center the data after an equation of the type Y= a*x + b
+    const double r2ry = rtengine::OFFSET_MODIFIER * (REC2020_RED_Y + rtengine::CIExy_MARGIN) - 1.;
+    const double r2gx = rtengine::OFFSET_MODIFIER * (REC2020_GRE_X + rtengine::CIExy_MARGIN) - 1.;
+    const double r2gy = rtengine::OFFSET_MODIFIER * (REC2020_GRE_Y + rtengine::CIExy_MARGIN) - 1.;
+    const double r2bx = rtengine::OFFSET_MODIFIER * (REC2020_BLU_X + rtengine::CIExy_MARGIN) - 1.;
+    const double r2by = rtengine::OFFSET_MODIFIER * (REC2020_BLU_Y + rtengine::CIExy_MARGIN) - 1.;
+
+    const double r2020_redx = .5 * (static_cast<double>(width) + static_cast<double>(width) * r2rx);
+    const double r2020_redy = .5 * (static_cast<double>(height) + static_cast<double>(height) * r2ry);
+    const double r2020_grex = .5 * (static_cast<double>(width) + static_cast<double>(width) * r2gx);
+    const double r2020_grey = .5 * (static_cast<double>(height) + static_cast<double>(height) * r2gy);
+    const double r2020_blux = .5 * (static_cast<double>(width) + static_cast<double>(width) * r2bx);
+    const double r2020_bluy = .5 * (static_cast<double>(height) + static_cast<double>(height) * r2by);
+
     cr->set_line_width(1.5);
+    if (ciexy_enabled) {       
         mex = .5 * (width + width * me_x);
         mey = .5 * (height + height * me_y);
+        
+    }
     cr->set_source_rgb(0.6, 0.6, 0.6);
-    cr->move_to(loa, lob);
-    cr->line_to(hia, hib);
+    if (!ghs_enabled) {
+
+        cr->move_to(loa, lob);
+        cr->line_to(hia, hib);
+    }
     if (ciexy_enabled) {
+        //Rec2020 default  
         cr->move_to(loa, lob);
         cr->line_to(grx, gry);
         cr->move_to(grx, gry);
         cr->line_to(hia, hib);
+    } else if (ghs_enabled) {
+        if (function_params.is_valid()) {
+            constexpr double line_width = 3.;
+            cr->set_line_width(line_width);
+            cr->set_source_rgb(0.2, 0.2, 0.2);
+
+            const int curve_segment_count = std::max(1, function_params.resolution_function(width));
+
+            std::vector<double> curve(curve_segment_count + 1);
+
+            // Calculate y-values.
+            const double x_range = function_params.x_max - function_params.x_min;
+            const double y_range = function_params.y_max - function_params.y_min;
+            const double y_scale = height / y_range;
+            for (int i = 0; i <= curve_segment_count; ++i) {
+                const double x = function_params.x_min + x_range / curve_segment_count * i;
+                curve[i] = rtengine::LIM<double>(y_scale * (function_params.function(x) - function_params.y_min), 0.0, height);
+            }
+
+            // Plot curve.
+            const double dx = static_cast<double>(width) / curve_segment_count;
+            for (int i = 0; i < curve_segment_count; ++i) {
+                const double x0 = dx * i;
+                const double x1 = x0 + dx;
+                const double y0 = curve[i];
+                const double y1 = curve[i + 1];
+                cr->move_to(x0, y0);
+                cr->line_to(x1, y1);
+            }
+        }
     }
     cr->stroke();
+    if(ghs_enabled) {//only 10 * 10 squares
+        cr->set_line_width(0.2);
+        cr->set_source_rgb(0.1, 0.1, 0.1);
+        //draw horiz and vertical lines
+        for(int i = 0; i < 10; i++) {
+            cr->move_to(0.1 * static_cast<double>(i * width), 0.);
+            cr->line_to(0.1 * static_cast<double>(i * width), static_cast<double>(height));
+        }
+        for(int i = 0; i < 10; i++) {
+            cr->move_to(0., 0.1 * static_cast<double>(i * height));
+            cr->line_to(static_cast<double>(width), 0.1 * static_cast<double>(i * height));
+        }
 
-    if (ciexy_enabled) {
+        cr->stroke();
+        
+    } else if (ciexy_enabled) {//for CIExy
         cr->set_line_width(0.2);
         cr->set_source_rgb(0.1, 0.1, 0.1);
         //draw horiz and vertical lines
@@ -391,53 +484,66 @@ bool LabGridArea::on_draw(const ::Cairo::RefPtr<Cairo::Context> &cr)
         cr->set_source_rgb(0.4, 0., 0.);
         cr->move_to(0.985 * static_cast<double>(width), 0.08 * static_cast<double>(height));
         cr->line_to(0.985 * static_cast<double>(width),  0.055 * static_cast<double>(height));
-
         cr->move_to(0.07 * static_cast<double>(width), 0.99 * static_cast<double>(height));
         cr->line_to(0.07 * static_cast<double>(width),  0.965 * static_cast<double>(height));
-
         cr->stroke();
     }
-
+    if(!ghs_enabled) {//no points with GHS
     // Drawing points
-    if (low_enabled) {
-        cr->set_source_rgb(0.1, 0.1, 0.1);//black for red in Ciexy
-        if (litPoint == LOW) {
-            cr->arc(loa, lob, 5., 0., 2. * rtengine::RT_PI);
-        } else {
-            cr->arc(loa, lob, 3., 0., 2. * rtengine::RT_PI);
+        if (low_enabled) {
+            cr->set_source_rgb(0.1, 0.1, 0.1);//black for red in Ciexy
+            if (litPoint == LOW) {
+                cr->arc(loa, lob, 5., 0., 2. * rtengine::RT_PI);
+            } else {
+                cr->arc(loa, lob, 3., 0., 2. * rtengine::RT_PI);
+            }
+            cr->fill();
         }
-        cr->fill();
-    }
 
-    if (ciexy_enabled) {
-        cr->set_source_rgb(0.5, 0.5, 0.5);//gray for green
-        if (litPoint == GRE) {
-            cr->arc(grx, gry, 5., 0., 2. * rtengine::RT_PI);
-        } else {
-            cr->arc(grx, gry, 3., 0., 2. * rtengine::RT_PI);
+        if (ciexy_enabled) {
+            cr->set_source_rgb(0.5, 0.5, 0.5);//gray for green
+            if (litPoint == GRE) {
+                cr->arc(grx, gry, 5., 0., 2. * rtengine::RT_PI);
+            } else {
+                cr->arc(grx, gry, 3., 0., 2. * rtengine::RT_PI);
+            }
+            cr->fill();
         }
-        cr->fill();
-    }
-
-    if (ciexy_enabled) {//White Point
-        cr->set_source_rgb(1., 1., 1.);//White
-        cr->arc(whx, why, 3., 0., 2. * rtengine::RT_PI);
-        cr->fill();
-    }
-
+        //Draw small dots to retain the RGB values ​​of Rec2020
+        if (ciexy_enabled) {
+            cr->set_source_rgb(0.1, 0.1, 0.1);//black for red Rec2020
+            cr->arc(r2020_redx, r2020_redy, 2., 0., 2. * rtengine::RT_PI);
+            cr->fill();
+        }
+        if (ciexy_enabled) {
+            cr->set_source_rgb(0.5, 0.5, 0.5);//gray for green Rec2020
+            cr->arc(r2020_grex, r2020_grey, 2., 0., 2. * rtengine::RT_PI);
+            cr->fill();
+        }
+        if (ciexy_enabled) {
+            cr->set_source_rgb(0.9, 0.9, 0.9);//white for blue Rec2020
+            cr->arc(r2020_blux, r2020_bluy, 2., 0., 2. * rtengine::RT_PI);
+            cr->fill();
+        }
+        if (ciexy_enabled) {//White Point
+            cr->set_source_rgb(1., 1., 1.);//White
+            cr->arc(whx, why, 3., 0., 2. * rtengine::RT_PI);
+            cr->fill();
+        }
         if (ciexy_enabled) {//Dominant
             cr->set_source_rgb(0.3, 0.4, 0.3);
             cr->arc(mex, mey, 3., 0, 2. * rtengine::RT_PI);
             cr->fill();
         }
 
-    cr->set_source_rgb(0.9, 0.9, 0.9);//white for blue en Ciexy
-    if (litPoint == HIGH) {
-        cr->arc(hia, hib, 5., 0., 2. * rtengine::RT_PI);
-    } else {
-        cr->arc(hia, hib, 3., 0., 2. * rtengine::RT_PI);
-    }
-    cr->fill();
+        cr->set_source_rgb(0.9, 0.9, 0.9);//white for blue en Ciexy
+        if (litPoint == HIGH) {
+            cr->arc(hia, hib, 5., 0., 2. * rtengine::RT_PI);
+        } else {
+            cr->arc(hia, hib, 3., 0., 2. * rtengine::RT_PI);
+        }
+        cr->fill();
+}
 
     return false;
 }
@@ -446,7 +552,7 @@ bool LabGridArea::on_draw(const ::Cairo::RefPtr<Cairo::Context> &cr)
 bool LabGridArea::on_button_press_event(GdkEventButton *event)
 {
     if (event->button == 1  && mous_enabled) {
-      if (!ciexy_enabled) {
+      if (!ciexy_enabled && !ghs_enabled) {
         if (event->type == GDK_2BUTTON_PRESS) {
             switch (litPoint) {
             case NONE:
@@ -525,6 +631,7 @@ bool LabGridArea::on_motion_notify_event(GdkEventMotion *event)
         }
         edited = true;
         grab_focus();
+        const auto& options = App::get().options();
         if (options.adjusterMinDelay == 0) {
             notifyListener();
         } else {
@@ -547,7 +654,7 @@ bool LabGridArea::on_motion_notify_event(GdkEventMotion *event)
             litPoint = LOW;
         } else if (disthi < thrs * thrs && disthi <= distlo) {
             litPoint = HIGH;
-        } else if (ciexy_enabled && distgxy < thrs * thrs && distgxy <= distlo) {
+        } else if (ciexy_enabled && !ghs_enabled && distgxy < thrs * thrs && distgxy <= distlo) {
             litPoint = GRE;
         }
         if ((oldLitPoint == NONE && litPoint != NONE) || (oldLitPoint != NONE && litPoint == NONE)) {
@@ -595,6 +702,11 @@ bool LabGridArea::ciexyEnabled() const
     return ciexy_enabled;
 }
 
+bool LabGridArea::ghsEnabled() const
+{
+    return ghs_enabled;
+}
+
 void LabGridArea::setLowEnabled(bool yes)
 {
     if (low_enabled != yes) {
@@ -607,6 +719,14 @@ void LabGridArea::setciexyEnabled(bool yes)
 {
     if (ciexy_enabled != yes) {
         ciexy_enabled = yes;
+        queue_draw();
+    }
+}
+
+void LabGridArea::setghsEnabled(bool yes)
+{
+    if (ghs_enabled != yes) {
+        ghs_enabled = yes;
         queue_draw();
     }
 }
@@ -624,12 +744,14 @@ void LabGridArea::setmousEnabled(bool yes)
 // LabGrid
 //-----------------------------------------------------------------------------
 
-LabGrid::LabGrid(rtengine::ProcEvent evt, const Glib::ustring &msg, bool enable_low, bool ciexy, bool mous):
-    grid(evt, msg, enable_low, ciexy, mous)
+LabGrid::LabGrid(rtengine::ProcEvent evt, const Glib::ustring &msg, bool enable_low, bool ciexy, bool ghs, bool mous):
+    grid(evt, msg, enable_low, ciexy, ghs, mous)
 {
     Gtk::Button *reset = Gtk::manage(new Gtk::Button());
+    bool resetfalse = ghs || ciexy;//disable Icon Reset when using Labgrid with GHS or CIExy in Abstract Profile or in Selective Editing > Color Appearance (CAM16 & JzCzHz) to avoid very bad behavior
+
     reset->set_tooltip_markup(M("ADJUSTER_RESET_TO_DEFAULT"));
-    if(!ciexy) {//disabled for Cie xy
+    if(!resetfalse) {
         reset->add(*Gtk::manage(new RTImage("undo-small", Gtk::ICON_SIZE_BUTTON)));
     }
     reset->signal_button_release_event().connect(sigc::mem_fun(*this, &LabGrid::resetPressed));
@@ -639,6 +761,7 @@ LabGrid::LabGrid(rtengine::ProcEvent evt, const Glib::ustring &msg, bool enable_
     reset->get_style_context()->add_class(GTK_STYLE_CLASS_FLAT);
     reset->set_can_focus(false);
     reset->set_size_request(-1, 20);
+ 
 
     pack_start(grid, true, true, true);
     pack_start(*reset, false, false);

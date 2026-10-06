@@ -21,14 +21,15 @@
 #include <cstdio>
 #include <cstring>
 #include <functional>
+#include <unordered_map>
+
+#include <cjson/cJSON.h>
 #include <glib/gstdio.h>
 #include <glibmm/fileutils.h>
 #include <glibmm/miscutils.h>
-#include <unordered_map>
 
 #include "dcp.h"
 
-#include "cJSON.h"
 #include "color.h"
 #include "iccmatrices.h"
 #include "iccstore.h"
@@ -36,7 +37,7 @@
 #include "rawimagesource.h"
 #include "rt_math.h"
 #include "utils.h"
-#include "../rtgui/options.h"
+#include "rtgui/options.h"
 
 using namespace rtengine;
 
@@ -1131,13 +1132,17 @@ DCPProfile::DCPProfile(const Glib::ustring& filename) :
         });
 
     if (file == nullptr) {
-        printf ("Unable to load DCP profile '%s' !", filename.c_str());
+        if (settings->verbose) {
+            printf ("Unable to load DCP profile '%s' !\n", filename.c_str());
+        }
         return;
     }
 
     DCPMetadata md(file.get());
     if (!md.parse()) {
-        printf ("Unable to load DCP profile '%s'.", filename.c_str());
+        if (settings->verbose) {
+            printf ("Unable to load DCP profile '%s'.\n", filename.c_str());
+        }
         return;
     }
 
@@ -2152,15 +2157,14 @@ void DCPStore::init(const Glib::ustring& rt_profile_dir, bool loadAll)
 
     file_std_profiles.clear();
 
+    auto profile_dirpath = Glib::build_filename(App::get().options().rtdir, "dcpprofiles");
+
     if (!loadAll) {
-        profileDir = { rt_profile_dir, Glib::build_filename(options.rtdir, "dcpprofiles") };
+        profileDir = { rt_profile_dir, profile_dirpath };
         return;
     }
 
-    std::deque<Glib::ustring> dirs = {
-        rt_profile_dir,
-        Glib::build_filename(options.rtdir, "dcpprofiles")
-    };
+    std::deque<Glib::ustring> dirs = { rt_profile_dir, profile_dirpath };
 
     while (!dirs.empty()) {
         // Process directory

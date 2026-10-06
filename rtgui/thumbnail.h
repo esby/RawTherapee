@@ -115,7 +115,7 @@ class Thumbnail
 
     void saveMetadata();
     void loadProperties();
-    void updateProcParamsProperties();
+    void updateProcParamsProperties(bool forceUpdate = false);
     void saveXMPSidecarProperties();
 
 public:
@@ -190,6 +190,7 @@ public:
 
     void            increaseRef ();
     void            decreaseRef ();
+    int             decreaseRefCacheMgr (); ///< Special version used by the CacheManager
 
     void            updateCache (bool updatePParams = true, bool updateCacheImageData = true);
     void            saveThumbnail ();

@@ -24,7 +24,7 @@
 #include "guiutils.h"
 #include "rtimage.h"
 
-#include "../rtengine/procparams.h"
+#include "rtengine/procparams.h"
 
 
 
@@ -161,17 +161,17 @@ void FoldableToolPanel::setEnabled(bool isEnabled)
     enaConn.block (false);
 }
 
-void FoldableToolPanel::setEnabledTooltipMarkup(Glib::ustring tooltipMarkup)
+void FoldableToolPanel::setEnabledTooltipMarkup(const Glib::ustring& tooltipMarkup)
 {
     if (exp) {
-        exp->set_tooltip_markup(tooltipMarkup);
+        exp->setEnabledTooltipMarkup(tooltipMarkup);
     }
 }
 
-void FoldableToolPanel::setEnabledTooltipText(Glib::ustring tooltipText)
+void FoldableToolPanel::setEnabledTooltipText(const Glib::ustring& tooltipText)
 {
     if (exp) {
-        exp->set_tooltip_text(tooltipText);
+        exp->setEnabledTooltipText(tooltipText);
     }
 }
 

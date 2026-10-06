@@ -16,6 +16,8 @@
  *
  *  2010 Ilya Popov <ilia_popov@rambler.ru>
  *  2012 Emil Martinec <ejmartin@uchicago.edu>
+ *  2024 Jacques Desmis <jdesmis@gmail.com>
+
  */
 #pragma once
 
@@ -36,7 +38,7 @@ public:
     using internal_type = float;
 
     template<typename E>
-    wavelet_decomposition(E * src, int width, int height, int maxlvl, int subsampling, int skipcrop = 1, int numThreads = 1, int Daub4Len = 6);
+    wavelet_decomposition(E * src, int width, int height, int maxlvl, int subsampling, int skipcrop = 1, int numThreads = 1, int Daub4Len = 8);
 
     ~wavelet_decomposition();
 
@@ -170,14 +172,14 @@ wavelet_decomposition::wavelet_decomposition(
                 //n=0 lopass, n=1 hipass
             }
         }
-/*    } else if(wavfilt_len == 22) {
+    } else if(wavfilt_len == 22) {
         for (int n = 0; n < 2; n++) {
             for (int i = 0; i < wavfilt_len; i++) {
                 wavfilt_anal[wavfilt_len * (n) + i]  = Daub4_anal22[n][i];
                 wavfilt_synth[wavfilt_len * (n) + i] = Daub4_anal22[n][wavfilt_len - 1 - i];
                 //n=0 lopass, n=1 hipass
             }
-        } */
+        } 
     } else if(wavfilt_len == 4) {
         for (int n = 0; n < 2; n++) {
             for (int i = 0; i < wavfilt_len; i++) {

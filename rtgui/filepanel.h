@@ -31,7 +31,7 @@
 #include "recentbrowser.h"
 #include "batchtoolpanelcoord.h"
 
-#include "../rtengine/noncopyable.h"
+#include "rtengine/noncopyable.h"
 
 class BatchToolPanelCoordinator;
 class RTWindow;

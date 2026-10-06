@@ -23,7 +23,208 @@
 #include "addsetids.h"
 #include "options.h"
 
-#include "../rtengine/procparams.h"
+#include "rtengine/procparams.h"
+
+namespace
+{
+
+using namespace rtengine::procparams;
+
+void setAll(CropGuideParamsEdited& guide, bool v)
+{
+    if (v) {
+        guide.presets.set();
+    } else {
+        guide.presets.reset();
+    }
+    guide.enabled = v;
+    guide.mirror_golden_triangle = v;
+    guide.rotate_golden_ratio = v;
+    guide.mirror_golden_ratio = v;
+    guide.aspect_ratios = v;
+    guide.bleed = v;
+    guide.basis = v;
+}
+
+void initFrom(CropGuideParamsEdited& edits, const ProcParams& params,
+              const ProcParams& otherParams)
+{
+    const CropGuideParams& curr = params.cropGuide;
+    const CropGuideParams& other = otherParams.cropGuide;
+
+    for (size_t i = 0; i < edits.presets.size(); i++) {
+        bool is_edited = edits.presets[i];
+        is_edited &= curr.presets[i] == other.presets[i];
+        edits.presets[i] = is_edited;
+    }
+    edits.enabled &= curr.enabled == other.enabled;
+    edits.mirror_golden_triangle &=
+        curr.mirror_golden_triangle == other.mirror_golden_triangle;
+    edits.rotate_golden_ratio &=
+        curr.rotate_golden_ratio == other.rotate_golden_ratio;
+    edits.mirror_golden_ratio &=
+        curr.mirror_golden_ratio == other.mirror_golden_ratio;
+    edits.aspect_ratios &=
+        curr.aspect_ratios == other.aspect_ratios;
+    edits.bleed &= curr.bleed == other.bleed;
+    edits.basis &= curr.basis == other.basis;
+}
+
+void combine(CropGuideParams& toEdit, const CropGuideParams& mod,
+             const CropGuideParamsEdited& edits)
+{
+    for (size_t i = 0; i < edits.presets.size(); i++) {
+        if (edits.presets[i]) {
+            toEdit.presets[i] = mod.presets[i];
+        }
+    }
+    if (edits.enabled) {
+        toEdit.enabled = mod.enabled;
+    }
+    if (edits.mirror_golden_triangle) {
+        toEdit.mirror_golden_triangle = mod.mirror_golden_triangle;
+    }
+    if (edits.rotate_golden_ratio) {
+        toEdit.rotate_golden_ratio = mod.rotate_golden_ratio;
+    }
+    if (edits.mirror_golden_ratio) {
+        toEdit.mirror_golden_ratio = mod.mirror_golden_ratio;
+    }
+    if (edits.aspect_ratios) {
+        toEdit.aspect_ratios = mod.aspect_ratios;
+    }
+    if (edits.bleed) {
+        toEdit.bleed = mod.bleed;
+    }
+    if (edits.basis) {
+        toEdit.basis = mod.basis;
+    }
+}
+
+void setAll(FramingParamsEdited& framing, bool v)
+{
+    framing.enabled = v;
+    framing.framingMethod = v;
+    framing.aspectRatio = v;
+    framing.orientation = v;
+    framing.framedWidth = v;
+    framing.framedHeight = v;
+    framing.allowUpscaling = v;
+
+    framing.borderSizingMethod = v;
+    framing.basis = v;
+    framing.relativeBorderSize = v;
+    framing.minSizeEnabled = v;
+    framing.minWidth = v;
+    framing.minHeight = v;
+    framing.absWidth = v;
+    framing.absHeight = v;
+
+    framing.borderRed = v;
+    framing.borderGreen = v;
+    framing.borderBlue = v;
+}
+
+void initFrom(FramingParamsEdited& edits, const ProcParams& params, const ProcParams& otherParams)
+{
+    const FramingParams& curr = params.framing;
+    const FramingParams& other = otherParams.framing;
+
+    edits.enabled &= curr.enabled == other.enabled;
+    edits.framingMethod &= curr.framingMethod == other.framingMethod;
+    edits.aspectRatio &= curr.aspectRatio == other.aspectRatio;
+    edits.orientation &= curr.orientation == other.orientation;
+    edits.framedWidth &= curr.framedWidth == other.framedWidth;
+    edits.framedHeight &= curr.framedHeight == other.framedHeight;
+    edits.allowUpscaling &= curr.allowUpscaling == other.allowUpscaling;
+
+    edits.borderSizingMethod &= curr.borderSizingMethod == other.borderSizingMethod;
+    edits.basis &= curr.basis == other.basis;
+    edits.relativeBorderSize &= curr.relativeBorderSize == other.relativeBorderSize;
+    edits.minSizeEnabled &= curr.minSizeEnabled == other.minSizeEnabled;
+    edits.minWidth &= curr.minWidth == other.minWidth;
+    edits.minHeight &= curr.minHeight == other.minHeight;
+    edits.absWidth &= curr.absWidth == other.absWidth;
+    edits.absHeight &= curr.absHeight == other.absHeight;
+
+    edits.borderRed &= curr.borderRed == other.borderRed;
+    edits.borderGreen &= curr.borderGreen == other.borderGreen;
+    edits.borderBlue &= curr.borderBlue == other.borderBlue;
+}
+
+void combine(FramingParams& toEdit, const FramingParams& mod, const FramingParamsEdited& edits,
+             bool dontForceSet)
+{
+    const auto& options = App::get().options();
+
+    if (edits.enabled) {
+        toEdit.enabled = mod.enabled;
+    }
+    if (edits.framingMethod) {
+        toEdit.framingMethod = mod.framingMethod;
+    }
+    if (edits.aspectRatio) {
+        toEdit.aspectRatio = mod.aspectRatio;
+    }
+    if (edits.orientation) {
+        toEdit.orientation = mod.orientation;
+    }
+    if (edits.framedWidth) {
+        toEdit.framedWidth = mod.framedWidth;
+    }
+    if (edits.framedHeight) {
+        toEdit.framedHeight = mod.framedHeight;
+    }
+    if (edits.allowUpscaling) {
+        toEdit.allowUpscaling = mod.allowUpscaling;
+    }
+
+    if (edits.borderSizingMethod) {
+        toEdit.borderSizingMethod = mod.borderSizingMethod;
+    }
+    if (edits.basis) {
+        toEdit.basis = mod.basis;
+    }
+    if (edits.relativeBorderSize) {
+        toEdit.relativeBorderSize =
+            dontForceSet && options.baBehav[ADDSET_FRAMING_RELATIVE_SCALE] ?
+                toEdit.relativeBorderSize + mod.relativeBorderSize :
+                mod.relativeBorderSize;
+    }
+    if (edits.minSizeEnabled) {
+        toEdit.minSizeEnabled = mod.minSizeEnabled;
+    }
+    if (edits.minWidth) {
+        toEdit.minWidth = mod.minWidth;
+    }
+    if (edits.minHeight) {
+        toEdit.minHeight = mod.minHeight;
+    }
+    if (edits.absWidth) {
+        toEdit.absWidth = mod.absWidth;
+    }
+    if (edits.absHeight) {
+        toEdit.absHeight = mod.absHeight;
+    }
+
+    if (edits.borderRed) {
+        toEdit.borderRed = dontForceSet && options.baBehav[ADDSET_FRAMING_BORDER_RED] ?
+            toEdit.borderRed + mod.borderRed :
+            mod.borderRed;
+    }
+    if (edits.borderGreen) {
+        toEdit.borderGreen = dontForceSet && options.baBehav[ADDSET_FRAMING_BORDER_GREEN] ?
+            toEdit.borderGreen + mod.borderGreen :
+            mod.borderGreen;
+    }
+    if (edits.borderBlue) {
+        toEdit.borderBlue = dontForceSet && options.baBehav[ADDSET_FRAMING_BORDER_BLUE] ?
+            toEdit.borderBlue + mod.borderBlue :
+            mod.borderBlue;
+    }
+}
+
+}  // namespace
 
 ParamsEdited::ParamsEdited(bool value)
 {
@@ -176,6 +377,10 @@ void ParamsEdited::set(bool v)
     pdsharpening.deconvradiusOffset   = v;
     pdsharpening.deconviter     = v;
     pdsharpening.deconvitercheck     = v;
+    pdsharpening.showcap     = v;
+    pdsharpening.noisecap     = v;
+    pdsharpening.noisecaptype     = v;
+    pdsharpening.noisecapafter     = v;
     prsharpening.enabled            = v;
     prsharpening.contrast           = v;
     prsharpening.radius             = v;
@@ -229,10 +434,17 @@ void ParamsEdited::set(bool v)
     colorappearance.qbright     = v;
     colorappearance.chroma     = v;
     colorappearance.schroma     = v;
+    colorappearance.schromared     = v;
+    colorappearance.schromagreen     = v;
+    colorappearance.schromablue   = v;
     colorappearance.mchroma     = v;
     colorappearance.contrast     = v;
     colorappearance.qcontrast     = v;
     colorappearance.colorh     = v;
+    colorappearance.colorhred     = v;
+    colorappearance.colorhgreen     = v;
+    colorappearance.colorhblue     = v;
+    colorappearance.brighthres     = v;
     colorappearance.rstprotection     = v;
     colorappearance.surrsource = v;
     colorappearance.gamut = v;
@@ -241,6 +453,9 @@ void ParamsEdited::set(bool v)
     colorappearance.tonecie = v;
 //  colorappearance.sharpcie = v;
     colorappearance.curve      = v;
+    colorappearance.curvered   = v;
+    colorappearance.curvegreen   = v;
+    colorappearance.curveblue   = v;
     colorappearance.curve2     = v;
     colorappearance.curve3     = v;
     colorappearance.curveMode  = v;
@@ -326,6 +541,20 @@ void ParamsEdited::set(bool v)
     sh.stonalwidth   = v;
     sh.radius        = v;
     sh.lab           = v;
+    cg.enabled = v;
+    cg.th_c = v;
+    cg.th_m = v;
+    cg.th_y = v;
+    cg.d_c = v;
+    cg.autodc = v;
+    cg.d_m = v;
+    cg.autodm = v;
+    cg.d_y = v;
+    cg.autody = v;
+    cg.pwr = v;
+    cg.colorspace = v;
+    cg.rolloff = v;
+
     toneEqualizer.enabled        = v;
     toneEqualizer.bands.fill(v);
     toneEqualizer.regularization = v;
@@ -339,13 +568,15 @@ void ParamsEdited::set(bool v)
     crop.fixratio = v;
     crop.ratio   = v;
     crop.orientation = v;
-    crop.guide   = v;
+    ::setAll(cropGuide, v);
     coarse.rotate = v;
     coarse.hflip = v;
     coarse.vflip = v;
     commonTrans.method = v;
     commonTrans.autofill = v;
     commonTrans.scale = v;
+    commonTrans.scale_horizontally = v;
+    commonTrans.scale_vertically = v;
     rotate.degree = v;
     distortion.amount = v;
     distortion.defish = v;
@@ -435,7 +666,6 @@ void ParamsEdited::set(bool v)
     blackwhite.autoc    = v;
     blackwhite.algo    = v;
 
-
     resize.scale     = v;
     resize.appliesTo = v;
     resize.method    = v;
@@ -445,11 +675,13 @@ void ParamsEdited::set(bool v)
     resize.longedge  = v;
     resize.shortedge = v;
     resize.enabled   = v;
+    resize.allowUpscaling = v;
+
+    ::setAll(framing, v);
 
     spot.enabled = v;
     spot.entries = v;
 
-    resize.allowUpscaling = v;
     icm.inputProfile = v;
     icm.toneCurve = v;
     icm.applyLookTable = v;
@@ -460,22 +692,40 @@ void ParamsEdited::set(bool v)
     icm.outputProfile = v;
     icm.outputIntent = v;
     icm.outputBPC = v;
-    icm.workingTRCGamma = v;
-    icm.workingTRCSlope = v;
+    icm.wGamma = v;
+    icm.wSlope = v;
     icm.wmidtcie = v;
+    icm.sigmatrc = v;
+    icm.offstrc = v;
+    icm.residtrc = v;
+    icm.wgampower = v;
+    icm.wgamgain = v;
+    icm.pyrwavtrc = v;
+    icm.opacityCurveWLI = v;
+    icm.wapsat = v;
     icm.wsmoothcie = v;
+    icm.wsmoothciesli = v;
     icm.redx = v;
     icm.redy = v;
     icm.grex = v;
     icm.grey = v;
     icm.blux = v;
     icm.bluy = v;
+    
+    icm.redrot = v;
+    icm.redsat = v;
+    icm.grerot = v;
+    icm.gresat = v;
+    icm.blurot = v;
+    icm.blusat = v;
+    
     icm.refi = v;
     icm.shiftx = v;
     icm.shifty = v;
     icm.preser = v;
     icm.fbw = v;
     icm.trcExp = v;
+    icm.wavExp = v;
     icm.gamut = v;
     icm.labgridcieALow = v;
     icm.labgridcieBLow = v;
@@ -489,6 +739,7 @@ void ParamsEdited::set(bool v)
     icm.labgridcieMy = v;
     icm.aRendIntent = v;
     icm.workingTRC = v;
+    icm.wgamut = v;
     icm.will = v;
     icm.wprim = v;
     icm.wcat = v;
@@ -910,12 +1161,16 @@ void ParamsEdited::initFrom(const std::vector<rtengine::procparams::ProcParams>&
         sharpening.deconvdamping = sharpening.deconvdamping && p.sharpening.deconvdamping == other.sharpening.deconvdamping;
         pdsharpening.enabled = pdsharpening.enabled && p.pdsharpening.enabled == other.pdsharpening.enabled;
         pdsharpening.contrast = pdsharpening.contrast && p.pdsharpening.contrast == other.pdsharpening.contrast;
+        pdsharpening.noisecap = pdsharpening.noisecap && p.pdsharpening.noisecap == other.pdsharpening.noisecap;
+        pdsharpening.noisecapafter = pdsharpening.noisecapafter && p.pdsharpening.noisecapafter == other.pdsharpening.noisecapafter;
         pdsharpening.autoContrast = pdsharpening.autoContrast && p.pdsharpening.autoContrast == other.pdsharpening.autoContrast;
         pdsharpening.autoRadius = pdsharpening.autoRadius && p.pdsharpening.autoRadius == other.pdsharpening.autoRadius;
         pdsharpening.deconvradius = pdsharpening.deconvradius && p.pdsharpening.deconvradius == other.pdsharpening.deconvradius;
         pdsharpening.deconvradiusOffset = pdsharpening.deconvradiusOffset && p.pdsharpening.deconvradiusOffset == other.pdsharpening.deconvradiusOffset;
         pdsharpening.deconviter = pdsharpening.deconviter && p.pdsharpening.deconviter == other.pdsharpening.deconviter;
         pdsharpening.deconvitercheck = pdsharpening.deconvitercheck && p.pdsharpening.deconvitercheck == other.pdsharpening.deconvitercheck;
+        pdsharpening.showcap = pdsharpening.showcap && p.pdsharpening.showcap == other.pdsharpening.showcap;
+        pdsharpening.noisecaptype = pdsharpening.noisecaptype && p.pdsharpening.noisecaptype == other.pdsharpening.noisecaptype;
         prsharpening.enabled = prsharpening.enabled && p.prsharpening.enabled == other.prsharpening.enabled;
         prsharpening.contrast = prsharpening.contrast && p.prsharpening.contrast == other.prsharpening.contrast;
         prsharpening.radius = prsharpening.radius && p.prsharpening.radius == other.prsharpening.radius;
@@ -959,11 +1214,18 @@ void ParamsEdited::initFrom(const std::vector<rtengine::procparams::ProcParams>&
         colorappearance.qbright = colorappearance.qbright && p.colorappearance.qbright == other.colorappearance.qbright;
         colorappearance.chroma = colorappearance.chroma && p.colorappearance.chroma == other.colorappearance.chroma;
         colorappearance.schroma = colorappearance.schroma && p.colorappearance.schroma == other.colorappearance.schroma;
+        colorappearance.schromared = colorappearance.schromared && p.colorappearance.schromared == other.colorappearance.schromared;
+        colorappearance.schromagreen = colorappearance.schromagreen && p.colorappearance.schromagreen == other.colorappearance.schromagreen;
+        colorappearance.schromablue = colorappearance.schromablue && p.colorappearance.schromablue == other.colorappearance.schromablue;
         colorappearance.mchroma = colorappearance.mchroma && p.colorappearance.mchroma == other.colorappearance.mchroma;
         colorappearance.rstprotection = colorappearance.rstprotection && p.colorappearance.rstprotection == other.colorappearance.rstprotection;
         colorappearance.contrast = colorappearance.contrast && p.colorappearance.contrast == other.colorappearance.contrast;
         colorappearance.qcontrast = colorappearance.qcontrast && p.colorappearance.qcontrast == other.colorappearance.qcontrast;
         colorappearance.colorh = colorappearance.colorh && p.colorappearance.colorh == other.colorappearance.colorh;
+        colorappearance.colorhred = colorappearance.colorhred && p.colorappearance.colorhred == other.colorappearance.colorhred;
+        colorappearance.colorhgreen = colorappearance.colorhgreen && p.colorappearance.colorhgreen == other.colorappearance.colorhgreen;
+        colorappearance.colorhblue = colorappearance.colorhblue && p.colorappearance.colorhblue == other.colorappearance.colorhblue;
+        colorappearance.brighthres = colorappearance.brighthres && p.colorappearance.brighthres == other.colorappearance.brighthres;
         colorappearance.surrsource = colorappearance.surrsource && p.colorappearance.surrsource == other.colorappearance.surrsource;
         colorappearance.gamut = colorappearance.gamut && p.colorappearance.gamut == other.colorappearance.gamut;
 //       colorappearance.badpix = colorappearance.badpix && p.colorappearance.badpix == other.colorappearance.badpix;
@@ -971,6 +1233,9 @@ void ParamsEdited::initFrom(const std::vector<rtengine::procparams::ProcParams>&
         colorappearance.tonecie = colorappearance.tonecie && p.colorappearance.tonecie == other.colorappearance.tonecie;
         //     colorappearance.sharpcie = colorappearance.sharpcie && p.colorappearance.sharpcie == other.colorappearance.sharpcie;
         colorappearance.curve = colorappearance.curve && p.colorappearance.curve == other.colorappearance.curve;
+        colorappearance.curvered = colorappearance.curvered && p.colorappearance.curvered == other.colorappearance.curvered;
+        colorappearance.curvegreen = colorappearance.curvegreen && p.colorappearance.curvegreen == other.colorappearance.curvegreen;
+        colorappearance.curveblue = colorappearance.curveblue && p.colorappearance.curveblue == other.colorappearance.curveblue;
         colorappearance.curve3 = colorappearance.curve3 && p.colorappearance.curve3 == other.colorappearance.curve3;
         colorappearance.curve2 = colorappearance.curve2 && p.colorappearance.curve2 == other.colorappearance.curve2;
         colorappearance.curveMode = colorappearance.curveMode && p.colorappearance.curveMode == other.colorappearance.curveMode;
@@ -1061,6 +1326,21 @@ void ParamsEdited::initFrom(const std::vector<rtengine::procparams::ProcParams>&
         sh.stonalwidth = sh.stonalwidth && p.sh.stonalwidth == other.sh.stonalwidth;
         sh.radius = sh.radius && p.sh.radius == other.sh.radius;
         sh.lab = sh.lab && p.sh.lab == other.sh.lab;
+
+        cg.enabled = cg.enabled && p.cg.enabled == other.cg.enabled;
+        cg.th_c = cg.th_c && p.cg.th_c == other.cg.th_c;   
+        cg.th_m = cg.th_m && p.cg.th_m == other.cg.th_m;
+        cg.th_y = cg.th_y && p.cg.th_y == other.cg.th_y;
+        cg.d_c = cg.d_c && p.cg.d_c == other.cg.d_c;
+        cg.autodc = cg.autodc && p.cg.autodc == other.cg.autodc;
+        cg.d_m = cg.d_m && p.cg.d_m == other.cg.d_m;
+        cg.autodm = cg.autodm && p.cg.autodm == other.cg.autodm;
+        cg.d_y = cg.d_y && p.cg.d_y == other.cg.d_y;
+        cg.autody = cg.autody && p.cg.autody == other.cg.autody;
+        cg.pwr = cg.pwr && p.cg.pwr == other.cg.pwr;
+        cg.colorspace = cg.colorspace && p.cg.colorspace == other.cg.colorspace;
+        cg.rolloff = cg.rolloff && p.cg.rolloff == other.cg.rolloff;
+
         crop.enabled = crop.enabled && p.crop.enabled == other.crop.enabled;
         crop.x = crop.x && p.crop.x == other.crop.x;
         crop.y = crop.y && p.crop.y == other.crop.y;
@@ -1069,7 +1349,7 @@ void ParamsEdited::initFrom(const std::vector<rtengine::procparams::ProcParams>&
         crop.fixratio = crop.fixratio && p.crop.fixratio == other.crop.fixratio;
         crop.ratio = crop.ratio && p.crop.ratio == other.crop.ratio;
         crop.orientation = crop.orientation && p.crop.orientation == other.crop.orientation;
-        crop.guide = crop.guide && p.crop.guide == other.crop.guide;
+        ::initFrom(cropGuide, p, other);
         toneEqualizer.enabled = toneEqualizer.enabled && p.toneEqualizer.enabled == other.toneEqualizer.enabled;
         for (size_t i = 0; i < toneEqualizer.bands.size(); ++i) {
             toneEqualizer.bands[i] = toneEqualizer.bands[i] && p.toneEqualizer.bands[i] == other.toneEqualizer.bands[i];
@@ -1082,6 +1362,8 @@ void ParamsEdited::initFrom(const std::vector<rtengine::procparams::ProcParams>&
         coarse.vflip = coarse.vflip && p.coarse.vflip == other.coarse.vflip;
         commonTrans.method = commonTrans.method && p.commonTrans.method == other.commonTrans.method;
         commonTrans.scale = commonTrans.scale && p.commonTrans.scale == other.commonTrans.scale;
+        commonTrans.scale_horizontally = commonTrans.scale_horizontally && p.commonTrans.scale_horizontally == other.commonTrans.scale_horizontally;
+        commonTrans.scale_vertically = commonTrans.scale_vertically && p.commonTrans.scale_vertically == other.commonTrans.scale_vertically;
         commonTrans.autofill = commonTrans.autofill && p.commonTrans.autofill == other.commonTrans.autofill;
         rotate.degree = rotate.degree && p.rotate.degree == other.rotate.degree;
         distortion.amount = distortion.amount && p.distortion.amount == other.distortion.amount;
@@ -1159,6 +1441,7 @@ void ParamsEdited::initFrom(const std::vector<rtengine::procparams::ProcParams>&
                 locallab.spots.at(j).transitgrad = locallab.spots.at(j).transitgrad && pSpot.transitgrad == otherSpot.transitgrad;
                 locallab.spots.at(j).hishow = locallab.spots.at(j).hishow && pSpot.hishow == otherSpot.hishow;
                 locallab.spots.at(j).activ = locallab.spots.at(j).activ && pSpot.activ == otherSpot.activ;
+                locallab.spots.at(j).avoidneg = locallab.spots.at(j).avoidneg && pSpot.avoidneg == otherSpot.avoidneg;
                 locallab.spots.at(j).blwh = locallab.spots.at(j).blwh && pSpot.blwh == otherSpot.blwh;
                 locallab.spots.at(j).recurs = locallab.spots.at(j).recurs && pSpot.recurs == otherSpot.recurs;
                 locallab.spots.at(j).laplac = locallab.spots.at(j).laplac && pSpot.laplac == otherSpot.laplac;
@@ -1213,7 +1496,7 @@ void ParamsEdited::initFrom(const std::vector<rtengine::procparams::ProcParams>&
                 locallab.spots.at(j).llcurve = locallab.spots.at(j).llcurve && pSpot.llcurve == otherSpot.llcurve;
                 locallab.spots.at(j).lccurve = locallab.spots.at(j).lccurve && pSpot.lccurve == otherSpot.lccurve;
                 locallab.spots.at(j).cccurve = locallab.spots.at(j).cccurve && pSpot.cccurve == otherSpot.cccurve;
-                locallab.spots.at(j).clcurve = locallab.spots.at(j).clcurve && pSpot.cccurve == otherSpot.clcurve;
+                locallab.spots.at(j).clcurve = locallab.spots.at(j).clcurve && pSpot.clcurve == otherSpot.clcurve;
                 locallab.spots.at(j).rgbcurve = locallab.spots.at(j).rgbcurve && pSpot.rgbcurve == otherSpot.rgbcurve;
                 locallab.spots.at(j).LHcurve = locallab.spots.at(j).LHcurve && pSpot.LHcurve == otherSpot.LHcurve;
                 locallab.spots.at(j).HHcurve = locallab.spots.at(j).HHcurve && pSpot.HHcurve == otherSpot.HHcurve;
@@ -1296,6 +1579,35 @@ void ParamsEdited::initFrom(const std::vector<rtengine::procparams::ProcParams>&
                 locallab.spots.at(j).expshadhigh = locallab.spots.at(j).expshadhigh && pSpot.expshadhigh == otherSpot.expshadhigh;
                 locallab.spots.at(j).complexshadhigh = locallab.spots.at(j).complexshadhigh && pSpot.complexshadhigh == otherSpot.complexshadhigh;
                 locallab.spots.at(j).shMethod = locallab.spots.at(j).shMethod && pSpot.shMethod == otherSpot.shMethod;
+                locallab.spots.at(j).ghsMethod = locallab.spots.at(j).ghsMethod && pSpot.ghsMethod == otherSpot.ghsMethod;
+                locallab.spots.at(j).ghsMatmet = locallab.spots.at(j).ghsMatmet && pSpot.ghsMatmet == otherSpot.ghsMatmet;
+                locallab.spots.at(j).ghsMode = locallab.spots.at(j).ghsMode && pSpot.ghsMode == otherSpot.ghsMode;
+                locallab.spots.at(j).ghs_D = locallab.spots.at(j).ghs_D && pSpot.ghs_D == otherSpot.ghs_D;
+                locallab.spots.at(j).ghs_slope = locallab.spots.at(j).ghs_slope && pSpot.ghs_slope == otherSpot.ghs_slope;
+                locallab.spots.at(j).ghs_chro = locallab.spots.at(j).ghs_chro && pSpot.ghs_chro == otherSpot.ghs_chro;
+                locallab.spots.at(j).ghs_B = locallab.spots.at(j).ghs_B && pSpot.ghs_B == otherSpot.ghs_B;
+                locallab.spots.at(j).ghs_SP = locallab.spots.at(j).ghs_SP && pSpot.ghs_SP == otherSpot.ghs_SP;
+                locallab.spots.at(j).SPAutoRadius = locallab.spots.at(j).SPAutoRadius && pSpot.SPAutoRadius == otherSpot.SPAutoRadius;
+                locallab.spots.at(j).ghs_LP = locallab.spots.at(j).ghs_LP && pSpot.ghs_LP == otherSpot.ghs_LP;
+                locallab.spots.at(j).ghs_HP = locallab.spots.at(j).ghs_HP && pSpot.ghs_HP == otherSpot.ghs_HP;
+                locallab.spots.at(j).ghs_LC = locallab.spots.at(j).ghs_LC && pSpot.ghs_LC == otherSpot.ghs_LC;
+                locallab.spots.at(j).ghs_MID = locallab.spots.at(j).ghs_MID && pSpot.ghs_MID == otherSpot.ghs_MID;
+                locallab.spots.at(j).ghs_BLP = locallab.spots.at(j).ghs_BLP && pSpot.ghs_BLP == otherSpot.ghs_BLP;
+                locallab.spots.at(j).ghs_HLP = locallab.spots.at(j).ghs_HLP && pSpot.ghs_HLP == otherSpot.ghs_HLP;
+                locallab.spots.at(j).ghs_autobw = locallab.spots.at(j).ghs_autobw && pSpot.ghs_autobw == otherSpot.ghs_autobw;
+                locallab.spots.at(j).ghs_agx = locallab.spots.at(j).ghs_agx && pSpot.ghs_agx == otherSpot.ghs_agx;
+                locallab.spots.at(j).ghs_smooth = locallab.spots.at(j).ghs_smooth && pSpot.ghs_smooth == otherSpot.ghs_smooth;
+                locallab.spots.at(j).ghs_inv = locallab.spots.at(j).ghs_inv && pSpot.ghs_inv == otherSpot.ghs_inv;
+
+                locallab.spots.at(j).mich_exp = locallab.spots.at(j).mich_exp && pSpot.mich_exp == otherSpot.mich_exp;
+                locallab.spots.at(j).mich_spar = locallab.spots.at(j).mich_spar && pSpot.mich_spar == otherSpot.mich_spar;
+                locallab.spots.at(j).mich_kpar = locallab.spots.at(j).mich_kpar && pSpot.mich_kpar == otherSpot.mich_kpar;
+                locallab.spots.at(j).mich_sat = locallab.spots.at(j).mich_sat && pSpot.mich_sat == otherSpot.mich_sat;
+                locallab.spots.at(j).mich_out = locallab.spots.at(j).mich_out && pSpot.mich_out == otherSpot.mich_out;
+                locallab.spots.at(j).mich_black = locallab.spots.at(j).mich_black && pSpot.mich_black == otherSpot.mich_black;
+                locallab.spots.at(j).mich_white = locallab.spots.at(j).mich_white && pSpot.mich_white == otherSpot.mich_white;
+                locallab.spots.at(j).mich_high = locallab.spots.at(j).mich_high && pSpot.mich_high == otherSpot.mich_high;
+                locallab.spots.at(j).mich_jdx = locallab.spots.at(j).mich_jdx && pSpot.mich_jdx == otherSpot.mich_jdx;
 
                 for (int k = 0; k < 6; k++) {
                     locallab.spots.at(j).multsh[k] = locallab.spots.at(j).multsh[k] && pSpot.multsh[k] == otherSpot.multsh[k];
@@ -1412,6 +1724,9 @@ void ParamsEdited::initFrom(const std::vector<rtengine::procparams::ProcParams>&
                 locallab.spots.at(j).levelthrlow = locallab.spots.at(j).levelthrlow && pSpot.levelthrlow == otherSpot.levelthrlow;
                 locallab.spots.at(j).medMethod = locallab.spots.at(j).medMethod && pSpot.medMethod == otherSpot.medMethod;
                 locallab.spots.at(j).activlum = locallab.spots.at(j).activlum && pSpot.activlum == otherSpot.activlum;
+                for (int k = 0; k < 21; k++) {
+                    locallab.spots.at(j).madlsav[k] = locallab.spots.at(j).madlsav[k] && pSpot.madlsav[k] == otherSpot.madlsav[k];
+                }
                 locallab.spots.at(j).noiselumf = locallab.spots.at(j).noiselumf && pSpot.noiselumf == otherSpot.noiselumf;
                 locallab.spots.at(j).noiselumf0 = locallab.spots.at(j).noiselumf0 && pSpot.noiselumf0 == otherSpot.noiselumf0;
                 locallab.spots.at(j).noiselumf2 = locallab.spots.at(j).noiselumf2 && pSpot.noiselumf2 == otherSpot.noiselumf2;
@@ -1429,11 +1744,13 @@ void ParamsEdited::initFrom(const std::vector<rtengine::procparams::ProcParams>&
                 locallab.spots.at(j).nlpat = locallab.spots.at(j).nlpat && pSpot.nlpat == otherSpot.nlpat;
                 locallab.spots.at(j).nlrad = locallab.spots.at(j).nlrad && pSpot.nlrad == otherSpot.nlrad;
                 locallab.spots.at(j).nlgam = locallab.spots.at(j).nlgam && pSpot.nlgam == otherSpot.nlgam;
+                locallab.spots.at(j).nliter = locallab.spots.at(j).nliter && pSpot.nliter == otherSpot.nliter;
                 locallab.spots.at(j).sensiden = locallab.spots.at(j).sensiden && pSpot.sensiden == otherSpot.sensiden;
                 locallab.spots.at(j).reparden = locallab.spots.at(j).reparden && pSpot.reparden == otherSpot.reparden;
                 locallab.spots.at(j).detailthr = locallab.spots.at(j).detailthr && pSpot.detailthr == otherSpot.detailthr;
                 locallab.spots.at(j).locwavcurveden = locallab.spots.at(j).locwavcurveden && pSpot.locwavcurveden == otherSpot.locwavcurveden;
                 locallab.spots.at(j).locwavcurvehue = locallab.spots.at(j).locwavcurvehue && pSpot.locwavcurvehue == otherSpot.locwavcurvehue;
+                locallab.spots.at(j).locwavcurvehuecont = locallab.spots.at(j).locwavcurvehuecont && pSpot.locwavcurvehuecont == otherSpot.locwavcurvehuecont;
                 locallab.spots.at(j).showmaskblMethodtyp = locallab.spots.at(j).showmaskblMethodtyp && pSpot.showmaskblMethodtyp == otherSpot.showmaskblMethodtyp;
                 locallab.spots.at(j).CCmaskblcurve = locallab.spots.at(j).CCmaskblcurve && pSpot.CCmaskblcurve == otherSpot.CCmaskblcurve;
                 locallab.spots.at(j).LLmaskblcurve = locallab.spots.at(j).LLmaskblcurve && pSpot.LLmaskblcurve == otherSpot.LLmaskblcurve;
@@ -1454,6 +1771,14 @@ void ParamsEdited::initFrom(const std::vector<rtengine::procparams::ProcParams>&
                 locallab.spots.at(j).Lmaskblcurve = locallab.spots.at(j).Lmaskblcurve && pSpot.Lmaskblcurve == otherSpot.Lmaskblcurve;
                 locallab.spots.at(j).LLmaskblcurvewav = locallab.spots.at(j).LLmaskblcurvewav && pSpot.LLmaskblcurvewav == otherSpot.LLmaskblcurvewav;
                 locallab.spots.at(j).csthresholdblur = locallab.spots.at(j).csthresholdblur && pSpot.csthresholdblur == otherSpot.csthresholdblur;
+                locallab.spots.at(j).denocontrast = locallab.spots.at(j).denocontrast && pSpot.denocontrast == otherSpot.denocontrast;
+                locallab.spots.at(j).denoAutocontrast = locallab.spots.at(j).denoAutocontrast && pSpot.denoAutocontrast == otherSpot.denoAutocontrast;
+                locallab.spots.at(j).contrshow = locallab.spots.at(j).contrshow && pSpot.contrshow == otherSpot.contrshow;
+                locallab.spots.at(j).lockmadl = locallab.spots.at(j).lockmadl && pSpot.lockmadl == otherSpot.lockmadl;
+                locallab.spots.at(j).madllock = locallab.spots.at(j).madllock && pSpot.madllock == otherSpot.madllock;
+                locallab.spots.at(j).enacontrast = locallab.spots.at(j).enacontrast && pSpot.enacontrast == otherSpot.enacontrast;
+                locallab.spots.at(j).denoratio = locallab.spots.at(j).denoratio && pSpot.denoratio == otherSpot.denoratio;
+                locallab.spots.at(j).denomask = locallab.spots.at(j).denomask && pSpot.denomask == otherSpot.denomask;
                 // Tone Mapping
                 locallab.spots.at(j).visitonemap = locallab.spots.at(j).visitonemap && pSpot.visitonemap == otherSpot.visitonemap;
                 locallab.spots.at(j).exptonemap = locallab.spots.at(j).exptonemap && pSpot.exptonemap == otherSpot.exptonemap;
@@ -1533,6 +1858,7 @@ void ParamsEdited::initFrom(const std::vector<rtengine::procparams::ProcParams>&
                 locallab.spots.at(j).expsharp = locallab.spots.at(j).expsharp && pSpot.expsharp == otherSpot.expsharp;
                 locallab.spots.at(j).complexsharp = locallab.spots.at(j).complexsharp && pSpot.complexsharp == otherSpot.complexsharp;
                 locallab.spots.at(j).sharcontrast = locallab.spots.at(j).sharcontrast && pSpot.sharcontrast == otherSpot.sharcontrast;
+                locallab.spots.at(j).deconvAutoshar = locallab.spots.at(j).deconvAutoshar && pSpot.deconvAutoshar == otherSpot.deconvAutoshar;
                 locallab.spots.at(j).sharradius = locallab.spots.at(j).sharradius && pSpot.sharradius == otherSpot.sharradius;
                 locallab.spots.at(j).sharamount = locallab.spots.at(j).sharamount && pSpot.sharamount == otherSpot.sharamount;
                 locallab.spots.at(j).shardamping = locallab.spots.at(j).shardamping && pSpot.shardamping == otherSpot.shardamping;
@@ -1541,6 +1867,17 @@ void ParamsEdited::initFrom(const std::vector<rtengine::procparams::ProcParams>&
                 locallab.spots.at(j).shargam = locallab.spots.at(j).shargam && pSpot.shargam == otherSpot.shargam;
                 locallab.spots.at(j).sensisha = locallab.spots.at(j).sensisha && pSpot.sensisha == otherSpot.sensisha;
                 locallab.spots.at(j).inverssha = locallab.spots.at(j).inverssha && pSpot.inverssha == otherSpot.inverssha;
+                locallab.spots.at(j).sharshow = locallab.spots.at(j).sharshow && pSpot.sharshow == otherSpot.sharshow;
+                locallab.spots.at(j).itercheck = locallab.spots.at(j).itercheck && pSpot.itercheck == otherSpot.itercheck;
+                locallab.spots.at(j).methodcap = locallab.spots.at(j).methodcap && pSpot.methodcap == otherSpot.methodcap;
+                locallab.spots.at(j).capradius = locallab.spots.at(j).capradius && pSpot.capradius == otherSpot.capradius;
+                locallab.spots.at(j).deconvAutoRadius = locallab.spots.at(j).deconvAutoRadius && pSpot.deconvAutoRadius == otherSpot.deconvAutoRadius;
+                locallab.spots.at(j).deconvCoBoost = locallab.spots.at(j).deconvCoBoost && pSpot.deconvCoBoost == otherSpot.deconvCoBoost;
+                locallab.spots.at(j).deconvCoProt = locallab.spots.at(j).deconvCoProt && pSpot.deconvCoProt == otherSpot.deconvCoProt;
+                locallab.spots.at(j).deconvCoLat = locallab.spots.at(j).deconvCoLat && pSpot.deconvCoLat == otherSpot.deconvCoLat;
+                locallab.spots.at(j).deconvCogam = locallab.spots.at(j).deconvCogam && pSpot.deconvCogam == otherSpot.deconvCogam;
+                locallab.spots.at(j).reparsha = locallab.spots.at(j).reparsha && pSpot.reparsha == otherSpot.reparsha;
+
                 // Local Contrast
                 locallab.spots.at(j).visicontrast = locallab.spots.at(j).visicontrast && pSpot.visicontrast == otherSpot.visicontrast;
                 locallab.spots.at(j).expcontrast = locallab.spots.at(j).expcontrast && pSpot.expcontrast == otherSpot.expcontrast;
@@ -1550,6 +1887,8 @@ void ParamsEdited::initFrom(const std::vector<rtengine::procparams::ProcParams>&
                 locallab.spots.at(j).lcdarkness = locallab.spots.at(j).lcdarkness && pSpot.lcdarkness == otherSpot.lcdarkness;
                 locallab.spots.at(j).lclightness = locallab.spots.at(j).lclightness && pSpot.lclightness == otherSpot.lclightness;
                 locallab.spots.at(j).sigmalc = locallab.spots.at(j).sigmalc && pSpot.sigmalc == otherSpot.sigmalc;
+                locallab.spots.at(j).offslc = locallab.spots.at(j).offslc && pSpot.offslc == otherSpot.offslc;
+                locallab.spots.at(j).gradlc = locallab.spots.at(j).gradlc && pSpot.gradlc == otherSpot.gradlc;
                 locallab.spots.at(j).levelwav = locallab.spots.at(j).levelwav && pSpot.levelwav == otherSpot.levelwav;
                 locallab.spots.at(j).residcont = locallab.spots.at(j).residcont && pSpot.residcont == otherSpot.residcont;
                 locallab.spots.at(j).residsha = locallab.spots.at(j).residsha && pSpot.residsha == otherSpot.residsha;
@@ -1601,6 +1940,8 @@ void ParamsEdited::initFrom(const std::vector<rtengine::procparams::ProcParams>&
                 locallab.spots.at(j).wavgradl = locallab.spots.at(j).wavgradl && pSpot.wavgradl == otherSpot.wavgradl;
                 locallab.spots.at(j).wavcompre = locallab.spots.at(j).wavcompre && pSpot.wavcompre == otherSpot.wavcompre;
                 locallab.spots.at(j).origlc = locallab.spots.at(j).origlc && pSpot.origlc == otherSpot.origlc;
+                locallab.spots.at(j).processwav = locallab.spots.at(j).processwav && pSpot.processwav == otherSpot.processwav;
+                locallab.spots.at(j).limitwav = locallab.spots.at(j).limitwav && pSpot.limitwav == otherSpot.limitwav;
                 locallab.spots.at(j).localcontMethod = locallab.spots.at(j).localcontMethod && pSpot.localcontMethod == otherSpot.localcontMethod;
                 locallab.spots.at(j).localedgMethod = locallab.spots.at(j).localedgMethod && pSpot.localedgMethod == otherSpot.localedgMethod;
                 locallab.spots.at(j).localneiMethod = locallab.spots.at(j).localneiMethod && pSpot.localneiMethod == otherSpot.localneiMethod;
@@ -1743,12 +2084,13 @@ void ParamsEdited::initFrom(const std::vector<rtengine::procparams::ProcParams>&
                 locallab.spots.at(j).complexcie = locallab.spots.at(j).complexcie && pSpot.complexcie == otherSpot.complexcie;
                 locallab.spots.at(j).reparcie = locallab.spots.at(j).reparcie && pSpot.reparcie == otherSpot.reparcie;
                 locallab.spots.at(j).sensicie = locallab.spots.at(j).sensicie && pSpot.sensicie == otherSpot.sensicie;
+                locallab.spots.at(j).blurciede = locallab.spots.at(j).blurciede && pSpot.blurciede == otherSpot.blurciede;
                 locallab.spots.at(j).Autograycie = locallab.spots.at(j).Autograycie && pSpot.Autograycie == otherSpot.Autograycie;
-                locallab.spots.at(j).forcejz = locallab.spots.at(j).forcejz && pSpot.forcejz == otherSpot.forcejz;
-                locallab.spots.at(j).forcebw = locallab.spots.at(j).forcebw && pSpot.forcebw == otherSpot.forcebw;
+                locallab.spots.at(j).sigybjz12 = locallab.spots.at(j).sigybjz12 && pSpot.sigybjz12 == otherSpot.sigybjz12;
                 locallab.spots.at(j).qtoj = locallab.spots.at(j).qtoj && pSpot.qtoj == otherSpot.qtoj;
                 locallab.spots.at(j).jabcie = locallab.spots.at(j).jabcie && pSpot.jabcie == otherSpot.jabcie;
                 locallab.spots.at(j).comprcieauto = locallab.spots.at(j).comprcieauto && pSpot.comprcieauto == otherSpot.comprcieauto;
+                locallab.spots.at(j).normcie12 = locallab.spots.at(j).normcie12 && pSpot.normcie12 == otherSpot.normcie12;
                 locallab.spots.at(j).normcie = locallab.spots.at(j).normcie && pSpot.normcie == otherSpot.normcie;
                 locallab.spots.at(j).gamutcie = locallab.spots.at(j).gamutcie && pSpot.gamutcie == otherSpot.gamutcie;
                 locallab.spots.at(j).bwcie = locallab.spots.at(j).bwcie && pSpot.bwcie == otherSpot.bwcie;
@@ -1757,22 +2099,45 @@ void ParamsEdited::initFrom(const std::vector<rtengine::procparams::ProcParams>&
                 locallab.spots.at(j).satcie = locallab.spots.at(j).satcie && pSpot.satcie == otherSpot.satcie;
                 locallab.spots.at(j).logcieq = locallab.spots.at(j).logcieq && pSpot.logcieq == otherSpot.logcieq;
                 locallab.spots.at(j).smoothcie = locallab.spots.at(j).smoothcie && pSpot.smoothcie == otherSpot.smoothcie;
+                locallab.spots.at(j).smoothcietrc = locallab.spots.at(j).smoothcietrc && pSpot.smoothcietrc == otherSpot.smoothcietrc;
+                locallab.spots.at(j).smoothcietrcrel = locallab.spots.at(j).smoothcietrcrel && pSpot.smoothcietrcrel == otherSpot.smoothcietrcrel;
                 locallab.spots.at(j).smoothcieyb = locallab.spots.at(j).smoothcieyb && pSpot.smoothcieyb == otherSpot.smoothcieyb;
                 locallab.spots.at(j).smoothcielum = locallab.spots.at(j).smoothcielum && pSpot.smoothcielum == otherSpot.smoothcielum;
+                locallab.spots.at(j).smoothciehigh = locallab.spots.at(j).smoothciehigh && pSpot.smoothciehigh == otherSpot.smoothciehigh;
+                locallab.spots.at(j).smoothcielnk = locallab.spots.at(j).smoothcielnk && pSpot.smoothcielnk == otherSpot.smoothcielnk;
+                locallab.spots.at(j).smoothcieinv = locallab.spots.at(j).smoothcieinv && pSpot.smoothcieinv == otherSpot.smoothcieinv;
                 locallab.spots.at(j).logjz = locallab.spots.at(j).logjz && pSpot.logjz == otherSpot.logjz;
+                locallab.spots.at(j).sigjz12 = locallab.spots.at(j).sigjz12 && pSpot.sigjz12 == otherSpot.sigjz12;
                 locallab.spots.at(j).sigjz = locallab.spots.at(j).sigjz && pSpot.sigjz == otherSpot.sigjz;
+                locallab.spots.at(j).forcebw = locallab.spots.at(j).forcebw && pSpot.forcebw == otherSpot.forcebw;
+                locallab.spots.at(j).sigq12 = locallab.spots.at(j).sigq12 && pSpot.sigq12 == otherSpot.sigq12;
                 locallab.spots.at(j).sigq = locallab.spots.at(j).sigq && pSpot.sigq == otherSpot.sigq;
                 locallab.spots.at(j).chjzcie = locallab.spots.at(j).chjzcie && pSpot.chjzcie == otherSpot.chjzcie;
                 locallab.spots.at(j).sourceGraycie = locallab.spots.at(j).sourceGraycie && pSpot.sourceGraycie == otherSpot.sourceGraycie;
                 locallab.spots.at(j).sourceabscie = locallab.spots.at(j).sourceabscie && pSpot.sourceabscie == otherSpot.sourceabscie;
                 locallab.spots.at(j).sursourcie = locallab.spots.at(j).sursourcie && pSpot.sursourcie == otherSpot.sursourcie;
                 locallab.spots.at(j).modecam = locallab.spots.at(j).modecam && pSpot.modecam == otherSpot.modecam;
+                locallab.spots.at(j).modeQJ = locallab.spots.at(j).modeQJ && pSpot.modeQJ == otherSpot.modeQJ;
+                locallab.spots.at(j).bwevMethod12 = locallab.spots.at(j).bwevMethod12 && pSpot.bwevMethod12 == otherSpot.bwevMethod12;
                 locallab.spots.at(j).bwevMethod = locallab.spots.at(j).bwevMethod && pSpot.bwevMethod == otherSpot.bwevMethod;
                 locallab.spots.at(j).modecie = locallab.spots.at(j).modecie && pSpot.modecie == otherSpot.modecie;
                 locallab.spots.at(j).saturlcie = locallab.spots.at(j).saturlcie && pSpot.saturlcie == otherSpot.saturlcie;
                 locallab.spots.at(j).rstprotectcie = locallab.spots.at(j).rstprotectcie && pSpot.rstprotectcie == otherSpot.rstprotectcie;
                 locallab.spots.at(j).chromlcie = locallab.spots.at(j).chromlcie && pSpot.chromlcie == otherSpot.chromlcie;
                 locallab.spots.at(j).huecie = locallab.spots.at(j).huecie && pSpot.huecie == otherSpot.huecie;
+                
+                locallab.spots.at(j).colorhred = locallab.spots.at(j).colorhred && pSpot.colorhred == otherSpot.colorhred;
+                locallab.spots.at(j).schromared = locallab.spots.at(j).schromared && pSpot.schromared == otherSpot.schromared;
+                locallab.spots.at(j).redcurve = locallab.spots.at(j).redcurve && pSpot.redcurve == otherSpot.redcurve;
+                locallab.spots.at(j).colorhgreen = locallab.spots.at(j).colorhgreen && pSpot.colorhgreen == otherSpot.colorhgreen;
+                locallab.spots.at(j).schromagreen = locallab.spots.at(j).schromagreen && pSpot.schromagreen == otherSpot.schromagreen;
+                locallab.spots.at(j).greencurve = locallab.spots.at(j).greencurve && pSpot.greencurve == otherSpot.greencurve;
+                locallab.spots.at(j).colorhblue = locallab.spots.at(j).colorhblue && pSpot.colorhblue == otherSpot.colorhblue;
+                locallab.spots.at(j).schromablue = locallab.spots.at(j).schromablue && pSpot.schromablue == otherSpot.schromablue;
+                locallab.spots.at(j).bluecurve = locallab.spots.at(j).bluecurve && pSpot.bluecurve == otherSpot.bluecurve;
+                locallab.spots.at(j).brighthres = locallab.spots.at(j).brighthres && pSpot.brighthres == otherSpot.brighthres;
+
+
                 locallab.spots.at(j).toneMethodcie = locallab.spots.at(j).toneMethodcie && pSpot.toneMethodcie == otherSpot.toneMethodcie;
                 locallab.spots.at(j).ciecurve = locallab.spots.at(j).ciecurve && pSpot.ciecurve == otherSpot.ciecurve;
                 locallab.spots.at(j).toneMethodcie2 = locallab.spots.at(j).toneMethodcie2 && pSpot.toneMethodcie2 == otherSpot.toneMethodcie2;
@@ -1786,6 +2151,7 @@ void ParamsEdited::initFrom(const std::vector<rtengine::procparams::ProcParams>&
                 locallab.spots.at(j).jzcurve = locallab.spots.at(j).jzcurve && pSpot.jzcurve == otherSpot.jzcurve;
                 locallab.spots.at(j).czcurve = locallab.spots.at(j).czcurve && pSpot.czcurve == otherSpot.czcurve;
                 locallab.spots.at(j).czjzcurve = locallab.spots.at(j).czjzcurve && pSpot.czjzcurve == otherSpot.czjzcurve;
+                locallab.spots.at(j).invcurve = locallab.spots.at(j).invcurve && pSpot.invcurve == otherSpot.invcurve;
                 locallab.spots.at(j).HHcurvejz = locallab.spots.at(j).HHcurvejz && pSpot.HHcurvejz == otherSpot.HHcurvejz;
                 locallab.spots.at(j).CHcurvejz = locallab.spots.at(j).CHcurvejz && pSpot.CHcurvejz == otherSpot.CHcurvejz;
                 locallab.spots.at(j).LHcurvejz = locallab.spots.at(j).LHcurvejz && pSpot.LHcurvejz == otherSpot.LHcurvejz;
@@ -1809,19 +2175,37 @@ void ParamsEdited::initFrom(const std::vector<rtengine::procparams::ProcParams>&
                 locallab.spots.at(j).blackEvjz = locallab.spots.at(j).blackEvjz && pSpot.blackEvjz == otherSpot.blackEvjz;
                 locallab.spots.at(j).whiteEvjz = locallab.spots.at(j).whiteEvjz && pSpot.whiteEvjz == otherSpot.whiteEvjz;
                 locallab.spots.at(j).targetjz = locallab.spots.at(j).targetjz && pSpot.targetjz == otherSpot.targetjz;
+                locallab.spots.at(j).sigmoidldacie12 = locallab.spots.at(j).sigmoidldacie12 && pSpot.sigmoidldacie12 == otherSpot.sigmoidldacie12;
+                locallab.spots.at(j).sigmoidthcie12 = locallab.spots.at(j).sigmoidthcie12 && pSpot.sigmoidthcie12 == otherSpot.sigmoidthcie12;
+                locallab.spots.at(j).sigmoidblcie12 = locallab.spots.at(j).sigmoidblcie12 && pSpot.sigmoidblcie12 == otherSpot.sigmoidblcie12;
+
                 locallab.spots.at(j).sigmoidldacie = locallab.spots.at(j).sigmoidldacie && pSpot.sigmoidldacie == otherSpot.sigmoidldacie;
                 locallab.spots.at(j).sigmoidthcie = locallab.spots.at(j).sigmoidthcie && pSpot.sigmoidthcie == otherSpot.sigmoidthcie;
                 locallab.spots.at(j).sigmoidsenscie = locallab.spots.at(j).sigmoidsenscie && pSpot.sigmoidsenscie == otherSpot.sigmoidsenscie;
                 locallab.spots.at(j).sigmoidblcie = locallab.spots.at(j).sigmoidblcie && pSpot.sigmoidblcie == otherSpot.sigmoidblcie;
+
                 locallab.spots.at(j).comprcie = locallab.spots.at(j).comprcie && pSpot.comprcie == otherSpot.comprcie;
                 locallab.spots.at(j).strcielog = locallab.spots.at(j).strcielog && pSpot.strcielog == otherSpot.strcielog;
                 locallab.spots.at(j).comprcieth = locallab.spots.at(j).comprcieth && pSpot.comprcieth == otherSpot.comprcieth;
                 locallab.spots.at(j).gamjcie = locallab.spots.at(j).gamjcie && pSpot.gamjcie == otherSpot.gamjcie;
+                locallab.spots.at(j).smoothcieth = locallab.spots.at(j).smoothcieth && pSpot.smoothcieth == otherSpot.smoothcieth;
+                locallab.spots.at(j).smoothciethtrc = locallab.spots.at(j).smoothciethtrc && pSpot.smoothciethtrc == otherSpot.smoothciethtrc;
                 locallab.spots.at(j).slopjcie = locallab.spots.at(j).slopjcie && pSpot.slopjcie == otherSpot.slopjcie;
+                locallab.spots.at(j).satjcie = locallab.spots.at(j).satjcie && pSpot.satjcie == otherSpot.satjcie;
+                locallab.spots.at(j).smoothjcie = locallab.spots.at(j).smoothjcie && pSpot.smoothjcie == otherSpot.smoothjcie;
                 locallab.spots.at(j).slopesmo = locallab.spots.at(j).slopesmo && pSpot.slopesmo == otherSpot.slopesmo;
+                locallab.spots.at(j).slopesmoq = locallab.spots.at(j).slopesmoq && pSpot.slopesmoq == otherSpot.slopesmoq;
                 locallab.spots.at(j).slopesmor = locallab.spots.at(j).slopesmor && pSpot.slopesmor == otherSpot.slopesmor;
                 locallab.spots.at(j).slopesmog = locallab.spots.at(j).slopesmog && pSpot.slopesmog == otherSpot.slopesmog;
                 locallab.spots.at(j).slopesmob = locallab.spots.at(j).slopesmob && pSpot.slopesmob == otherSpot.slopesmob;
+                locallab.spots.at(j).contsig = locallab.spots.at(j).contsig && pSpot.contsig == otherSpot.contsig;
+                locallab.spots.at(j).skewsig = locallab.spots.at(j).skewsig && pSpot.skewsig == otherSpot.skewsig;
+                locallab.spots.at(j).whitsig = locallab.spots.at(j).whitsig && pSpot.whitsig == otherSpot.whitsig;
+
+                locallab.spots.at(j).kslopesmor = locallab.spots.at(j).kslopesmor && pSpot.kslopesmor == otherSpot.kslopesmor;
+                locallab.spots.at(j).kslopesmog = locallab.spots.at(j).kslopesmog && pSpot.kslopesmog == otherSpot.kslopesmog;
+                locallab.spots.at(j).kslopesmob = locallab.spots.at(j).kslopesmob && pSpot.kslopesmob == otherSpot.kslopesmob;
+                locallab.spots.at(j).midtciemet = locallab.spots.at(j).midtciemet && pSpot.midtciemet == otherSpot.midtciemet;
                 locallab.spots.at(j).midtcie = locallab.spots.at(j).midtcie && pSpot.midtcie == otherSpot.midtcie;
                 locallab.spots.at(j).grexl = locallab.spots.at(j).grexl && pSpot.grexl == otherSpot.grexl;
                 locallab.spots.at(j).greyl = locallab.spots.at(j).greyl && pSpot.greyl == otherSpot.greyl;
@@ -1849,9 +2233,14 @@ void ParamsEdited::initFrom(const std::vector<rtengine::procparams::ProcParams>&
                 locallab.spots.at(j).smoothciemet = locallab.spots.at(j).smoothciemet && pSpot.smoothciemet == otherSpot.smoothciemet;
                 locallab.spots.at(j).primMethod = locallab.spots.at(j).primMethod && pSpot.primMethod == otherSpot.primMethod;
                 locallab.spots.at(j).catMethod = locallab.spots.at(j).catMethod && pSpot.catMethod == otherSpot.catMethod;
+                locallab.spots.at(j).sigmoidldajzcie12 = locallab.spots.at(j).sigmoidldajzcie12 && pSpot.sigmoidldajzcie12 == otherSpot.sigmoidldajzcie12;
+                locallab.spots.at(j).sigmoidthjzcie12 = locallab.spots.at(j).sigmoidthjzcie12 && pSpot.sigmoidthjzcie12 == otherSpot.sigmoidthjzcie12;
+                locallab.spots.at(j).sigmoidbljzcie12 = locallab.spots.at(j).sigmoidbljzcie12 && pSpot.sigmoidbljzcie12 == otherSpot.sigmoidbljzcie12;
+
                 locallab.spots.at(j).sigmoidldajzcie = locallab.spots.at(j).sigmoidldajzcie && pSpot.sigmoidldajzcie == otherSpot.sigmoidldajzcie;
                 locallab.spots.at(j).sigmoidthjzcie = locallab.spots.at(j).sigmoidthjzcie && pSpot.sigmoidthjzcie == otherSpot.sigmoidthjzcie;
                 locallab.spots.at(j).sigmoidbljzcie = locallab.spots.at(j).sigmoidbljzcie && pSpot.sigmoidbljzcie == otherSpot.sigmoidbljzcie;
+
                 locallab.spots.at(j).contqcie = locallab.spots.at(j).contqcie && pSpot.contqcie == otherSpot.contqcie;
                 locallab.spots.at(j).contsigqcie = locallab.spots.at(j).contsigqcie && pSpot.contsigqcie == otherSpot.contsigqcie;
                 locallab.spots.at(j).colorflcie = locallab.spots.at(j).colorflcie && pSpot.colorflcie == otherSpot.colorflcie;
@@ -1860,7 +2249,11 @@ void ParamsEdited::initFrom(const std::vector<rtengine::procparams::ProcParams>&
                 locallab.spots.at(j).catadcie = locallab.spots.at(j).catadcie && pSpot.catadcie == otherSpot.catadcie;
                 locallab.spots.at(j).detailcie = locallab.spots.at(j).detailcie && pSpot.detailcie == otherSpot.detailcie;
                 locallab.spots.at(j).surroundcie = locallab.spots.at(j).surroundcie && pSpot.surroundcie == otherSpot.surroundcie;
-                
+
+                locallab.spots.at(j).gamgain = locallab.spots.at(j).gamgain && pSpot.gamgain == otherSpot.gamgain;
+                locallab.spots.at(j).gampower = locallab.spots.at(j).gampower && pSpot.gampower == otherSpot.gampower;
+                locallab.spots.at(j).gamutw = locallab.spots.at(j).gamutw && pSpot.gamutw == otherSpot.gamutw;
+
                 locallab.spots.at(j).strgradcie = locallab.spots.at(j).strgradcie && pSpot.strgradcie == otherSpot.strgradcie;
                 locallab.spots.at(j).anggradcie = locallab.spots.at(j).anggradcie && pSpot.anggradcie == otherSpot.anggradcie;
                 locallab.spots.at(j).feathercie = locallab.spots.at(j).feathercie && pSpot.feathercie == otherSpot.feathercie;
@@ -1961,9 +2354,12 @@ void ParamsEdited::initFrom(const std::vector<rtengine::procparams::ProcParams>&
         resize.longedge = resize.longedge && p.resize.longedge == other.resize.longedge;
         resize.shortedge = resize.shortedge && p.resize.shortedge == other.resize.shortedge;
         resize.enabled = resize.enabled && p.resize.enabled == other.resize.enabled;
+        resize.allowUpscaling = resize.allowUpscaling && p.resize.allowUpscaling == other.resize.allowUpscaling;
+
+        ::initFrom(framing, p, other);
+
         spot.enabled = spot.enabled && p.spot.enabled == other.spot.enabled;
         spot.entries = spot.entries && p.spot.entries == other.spot.entries;
-        resize.allowUpscaling = resize.allowUpscaling && p.resize.allowUpscaling == other.resize.allowUpscaling;
         icm.inputProfile = icm.inputProfile && p.icm.inputProfile == other.icm.inputProfile;
         icm.toneCurve = icm.toneCurve && p.icm.toneCurve == other.icm.toneCurve;
         icm.applyLookTable = icm.applyLookTable && p.icm.applyLookTable == other.icm.applyLookTable;
@@ -1974,16 +2370,33 @@ void ParamsEdited::initFrom(const std::vector<rtengine::procparams::ProcParams>&
         icm.outputProfile = icm.outputProfile && p.icm.outputProfile == other.icm.outputProfile;
         icm.outputIntent = icm.outputIntent && p.icm.outputIntent == other.icm.outputIntent;
         icm.outputBPC = icm.outputBPC && p.icm.outputBPC == other.icm.outputBPC ;
-        icm.workingTRCGamma = icm.workingTRCGamma && p.icm.workingTRCGamma == other.icm.workingTRCGamma;
-        icm.workingTRCSlope = icm.workingTRCSlope && p.icm.workingTRCSlope == other.icm.workingTRCSlope;
+        icm.wGamma = icm.wGamma && p.icm.wGamma == other.icm.wGamma;
+        icm.wSlope = icm.wSlope && p.icm.wSlope == other.icm.wSlope;
         icm.wmidtcie = icm.wmidtcie && p.icm.wmidtcie == other.icm.wmidtcie;
+        icm.sigmatrc = icm.sigmatrc && p.icm.sigmatrc == other.icm.sigmatrc;
+        icm.offstrc = icm.offstrc && p.icm.offstrc == other.icm.offstrc;
+        icm.residtrc = icm.residtrc && p.icm.residtrc == other.icm.residtrc;
+        icm.wgampower = icm.wgampower && p.icm.wgampower == other.icm.wgampower;
+        icm.wgamgain = icm.wgamgain && p.icm.wgamgain == other.icm.wgamgain;
+        icm.pyrwavtrc = icm.pyrwavtrc && p.icm.pyrwavtrc == other.icm.pyrwavtrc;
+        icm.opacityCurveWLI = icm.opacityCurveWLI && p.icm.opacityCurveWLI == other.icm.opacityCurveWLI;
         icm.wsmoothcie = icm.wsmoothcie && p.icm.wsmoothcie == other.icm.wsmoothcie;
+        icm.wapsat = icm.wapsat && p.icm.wapsat == other.icm.wapsat;
+        icm.wsmoothciesli = icm.wsmoothciesli && p.icm.wsmoothciesli == other.icm.wsmoothciesli;
         icm.redx = icm.redx && p.icm.redx == other.icm.redx;
         icm.redy = icm.redy && p.icm.redy == other.icm.redy;
         icm.grex = icm.grex && p.icm.grex == other.icm.grex;
         icm.grey = icm.grey && p.icm.grey == other.icm.grey;
         icm.blux = icm.blux && p.icm.blux == other.icm.blux;
         icm.bluy = icm.bluy && p.icm.bluy == other.icm.bluy;
+        
+        icm.redrot = icm.redrot && p.icm.redrot == other.icm.redrot;
+        icm.redsat = icm.redsat && p.icm.redsat == other.icm.redsat;
+        icm.grerot = icm.grerot && p.icm.grerot == other.icm.grerot;
+        icm.gresat = icm.gresat && p.icm.gresat == other.icm.gresat;
+        icm.blurot = icm.blurot && p.icm.blurot == other.icm.blurot;
+        icm.blusat = icm.blusat && p.icm.blusat == other.icm.blusat;
+        
         icm.refi = icm.refi && p.icm.refi == other.icm.refi;
         icm.shiftx = icm.shiftx && p.icm.shiftx == other.icm.shiftx;
         icm.shifty = icm.shifty && p.icm.shifty == other.icm.shifty;
@@ -2000,9 +2413,11 @@ void ParamsEdited::initFrom(const std::vector<rtengine::procparams::ProcParams>&
         icm.preser = icm.preser && p.icm.preser == other.icm.preser;
         icm.fbw = icm.fbw && p.icm.fbw == other.icm.fbw;
         icm.trcExp = icm.trcExp && p.icm.trcExp == other.icm.trcExp;
+        icm.wavExp = icm.wavExp && p.icm.wavExp == other.icm.wavExp;
         icm.gamut = icm.gamut && p.icm.gamut == other.icm.gamut;
         icm.aRendIntent = icm.aRendIntent && p.icm.aRendIntent == other.icm.aRendIntent;
         icm.workingTRC = icm.workingTRC && p.icm.workingTRC == other.icm.workingTRC;
+        icm.wgamut = icm.wgamut && p.icm.wgamut == other.icm.wgamut;
         icm.will = icm.will && p.icm.will == other.icm.will;
         icm.wprim = icm.wprim && p.icm.wprim == other.icm.wprim;
         icm.wcat = icm.wcat && p.icm.wcat == other.icm.wcat;
@@ -2255,6 +2670,7 @@ void ParamsEdited::initFrom(const std::vector<rtengine::procparams::ProcParams>&
 
 void ParamsEdited::combine(rtengine::procparams::ProcParams& toEdit, const rtengine::procparams::ProcParams& mods, bool forceSet)
 {
+    const Options& options = App::get().options();
 
     bool dontforceSet = !forceSet;
 
@@ -2825,6 +3241,14 @@ void ParamsEdited::combine(rtengine::procparams::ProcParams& toEdit, const rteng
         toEdit.pdsharpening.contrast = dontforceSet && options.baBehav[ADDSET_SHARP_CONTRAST] ? toEdit.pdsharpening.contrast + mods.pdsharpening.contrast : mods.pdsharpening.contrast;
     }
 
+    if (pdsharpening.noisecap) {
+        toEdit.pdsharpening.noisecap = mods.pdsharpening.noisecap;
+    }
+
+    if (pdsharpening.noisecapafter) {
+        toEdit.pdsharpening.noisecapafter = mods.pdsharpening.noisecapafter;
+    }
+
     if (pdsharpening.autoContrast) {
         toEdit.pdsharpening.autoContrast = mods.pdsharpening.autoContrast;
     }
@@ -2847,6 +3271,14 @@ void ParamsEdited::combine(rtengine::procparams::ProcParams& toEdit, const rteng
 
     if (pdsharpening.deconvitercheck) {
         toEdit.pdsharpening.deconvitercheck =  mods.pdsharpening.deconvitercheck;
+    }
+
+    if (pdsharpening.showcap) {
+        toEdit.pdsharpening.showcap =  mods.pdsharpening.showcap;
+    }
+
+    if (pdsharpening.noisecaptype) {
+        toEdit.pdsharpening.noisecaptype =  mods.pdsharpening.noisecaptype;
     }
 
     if (prsharpening.enabled) {
@@ -3029,6 +3461,18 @@ void ParamsEdited::combine(rtengine::procparams::ProcParams& toEdit, const rteng
         toEdit.colorappearance.curve = mods.colorappearance.curve;
     }
 
+    if (colorappearance.curvered) {
+        toEdit.colorappearance.curvered = mods.colorappearance.curvered;
+    }
+
+    if (colorappearance.curvegreen) {
+        toEdit.colorappearance.curvegreen = mods.colorappearance.curvegreen;
+    }
+
+    if (colorappearance.curveblue) {
+        toEdit.colorappearance.curveblue = mods.colorappearance.curveblue;
+    }
+
     if (colorappearance.curve2) {
         toEdit.colorappearance.curve2 = mods.colorappearance.curve2;
     }
@@ -3165,6 +3609,18 @@ void ParamsEdited::combine(rtengine::procparams::ProcParams& toEdit, const rteng
         toEdit.colorappearance.schroma = dontforceSet && options.baBehav[ADDSET_CAT_CHROMA_S] ? toEdit.colorappearance.schroma + mods.colorappearance.schroma : mods.colorappearance.schroma;
     }
 
+    if (colorappearance.schromared) {
+        toEdit.colorappearance.schromared = dontforceSet && options.baBehav[ADDSET_CAT_CHROMA_S_RED] ? toEdit.colorappearance.schromared + mods.colorappearance.schromared : mods.colorappearance.schromared;
+    }
+
+    if (colorappearance.schromagreen) {
+        toEdit.colorappearance.schromagreen = dontforceSet && options.baBehav[ADDSET_CAT_CHROMA_S_GREEN] ? toEdit.colorappearance.schromagreen + mods.colorappearance.schromagreen : mods.colorappearance.schromagreen;
+    }
+
+    if (colorappearance.schromablue) {
+        toEdit.colorappearance.schromablue = dontforceSet && options.baBehav[ADDSET_CAT_CHROMA_S_BLUE] ? toEdit.colorappearance.schromablue + mods.colorappearance.schromablue : mods.colorappearance.schromablue;
+    }
+
     if (colorappearance.mchroma) {
         toEdit.colorappearance.mchroma = dontforceSet && options.baBehav[ADDSET_CAT_CHROMA_M] ? toEdit.colorappearance.mchroma + mods.colorappearance.mchroma : mods.colorappearance.mchroma;
     }
@@ -3179,6 +3635,22 @@ void ParamsEdited::combine(rtengine::procparams::ProcParams& toEdit, const rteng
 
     if (colorappearance.colorh) {
         toEdit.colorappearance.colorh = dontforceSet && options.baBehav[ADDSET_CAT_HUE] ? toEdit.colorappearance.colorh + mods.colorappearance.colorh : mods.colorappearance.colorh;
+    }
+
+    if (colorappearance.colorhred) {
+        toEdit.colorappearance.colorhred = dontforceSet && options.baBehav[ADDSET_CAT_HUE_RED] ? toEdit.colorappearance.colorhred + mods.colorappearance.colorhred : mods.colorappearance.colorhred;
+    }
+
+    if (colorappearance.colorhgreen) {
+        toEdit.colorappearance.colorhgreen = dontforceSet && options.baBehav[ADDSET_CAT_HUE_GREEN] ? toEdit.colorappearance.colorhgreen + mods.colorappearance.colorhgreen : mods.colorappearance.colorhgreen;
+    }
+
+    if (colorappearance.colorhblue) {
+        toEdit.colorappearance.colorhblue = dontforceSet && options.baBehav[ADDSET_CAT_HUE_BLUE] ? toEdit.colorappearance.colorhblue + mods.colorappearance.colorhblue : mods.colorappearance.colorhblue;
+    }
+
+    if (colorappearance.brighthres) {
+        toEdit.colorappearance.brighthres = dontforceSet && options.baBehav[ADDSET_CAT_BRIGHTHRES] ? toEdit.colorappearance.brighthres + mods.colorappearance.brighthres : mods.colorappearance.brighthres;
     }
 
     if (colorappearance.rstprotection) {
@@ -3365,6 +3837,58 @@ void ParamsEdited::combine(rtengine::procparams::ProcParams& toEdit, const rteng
         toEdit.sh.lab = mods.sh.lab;
     }
 
+    if (cg.th_c) {
+        toEdit.cg.th_c = mods.cg.th_c;
+    }
+
+    if (cg.th_m) {
+        toEdit.cg.th_m = mods.cg.th_m;
+    }
+
+    if (cg.th_y) {
+        toEdit.cg.th_y = mods.cg.th_y;
+    }
+
+    if (cg.d_c) {
+        toEdit.cg.d_c = mods.cg.d_c;
+    }
+
+    if (cg.autodc) {
+        toEdit.cg.autodc = mods.cg.autodc;
+    }
+
+    if (cg.d_m) {
+        toEdit.cg.d_m = mods.cg.d_m;
+    }
+
+    if (cg.autodm) {
+        toEdit.cg.autodm = mods.cg.autodm;
+    }
+   
+    if (cg.d_y) {
+        toEdit.cg.d_y = mods.cg.d_y;
+    }
+
+    if (cg.autody) {
+        toEdit.cg.autody = mods.cg.autody;
+    }   
+
+    if (cg.colorspace) {
+        toEdit.cg.colorspace = mods.cg.colorspace;
+    }
+
+    if (cg.pwr) {
+        toEdit.cg.pwr = mods.cg.pwr;
+    }
+
+    if (cg.rolloff) {
+        toEdit.cg.rolloff = mods.cg.rolloff;
+    }
+
+    if (cg.enabled) {
+        toEdit.cg.enabled = mods.cg.enabled;
+    }
+
     if (toneEqualizer.enabled) {
         toEdit.toneEqualizer.enabled = mods.toneEqualizer.enabled;
     }
@@ -3428,9 +3952,7 @@ void ParamsEdited::combine(rtengine::procparams::ProcParams& toEdit, const rteng
         toEdit.crop.orientation = mods.crop.orientation;
     }
 
-    if (crop.guide) {
-        toEdit.crop.guide = mods.crop.guide;
-    }
+    ::combine(toEdit.cropGuide, mods.cropGuide, cropGuide);
 
     if (coarse.rotate) {
         toEdit.coarse.rotate = mods.coarse.rotate;
@@ -3450,6 +3972,14 @@ void ParamsEdited::combine(rtengine::procparams::ProcParams& toEdit, const rteng
 
     if (commonTrans.scale) {
         toEdit.commonTrans.scale = dontforceSet && options.baBehav[ADDSET_LENSGEOM_SCALE] ? toEdit.commonTrans.scale + mods.commonTrans.scale : mods.commonTrans.scale;
+    }
+
+    if (commonTrans.scale_horizontally) {
+        toEdit.commonTrans.scale_horizontally = dontforceSet && options.baBehav[ADDSET_LENSGEOM_SCALE_HORIZONTALLY] ? toEdit.commonTrans.scale_horizontally + mods.commonTrans.scale_horizontally : mods.commonTrans.scale_horizontally;
+    }
+
+    if (commonTrans.scale_vertically) {
+        toEdit.commonTrans.scale_vertically = dontforceSet && options.baBehav[ADDSET_LENSGEOM_SCALE_VERTICALLY] ? toEdit.commonTrans.scale_vertically + mods.commonTrans.scale_vertically : mods.commonTrans.scale_vertically;
     }
 
     if (commonTrans.autofill) {
@@ -3727,6 +4257,10 @@ void ParamsEdited::combine(rtengine::procparams::ProcParams& toEdit, const rteng
 
         if (locallab.spots.at(i).activ) {
             toEdit.locallab.spots.at(i).activ = mods.locallab.spots.at(i).activ;
+        }
+
+        if (locallab.spots.at(i).avoidneg) {
+            toEdit.locallab.spots.at(i).avoidneg = mods.locallab.spots.at(i).avoidneg;
         }
 
         if (locallab.spots.at(i).blwh) {
@@ -4272,6 +4806,118 @@ void ParamsEdited::combine(rtengine::procparams::ProcParams& toEdit, const rteng
             toEdit.locallab.spots.at(i).shMethod = mods.locallab.spots.at(i).shMethod;
         }
 
+        if (locallab.spots.at(i).ghsMethod) {
+            toEdit.locallab.spots.at(i).ghsMethod = mods.locallab.spots.at(i).ghsMethod;
+        }
+
+        if (locallab.spots.at(i).ghsMatmet) {
+            toEdit.locallab.spots.at(i).ghsMatmet = mods.locallab.spots.at(i).ghsMatmet;
+        }
+
+        if (locallab.spots.at(i).ghsMode) {
+            toEdit.locallab.spots.at(i).ghsMode = mods.locallab.spots.at(i).ghsMode;
+        }
+
+        if (locallab.spots.at(i).ghs_D) {
+            toEdit.locallab.spots.at(i).ghs_D = mods.locallab.spots.at(i).ghs_D;
+        }
+
+        if (locallab.spots.at(i).ghs_slope) {
+            toEdit.locallab.spots.at(i).ghs_slope = mods.locallab.spots.at(i).ghs_slope;
+        }
+
+        if (locallab.spots.at(i).ghs_chro) {
+            toEdit.locallab.spots.at(i).ghs_chro = mods.locallab.spots.at(i).ghs_chro;
+        }
+
+        if (locallab.spots.at(i).ghs_B) {
+            toEdit.locallab.spots.at(i).ghs_B = mods.locallab.spots.at(i).ghs_B;
+        }
+
+        if (locallab.spots.at(i).ghs_SP) {
+            toEdit.locallab.spots.at(i).ghs_SP = mods.locallab.spots.at(i).ghs_SP;
+        }
+
+        if (locallab.spots.at(i).SPAutoRadius) {
+            toEdit.locallab.spots.at(i).SPAutoRadius = mods.locallab.spots.at(i).SPAutoRadius;
+        }
+
+        if (locallab.spots.at(i).ghs_LP) {
+            toEdit.locallab.spots.at(i).ghs_LP = mods.locallab.spots.at(i).ghs_LP;
+        }
+
+        if (locallab.spots.at(i).ghs_HP) {
+            toEdit.locallab.spots.at(i).ghs_HP = mods.locallab.spots.at(i).ghs_HP;
+        }
+
+        if (locallab.spots.at(i).ghs_LC) {
+            toEdit.locallab.spots.at(i).ghs_LC = mods.locallab.spots.at(i).ghs_LC;
+        }
+
+        if (locallab.spots.at(i).ghs_MID) {
+            toEdit.locallab.spots.at(i).ghs_MID = mods.locallab.spots.at(i).ghs_MID;
+        }
+
+        if (locallab.spots.at(i).ghs_BLP) {
+            toEdit.locallab.spots.at(i).ghs_BLP = mods.locallab.spots.at(i).ghs_BLP;
+        }
+
+        if (locallab.spots.at(i).ghs_HLP) {
+            toEdit.locallab.spots.at(i).ghs_HLP = mods.locallab.spots.at(i).ghs_HLP;
+        }
+
+        if (locallab.spots.at(i).ghs_autobw) {
+            toEdit.locallab.spots.at(i).ghs_autobw = mods.locallab.spots.at(i).ghs_autobw;
+        }
+
+        if (locallab.spots.at(i).ghs_agx) {
+            toEdit.locallab.spots.at(i).ghs_agx = mods.locallab.spots.at(i).ghs_agx;
+        }
+
+        if (locallab.spots.at(i).ghs_smooth) {
+            toEdit.locallab.spots.at(i).ghs_smooth = mods.locallab.spots.at(i).ghs_smooth;
+        }
+
+        if (locallab.spots.at(i).ghs_inv) {
+            toEdit.locallab.spots.at(i).ghs_inv = mods.locallab.spots.at(i).ghs_inv;
+        }
+
+        if (locallab.spots.at(i).mich_exp) {
+            toEdit.locallab.spots.at(i).mich_exp = mods.locallab.spots.at(i).mich_exp;
+        }
+
+        if (locallab.spots.at(i).mich_spar) {
+            toEdit.locallab.spots.at(i).mich_spar = mods.locallab.spots.at(i).mich_spar;
+        }
+
+        if (locallab.spots.at(i).mich_kpar) {
+            toEdit.locallab.spots.at(i).mich_kpar = mods.locallab.spots.at(i).mich_kpar;
+        }
+
+        if (locallab.spots.at(i).mich_sat) {
+            toEdit.locallab.spots.at(i).mich_sat = mods.locallab.spots.at(i).mich_sat;
+        }
+
+        if (locallab.spots.at(i).mich_out) {
+            toEdit.locallab.spots.at(i).mich_out = mods.locallab.spots.at(i).mich_out;
+        }
+
+        if (locallab.spots.at(i).mich_high) {
+            toEdit.locallab.spots.at(i).mich_high = mods.locallab.spots.at(i).mich_high;
+        }
+
+        if (locallab.spots.at(i).mich_black) {
+            toEdit.locallab.spots.at(i).mich_black = mods.locallab.spots.at(i).mich_black;
+        }
+
+        if (locallab.spots.at(i).mich_white) {
+            toEdit.locallab.spots.at(i).mich_white = mods.locallab.spots.at(i).mich_white;
+        }
+
+        if (locallab.spots.at(i).mich_jdx) {
+            toEdit.locallab.spots.at(i).mich_jdx = mods.locallab.spots.at(i).mich_jdx;
+        }
+
         for (int j = 0; j < 6; j++) {
             if (locallab.spots.at(i).multsh[j]) {
                 toEdit.locallab.spots.at(i).multsh[j] = mods.locallab.spots.at(i).multsh[j];
@@ -4712,6 +5358,12 @@ void ParamsEdited::combine(rtengine::procparams::ProcParams& toEdit, const rteng
         if (locallab.spots.at(i).activlum) {
             toEdit.locallab.spots.at(i).activlum = mods.locallab.spots.at(i).activlum;
         }
+        
+        for (int j = 0; j < 21; j++) {
+            if (locallab.spots.at(i).madlsav[j]) {
+                toEdit.locallab.spots.at(i).madlsav[j] = mods.locallab.spots.at(i).madlsav[j];
+            }
+        }
 
         if (locallab.spots.at(i).noiselumf) {
             toEdit.locallab.spots.at(i).noiselumf = mods.locallab.spots.at(i).noiselumf;
@@ -4781,6 +5433,10 @@ void ParamsEdited::combine(rtengine::procparams::ProcParams& toEdit, const rteng
             toEdit.locallab.spots.at(i).nlgam = mods.locallab.spots.at(i).nlgam;
         }
 
+        if (locallab.spots.at(i).nliter) {
+            toEdit.locallab.spots.at(i).nliter = mods.locallab.spots.at(i).nliter;
+        }
+
         if (locallab.spots.at(i).sensiden) {
             toEdit.locallab.spots.at(i).sensiden = mods.locallab.spots.at(i).sensiden;
         }
@@ -4801,6 +5457,9 @@ void ParamsEdited::combine(rtengine::procparams::ProcParams& toEdit, const rteng
             toEdit.locallab.spots.at(i).locwavcurvehue = mods.locallab.spots.at(i).locwavcurvehue;
         }
 
+        if (locallab.spots.at(i).locwavcurvehuecont) {
+            toEdit.locallab.spots.at(i).locwavcurvehuecont = mods.locallab.spots.at(i).locwavcurvehuecont;
+        }
 
         if (locallab.spots.at(i).showmaskblMethodtyp) {
             toEdit.locallab.spots.at(i).showmaskblMethodtyp = mods.locallab.spots.at(i).showmaskblMethodtyp;
@@ -4878,8 +5537,37 @@ void ParamsEdited::combine(rtengine::procparams::ProcParams& toEdit, const rteng
             toEdit.locallab.spots.at(i).LLmaskblcurvewav = mods.locallab.spots.at(i).LLmaskblcurvewav;
         }
 
-        if (locallab.spots.at(i).csthresholdblur) {
-            toEdit.locallab.spots.at(i).csthresholdblur = mods.locallab.spots.at(i).csthresholdblur;
+
+        if (locallab.spots.at(i).denocontrast) {
+            toEdit.locallab.spots.at(i).denocontrast = mods.locallab.spots.at(i).denocontrast;
+        }
+
+        if (locallab.spots.at(i).denoAutocontrast) {
+            toEdit.locallab.spots.at(i).denoAutocontrast = mods.locallab.spots.at(i).denoAutocontrast;
+        }
+
+        if (locallab.spots.at(i).contrshow) {
+            toEdit.locallab.spots.at(i).contrshow = mods.locallab.spots.at(i).contrshow;
+        }
+
+        if (locallab.spots.at(i).lockmadl) {
+            toEdit.locallab.spots.at(i).lockmadl = mods.locallab.spots.at(i).lockmadl;
+        }
+
+        if (locallab.spots.at(i).madllock) {
+            toEdit.locallab.spots.at(i).madllock = mods.locallab.spots.at(i).madllock;
+        }
+
+        if (locallab.spots.at(i).enacontrast) {
+            toEdit.locallab.spots.at(i).enacontrast = mods.locallab.spots.at(i).enacontrast;
+        }
+
+        if (locallab.spots.at(i).denoratio) {
+            toEdit.locallab.spots.at(i).denoratio = mods.locallab.spots.at(i).denoratio;
+        }
+
+        if (locallab.spots.at(i).denomask) {
+            toEdit.locallab.spots.at(i).denomask = mods.locallab.spots.at(i).denomask;
         }
 
         // Tone Mapping
@@ -5221,6 +5909,50 @@ void ParamsEdited::combine(rtengine::procparams::ProcParams& toEdit, const rteng
             toEdit.locallab.spots.at(i).inverssha = mods.locallab.spots.at(i).inverssha;
         }
 
+        if (locallab.spots.at(i).sharshow) {
+            toEdit.locallab.spots.at(i).sharshow = mods.locallab.spots.at(i).sharshow;
+        }
+
+        if (locallab.spots.at(i).itercheck) {
+            toEdit.locallab.spots.at(i).itercheck = mods.locallab.spots.at(i).itercheck;
+        }
+
+        if (locallab.spots.at(i).methodcap) {
+            toEdit.locallab.spots.at(i).methodcap = mods.locallab.spots.at(i).methodcap;
+        }
+
+        if (locallab.spots.at(i).capradius) {
+            toEdit.locallab.spots.at(i).capradius = mods.locallab.spots.at(i).capradius;
+        }
+
+        if (locallab.spots.at(i).deconvCoBoost) {
+            toEdit.locallab.spots.at(i).deconvCoBoost = mods.locallab.spots.at(i).deconvCoBoost;
+        }
+
+        if (locallab.spots.at(i).deconvCoProt) {
+            toEdit.locallab.spots.at(i).deconvCoProt = mods.locallab.spots.at(i).deconvCoProt;
+        }
+
+        if (locallab.spots.at(i).deconvCoLat) {
+            toEdit.locallab.spots.at(i).deconvCoLat = mods.locallab.spots.at(i).deconvCoLat;
+        }
+
+        if (locallab.spots.at(i).deconvCogam) {
+            toEdit.locallab.spots.at(i).deconvCogam = mods.locallab.spots.at(i).deconvCogam;
+        }
+
+        if (locallab.spots.at(i).reparsha) {
+            toEdit.locallab.spots.at(i).reparsha = mods.locallab.spots.at(i).reparsha;
+        }
+
+        if (locallab.spots.at(i).deconvAutoRadius) {
+            toEdit.locallab.spots.at(i).deconvAutoRadius = mods.locallab.spots.at(i).deconvAutoRadius;
+        }
+          
+        if (locallab.spots.at(i).deconvAutoshar) {
+            toEdit.locallab.spots.at(i).deconvAutoshar = mods.locallab.spots.at(i).deconvAutoshar;
+        }
+
         // Local Contrast
         if (locallab.spots.at(i).visicontrast) {
             toEdit.locallab.spots.at(i).visicontrast   = mods.locallab.spots.at(i).visicontrast;
@@ -5252,6 +5984,14 @@ void ParamsEdited::combine(rtengine::procparams::ProcParams& toEdit, const rteng
 
         if (locallab.spots.at(i).sigmalc) {
             toEdit.locallab.spots.at(i).sigmalc   = mods.locallab.spots.at(i).sigmalc;
+        }
+
+        if (locallab.spots.at(i).offslc) {
+            toEdit.locallab.spots.at(i).offslc   = mods.locallab.spots.at(i).offslc;
+        }
+
+        if (locallab.spots.at(i).gradlc) {
+            toEdit.locallab.spots.at(i).gradlc   = mods.locallab.spots.at(i).gradlc;
         }
 
         if (locallab.spots.at(i).levelwav) {
@@ -5457,6 +6197,14 @@ void ParamsEdited::combine(rtengine::procparams::ProcParams& toEdit, const rteng
 
         if (locallab.spots.at(i).origlc) {
             toEdit.locallab.spots.at(i).origlc = mods.locallab.spots.at(i).origlc;
+        }
+
+        if (locallab.spots.at(i).processwav) {
+            toEdit.locallab.spots.at(i).processwav = mods.locallab.spots.at(i).processwav;
+        }
+
+        if (locallab.spots.at(i).limitwav) {
+            toEdit.locallab.spots.at(i).limitwav = mods.locallab.spots.at(i).limitwav;
         }
 
         if (locallab.spots.at(i).localcontMethod) {
@@ -5989,16 +6737,16 @@ void ParamsEdited::combine(rtengine::procparams::ProcParams& toEdit, const rteng
             toEdit.locallab.spots.at(i).sensicie = mods.locallab.spots.at(i).sensicie;
         }
 
+        if (locallab.spots.at(i).blurciede) {
+            toEdit.locallab.spots.at(i).blurciede = mods.locallab.spots.at(i).blurciede;
+        }
+
         if (locallab.spots.at(i).Autograycie) {
             toEdit.locallab.spots.at(i).Autograycie = mods.locallab.spots.at(i).Autograycie;
         }
 
-        if (locallab.spots.at(i).forcejz) {
-            toEdit.locallab.spots.at(i).forcejz = mods.locallab.spots.at(i).forcejz;
-        }
-
-        if (locallab.spots.at(i).forcebw) {
-            toEdit.locallab.spots.at(i).forcebw = mods.locallab.spots.at(i).forcebw;
+        if (locallab.spots.at(i).sigybjz12) {
+            toEdit.locallab.spots.at(i).sigybjz12 = mods.locallab.spots.at(i).sigybjz12;
         }
 
         if (locallab.spots.at(i).qtoj) {
@@ -6011,6 +6759,10 @@ void ParamsEdited::combine(rtengine::procparams::ProcParams& toEdit, const rteng
 
         if (locallab.spots.at(i).comprcieauto) {
             toEdit.locallab.spots.at(i).comprcieauto = mods.locallab.spots.at(i).comprcieauto;
+        }
+
+        if (locallab.spots.at(i).normcie12) {
+            toEdit.locallab.spots.at(i).normcie12 = mods.locallab.spots.at(i).normcie12;
         }
 
         if (locallab.spots.at(i).normcie) {
@@ -6045,6 +6797,14 @@ void ParamsEdited::combine(rtengine::procparams::ProcParams& toEdit, const rteng
             toEdit.locallab.spots.at(i).smoothcie = mods.locallab.spots.at(i).smoothcie;
         }
 
+        if (locallab.spots.at(i).smoothcietrc) {
+            toEdit.locallab.spots.at(i).smoothcietrc = mods.locallab.spots.at(i).smoothcietrc;
+        }
+
+        if (locallab.spots.at(i).smoothcietrcrel) {
+            toEdit.locallab.spots.at(i).smoothcietrcrel = mods.locallab.spots.at(i).smoothcietrcrel;
+        }
+
         if (locallab.spots.at(i).smoothcieyb) {
             toEdit.locallab.spots.at(i).smoothcieyb = mods.locallab.spots.at(i).smoothcieyb;
         }
@@ -6053,12 +6813,36 @@ void ParamsEdited::combine(rtengine::procparams::ProcParams& toEdit, const rteng
             toEdit.locallab.spots.at(i).smoothcielum = mods.locallab.spots.at(i).smoothcielum;
         }
 
+        if (locallab.spots.at(i).smoothciehigh) {
+            toEdit.locallab.spots.at(i).smoothciehigh = mods.locallab.spots.at(i).smoothciehigh;
+        }
+
+        if (locallab.spots.at(i).smoothcielnk) {
+            toEdit.locallab.spots.at(i).smoothcielnk = mods.locallab.spots.at(i).smoothcielnk;
+        }
+
+        if (locallab.spots.at(i).smoothcieinv) {
+            toEdit.locallab.spots.at(i).smoothcieinv = mods.locallab.spots.at(i).smoothcieinv;
+        }
+
         if (locallab.spots.at(i).logjz) {
             toEdit.locallab.spots.at(i).logjz = mods.locallab.spots.at(i).logjz;
         }
 
+        if (locallab.spots.at(i).sigjz12) {
+            toEdit.locallab.spots.at(i).sigjz12 = mods.locallab.spots.at(i).sigjz12;
+        }
+
         if (locallab.spots.at(i).sigjz) {
             toEdit.locallab.spots.at(i).sigjz = mods.locallab.spots.at(i).sigjz;
+        }
+
+        if (locallab.spots.at(i).forcebw) {
+            toEdit.locallab.spots.at(i).forcebw = mods.locallab.spots.at(i).forcebw;
+        }
+
+        if (locallab.spots.at(i).sigq12) {
+            toEdit.locallab.spots.at(i).sigq12 = mods.locallab.spots.at(i).sigq12;
         }
 
         if (locallab.spots.at(i).sigq) {
@@ -6085,6 +6869,14 @@ void ParamsEdited::combine(rtengine::procparams::ProcParams& toEdit, const rteng
             toEdit.locallab.spots.at(i).modecam = mods.locallab.spots.at(i).modecam;
         }
 
+        if (locallab.spots.at(i).modeQJ) {
+            toEdit.locallab.spots.at(i).modeQJ = mods.locallab.spots.at(i).modeQJ;
+        }
+
+        if (locallab.spots.at(i).bwevMethod12) {
+            toEdit.locallab.spots.at(i).bwevMethod12 = mods.locallab.spots.at(i).bwevMethod12;
+        }
+
         if (locallab.spots.at(i).bwevMethod) {
             toEdit.locallab.spots.at(i).bwevMethod = mods.locallab.spots.at(i).bwevMethod;
         }
@@ -6107,6 +6899,46 @@ void ParamsEdited::combine(rtengine::procparams::ProcParams& toEdit, const rteng
 
         if (locallab.spots.at(i).huecie) {
             toEdit.locallab.spots.at(i).huecie = mods.locallab.spots.at(i).huecie;
+        }
+
+        if (locallab.spots.at(i).colorhred) {
+            toEdit.locallab.spots.at(i).colorhred = mods.locallab.spots.at(i).colorhred;
+        }
+
+        if (locallab.spots.at(i).schromared) {
+            toEdit.locallab.spots.at(i).schromared = mods.locallab.spots.at(i).schromared;
+        }
+
+        if (locallab.spots.at(i).redcurve) {
+            toEdit.locallab.spots.at(i).redcurve = mods.locallab.spots.at(i).redcurve;
+        }
+
+        if (locallab.spots.at(i).colorhgreen) {
+            toEdit.locallab.spots.at(i).colorhgreen = mods.locallab.spots.at(i).colorhgreen;
+        }
+
+        if (locallab.spots.at(i).schromagreen) {
+            toEdit.locallab.spots.at(i).schromagreen = mods.locallab.spots.at(i).schromagreen;
+        }
+
+        if (locallab.spots.at(i).greencurve) {
+            toEdit.locallab.spots.at(i).greencurve = mods.locallab.spots.at(i).greencurve;
+        }
+
+        if (locallab.spots.at(i).colorhblue) {
+            toEdit.locallab.spots.at(i).colorhblue = mods.locallab.spots.at(i).colorhblue;
+        }
+
+        if (locallab.spots.at(i).schromablue) {
+            toEdit.locallab.spots.at(i).schromablue = mods.locallab.spots.at(i).schromablue;
+        }
+
+        if (locallab.spots.at(i).bluecurve) {
+            toEdit.locallab.spots.at(i).bluecurve = mods.locallab.spots.at(i).bluecurve;
+        }
+
+        if (locallab.spots.at(i).brighthres) {
+            toEdit.locallab.spots.at(i).brighthres = mods.locallab.spots.at(i).brighthres;
         }
 
         if (locallab.spots.at(i).toneMethodcie) {
@@ -6155,6 +6987,10 @@ void ParamsEdited::combine(rtengine::procparams::ProcParams& toEdit, const rteng
 
         if (locallab.spots.at(i).czjzcurve) {
             toEdit.locallab.spots.at(i).czjzcurve = mods.locallab.spots.at(i).czjzcurve;
+        }
+
+        if (locallab.spots.at(i).invcurve) {
+            toEdit.locallab.spots.at(i).invcurve = mods.locallab.spots.at(i).invcurve;
         }
 
         if (locallab.spots.at(i).HHcurvejz) {
@@ -6249,6 +7085,19 @@ void ParamsEdited::combine(rtengine::procparams::ProcParams& toEdit, const rteng
             toEdit.locallab.spots.at(i).targetjz = mods.locallab.spots.at(i).targetjz;
         }
 
+        if (locallab.spots.at(i).sigmoidldacie12) {
+            toEdit.locallab.spots.at(i).sigmoidldacie12 = mods.locallab.spots.at(i).sigmoidldacie12;
+        }
+
+        if (locallab.spots.at(i).sigmoidthcie12) {
+            toEdit.locallab.spots.at(i).sigmoidthcie12 = mods.locallab.spots.at(i).sigmoidthcie12;
+        }
+
+        if (locallab.spots.at(i).sigmoidblcie12) {
+            toEdit.locallab.spots.at(i).sigmoidblcie12 = mods.locallab.spots.at(i).sigmoidblcie12;
+        }
+
+
         if (locallab.spots.at(i).sigmoidldacie) {
             toEdit.locallab.spots.at(i).sigmoidldacie = mods.locallab.spots.at(i).sigmoidldacie;
         }
@@ -6281,12 +7130,44 @@ void ParamsEdited::combine(rtengine::procparams::ProcParams& toEdit, const rteng
             toEdit.locallab.spots.at(i).gamjcie = mods.locallab.spots.at(i).gamjcie;
         }
 
+        if (locallab.spots.at(i).smoothcieth) {
+            toEdit.locallab.spots.at(i).smoothcieth = mods.locallab.spots.at(i).smoothcieth;
+        }
+
+        if (locallab.spots.at(i).smoothciethtrc) {
+            toEdit.locallab.spots.at(i).smoothciethtrc = mods.locallab.spots.at(i).smoothciethtrc;
+        }
+
         if (locallab.spots.at(i).slopjcie) {
             toEdit.locallab.spots.at(i).slopjcie = mods.locallab.spots.at(i).slopjcie;
         }
 
+        if (locallab.spots.at(i).satjcie) {
+            toEdit.locallab.spots.at(i).satjcie = mods.locallab.spots.at(i).satjcie;
+        }
+
+        if (locallab.spots.at(i).smoothjcie) {
+            toEdit.locallab.spots.at(i).smoothjcie = mods.locallab.spots.at(i).smoothjcie;
+        }
+
+        if (locallab.spots.at(i).contsig) {
+            toEdit.locallab.spots.at(i).contsig = mods.locallab.spots.at(i).contsig;
+        }
+
+        if (locallab.spots.at(i).skewsig) {
+            toEdit.locallab.spots.at(i).skewsig = mods.locallab.spots.at(i).skewsig;
+        }
+
+        if (locallab.spots.at(i).whitsig) {
+            toEdit.locallab.spots.at(i).whitsig = mods.locallab.spots.at(i).whitsig;
+        }
+
         if (locallab.spots.at(i).slopesmo) {
             toEdit.locallab.spots.at(i).slopesmo = mods.locallab.spots.at(i).slopesmo;
+        }
+
+        if (locallab.spots.at(i).slopesmoq) {
+            toEdit.locallab.spots.at(i).slopesmoq = mods.locallab.spots.at(i).slopesmoq;
         }
 
         if (locallab.spots.at(i).slopesmor) {
@@ -6299,6 +7180,22 @@ void ParamsEdited::combine(rtengine::procparams::ProcParams& toEdit, const rteng
 
         if (locallab.spots.at(i).slopesmob) {
             toEdit.locallab.spots.at(i).slopesmob = mods.locallab.spots.at(i).slopesmob;
+        }
+
+        if (locallab.spots.at(i).kslopesmor) {
+            toEdit.locallab.spots.at(i).kslopesmor = mods.locallab.spots.at(i).kslopesmor;
+        }
+
+        if (locallab.spots.at(i).kslopesmog) {
+            toEdit.locallab.spots.at(i).kslopesmog = mods.locallab.spots.at(i).kslopesmog;
+        }
+
+        if (locallab.spots.at(i).kslopesmob) {
+            toEdit.locallab.spots.at(i).kslopesmob = mods.locallab.spots.at(i).kslopesmob;
+        }
+
+        if (locallab.spots.at(i).midtciemet) {
+            toEdit.locallab.spots.at(i).midtciemet = mods.locallab.spots.at(i).midtciemet;
         }
 
         if (locallab.spots.at(i).midtcie) {
@@ -6405,6 +7302,18 @@ void ParamsEdited::combine(rtengine::procparams::ProcParams& toEdit, const rteng
             toEdit.locallab.spots.at(i).catMethod = mods.locallab.spots.at(i).catMethod;
         }
 
+        if (locallab.spots.at(i).sigmoidldajzcie12) {
+            toEdit.locallab.spots.at(i).sigmoidldajzcie12 = mods.locallab.spots.at(i).sigmoidldajzcie12;
+        }
+
+        if (locallab.spots.at(i).sigmoidthjzcie12) {
+            toEdit.locallab.spots.at(i).sigmoidthjzcie12 = mods.locallab.spots.at(i).sigmoidthjzcie12;
+        }
+
+        if (locallab.spots.at(i).sigmoidbljzcie12) {
+            toEdit.locallab.spots.at(i).sigmoidbljzcie12 = mods.locallab.spots.at(i).sigmoidbljzcie12;
+        }
+
         if (locallab.spots.at(i).sigmoidldajzcie) {
             toEdit.locallab.spots.at(i).sigmoidldajzcie = mods.locallab.spots.at(i).sigmoidldajzcie;
         }
@@ -6471,6 +7380,18 @@ void ParamsEdited::combine(rtengine::procparams::ProcParams& toEdit, const rteng
 
         if (locallab.spots.at(i).surroundcie) {
             toEdit.locallab.spots.at(i).surroundcie = mods.locallab.spots.at(i).surroundcie;
+        }
+
+        if (locallab.spots.at(i).gamgain) {
+            toEdit.locallab.spots.at(i).gamgain = mods.locallab.spots.at(i).gamgain;
+        }
+
+        if (locallab.spots.at(i).gampower) {
+            toEdit.locallab.spots.at(i).gampower = mods.locallab.spots.at(i).gampower;
+        }
+
+        if (locallab.spots.at(i).gamutw) {
+            toEdit.locallab.spots.at(i).gamutw = mods.locallab.spots.at(i).gamutw;
         }
 
         if (locallab.spots.at(i).strgradcie) {
@@ -6793,6 +7714,8 @@ void ParamsEdited::combine(rtengine::procparams::ProcParams& toEdit, const rteng
         toEdit.resize.allowUpscaling = mods.resize.allowUpscaling;
     }
 
+    ::combine(toEdit.framing, mods.framing, framing, dontforceSet);
+
     if (icm.inputProfile) {
         toEdit.icm.inputProfile = mods.icm.inputProfile;
     }
@@ -6833,20 +7756,56 @@ void ParamsEdited::combine(rtengine::procparams::ProcParams& toEdit, const rteng
         toEdit.icm.outputBPC = mods.icm.outputBPC;
     }
 
-    if (icm.workingTRCGamma) {
-        toEdit.icm.workingTRCGamma = mods.icm.workingTRCGamma;
+    if (icm.wGamma) {
+        toEdit.icm.wGamma = mods.icm.wGamma;
     }
 
-    if (icm.workingTRCSlope) {
-        toEdit.icm.workingTRCSlope = mods.icm.workingTRCSlope;
+    if (icm.wSlope) {
+        toEdit.icm.wSlope = mods.icm.wSlope;
     }
 
     if (icm.wmidtcie) {
         toEdit.icm.wmidtcie = mods.icm.wmidtcie;
     }
 
+    if (icm.sigmatrc) {
+        toEdit.icm.sigmatrc = mods.icm.sigmatrc;
+    }
+
+    if (icm.offstrc) {
+        toEdit.icm.offstrc = mods.icm.offstrc;
+    }
+
+    if (icm.wgampower) {
+        toEdit.icm.wgampower = mods.icm.wgampower;
+    }
+
+    if (icm.wgamgain) {
+        toEdit.icm.wgamgain = mods.icm.wgamgain;
+    }
+
+    if (icm.residtrc) {
+        toEdit.icm.residtrc = mods.icm.residtrc;
+    }
+
+    if (icm.pyrwavtrc) {
+        toEdit.icm.pyrwavtrc = mods.icm.pyrwavtrc;
+    }
+
+    if (icm.opacityCurveWLI) {
+        toEdit.icm.opacityCurveWLI = mods.icm.opacityCurveWLI;
+    }
+
     if (icm.wsmoothcie) {
         toEdit.icm.wsmoothcie = mods.icm.wsmoothcie;
+    }
+
+    if (icm.wapsat) {
+        toEdit.icm.wapsat = mods.icm.wapsat;
+    }
+
+    if (icm.wsmoothciesli) {
+        toEdit.icm.wsmoothciesli = mods.icm.wsmoothciesli;
     }
 
     if (icm.redx) {
@@ -6873,6 +7832,31 @@ void ParamsEdited::combine(rtengine::procparams::ProcParams& toEdit, const rteng
         toEdit.icm.bluy = mods.icm.bluy;
     }
 
+    if (icm.redrot) {
+        toEdit.icm.redrot = mods.icm.redrot;
+    }
+
+    if (icm.redsat) {
+        toEdit.icm.redsat = mods.icm.redsat;
+    }
+
+    if (icm.grerot) {
+        toEdit.icm.grerot = mods.icm.grerot;
+    }
+
+    if (icm.gresat) {
+        toEdit.icm.gresat = mods.icm.gresat;
+    }
+
+    if (icm.blurot) {
+        toEdit.icm.blurot = mods.icm.blurot;
+    }
+
+    if (icm.blusat) {
+        toEdit.icm.blusat = mods.icm.blusat;
+    }
+
+
     if (icm.refi) {
         toEdit.icm.refi = mods.icm.refi;
     }
@@ -6895,6 +7879,10 @@ void ParamsEdited::combine(rtengine::procparams::ProcParams& toEdit, const rteng
 
     if (icm.trcExp) {
         toEdit.icm.trcExp = mods.icm.trcExp;
+    }
+
+    if (icm.wavExp) {
+        toEdit.icm.wavExp = mods.icm.wavExp;
     }
 
     if (icm.gamut) {
@@ -6947,6 +7935,10 @@ void ParamsEdited::combine(rtengine::procparams::ProcParams& toEdit, const rteng
 
     if (icm.workingTRC) {
         toEdit.icm.workingTRC = mods.icm.workingTRC;
+    }
+
+    if (icm.wgamut) {
+        toEdit.icm.wgamut = mods.icm.wgamut;
     }
 
     if (icm.will) {
@@ -7974,6 +8966,7 @@ LocallabParamsEdited::LocallabSpotEdited::LocallabSpotEdited(bool v) :
     transitgrad(v),
     hishow(v),
     activ(v),
+    avoidneg(v),
     blwh(v),
     recurs(v),
     laplac(v),
@@ -8111,6 +9104,35 @@ LocallabParamsEdited::LocallabSpotEdited::LocallabSpotEdited(bool v) :
     expshadhigh(v),
     complexshadhigh(v),
     shMethod(v),
+    ghsMethod(v),
+    ghsMatmet(v),
+    ghsMode(v),
+    ghs_D(v),
+    ghs_slope(v),
+    ghs_chro(v),
+    ghs_B(v),
+    ghs_SP(v),
+    SPAutoRadius(v),
+    ghs_LP(v),
+    ghs_HP(v),
+    ghs_LC(v),
+    ghs_MID(v),
+    ghs_BLP(v),
+    ghs_HLP(v),
+    ghs_autobw(v),
+    ghs_agx(v),
+    ghs_smooth(v),
+    ghs_inv(v),
+    mich_exp(v),
+    mich_spar(v),
+    mich_kpar(v),
+    mich_sat(v),
+    mich_out(v),
+    mich_black(v),
+    mich_white(v),
+    mich_high(v),
+    mich_jdx(v),
+
     multsh{v, v, v, v, v, v, v},
     highlights(v),
     h_tonalwidth(v),
@@ -8223,6 +9245,7 @@ LocallabParamsEdited::LocallabSpotEdited::LocallabSpotEdited(bool v) :
     blurMethod(v),
     medMethod(v),
     activlum(v),
+    madlsav{v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v},
     noiselumf(v),
     noiselumf0(v),
     noiselumf2(v),
@@ -8240,11 +9263,13 @@ LocallabParamsEdited::LocallabSpotEdited::LocallabSpotEdited(bool v) :
     nlpat(v),
     nlrad(v),
     nlgam(v),
+    nliter(v),
     sensiden(v),
     reparden(v),
     detailthr(v),
     locwavcurveden(v),
     locwavcurvehue(v),
+    locwavcurvehuecont(v),
     showmaskblMethodtyp(v),
     CCmaskblcurve(v),
     LLmaskblcurve(v),
@@ -8265,6 +9290,14 @@ LocallabParamsEdited::LocallabSpotEdited::LocallabSpotEdited(bool v) :
     Lmaskblcurve(v),
     LLmaskblcurvewav(v),
     csthresholdblur(v),
+    denocontrast(v),
+    denoAutocontrast(v),
+    contrshow(v),
+    lockmadl(v),
+    madllock(v),
+    enacontrast(v),
+    denoratio(v),
+    denomask(v),
     // Tone Mapping
     visitonemap(v),
     exptonemap(v),
@@ -8344,6 +9377,7 @@ LocallabParamsEdited::LocallabSpotEdited::LocallabSpotEdited(bool v) :
     expsharp(v),
     complexsharp(v),
     sharcontrast(v),
+    deconvAutoshar(v),
     sharradius(v),
     sharamount(v),
     shardamping(v),
@@ -8352,6 +9386,16 @@ LocallabParamsEdited::LocallabSpotEdited::LocallabSpotEdited(bool v) :
     shargam(v),
     sensisha(v),
     inverssha(v),
+    sharshow(v),
+    itercheck(v),
+    methodcap(v),
+    capradius(v),
+    deconvAutoRadius(v),
+    deconvCoBoost(v),
+    deconvCoProt(v),
+    deconvCoLat(v),
+    deconvCogam(v),
+    reparsha(v),
     // Local Contrast
     visicontrast(v),
     expcontrast(v),
@@ -8361,6 +9405,8 @@ LocallabParamsEdited::LocallabSpotEdited::LocallabSpotEdited(bool v) :
     lcdarkness(v),
     lclightness(v),
     sigmalc(v),
+    offslc(v),
+    gradlc(v),
     levelwav(v),
     residcont(v),
     residsha(v),
@@ -8412,6 +9458,8 @@ LocallabParamsEdited::LocallabSpotEdited::LocallabSpotEdited(bool v) :
     wavgradl(v),
     wavcompre(v),
     origlc(v),
+    processwav(v),
+    limitwav(v),
     localcontMethod(v),
     localedgMethod(v),
     localneiMethod(v),
@@ -8547,12 +9595,13 @@ LocallabParamsEdited::LocallabSpotEdited::LocallabSpotEdited(bool v) :
     expprecam(v),
     reparcie(v),
     sensicie(v),
+    blurciede(v),
     Autograycie(v),
-    forcejz(v),
-    forcebw(v),
+    sigybjz12(v),
     qtoj(v),
     jabcie(v),
     comprcieauto(v),
+    normcie12(v),
     normcie(v),
     gamutcie(v),
     bwcie(v),
@@ -8561,22 +9610,42 @@ LocallabParamsEdited::LocallabSpotEdited::LocallabSpotEdited(bool v) :
     satcie(v),
     logcieq(v),
     smoothcie(v),
+    smoothcietrc(v),
+    smoothcietrcrel(v),
     smoothcieyb(v),
     smoothcielum(v),
+    smoothciehigh(v),
+    smoothcielnk(v),
+    smoothcieinv(v),
     logjz(v),
+    sigjz12(v),
     sigjz(v),
+    forcebw(v),
+    sigq12(v),
     sigq(v),
     chjzcie(v),
     sourceGraycie(v),
     sourceabscie(v),
     sursourcie(v),
     modecam(v),
+    modeQJ(v),
+    bwevMethod12(v),
     bwevMethod(v),
     modecie(v),
     saturlcie(v),
     rstprotectcie(v),
     chromlcie(v),
     huecie(v),
+    colorhred(v),
+    schromared(v),
+    redcurve(v),
+    colorhgreen(v),
+    schromagreen(v),
+    greencurve(v),
+    colorhblue(v),
+    schromablue(v),
+    bluecurve(v),
+    brighthres(v),
     toneMethodcie(v),
     ciecurve(v),
     toneMethodcie2(v),
@@ -8590,6 +9659,7 @@ LocallabParamsEdited::LocallabSpotEdited::LocallabSpotEdited(bool v) :
     jzcurve(v),
     czcurve(v),
     czjzcurve(v),
+    invcurve(v),
     HHcurvejz(v),
     CHcurvejz(v),
     LHcurvejz(v),
@@ -8613,6 +9683,9 @@ LocallabParamsEdited::LocallabSpotEdited::LocallabSpotEdited(bool v) :
     blackEvjz(v),
     whiteEvjz(v),
     targetjz(v),
+    sigmoidldacie12(v),
+    sigmoidthcie12(v),
+    sigmoidblcie12(v),
     sigmoidldacie(v),
     sigmoidthcie(v),
     sigmoidsenscie(v),
@@ -8621,11 +9694,23 @@ LocallabParamsEdited::LocallabSpotEdited::LocallabSpotEdited(bool v) :
     strcielog(v),
     comprcieth(v),
     gamjcie(v),
+    smoothcieth(v),
+    smoothciethtrc(v),
     slopjcie(v),
+    satjcie(v),
+    smoothjcie(v),
+    contsig(v),
+    skewsig(v),
+    whitsig(v),
     slopesmo(v),
+    slopesmoq(v),
     slopesmor(v),
     slopesmog(v),
     slopesmob(v),
+    kslopesmor(v),
+    kslopesmog(v),
+    kslopesmob(v),
+    midtciemet(v),
     midtcie(v),
     redxl(v),
     redyl(v),
@@ -8652,6 +9737,9 @@ LocallabParamsEdited::LocallabSpotEdited::LocallabSpotEdited(bool v) :
     smoothciemet(v),
     primMethod(v),
     catMethod(v),
+    sigmoidldajzcie12(v),
+    sigmoidthjzcie12(v),
+    sigmoidbljzcie12(v),
     sigmoidldajzcie(v),
     sigmoidthjzcie(v),
     sigmoidbljzcie(v),
@@ -8663,6 +9751,9 @@ LocallabParamsEdited::LocallabSpotEdited::LocallabSpotEdited(bool v) :
     catadcie(v),
     detailcie(v),
     surroundcie(v),
+    gamgain(v),
+    gampower(v),
+    gamutw(v),
     strgradcie(v),
     anggradcie(v),
     feathercie(v),
@@ -8734,6 +9825,7 @@ void LocallabParamsEdited::LocallabSpotEdited::set(bool v)
     transitgrad = v;
     hishow = v;
     activ = v;
+    avoidneg = v;
     blwh = v;
     recurs = v;
     laplac = v;
@@ -8871,6 +9963,34 @@ void LocallabParamsEdited::LocallabSpotEdited::set(bool v)
     expshadhigh = v;
     complexshadhigh = v;
     shMethod = v;
+    ghsMethod = v;
+    ghsMatmet = v;
+    ghsMode = v;
+    ghs_D = v;
+    ghs_slope = v;
+    ghs_chro = v;
+    ghs_B = v;
+    ghs_SP = v;
+    SPAutoRadius = v;
+    ghs_LP = v;
+    ghs_HP = v;
+    ghs_LC = v;
+    ghs_MID = v;
+    ghs_BLP = v;
+    ghs_HLP = v;
+    ghs_autobw = v;
+    ghs_agx = v;
+    ghs_smooth = v;
+    ghs_inv = v;
+    mich_exp = v;
+    mich_spar = v;
+    mich_kpar = v;
+    mich_sat = v;
+    mich_out = v;
+    mich_black = v;
+    mich_white = v;
+    mich_high = v;
+    mich_jdx = v;
 
     for (int i = 0; i < 6; i++) {
         multsh[i] = v;
@@ -8987,6 +10107,9 @@ void LocallabParamsEdited::LocallabSpotEdited::set(bool v)
     blurMethod = v;
     medMethod = v;
     activlum = v;
+    for (int i = 0; i < 21; i++) {
+        madlsav[i] = v;
+    }
     noiselumf = v;
     noiselumf0 = v;
     noiselumf2 = v;
@@ -9004,10 +10127,13 @@ void LocallabParamsEdited::LocallabSpotEdited::set(bool v)
     nlpat = v;
     nlrad = v;
     nlgam = v;
+    nliter = v;
     sensiden = v;
     reparden = v;
     detailthr = v;
     locwavcurveden = v;
+    locwavcurvehue = v;
+    locwavcurvehuecont = v;
     showmaskblMethodtyp = v;
     CCmaskblcurve = v;
     LLmaskblcurve = v;
@@ -9028,6 +10154,14 @@ void LocallabParamsEdited::LocallabSpotEdited::set(bool v)
     Lmaskblcurve = v;
     LLmaskblcurvewav = v;
     csthresholdblur = v;
+    denocontrast = v;
+    denoAutocontrast = v;
+    contrshow = v;
+    lockmadl = v;
+    madllock = v;
+    enacontrast = v;
+    denoratio = v;
+    denomask = v;
     // Tone Mapping
     visitonemap = v;
     exptonemap = v;
@@ -9107,6 +10241,7 @@ void LocallabParamsEdited::LocallabSpotEdited::set(bool v)
     expsharp = v;
     complexsharp = v;
     sharcontrast = v;
+    deconvAutoshar = v;
     sharradius = v;
     sharamount = v;
     shardamping = v;
@@ -9115,6 +10250,17 @@ void LocallabParamsEdited::LocallabSpotEdited::set(bool v)
     shargam = v;
     sensisha = v;
     inverssha = v;
+    sharshow = v;
+    sharshow = v;
+    itercheck = v;
+    capradius = v;
+    deconvAutoRadius = v;
+    deconvCoBoost = v;
+    deconvCoProt = v;
+    deconvCoLat = v;
+    deconvCogam = v;
+    reparsha = v;
+
     // Local Contrast
     visicontrast = v;
     expcontrast = v;
@@ -9124,6 +10270,8 @@ void LocallabParamsEdited::LocallabSpotEdited::set(bool v)
     lcdarkness = v;
     lclightness = v;
     sigmalc = v;
+    offslc = v;
+    gradlc = v;
     levelwav = v;
     residcont = v;
     residsha = v;
@@ -9175,6 +10323,8 @@ void LocallabParamsEdited::LocallabSpotEdited::set(bool v)
     wavgradl = v;
     wavcompre = v;
     origlc = v;
+    processwav = v;
+    limitwav = v;
     localcontMethod = v;
     localedgMethod = v;
     localneiMethod = v;
@@ -9314,12 +10464,13 @@ void LocallabParamsEdited::LocallabSpotEdited::set(bool v)
     expprecam = v;
     reparcie = v;
     sensicie = v;
+    blurciede = v;
     Autograycie = v;
-    forcejz = v;
-    forcebw = v;
+    sigybjz12 = v;
     qtoj = v;
     jabcie = v;
     comprcieauto = v;
+    normcie12 = v;
     normcie = v;
     gamutcie = v;
     bwcie = v;
@@ -9328,22 +10479,42 @@ void LocallabParamsEdited::LocallabSpotEdited::set(bool v)
     satcie = v;
     logcieq = v;
     smoothcie = v;
+    smoothcietrc = v;
+    smoothcietrcrel = v;
     smoothcieyb = v;
     smoothcielum = v;
+    smoothciehigh = v;
+    smoothcielnk = v;
+    smoothcieinv = v;
     logjz = v;
+    sigjz12 = v;
     sigjz = v;
+    forcebw = v;
+    sigq12 = v;
     sigq = v;
     chjzcie = v;
     sourceGraycie = v;
     sourceabscie = v;
     sursourcie = v;
     modecam = v;
+    modeQJ = v;
+    bwevMethod12 = v;
     bwevMethod = v;
     modecie = v;
     saturlcie = v;
     rstprotectcie = v;
     chromlcie = v;
     huecie = v;
+    colorhred = v;
+    schromared = v;
+    redcurve = v;
+    colorhgreen = v;
+    schromagreen = v;
+    greencurve = v;
+    colorhblue = v;
+    schromablue = v;
+    bluecurve = v;
+    brighthres = v;
     toneMethodcie = v;
     ciecurve = v;
     toneMethodcie2 = v;
@@ -9357,6 +10528,7 @@ void LocallabParamsEdited::LocallabSpotEdited::set(bool v)
     jzcurve = v;
     czcurve = v;
     czjzcurve = v;
+    invcurve = v;
     HHcurvejz = v;
     CHcurvejz = v;
     LHcurvejz = v;
@@ -9380,6 +10552,10 @@ void LocallabParamsEdited::LocallabSpotEdited::set(bool v)
     blackEvjz = v;
     whiteEvjz = v;
     targetjz = v;
+    sigmoidldacie12 = v;
+    sigmoidthcie12 = v;
+    sigmoidblcie12 = v;
+
     sigmoidldacie = v;
     sigmoidthcie = v;
     sigmoidsenscie = v;
@@ -9388,11 +10564,23 @@ void LocallabParamsEdited::LocallabSpotEdited::set(bool v)
     strcielog = v;
     comprcieth = v;
     gamjcie = v;
+    smoothcieth = v;
+    smoothciethtrc = v;
     slopjcie = v;
+    satjcie = v;
+    smoothjcie = v;
+    contsig = v;
+    skewsig = v;
+    whitsig = v;
     slopesmo = v;
+    slopesmoq = v;
     slopesmor = v;
     slopesmog = v;
     slopesmob = v;
+    kslopesmor = v;
+    kslopesmog = v;
+    kslopesmob = v;
+    midtciemet = v;
     midtcie = v;
     redxl = v;
     redyl = v;
@@ -9419,6 +10607,9 @@ void LocallabParamsEdited::LocallabSpotEdited::set(bool v)
     smoothciemet = v;
     primMethod = v;
     catMethod = v;
+    sigmoidldajzcie12 = v;
+    sigmoidthjzcie12 = v;
+    sigmoidbljzcie12 = v;
     sigmoidldajzcie = v;
     sigmoidthjzcie = v;
     sigmoidbljzcie = v;
@@ -9432,6 +10623,9 @@ void LocallabParamsEdited::LocallabSpotEdited::set(bool v)
     surroundcie = v;
     anggradcie =  v;
     feathercie =  v;
+    gamgain = v;
+    gampower = v;
+    gamutw = v;
     strgradcie =  v;
     enacieMask = v;
     enacieMaskall = v;
@@ -9470,7 +10664,7 @@ void LocallabParamsEdited::LocallabSpotEdited::set(bool v)
 
 bool CaptureSharpeningParamsEdited::isUnchanged() const
 {
-    return enabled && contrast && autoContrast && autoRadius && deconvradius && deconvradiusOffset && deconviter && deconvitercheck;
+    return enabled && contrast && autoContrast && autoRadius && deconvradius && deconvradiusOffset && deconviter && deconvitercheck  && showcap  && noisecaptype && noisecap && noisecapafter;;
 }
 
 bool RAWParamsEdited::PreprocessWBParamsEdited::isUnchanged() const

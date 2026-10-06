@@ -25,8 +25,8 @@
 
 #include "editcoordsys.h"
 #include "rtsurface.h"
-#include "../rtengine/coord.h"
-#include "../rtengine/rt_math.h"
+#include "rtengine/coord.h"
+#include "rtengine/rt_math.h"
 
 class ObjectMOBuffer;
 
@@ -233,6 +233,9 @@ protected:
     RGBColor innerLineColor;
     RGBColor outerLineColor;
     short flags;
+
+    // Set MO Channel color according to Edit Widget id and MO Channel mode
+    static void setMOChannelColor (Cairo::RefPtr<Cairo::Context> &cr, ObjectMOBuffer *objectBuffer, unsigned short id);
 
 public:
     float innerLineWidth;  // ...outerLineWidth = innerLineWidth+2

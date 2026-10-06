@@ -22,6 +22,125 @@
 #include "utils.h"
 #include "rtengine.h"
 
+
+namespace
+{
+
+const std::string MAKE_PENTAX = "Pentax";
+const std::string MAKE_SAMSUNG = "Samsung";
+
+/**
+ * Make and model.
+ */
+struct MakeModel
+{
+    std::string make;
+    std::string model;
+
+    friend bool operator <(const MakeModel &lhs, const MakeModel &rhs)
+    {
+        return lhs.make < rhs.make || (lhs.make == rhs.make && lhs.model < rhs.model);
+    }
+};
+
+/**
+ * Map from make and model to other make and models that are essentially
+ * identical.
+ */
+const std::map<MakeModel, std::vector<MakeModel>> CAMERA_ALIASES = {
+    {{MAKE_PENTAX, "*istDL2"},
+        {{MAKE_SAMSUNG, "GX-1L"}}},
+    {{MAKE_PENTAX, "*istDS2"},
+        {{MAKE_SAMSUNG, "GX-1S"}}},
+    {{MAKE_PENTAX, "K10D"},
+        {{MAKE_SAMSUNG, "GX10"}, {MAKE_SAMSUNG, "GX-10"}}},
+    {{MAKE_PENTAX, "K20D"},
+        {{MAKE_SAMSUNG, "GX20"}, {MAKE_SAMSUNG, "GX-20"}}},
+};
+
+/**
+ * Transforms a map of make and model to like make and models into a map of make
+ * and model to the alias make and model.
+ */
+std::map<MakeModel, MakeModel> normalize_cameras(const std::map<MakeModel, std::vector<MakeModel>> &aliases)
+{
+    std::map<MakeModel, MakeModel> normalized;
+
+    for (const auto &alias : aliases) {
+        for (const auto &make_model : alias.second) {
+            normalized.emplace(make_model, alias.first);
+        }
+    }
+
+    return normalized;
+}
+
+/**
+ * Map from make and model to normalized make and model.
+ */
+const std::map<MakeModel, MakeModel> NORMALIZED_CAMERAS = normalize_cameras(CAMERA_ALIASES);
+
+/**
+ * Returns the normalized make and model.
+ */
+MakeModel normalize_make_model(const MakeModel &make_model)
+{
+    const auto normalized_iter = NORMALIZED_CAMERAS.find(make_model);
+
+    if (normalized_iter != NORMALIZED_CAMERAS.end()) {
+        return normalized_iter->second;
+    }
+
+    return make_model;
+}
+
+void calculate_black_from_mask(
+    const int mask[8][4],
+    unsigned black[],
+    const DCraw::ushort *raw_image,
+    DCraw::ushort raw_height,
+    DCraw::ushort raw_width,
+    DCraw::ushort top_margin,
+    DCraw::ushort left_margin,
+    unsigned filters)
+{
+    // Adapted from dcraw's crop_masked_pixels().
+
+    const auto FC = [filters](unsigned row, unsigned col) {
+        return filters >> (((row << 1 & 14) + (col & 1)) << 1) & 3;
+    };
+
+    std::array<unsigned, 8> black_stat = {0};
+    unsigned zero = 0;
+    for (int m = 0; m < 8; ++m) { // Each mask
+        const auto row_begin = std::max(mask[m][0], 0);
+        const auto row_end = std::min<int>(mask[m][2], raw_height);
+        const auto col_begin = std::max(mask[m][1], 0);
+        const auto col_end = std::min<int>(mask[m][3], raw_width);
+
+        // Sum values and count pixels.
+        for (int row = row_begin; row < row_end; ++row) {
+            for (int col = col_begin; col < col_end; ++col) {
+                const auto c = FC(row - top_margin, col - left_margin);
+                const auto val = raw_image[row * raw_width + col];
+                black_stat[c] += val;
+                black_stat[4 + c]++;
+                zero += !val;
+            }
+        }
+    }
+
+    // Calculate average black level for each channel.
+    if (zero < black_stat[4] && black_stat[5] && black_stat[6] && black_stat[7]) {
+        for (int c = 0; c < 4; ++c) {
+            black[c] = black_stat[c] / black_stat[4 + c];
+        }
+        black[4] = black[5] = black[6] = 0;
+    }
+}
+
+} // namespace
+
 namespace rtengine
 {
 
@@ -465,6 +584,7 @@ int RawImage::loadRaw(bool loadData, unsigned int imageNum, bool closeFile, Prog
 {
     ifname = filename.c_str();
     image = nullptr;
+    image_from_float.reset();
     verbose = settings->verbose;
     oprof = nullptr;
 
@@ -531,16 +651,12 @@ int RawImage::loadRaw(bool loadData, unsigned int imageNum, bool closeFile, Prog
         } else if (err != LIBRAW_SUCCESS) {
             decoder = Decoder::LIBRAW;
             return err;
-        } else if (libraw->is_floating_point() && libraw->imgdata.idata.dng_version) {
+        } else if (libraw->is_floating_point() && libraw->imgdata.idata.dng_version && libraw->imgdata.idata.filters) {
             return err;
         }
 
         auto &d = libraw->imgdata.idata;
         is_raw = d.raw_count;
-        strncpy(make, d.normalized_make, sizeof(make)-1);
-        make[sizeof(make)-1] = 0;
-        strncpy(model, d.normalized_model, sizeof(model)-1);
-        model[sizeof(model)-1] = 0;
         RT_software = d.software;
         dng_version = d.dng_version;
         filters = d.filters;
@@ -548,10 +664,25 @@ int RawImage::loadRaw(bool loadData, unsigned int imageNum, bool closeFile, Prog
         colors = d.colors;
         tiff_bps = 0;
 
+        auto rt_strncpy = [](char* dest, char* src, size_t n) {
+            if (!dest || !src) return;
+            memset(dest, 0, n);
+            if (n == 0) return;
+            memcpy(dest, src, strnlen(src, n - 1));
+        };
+
+        rt_strncpy(make, d.normalized_make, sizeof(make));
+        normalized_make = make;
+        rt_strncpy(model, d.normalized_model, sizeof(model));
+        normalized_model = model;
+
         if (!strcmp("Hasselblad", make)) {
             // For Hasselblad, "model" provides the better name.
-            strncpy(model, d.model, sizeof(model) - 1);
-            model[sizeof(model) - 1] = 0;
+            rt_strncpy(model, d.model, sizeof(model));
+        } else if (!strcmp("Pentax", make) && !strcmp("Samsung", d.make)) {
+            // For Samsung cameras that have a Pentax counterpart.
+            rt_strncpy(make, d.make, sizeof(make));
+            rt_strncpy(model, d.model, sizeof(model));
         }
 
         if (merged_pixelshift.is_merged_pixelshift ||
@@ -711,6 +842,9 @@ int RawImage::loadRaw(bool loadData, unsigned int imageNum, bool closeFile, Prog
 
     if (decoder == Decoder::DCRAW) {
         identify();
+        const MakeModel normalized_make_model = normalize_make_model({make, model});
+        normalized_make = normalized_make_model.make;
+        normalized_model = normalized_make_model.model;
     }
 
     // in case dcraw didn't handle the above mentioned case...
@@ -785,6 +919,7 @@ int RawImage::loadRaw(bool loadData, unsigned int imageNum, bool closeFile, Prog
             (this->*load_raw)();
         } else if (decoder == Decoder::LIBRAW) {
             libraw->imgdata.rawparams.shot_select = shot_select;
+            libraw->imgdata.rawparams.options &= ~LIBRAW_RAWOPTIONS_CONVERTFLOAT_TO_INT;
 
             int err = libraw->open_buffer(ifp->data, ifp->size);
             if (err) {
@@ -794,11 +929,21 @@ int RawImage::loadRaw(bool loadData, unsigned int imageNum, bool closeFile, Prog
 #ifdef LIBRAW_USE_OPENMP
                 MyMutex::MyLock lock(*librawMutex);
 #endif
+
+                // For some cameras like Minolta RD175, the real white level is
+                // read with LibRaw::unpack(). Here, we initialize LibRaw's
+                // maximum with the value read earlier. Later, we read the value
+                // back in case it has changed.
+                libraw->imgdata.color.maximum = maximum;
+
                 err = libraw->unpack();
             }
             if (err) {
                 return err;
             }
+
+            // Update white level in case LibRaw::unpack() read a new value.
+            maximum = libraw->imgdata.color.maximum;
 
             auto &rd = libraw->imgdata.rawdata;
             raw_image = rd.raw_image;
@@ -808,6 +953,24 @@ int RawImage::loadRaw(bool loadData, unsigned int imageNum, bool closeFile, Prog
                     for (int x = 0; x < raw_width; ++x) {
                         size_t idx = y * raw_width + x;
                         float_raw_image[idx] = rd.float_image[idx];
+                    }
+                }
+            } else if (rd.float3_image) {
+                const auto image_size = static_cast<unsigned int>(height) * static_cast<unsigned int>(width);
+                try {
+                    image_from_float.reset(new std::remove_pointer<dcrawImage_t>::type[image_size]);
+                } catch (const std::bad_alloc &e) {
+                    return 200;
+                }
+                std::fill(&image_from_float[0][0], &image_from_float[0][0] + image_size, 0);
+
+                float_raw_image = new float[3 * raw_width * raw_height];
+                for (int y = 0; y < raw_height; ++y) {
+                    for (int x = 0; x < raw_width; ++x) {
+                        const size_t idx = y * raw_width + x;
+                        for (int c = 0; c < 3; ++c) {
+                            float_raw_image[3 * idx + c] = rd.float3_image[idx][c];
+                        }
                     }
                 }
             } else {
@@ -828,6 +991,16 @@ int RawImage::loadRaw(bool loadData, unsigned int imageNum, bool closeFile, Prog
             auto wl = RT_whitelevel_from_constant;
             RT_blacklevel_from_constant = ThreeValBool::F;
             RT_whitelevel_from_constant = ThreeValBool::F;
+
+            if (get_colors() < 4 && get_pre_mul(3) > 0.f) {
+                if (get_pre_mul(1) != get_pre_mul(3)) {
+                    printf("Warning: Number of colors is less than 4, but pre-multiplier for color 4 is set and different from pre-multiplier for color 1\n");
+                } else {
+                    // This will be calculated later. adobe_coeff() does not
+                    // handle pre-multipliers beyond the number of colors.
+                    pre_mul[3] = 0;
+                }
+            }
 
             adobe_coeff(make, model);
 
@@ -954,7 +1127,8 @@ int RawImage::loadRaw(bool loadData, unsigned int imageNum, bool closeFile, Prog
                 }
             }
 
-            if (cc && cc->has_rawMask(orig_raw_width, orig_raw_height, 0)) {
+            const bool has_raw_mask = cc && cc->has_rawMask(orig_raw_width, orig_raw_height, 0);
+            if (has_raw_mask) {
                 for (int i = 0; i < 2 && cc->has_rawMask(orig_raw_width, orig_raw_height, i); i++) {
                     cc->get_rawMask(orig_raw_width, orig_raw_height, i, mask[i][0], mask[i][1], mask[i][2], mask[i][3]);
                 }
@@ -963,6 +1137,10 @@ int RawImage::loadRaw(bool loadData, unsigned int imageNum, bool closeFile, Prog
             if (decoder == Decoder::DCRAW) {
                 crop_masked_pixels();
                 free(raw_image);
+            } else if (decoder == Decoder::LIBRAW) {
+                if (has_raw_mask) {
+                    calculate_black_from_mask(mask, cblack, raw_image, raw_height, raw_width, top_margin, left_margin, filters);
+                }
             }
             raw_image = nullptr;
             adjust_margins = !float_raw_image; //true;
@@ -1079,7 +1257,7 @@ int RawImage::loadRaw(bool loadData, unsigned int imageNum, bool closeFile, Prog
                    black_from_cc ? "camconst.json" : decoder_name);
             printf("white levels: R:%d G1:%d B:%d G2:%d (provided by %s)\n", get_white(0), get_white(1), get_white(2), get_white(3),
                    white_from_cc ? "camconst.json" : decoder_name);
-            printf("raw crop: %d %d %d %d (provided by %s)\n", left_margin, top_margin, iwidth, iheight, raw_crop_cc ? "camconst.json" : decoder_name);
+            printf("raw crop: %d %d %d %d (provided by %s)\n", left_margin, top_margin, width, height, raw_crop_cc ? "camconst.json" : decoder_name);
             printf("color matrix provided by %s\n", (cc && cc->has_dcrawMatrix()) ? "camconst.json" : decoder_name);
         }
 
@@ -1101,9 +1279,14 @@ int RawImage::loadRaw(bool loadData, unsigned int imageNum, bool closeFile, Prog
     return 0;
 }
 
+DCraw::dcrawImage_t RawImage::get_image()
+{
+    return image ? image : image_from_float.get();
+}
+
 float** RawImage::compress_image(unsigned int frameNum, bool freeImage)
 {
-    if (!image) {
+    if (!image && !image_from_float) {
         return nullptr;
     }
 
@@ -1139,7 +1322,7 @@ float** RawImage::compress_image(unsigned int frameNum, bool freeImage)
     }
 
     // copy pixel raw data: the compressed format earns space
-    if (float_raw_image) {
+    if (float_raw_image && filters) {
 #ifdef _OPENMP
         #pragma omp parallel for
 #endif
@@ -1147,6 +1330,20 @@ float** RawImage::compress_image(unsigned int frameNum, bool freeImage)
         for (int row = 0; row < height; row++)
             for (int col = 0; col < width; col++) {
                 this->data[row][col] = float_raw_image[(row + top_margin) * raw_width + col + left_margin];
+            }
+
+        delete [] float_raw_image;
+        float_raw_image = nullptr;
+    } else if (float_raw_image) {
+#ifdef _OPENMP
+        #pragma omp parallel for
+#endif
+
+        for (int row = 0; row < height; row++)
+            for (int col = 0; col < width; col++) {
+                for (int c = 0; c < 3; ++c) {
+                    this->data[row][3 * col + c] = float_raw_image[3 * ((row + top_margin) * raw_width + col + left_margin) + c];
+                }
             }
 
         delete [] float_raw_image;
@@ -1240,6 +1437,7 @@ float** RawImage::compress_image(unsigned int frameNum, bool freeImage)
             libraw->recycle();
         }
         image = nullptr;
+        image_from_float.reset();
     }
 
     return data;
@@ -1510,11 +1708,14 @@ DCraw::dcraw_coeff_overrides(const char make[], const char model[], const int is
     *white_level = -1;
 
     const bool is_pentax_dng = dng_version && !strncmp(RT_software.c_str(), "PENTAX", 6);
-    
-    if (RT_blacklevel_from_constant == ThreeValBool::F && !is_pentax_dng) {
+    const bool is_samsung_dng = dng_version && !strcmp("Samsung", make) && normalized_make == "Pentax" && RT_software.rfind(model, 0) == 0;
+    /** Is it a DNG from the camera? */
+    const bool is_camera_dng = is_pentax_dng || is_samsung_dng;
+
+    if (RT_blacklevel_from_constant == ThreeValBool::F && !is_camera_dng) {
         *black_level = black;
     }
-    if (RT_whitelevel_from_constant == ThreeValBool::F && !is_pentax_dng) {
+    if (RT_whitelevel_from_constant == ThreeValBool::F && !is_camera_dng) {
         *white_level = maximum;
     }
     memset(trans, 0, sizeof(*trans) * 12);
@@ -1524,10 +1725,10 @@ DCraw::dcraw_coeff_overrides(const char make[], const char model[], const int is
     // // from file, but then we will not provide any black level in the tables. This case is mainly just
     // // to avoid loading table values if we have loaded a DNG conversion of a raw file (which already
     // // have constants stored in the file).
-    // if (RT_whitelevel_from_constant == ThreeValBool::X || is_pentax_dng) {
+    // if (RT_whitelevel_from_constant == ThreeValBool::X || is_camera_dng) {
     //     RT_whitelevel_from_constant = ThreeValBool::T;
     // }
-    // if (RT_blacklevel_from_constant == ThreeValBool::X || is_pentax_dng) {
+    // if (RT_blacklevel_from_constant == ThreeValBool::X || is_camera_dng) {
     //     RT_blacklevel_from_constant = ThreeValBool::T;
     // }
     // if (RT_matrix_from_constant == ThreeValBool::X) {

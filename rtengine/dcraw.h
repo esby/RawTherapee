@@ -174,6 +174,12 @@ protected:
         unsigned sub_frame_shot_select;
     };
 
+    struct SonyMeta
+    {
+        /// SR2SubIFD black levels tag 0x7310 exists.
+        bool sr2subifd_black2 = false;
+    };
+
     int fuji_total_lines, fuji_total_blocks, fuji_block_width, fuji_bits, fuji_raw_type, fuji_lossless;
 
     ushort raw_height, raw_width, height, width, top_margin, left_margin;
@@ -199,8 +205,11 @@ protected:
     ThreeValBool RT_blacklevel_from_constant;
     ThreeValBool RT_matrix_from_constant;
     std::string RT_software;
+    std::string normalized_make;
+    std::string normalized_model;
     double RT_baseline_exposure;
     struct MergedPixelshift merged_pixelshift;
+    struct SonyMeta sony_meta;
 
 public:
     struct CanonCR3Data {

@@ -57,7 +57,7 @@ RTSurface::RTSurface(const Glib::ustring &fname) :
     // Create surface based on file extension
     const auto pos = fname.find_last_of('.');
 
-    if (pos >= 0 && pos < fname.length()) {
+    if (pos < fname.length()) {
         const auto fext = fname.substr(pos + 1, fname.length()).lowercase();
 
         // Case where fname is a PNG file
@@ -98,7 +98,7 @@ int RTSurface::getWidth()
                     w = h = -1; // Invalid case
                 }
 
-                return w;
+                return RTScalable::scalePixelSize(w);
 
             case RTSurfaceType::PNGType:
                 // Directly return surface width
@@ -131,7 +131,7 @@ int RTSurface::getHeight()
                     w = h = -1; // Invalid case
                 }
 
-                return h;
+                return RTScalable::scalePixelSize(h);
 
             case RTSurfaceType::PNGType:
                 // Directly return surface width

@@ -66,6 +66,34 @@ auto to_long(const Iterator &iter, Integer n = Integer{0}) -> decltype(
 }
 
 /**
+ * Returns if the values at the iterator are equal to the given values.
+ *
+ * @param iter The iterator.
+ * @param compare_to The values to compare to.
+ * @param get_value A function that accepts the iterator and an index and
+ * returns the value at the index.
+ * @return If the values are equal.
+ */
+template <typename Iterator, typename T>
+bool tag_values_equal(
+    const Iterator &iter,
+    const std::initializer_list<T> compare_to,
+    std::function<T (const Iterator &, std::size_t)> get_value)
+{
+    const auto size = compare_to.size();
+    if (size != iter->count()) {
+        return false;
+    }
+    std::size_t i = 0;
+    for (const auto value : compare_to) {
+        if (get_value(iter, i++) != value) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/**
  * Convenience class for reading data from a metadata tag's bytes value.
  *
  * It maintains an offset. Data is read starting from the offset, then the
@@ -230,6 +258,48 @@ void readOpcodesList(
         }
     }
 }
+
+
+struct ColorMapper {
+    std::map<int, std::string> indexLabelMap;
+    std::map<std::string, int> labelIndexMap;
+
+    ColorMapper(std::map<int, std::string> colors) {
+        for (const auto& color: colors) {
+            indexLabelMap.insert({color.first, color.second});
+            labelIndexMap.insert({color.second, color.first});
+        }
+    }
+
+    int index(const std::string &label) const
+    {
+        auto it = labelIndexMap.find(label);
+        if (it != labelIndexMap.end()) {
+            return it->second;
+        }
+        return 0;
+    }
+
+    std::string label(int index) const
+    {
+        auto it = indexLabelMap.find(index);
+        if (it != indexLabelMap.end()) {
+            return it->second;
+        }
+        return "";
+    }
+};
+
+const std::map<int, std::string> defaultColors = {
+    {1, "Red"},
+    {2, "Yellow"},
+    {3, "Green"},
+    {4, "Blue"},
+    {5, "Purple"}
+};
+
+auto defaultColorMapper = ColorMapper(defaultColors);
+
 }
 
 namespace rtengine {
@@ -270,6 +340,7 @@ FramesData::FramesData(const Glib::ustring &fname, time_t ts) :
     model("Unknown"),
     orientation("Unknown"),
     rating(0),
+    color_label(-1),
     lens("Unknown"),
     sampleFormat(IIOSF_UNKNOWN),
     isPixelShift(false),
@@ -601,17 +672,37 @@ FramesData::FramesData(const Glib::ustring &fname, time_t ts) :
                     lens = validateUft8(lens);
                 }
             }
+        } else if (!make.compare(0, 7, "OLYMPUS")) {
+            if (find_exif_tag("Exif.OlympusEq.LensType")) {
+                const bool is_none = tag_values_equal<decltype(pos), long>(
+                    pos,
+                    {0L, 0L, 0L, 0L, 0L, 0L},
+                    [](const decltype(pos) &iter, std::size_t n) {
+                        return to_long(iter, n);
+                    });
+
+                lens = validateUft8(pos->print(&exif));
+
+                if (is_none || lens == pos->toString()) {
+                    // Lens type is "None" or cannot be interpreted by Exiv2.
+                    lens = "Unknown";
+                }
+            }
         } else if (!make.compare(0, 4, "SONY")) {
             // ExifTool prefers LensType2 over LensType (called
             // Exif.Sony2.LensID by Exiv2). Exiv2 doesn't support LensType2 yet,
-            // so we let Exiv2 try it's best. For non ILCE/NEX cameras which
-            // likely don't have LensType2, we use Exif.Sony2.LensID because
-            // Exif.Photo.LensModel may be incorrect (see
-            // https://discuss.pixls.us/t/call-for-testing-rawtherapee-metadata-handling-with-exiv2-includes-cr3-support/36240/36).
+            // so we let Exiv2 try it's best. If the LensSpec is unknown, the
+            // lens information may be incorrect, so we use Exif.Sony2.LensID
+            // which lists all possible lenses.
             if (
-                // Camera model is neither a ILCE, ILME, nor NEX.
-                (!find_exif_tag("Exif.Image.Model") ||
-                    (pos->toString().compare(0, 4, "ILCE") && pos->toString().compare(0, 4, "ILME") && pos->toString().compare(0, 3, "NEX"))) &&
+                // LensSpec is unknown.
+                (find_exif_tag("Exif.Sony2.LensSpec") &&
+                    tag_values_equal<decltype(pos), long>(
+                        pos,
+                        {0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L},
+                        [](const decltype(pos) &iter, std::size_t n) {
+                            return to_long(iter, n);
+                        })) &&
                 // LensID exists. 0xFFFF could be one of many lenses.
                 find_exif_tag("Exif.Sony2.LensID") && to_long(pos) && to_long(pos) != 0xFFFF) {
                 lens = pos->print(&exif);
@@ -695,6 +786,13 @@ FramesData::FramesData(const Glib::ustring &fname, time_t ts) :
             }
         }
 
+        {
+            auto it = meta.xmpData().findKey(Exiv2::XmpKey("Xmp.xmp.Label"));
+            if (it != meta.xmpData().end()) {
+                color_label = xmp_label2color(it->toString());
+            }
+        }
+
         // try getting some metadata from ImageDescription
         if (!make.compare(0, 5, "KODAK") && !getISOSpeed() && !getFNumber() && !getFocalLen() && !getShutterSpeed() &&
             find_exif_tag("Exif.Image.ImageDescription")) {
@@ -736,7 +834,7 @@ FramesData::FramesData(const Glib::ustring &fname, time_t ts) :
         // -----------------------
         // Special file type detection (HDR, PixelShift)
         // ------------------------
-        uint16 bitspersample = 0, samplesperpixel = 0, sampleformat = 0, photometric = 0, compression = 0;
+        std::uint16_t bitspersample = 0, samplesperpixel = 0, sampleformat = 0, photometric = 0, compression = 0;
         const auto bps = exif.findKey(Exiv2::ExifKey("Exif.Image.BitsPerSample"));
         const auto spp = exif.findKey(Exiv2::ExifKey("Exif.Image.SamplesPerPixel"));
         const auto sf = exif.findKey(Exiv2::ExifKey("Exif.Image.SampleFormat"));
@@ -1219,3 +1317,16 @@ void FramesData::setDimensions(int w, int h)
     w_ = w;
     h_ = h;
 }
+
+
+int FramesData::xmp_label2color(const std::string &label)
+{
+    return defaultColorMapper.index(label);
+}
+
+
+std::string FramesData::xmp_color2label(int color)
+{
+    return defaultColorMapper.label(color);
+}
+

@@ -20,6 +20,7 @@
 #include <map>
 #include <string>
 
+#include <cjson/cJSON.h>
 #include <glibmm/ustring.h>
 #include <glibmm/fileutils.h>
 #include <glibmm/miscutils.h>
@@ -38,13 +39,11 @@
 #include "iccmatrices.h"
 #include "utils.h"
 
-#include "../rtgui/options.h"
-#include "../rtgui/threadutils.h"
+#include "rtgui/options.h"
+#include "rtgui/threadutils.h"
 #include "lcms2_plugin.h"
 
 #include "color.h"
-
-#include "cJSON.h"
 
 namespace
 {
@@ -452,6 +451,8 @@ public:
         userICCDir = usrICCDir;
         fileProfiles.clear();
         fileProfileContents.clear();
+
+        const auto& options = App::get().options();
 
         if (loadAll) {
             loadProfiles(profilesDir, &fileProfiles, &fileProfileContents, nullptr, false);

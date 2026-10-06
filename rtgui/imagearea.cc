@@ -17,13 +17,17 @@
  *  along with RawTherapee.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "imagearea.h"
+
 #include <ctime>
 #include <cmath>
-#include "options.h"
-#include "multilangmgr.h"
+
+#include "rtengine/refreshmap.h"
+#include "rtengine/procparams.h"
+#include "rtengine/profiling.h"
+
 #include "cropwindow.h"
-#include "../rtengine/refreshmap.h"
-#include "../rtengine/procparams.h"
+#include "hidpi.h"
+#include "multilangmgr.h"
 #include "options.h"
 #include "rtscalable.h"
 
@@ -97,6 +101,11 @@ void ImageArea::on_resized (Gtk::Allocation& req)
             mainCropWindow->setCropGUIListener (cropgl);
             mainCropWindow->setPointerMotionListener (pmlistener);
             mainCropWindow->setPointerMotionHListener (pmhlistener);
+
+            int deviceScale = RTScalable::getScaleForWidget(this);
+            // Needs to be before setSize()
+            mainCropWindow->cropHandler.setDeviceScale(deviceScale);
+
             mainCropWindow->setPosition (0, 0);
             mainCropWindow->setSize (get_width(), get_height());  // this execute the refresh itself
             mainCropWindow->enable();  // start processing !
@@ -145,17 +154,22 @@ void ImageArea::on_style_updated ()
     queue_draw ();
 }
 
-void ImageArea::setInfoText (Glib::ustring text)
+void ImageArea::setInfoText (Glib::ustring&& text)
 {
-
     infotext = std::move(text);
+    updateInfoTextBackBuffer();
+}
+
+void ImageArea::updateInfoTextBackBuffer()
+{
+    backBufferDeviceScale = RTScalable::getScaleForWidget(this);
 
     Glib::RefPtr<Pango::Context> context = get_pango_context () ;
     Pango::FontDescription fontd(get_style_context()->get_font());
 
     // update font
     fontd.set_weight (Pango::WEIGHT_BOLD);
-    const int fontSize = 10; // pt
+    const int fontSize = App::get().options().fontSize;
     // Non-absolute size is defined in "Pango units" and shall be multiplied by
     // Pango::SCALE from "pt":
     fontd.set_size (fontSize * Pango::SCALE);
@@ -169,9 +183,14 @@ void ImageArea::setInfoText (Glib::ustring text)
     int iw, ih;
     ilayout->get_pixel_size (iw, ih);
 
+    int bufferWidth = (iw + 16) * backBufferDeviceScale;
+    int bufferHeight = (ih + 16) * backBufferDeviceScale;
+    int bufferOffset = 8;
+
     // create BackBuffer
-    iBackBuffer.setDrawRectangle(Cairo::FORMAT_ARGB32, 0, 0, iw + 16, ih + 16, true);
-    iBackBuffer.setDestPosition(8, 8);
+    iBackBuffer.setDrawRectangle(Cairo::FORMAT_ARGB32, 0, 0, bufferWidth, bufferHeight, true);
+    iBackBuffer.setDestPosition(bufferOffset, bufferOffset);
+    hidpi::setDeviceScale(iBackBuffer.getSurface(), backBufferDeviceScale);
 
     Cairo::RefPtr<Cairo::Context> cr = iBackBuffer.getContext();
 
@@ -195,7 +214,7 @@ void ImageArea::setInfoText (Glib::ustring text)
 
 void ImageArea::infoEnabled (bool e)
 {
-
+    auto& options = App::get().mut_options();
     if (options.showInfo != e) {
         options.showInfo = e;
         queue_draw ();
@@ -232,17 +251,21 @@ void ImageArea::switchPickerVisibility (bool isVisible)
 
 bool ImageArea::on_draw(const ::Cairo::RefPtr< Cairo::Context> &cr)
 {
+    RT_PROFILE("editor::on_draw", GUI_EDITOR);
+
     dirty = false;
 
-    /* HOMBRE: How do we replace that??
-
-    if (event->count) {
-        return true;
-    }
-
-     */
+    int deviceScale = RTScalable::getScaleForWidget(this);
 
     if (mainCropWindow) {
+        if (deviceScale != mainCropWindow->cropHandler.getDeviceScale()) {
+            for (const auto& win : cropWins) {
+                win->cropHandler.setDeviceScale(deviceScale);
+            }
+            mainCropWindow->setSize(get_width(), get_height());
+        }
+
+        RT_PROFILE("editor::main_crop_window", GUI_EDITOR);
         mainCropWindow->expose (cr);
     }
 
@@ -250,7 +273,10 @@ bool ImageArea::on_draw(const ::Cairo::RefPtr< Cairo::Context> &cr)
         (*i)->expose (cr);
     }
 
-    if (options.showInfo && !infotext.empty()) {
+    if (App::get().options().showInfo && !infotext.empty()) {
+        if (deviceScale != backBufferDeviceScale) {
+            updateInfoTextBackBuffer();
+        }
         iBackBuffer.copySurface(cr);
     }
 
@@ -467,6 +493,7 @@ void ImageArea::addCropWindow ()
     cw->setCropGUIListener (cropgl);
     cw->setPointerMotionListener (pmlistener);
     cw->setPointerMotionHListener (pmhlistener);
+    const auto& options = App::get().options();
     int lastWidth = options.detailWindowWidth;
     int lastHeight = options.detailWindowHeight;
 
@@ -500,6 +527,10 @@ void ImageArea::addCropWindow ()
         cropwidth = lastWidth;
         cropheight = lastHeight;
     }
+
+    int deviceScale = RTScalable::getScaleForWidget(this);
+    // Needs to be before setSize()
+    cw->cropHandler.setDeviceScale(deviceScale);
 
     cw->setSize (cropwidth, cropheight);
     int x, y;
@@ -681,11 +712,11 @@ void ImageArea::setZoom (double zoom)
 
 void ImageArea::initialImageArrived ()
 {
-
     if (mainCropWindow) {
-        int w, h;
-        mainCropWindow->cropHandler.getFullImageSize(w, h);
-        if(options.prevdemo != PD_Sidecar || !options.rememberZoomAndPan || w != fullImageWidth || h != fullImageHeight) {
+        const auto& options = App::get().options();
+        ImageSize size = mainCropWindow->cropHandler.getFullImageSize();
+        if(options.prevdemo != PD_Sidecar || !options.rememberZoomAndPan ||
+                size.width != fullImageWidth || size.height != fullImageHeight) {
             if (options.cropAutoFit || options.bgcolor != 0) {
                 mainCropWindow->zoomFitCrop();
             } else {
@@ -694,8 +725,8 @@ void ImageArea::initialImageArrived ()
         } else if ((options.cropAutoFit || options.bgcolor != 0) && mainCropWindow->cropHandler.cropParams->enabled) {
             mainCropWindow->zoomFitCrop();
         }
-        fullImageWidth = w;
-        fullImageHeight = h;
+        fullImageWidth = size.width;
+        fullImageHeight = size.height;
     }
 }
 

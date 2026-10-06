@@ -23,11 +23,11 @@
 
 #include <memory>
 
-#include "../rtengine/coord.h"
+#include "rtengine/coord.h"
 #include "editcallbacks.h"
 #include "threadutils.h"
 #include "toolpanel.h"
-#include "adjuster.h"
+#include "widgets/basic/adjuster.h"
 
 class ControlPanelListener
 {
@@ -82,6 +82,7 @@ public:
         double avoidrad;
         bool hishow;
         bool activ;
+        bool avoidneg;
         bool blwh;
         bool recurs;
         bool laplac;
@@ -225,7 +226,7 @@ public:
     /**
      * upadte function to work with Preferences and spotMethod
     */
-    void updateguiset(int spottype, bool iscolor,  bool issh, bool isvib, bool isexpos, bool issoft, bool isblur, bool istom, bool isret, bool issharp, bool iscont, bool iscbdl, bool islog, bool ismas, bool iscie);
+    void updateguiset(int spottype, bool iscolor,  bool issh, bool isvib, bool isexpos, bool issoft, bool isblur, bool istom, bool isret, bool issharp, bool iscont, bool iscbdl, bool islog, bool ismas, bool isci);
     void updateguiscopeset(int scope);
 
 private:
@@ -261,6 +262,7 @@ private:
 
     void hishowChanged();
     void activChanged();
+    void avoidnegChanged();
     void blwhChanged();
     void recursChanged();
     void laplacChanged();
@@ -323,6 +325,7 @@ private:
         Gtk::TreeModelColumn<double> avoidrad;
         Gtk::TreeModelColumn<bool> hishow;
         Gtk::TreeModelColumn<bool> activ;
+        Gtk::TreeModelColumn<bool> avoidneg;
         Gtk::TreeModelColumn<bool> blwh;
         Gtk::TreeModelColumn<bool> recurs;
         Gtk::TreeModelColumn<bool> laplac;
@@ -354,6 +357,7 @@ private:
 
     ControlSpots spots_;
     rtengine::ProcEvent EvLocallabavoidgamutMethod;
+    rtengine::ProcEvent EvLocallabavoidnegative;
 
     // Child widgets
     Gtk::ScrolledWindow* const scrolledwindow_;
@@ -420,6 +424,8 @@ private:
     sigc::connection hishowconn_;
     Gtk::CheckButton* const activ_;
     sigc::connection activConn_;
+    Gtk::CheckButton* const avoidneg_;
+    sigc::connection avoidnegConn_;
     Gtk::CheckButton* const blwh_;
     sigc::connection blwhConn_;
     Gtk::CheckButton* const recurs_;

@@ -52,7 +52,7 @@
 #include "rawimagesource.h"
 #include "rtengine.h"
 #include "shmap.h"
-#define BENCHMARK
+//#define BENCHMARK
 #include "StopWatch.h"
 #include "guidedfilter.h"
 #include "boxblur.h"
@@ -518,7 +518,7 @@ void RawImageSource::MSR(float** luminance, float** originalLuminance, float **e
             for (int i = 0; i < H_L; i++) {
                 int j = 0;
 
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
                 const vfloat pondv = F2V(pond);
                 const vfloat limMinv = F2V(ilimdx);
                 const vfloat limMaxv = F2V(limdx);
@@ -1314,14 +1314,26 @@ void ImProcFunctions::MSRLocal(int call, int sp, bool fftw, int lum, float** red
                 if (settings->fftwsigma == false) { //empirical formula
                     ImProcFunctions::fftw_convol_blur2(src, out, bfwr, bfhr, (kr * RetinexScales[scale]), 0, 0);
                 } else {
-                    ImProcFunctions::fftw_convol_blur2(src, out, bfwr, bfhr, (SQR(RetinexScales[scale])), 0, 0);
+                    // FFT blur radius fixed in 5.12, resulting in different
+                    // blur amount. Here we preserve the original behavior by
+                    // multiplying the original sigma SQR(RetinexScales[scale])
+                    // with 2 then taking the square root.
+                    const auto gaussianSigma = std::sqrt(2.f) * RetinexScales[scale];
+                    ImProcFunctions::fftw_convol_blur2(src, out, bfwr, bfhr, gaussianSigma, 0, 0);
                 }
             } else { // reuse result of last iteration
                 // out was modified in last iteration => restore it
                 if (settings->fftwsigma == false) { //empirical formula
                     ImProcFunctions::fftw_convol_blur2(out, out, bfwr, bfhr, sqrtf(SQR(kr * RetinexScales[scale]) - SQR(kr * RetinexScales[scale + 1])), 0, 0);
                 } else {
-                    ImProcFunctions::fftw_convol_blur2(out, out, bfwr, bfhr, (SQR(RetinexScales[scale]) - SQR(RetinexScales[scale + 1])), 0, 0);
+                    // FFT blur radius fixed in 5.12, resulting in different
+                    // blur amount. Here we preserve the original behavior by
+                    // multiplying the original sigma
+                    // SQR(RetinexScales[scale]) - SQR(RetinexScales[scale + 1])
+                    // with 2 then taking the square root.
+                    const auto gaussianSigma =
+                        std::sqrt(2 * (SQR(RetinexScales[scale]) - SQR(RetinexScales[scale + 1])));
+                    ImProcFunctions::fftw_convol_blur2(out, out, bfwr, bfhr, gaussianSigma, 0, 0);
                 }
             }
         }
@@ -1350,7 +1362,7 @@ void ImProcFunctions::MSRLocal(int call, int sp, bool fftw, int lum, float** red
         for (int i = 0; i < H_L; i++) {
             int j = 0;
 
-#ifdef __SSE2__
+#if defined(__SSE2__) || defined(RT_SIMDE)
             const vfloat pondv = F2V(pond);
             const vfloat limMinv = F2V(ilimD);
             const vfloat limMaxv = F2V(limD);

@@ -29,7 +29,7 @@
 #include "LUT.h"
 #include "rtengine.h"
 
-#include "../rtgui/threadutils.h"
+#include "rtgui/threadutils.h"
 
 namespace Glib
 {
@@ -160,10 +160,14 @@ protected:
     WavOpacityCurveBY waOpacityCurveBY;
     WavOpacityCurveW waOpacityCurveW;
     WavOpacityCurveWL waOpacityCurveWL;
+    WavOpacityCurveWL icmOpacityCurveWL;
     RetinextransmissionCurve dehatransmissionCurve;
     RetinexgaintransmissionCurve dehagaintransmissionCurve;
 
     ColorAppearance customColCurve1;
+    ColorAppearance customColCurvered;
+    ColorAppearance customColCurvegreen;
+    ColorAppearance customColCurveblue;
     ColorAppearance customColCurve2;
     ColorAppearance customColCurve3;
     ToneCurve beforeToneCurveBW;
@@ -199,6 +203,8 @@ protected:
     AutoChromaListener* adnListener;
     WaveletListener* awavListener;
     RetinexListener* dehaListener;
+    CompgamutListener* acmaxListener;
+  
 //    LocallabListener* locallListener;
 
     
@@ -279,6 +285,7 @@ protected:
     LUTf lmasklocalcurve;
     LUTf lmaskexplocalcurve;
     LUTf lmaskSHlocalcurve;
+    LUTf ghslocalcurve;
     LUTf lmaskviblocalcurve;
     LUTf lmasktmlocalcurve;
     LUTf lmaskretilocalcurve;
@@ -293,6 +300,9 @@ protected:
     LUTf jzlocalcurve;
     LUTf czlocalcurve;
     LUTf czjzlocalcurve;
+    LUTf redlocalcurve;
+    LUTf greenlocalcurve;
+    LUTf bluelocalcurve;
     
     LocretigainCurve locRETgainCurve;
     LocretitransCurve locRETtransCurve;
@@ -355,6 +365,7 @@ protected:
     LocwavCurve locedgwavCurve;
     LocwavCurve loclmasCurve_wav;
     LocwavCurve locwavCurvehue;
+    LocwavCurve locwavCurvehuecont;
     LocwavCurve locwavCurvejz;
 
     std::vector<float> huerefs;
@@ -548,6 +559,10 @@ public:
     void setAutoChromaListener  (AutoChromaListener* adn) override
     {
         adnListener = adn;
+    }
+    void setCompgamutListener  (CompgamutListener* cop) override
+    {
+        acmaxListener = cop;
     }
     void setRetinexListener  (RetinexListener* adh) override
     {

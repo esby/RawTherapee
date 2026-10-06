@@ -20,7 +20,7 @@
 
 #include "rtengine.h"
 #include "pipettebuffer.h"
-#include "../rtgui/threadutils.h"
+#include "rtgui/threadutils.h"
 
 namespace rtengine
 {
@@ -66,7 +66,7 @@ protected:
     ImProcCoordinator* const parent;
     const bool isDetailWindow;
     EditUniqueID getCurrEditID() const;
-    bool setCropSizes(int cropX, int cropY, int cropW, int cropH, int skip, bool internal);
+    bool setCropSizes(const int cropX, const int cropY, const int cropW, const int cropH, const int skip, const bool internal);
     void freeAll();
 
 public:
