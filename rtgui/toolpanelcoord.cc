@@ -302,43 +302,7 @@ ToolPanelCoordinator::ToolPanelCoordinator (bool batch, bool benchmark) :
     rawPanel        = Gtk::manage (new ToolVBox ());
     advancedPanel    = Gtk::manage (new ToolVBox ());
     locallabPanel    = Gtk::manage(new ToolVBox());
-    trashPanel      = Gtk::manage (new ToolVBox());
-    usefulPanel     = Gtk::manage (new ToolVBox());
-
-    favoritePanel->setBoxName(PANEL_NAME_FAVORITE);
-    exposurePanel->setBoxName(PANEL_NAME_EXPOSURE);
-    detailsPanel->setBoxName(PANEL_NAME_DETAILS);
-    colorPanel->setBoxName(PANEL_NAME_COLOR);
-    advancedPanel->setBoxName(PANEL_NAME_WAVELET);
-    locallabPanel->setBoxName(PANEL_NAME_LOCALLAB);
-    transformPanel->setBoxName(PANEL_NAME_TRANSFORM);
-    rawPanel->setBoxName(PANEL_NAME_RAW);
-    usefulPanel->setBoxName(PANEL_NAME_USEFUL);
-    trashPanel->setBoxName(PANEL_NAME_TRASH);
-
-    env =  new Environment(toolPanels, expList);
-    isReaction = false;
-    TT_LOG("environment created: #%i \n",env->getEnvRef());
-    if (benchmark)
-      env->setVar("benchmark", 1);
-
-    favoritePanel->setEnvironment(env);
-    exposurePanel->setEnvironment(env);
-    detailsPanel->setEnvironment(env);
-    colorPanel->setEnvironment(env);
-    advancedPanel->setEnvironment(env);
-    transformPanel->setEnvironment(env);
-    rawPanel->setEnvironment(env);
-
-    trashPanel->setEnvironment(env);
-    usefulPanel->setEnvironment(env);
- 
-    env->setFavoritePanel(favoritePanel);
-    // used by TTSaver after loading a ttp profile: the panels are then laid out for the favorite tab.
-    env->setResyncCallback([this]() {
-        on_notebook_switch_page(nullptr, toolPanelNotebook->get_current_page());
-    });
-    env->setTrashPanel(trashPanel);
+    esbyCreatePanels(benchmark); // esby-hook
 
     coarse              = Gtk::manage (new CoarsePanel ());
     toneCurve           = Gtk::manage (new ToneCurve ());
@@ -407,85 +371,7 @@ ToolPanelCoordinator::ToolPanelCoordinator (bool batch, bool benchmark) :
     // Valeurs par dfaut:
     //     Best -> low ISO
     //     Medium -> High ISO
-    if (useRtFav)
-      favorites.resize(options.favorites.size(), nullptr);
-
-    // the tools are registered from the upstream table (PANEL_TOOLS, getDefaultToolLayout()):
-    // the tools added upstream are registered without any change here, and the sub-tools use
-    // the upstream sub-tools container instead of a packBox added in each tool.
-    // the list below gave exactly the same tabs, order and sub-blocks.
-    registerToolsFromLayout();
-/*
-    addfavoritePanel (colorPanel, whitebalance);
-    addfavoritePanel (exposurePanel, toneCurve);
-    addfavoritePanel (colorPanel, vibrance);
-    addfavoritePanel (colorPanel, chmixer);
-    addfavoritePanel (colorPanel, blackwhite);
-    addfavoritePanel (exposurePanel, shadowshighlights);
-    addfavoritePanel (exposurePanel, toneEqualizer);
-    addfavoritePanel (detailsPanel, spot);
-    addfavoritePanel (detailsPanel, sharpening);
-    addfavoritePanel (detailsPanel, localContrast);
-    addfavoritePanel (detailsPanel, sharpenEdge);
-    addfavoritePanel (detailsPanel, sharpenMicro);
-    addfavoritePanel (colorPanel, hsvequalizer);
-    addfavoritePanel (colorPanel, filmSimulation);
-    addfavoritePanel (colorPanel, filmNegative);
-    addfavoritePanel (colorPanel, softlight);
-    addfavoritePanel (colorPanel, rgbcurves);
-    addfavoritePanel (colorPanel, colortoning);
-    addfavoritePanel (exposurePanel, epd);
-    addfavoritePanel (exposurePanel, fattal);
-    addfavoritePanel (advancedPanel, retinex);
-    addfavoritePanel (exposurePanel, pcvignette);
-    addfavoritePanel (exposurePanel, gradient);
-    addfavoritePanel (exposurePanel, lcurve);
-    addfavoritePanel (advancedPanel, colorappearance);
-    addfavoritePanel (detailsPanel, impulsedenoise);
-    addfavoritePanel (detailsPanel, dirpyrdenoise);
-    addfavoritePanel (detailsPanel, defringe);
-    addfavoritePanel (detailsPanel, dirpyrequalizer);
-    addfavoritePanel (detailsPanel, dehaze);
-    addfavoritePanel (advancedPanel, wavelet);
-    addfavoritePanel(locallabPanel, locallab);
-    
-    addfavoritePanel (transformPanel, crop);
-    addfavoritePanel (transformPanel, resize);
-    addPanel (resize->getPackBox(), prsharpening, 2);
-    addfavoritePanel (transformPanel, lensgeom);
-    addfavoritePanel (lensgeom->getPackBox(), rotate, 2);
-    addfavoritePanel (lensgeom->getPackBox(), perspective, 2);
-    addfavoritePanel (lensgeom->getPackBox(), lensProf, 2);
-    addfavoritePanel (lensgeom->getPackBox(), distortion, 2);
-    addfavoritePanel (lensgeom->getPackBox(), cacorrection, 2);
-    addfavoritePanel (lensgeom->getPackBox(), vignetting, 2);
-    addfavoritePanel (colorPanel, icm);
-    addfavoritePanel (rawPanel, sensorbayer);
-    addfavoritePanel (sensorbayer->getPackBox(), bayerprocess, 2);
-    addfavoritePanel (sensorbayer->getPackBox(), bayerrawexposure, 2);
-    addfavoritePanel (sensorbayer->getPackBox(), bayerpreprocess, 2);
-    addfavoritePanel (sensorbayer->getPackBox(), rawcacorrection, 2);
-    addfavoritePanel (rawPanel, sensorxtrans);
-    addfavoritePanel (sensorxtrans->getPackBox(), xtransprocess, 2);
-    addfavoritePanel (sensorxtrans->getPackBox(), xtransrawexposure, 2);
-    addfavoritePanel (rawPanel, rawexposure);
-    addfavoritePanel (rawPanel, preprocessWB);
-    addfavoritePanel (rawPanel, preprocess);
-    addfavoritePanel (rawPanel, darkframe);
-    addfavoritePanel (rawPanel, flatfield);
-    addfavoritePanel (rawPanel, pdSharpening);
-*/
-
-//    int favoriteCount = 0; // this local variable was hiding the class member
-    favoriteCount = 0;
-    if (useRtFav){
-      for(auto it = favorites.begin(); it != favorites.end(); ++it) {
-        if (*it) {
-            addPanel(favoritePanel, *it);
-            ++favoriteCount;
-        }
-    }
-}
+    esbyRegisterTools(); // esby-hook
 
 /*
     for (const auto &panel_tool_layout : getDefaultToolLayout()) {
@@ -520,18 +406,7 @@ ToolPanelCoordinator::ToolPanelCoordinator (bool batch, bool benchmark) :
 
     toolPanels.push_back (coarse);
     toolPanels.push_back(metadata);
-    coarse->setToolName("coarse"); // coarse does not have a name.
-
-  // new panels are registered a bit diffently
-    addPanel(usefulPanel, Gtk::manage(new TTSaver()));
-    addPanel(usefulPanel, Gtk::manage(new TTIsoProfiler()));
-    addPanel(usefulPanel, Gtk::manage(new TTTabHider()));
-    addPanel(usefulPanel, Gtk::manage(new TTFavoriteColorChooser()));
-    addPanel(usefulPanel, Gtk::manage(new TTPanelColorChooser()));
-    addPanel(usefulPanel, Gtk::manage(new TTUDLRHider()));
-    addPanel(usefulPanel, Gtk::manage(new TTLensCorrector()));
-    addPanel(usefulPanel, Gtk::manage(new TTTweaker()));
-    addPanel(usefulPanel, Gtk::manage(new TTVarDisplayer()));
+    esbyCreateUsefulTools(); // esby-hook
 
     toolPanelNotebook = new Gtk::Notebook();
     toolPanelNotebook->set_name("ToolPanelNotebook");
@@ -546,9 +421,7 @@ ToolPanelCoordinator::ToolPanelCoordinator (bool batch, bool benchmark) :
     advancedPanelSW    = Gtk::manage (new MyScrolledWindow ());
     locallabPanelSW     = Gtk::manage(new MyScrolledWindow());
 
-    trashPanelSW       = Gtk::manage(new MyScrolledWindow());
-    usefulPanelSW      = Gtk::manage(new MyScrolledWindow());
-    updateVScrollbars(options.hideTPVScrollbar);
+    esbyCreateScrolledWindows(); // esby-hook
 
     // load panel endings
     for (int i = 0; i < NB_PANEL; i++) {
@@ -573,55 +446,7 @@ ToolPanelCoordinator::ToolPanelCoordinator (bool batch, bool benchmark) :
     }
     updateVScrollbars(options.hideTPVScrollbar);
 
-    int panelIter = 0;
-    if ((!useRtFav) || favoriteCount > 0 )
-      handlePanel(favoritePanel, favoritePanelSW, panelIter++, 4); //0
-    handlePanel(exposurePanel, exposurePanelSW, panelIter++, 4);   //1
-    handlePanel(detailsPanel, detailsPanelSW, panelIter++, 4);     //2
-    handlePanel(colorPanel, colorPanelSW, panelIter++, 4);         //3
-    handlePanel(advancedPanel, advancedPanelSW, panelIter++,4);    //4
-    handlePanel(transformPanel, transformPanelSW, panelIter++, 4); //5
-    handlePanel(locallabPanel, locallabPanelSW, panelIter++, 4);   //6
-    handlePanel(rawPanel, rawPanelSW, panelIter++, 4);             //7
-    handlePanel(usefulPanel, usefulPanelSW, panelIter++, 4);       //8
-    handlePanel(trashPanel, trashPanelSW, panelIter++, 4);         //9
-
-    if ( options.rtSettings.verbose )
-      printf("panel handling performed. \n");
-
-
-/*  the ring is now built by linkPanelRing(), once the pages are in the notebook:
-    this loop followed the handlePanel() order (transform before locallab) instead of the tab order,
-    it included the trash panel, and locallab while it is absent from the notebook in batch mode.
-    for(int i=PANEL_SWITCHABLE_START; i< PANEL_SWITCHABLE_START + NB_PANEL_SWITCHABLE; i++) { //last panel is trash thus ignored
-      printf(" %i",i);
-      int modOp  = NB_PANEL_SWITCHABLE ; //-2 because we ignore first panel and trash panel
-      // I really don't want to know how modulo negative number is h@ndled 
-      // so i am adding nbPanel to the values
-      // -- esby
-      ToolVBox* box1 =  static_cast<ToolVBox*>(vbPanel[PANEL_SWITCHABLE_START +((i+modOp-2) %(modOp))]);
-      ToolVBox* box2 =  static_cast<ToolVBox*>(vbPanel[i]);
-      box2->setPrevBox(box1);
-      box1->setNextBox(box2);
-      env->addVBox(box1);
-    }
-*/
-    // every main box is registered (ttp profiles find the boxes by name), even the ones outside the ring
-    for(int i=PANEL_SWITCHABLE_START; i< PANEL_SWITCHABLE_START + NB_PANEL_SWITCHABLE; i++) {
-      env->addVBox(static_cast<ToolVBox*>(vbPanel[i]));
-    }
-    env->doLog=true;
-    TT_LOG(" done.\n");
-
-  //allowing those filters to be extracted from their entity
-
-// configured by registerToolsFromLayout() (sub-tools container of the tool)
-//    ToolVBox* box =  static_cast<ToolVBox*>(lensgeom->getPackBox());
-
-//    box->setBoxName("lensgeom");
-//    box->setNextBox(transformPanel);
-//    box->setPrevBox(transformPanel);
-//    env->addVBox(box);
+    esbyLayoutPanels(); // esby-hook
 
     // the favorite tab label is created below (favorite icon, Alt-f shortcut)
 //    toiF = Gtk::manage (new TextOrIcon ("star", M ("MAIN_TAB_FAVORITES"), M ("MAIN_TAB_FAVORITES_TOOLTIP")));
@@ -630,38 +455,15 @@ ToolPanelCoordinator::ToolPanelCoordinator (bool batch, bool benchmark) :
     toiC = Gtk::manage (new TextOrIcon ("color-circles", M ("MAIN_TAB_COLOR"), M ("MAIN_TAB_COLOR_TOOLTIP")));
     toiW = Gtk::manage (new TextOrIcon ("atom", M ("MAIN_TAB_ADVANCED"), M ("MAIN_TAB_ADVANCED_TOOLTIP")));
 //    toiL = Gtk::manage (new TextOrIcon ("hand-open", M("MAIN_TAB_LOCALLAB"), M("MAIN_TAB_LOCALLAB_TOOLTIP")));
-    toiL = Gtk::manage (new TextOrIcon ("rt-spot", M("MAIN_TAB_LOCALLAB"), M("MAIN_TAB_LOCALLAB_TOOLTIP"))); // upstream icon
+    toiL = Gtk::manage(new TextOrIcon("rt-spot", M("MAIN_TAB_LOCALLAB"), M("MAIN_TAB_LOCALLAB_TOOLTIP")));
     toiT = Gtk::manage (new TextOrIcon ("transform", M ("MAIN_TAB_TRANSFORM"), M ("MAIN_TAB_TRANSFORM_TOOLTIP")));
     toiR = Gtk::manage (new TextOrIcon ("bayer", M ("MAIN_TAB_RAW"), M ("MAIN_TAB_RAW_TOOLTIP")));
     toiM = Gtk::manage (new TextOrIcon ("metadata", M ("MAIN_TAB_METADATA"), M ("MAIN_TAB_METADATA_TOOLTIP")));
-    toiF = Gtk::manage(new TextOrIcon("favorite" , M("MAIN_TAB_FAVORITE") , M("MAIN_TAB_FAVORITE_TOOLTIP") ));
-    toiP = Gtk::manage(new TextOrIcon("trash"    , M("MAIN_TAB_TRASH") ,    M("MAIN_TAB_TRASH_TOOLTIP") ));
-    toiU = Gtk::manage(new TextOrIcon("useful"   , M("MAIN_TAB_USEFUL") ,   M("MAIN_TAB_USEFUL_TOOLTIP") ));
 
 
     if ((!useRtFav) || (favoriteCount>0))
         toolPanelNotebook->append_page(*favoritePanelSW, *toiF);
 
-// configured by registerToolsFromLayout() (sub-tools container of the tool)
-//    box =  static_cast<ToolVBox*>(sensorbayer->getPackBox());
-//    box->setBoxName("sensorbayer");
-//    box->setPrevBox(rawPanel);
-//    box->setNextBox(rawPanel);
-//    env->addVBox(box);
-
-// configured by registerToolsFromLayout() (sub-tools container of the tool)
-//    box =  static_cast<ToolVBox*>(sensorxtrans->getPackBox());
-//    box->setBoxName("sensorxtrans");
-//    box->setPrevBox(rawPanel);
-//    box->setNextBox(rawPanel);
-//    env->addVBox(box);
-
-// configured by registerToolsFromLayout() (sub-tools container of the tool)
-//    box =  static_cast<ToolVBox*>(resize->getPackBox());
-//    box->setBoxName("resize");
-//    box->setPrevBox(transformPanel);
-//    box->setNextBox(transformPanel);
-//    env->addVBox(box);
 
     toolPanelNotebook->append_page (*exposurePanelSW,  *toiE);
     toolPanelNotebook->append_page (*detailsPanelSW,   *toiD);
@@ -676,12 +478,7 @@ ToolPanelCoordinator::ToolPanelCoordinator (bool batch, bool benchmark) :
     toolPanelNotebook->append_page (*transformPanelSW, *toiT);
     toolPanelNotebook->append_page (*rawPanelSW,       *toiR);
     toolPanelNotebook->append_page (*metadata,    *toiM);
-    toolPanelNotebook->append_page(*usefulPanelSW,    *toiU);
-    toolPanelNotebook->append_page(*trashPanelSW,     *toiP);
-
-    linkPanelRing();
-
-    toolPanelNotebook->set_current_page(0);
+    esbyAppendPages(); // esby-hook
 
     toolPanelNotebook->set_scrollable();
     toolPanelNotebook->show_all();
@@ -690,11 +487,7 @@ ToolPanelCoordinator::ToolPanelCoordinator (bool batch, bool benchmark) :
     notebookconn = toolPanelNotebook->signal_switch_page().connect(
                        sigc::mem_fun(*this, &ToolPanelCoordinator::notebookPageChanged));
 
-    if ( options.rtSettings.verbose )
-      printf("Starting toolpanel deployment\n");
-    doDeploy();
-    if ( options.rtSettings.verbose )
-      printf("Panel deployment finished\n");
+    esbyDeploy(); // esby-hook
 
     // In batch mode, notebookPageChanged method is blocked because it's useless to display spots
     if (batch) {
@@ -720,8 +513,8 @@ ToolPanelCoordinator::ToolPanelCoordinator (bool batch, bool benchmark) :
 
     toolBar = new ToolBar();
     toolBar->setToolBarListener(this);
-    prevPage = toolPanelNotebook->get_nth_page(0); // restored from upstream, used by notebookPageChanged
-    toolPanelNotebook->signal_switch_page().connect(sigc::mem_fun(*this,  &ToolPanelCoordinator::on_notebook_switch_page) );
+    prevPage = toolPanelNotebook->get_nth_page(0);
+    esbyConnectSignals(); // esby-hook
 }
 
 const ToolPanelCoordinator::ToolLayout &ToolPanelCoordinator::getDefaultToolLayout()

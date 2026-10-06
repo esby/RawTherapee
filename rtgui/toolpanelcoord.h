@@ -539,6 +539,14 @@ public:
     void linkPanelRing();
     void registerToolsFromLayout();
     void esbyTransmitImageData(const rtengine::FramesMetaData* pMetaData);
+    void esbyCreatePanels(bool benchmark);
+    void esbyRegisterTools();
+    void esbyCreateUsefulTools();
+    void esbyCreateScrolledWindows();
+    void esbyLayoutPanels();
+    void esbyAppendPages();
+    void esbyDeploy();
+    void esbyConnectSignals();
     Gtk::Widget* getToolPage(FoldableToolPanel* tool);
     void scrollToTool(FoldableToolPanel* tool, FoldableToolPanel* fallback = nullptr);
 
