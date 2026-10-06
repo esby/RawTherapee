@@ -241,7 +241,8 @@ RTWindow *create_rt_window()
     defaultIconTheme->append_search_path (icon_path);
 
     //gdk_threads_enter ();
-    RTWindow *rtWindow = new RTWindow();
+//    RTWindow *rtWindow = new RTWindow();
+    RTWindow *rtWindow = new RTWindow(benchmark); // the -b option was parsed but never passed to the window
     rtWindow->setWindowSize(); // Need to be called after RTWindow creation to work with all OS Windows Manager
     return rtWindow;
 }
