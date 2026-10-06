@@ -26,6 +26,7 @@
 #include <iomanip>
 #include <fstream>
 #include <sstream>
+#include <cstdlib>
 
 using namespace rtengine;
 using namespace rtengine::procparams;
@@ -88,6 +89,24 @@ TTSeriesWB::TTSeriesWB() : FoldableToolPanel(this, "TTSeriesWB", M("TT_SERIESWB_
   buttonBox->pack_start(*btLearn, Gtk::PACK_EXPAND_WIDGET, 0);
   pack_start(*buttonBox, Gtk::PACK_SHRINK, 0);
 
+  // esbywb server: the value is declared per folder, the folders below inherit it
+  Gtk::HBox* serverBox = Gtk::manage(new Gtk::HBox());
+  serverBox->set_spacing(4);
+  btSetFolder = Gtk::manage(new Gtk::Button(M("TT_SERIESWB_SET_FOLDER")));
+  btSetFolder->set_tooltip_text(M("TT_SERIESWB_SET_FOLDER_TOOLTIP"));
+  btSetParent = Gtk::manage(new Gtk::Button(M("TT_SERIESWB_SET_PARENT")));
+  btSetParent->set_tooltip_text(M("TT_SERIESWB_SET_PARENT_TOOLTIP"));
+  btUnset = Gtk::manage(new Gtk::Button(M("TT_SERIESWB_UNSET")));
+  btUnset->set_tooltip_text(M("TT_SERIESWB_UNSET_TOOLTIP"));
+  serverBox->pack_start(*btSetFolder, Gtk::PACK_EXPAND_WIDGET, 0);
+  serverBox->pack_start(*btSetParent, Gtk::PACK_EXPAND_WIDGET, 0);
+  serverBox->pack_start(*btUnset, Gtk::PACK_EXPAND_WIDGET, 0);
+  pack_start(*serverBox, Gtk::PACK_SHRINK, 0);
+
+  lbServer = Gtk::manage(new Gtk::Label(""));
+  lbServer->set_xalign(0.0);
+  pack_start(*lbServer, Gtk::PACK_SHRINK, 0);
+
   lbInfo = Gtk::manage(new Gtk::Label(""));
   lbInfo->set_line_wrap(true);
   lbInfo->set_xalign(0.0);
@@ -115,12 +134,134 @@ TTSeriesWB::TTSeriesWB() : FoldableToolPanel(this, "TTSeriesWB", M("TT_SERIESWB_
 
   btApply->signal_clicked().connect([this]() { applyToCurrentImage(true); });
   btLearn->signal_clicked().connect([this]() { learnFromCurrentImage(); });
+  btSetFolder->signal_clicked().connect([this]() { setFolderValue(false); });
+  btSetParent->signal_clicked().connect([this]() { setFolderValue(true); });
+  btUnset->signal_clicked().connect([this]() { unsetFolderValue(); });
   cbFlashOnly->signal_toggled().connect([this]() { saveSettings(); });
   cbLearnTint->signal_toggled().connect([this]() { saveSettings(); });
 
   // the values of the last session; a ttp profile loaded afterwards has the priority
   loading = false;
   loadSettings();
+
+  modified = false;
+  client.reset(new EsbyWBClient());
+  client->setStatusCallback([this](bool connected) {
+    updateServerStatus();
+    if (connected)
+      requestForCurrentImage();
+  });
+  client->setEventCallback([this](const Glib::ustring& path) {
+    // a value changed: the current image is concerned if its folder is the changed one or below it
+    Glib::ustring folder = currentFolder();
+    if (!folder.empty() && isBelow(folder, path))
+      requestForCurrentImage();
+  });
+  updateServerStatus();
+  client->start();
+}
+
+void TTSeriesWB::updateServerStatus()
+{
+  bool connected = client && client->isConnected();
+  lbServer->set_text(connected ? M("TT_SERIESWB_SERVER_CONNECTED") : M("TT_SERIESWB_SERVER_UNAVAILABLE"));
+  btSetFolder->set_sensitive(connected);
+  btSetParent->set_sensitive(connected);
+  btUnset->set_sensitive(connected);
+}
+
+// realpath: the server keys are absolute paths with the symbolic links resolved
+Glib::ustring TTSeriesWB::realPath(const Glib::ustring& path)
+{
+  char* resolved = realpath(path.c_str(), nullptr);
+  if (resolved == nullptr)
+    return path;
+  Glib::ustring result(resolved);
+  free(resolved);
+  return result;
+}
+
+bool TTSeriesWB::isBelow(const Glib::ustring& path, const Glib::ustring& folder)
+{
+  return (path == folder) || (folder == "/") || (path.compare(0, folder.size() + 1, folder + "/") == 0);
+}
+
+Glib::ustring TTSeriesWB::currentFolder()
+{
+  if (env == nullptr)
+    return "";
+  Glib::ustring file = currentFile();
+  return file.empty() ? Glib::ustring() : realPath(Glib::path_get_dirname(file));
+}
+
+// asks the server the value of the folder of the current image, then the white balance it applied
+// to the file, then applies (the answers come later, in the main loop)
+void TTSeriesWB::requestForCurrentImage()
+{
+  if ((env == nullptr) || !getExpander()->getEnabled())
+    return;
+  Glib::ustring file = currentFile();
+  if (file.empty())
+    return;
+  if (!client || !client->isConnected())
+  {
+    applyToCurrentImage(false);
+    return;
+  }
+
+  Glib::ustring folder = currentFolder();
+  client->get(folder, [this, file](bool ok, const EsbyWBRule& rule) {
+    if (currentFile() != file) // another image was opened meanwhile
+      return;
+    if (!ok)
+    {
+      applyToCurrentImage(false);
+      return;
+    }
+    // the tool shows the value of the folder (the local settings are kept for the cases without server)
+    loading = true;
+    adjMired->block(true);
+    adjGreen->block(true);
+    adjMired->setValue(rule.mired);
+    adjGreen->setValue(rule.green);
+    adjMired->block(false);
+    adjGreen->block(false);
+    cbFlashOnly->set_active(rule.flashOnly);
+    loading = false;
+    currentSource = rule.source;
+    modified = false;
+
+    client->fileState(realPath(file), [this, file](bool ok, const EsbyWBFileState& state) {
+      if (currentFile() != file)
+        return;
+      applyToCurrentImage(false, ok ? &state : nullptr);
+    });
+  });
+}
+
+// sends the values of the tool to the server, for the folder of the image or its parent.
+// the server then notifies the change, and the image is updated by the event.
+void TTSeriesWB::setFolderValue(bool parent)
+{
+  Glib::ustring folder = currentFolder();
+  if (folder.empty() || !client || !client->isConnected())
+    return;
+  if (parent)
+    folder = Glib::path_get_dirname(folder);
+  client->set(folder, adjMired->getValue(), adjGreen->getValue(), cbFlashOnly->get_active(),
+    [this, folder](bool ok, const Glib::ustring&) {
+      setInfo(Glib::ustring::compose(M(ok ? "TT_SERIESWB_SET_DONE" : "TT_SERIESWB_SERVER_ERROR"), folder));
+    });
+}
+
+void TTSeriesWB::unsetFolderValue()
+{
+  Glib::ustring folder = currentFolder();
+  if (folder.empty() || !client || !client->isConnected())
+    return;
+  client->unset(folder, [this, folder](bool ok, const Glib::ustring&) {
+    setInfo(Glib::ustring::compose(M(ok ? "TT_SERIESWB_UNSET_DONE" : "TT_SERIESWB_UNSET_NONE"), folder));
+  });
 }
 
 void TTSeriesWB::loadSettings()
@@ -174,7 +315,7 @@ void TTSeriesWB::enabledChanged()
   if (env == nullptr) // the tool is not deployed yet (settings loaded in the constructor)
     return;
   if (getExpander()->getEnabled())
-    applyToCurrentImage(false);
+    requestForCurrentImage();
 }
 
 Glib::ustring TTSeriesWB::currentFile()
@@ -238,7 +379,9 @@ void TTSeriesWB::setInfo(const Glib::ustring& text)
 }
 
 // force: "apply to this image" button, the image follows the series again whatever its white balance
-void TTSeriesWB::applyToCurrentImage(bool force)
+// serverState: white balance applied to the file according to the server (the image follows the
+// series if it still has it), nullptr without server
+void TTSeriesWB::applyToCurrentImage(bool force, const EsbyWBFileState* serverState)
 {
   if (!getExpander()->getEnabled() && !force)
     return;
@@ -272,6 +415,8 @@ void TTSeriesWB::applyToCurrentImage(bool force)
   bool follows = force
               || (wb.method == "Camera")
               || ((it != applied.end()) && sameWB(wb.temperature, wb.green, it->second.first, it->second.second))
+              || ((serverState != nullptr) && serverState->known
+                  && sameWB(wb.temperature, wb.green, serverState->temperature, serverState->green))
               || ((wb.method == "Custom") && sameWB(wb.temperature, wb.green, temp, green));
 
   if (!wb.enabled || !follows)
@@ -284,9 +429,18 @@ void TTSeriesWB::applyToCurrentImage(bool force)
     whitebalance->setWB(temp, green);
 
   applied[file] = std::make_pair(temp, green);
+  Glib::ustring origin;
+  if (client && client->isConnected())
+  {
+    client->applied(realPath(file), temp, green, currentSource);
+    origin = modified ? M("TT_SERIESWB_MODIFIED")
+           : currentSource.empty() ? M("TT_SERIESWB_SOURCE_DEFAULT")
+           : Glib::ustring::compose(M("TT_SERIESWB_SOURCE"), currentSource);
+  }
   setInfo(Glib::ustring::compose(M("TT_SERIESWB_APPLIED"),
                                  (int) std::lround(camTemp), temp,
-                                 Glib::ustring::format(std::fixed, std::setprecision(1), adjMired->getValue())));
+                                 Glib::ustring::format(std::fixed, std::setprecision(1), adjMired->getValue()))
+          + (origin.empty() ? Glib::ustring() : "\n" + origin));
 }
 
 // mired = mired(current white balance) - mired(camera); green = current green / camera green
@@ -344,6 +498,7 @@ void TTSeriesWB::learnFromCurrentImage()
   // an explicit action: written right away, it must not be lost if RawTherapee is not closed properly
   saveSettings();
   Options::save();
+  modified = client && client->isConnected(); // to send with "set for this folder"
 
   setInfo(Glib::ustring::compose(M("TT_SERIESWB_LEARNED"),
                                  Glib::ustring::format(std::fixed, std::setprecision(1), mired),
@@ -354,6 +509,8 @@ void TTSeriesWB::learnFromCurrentImage()
 void TTSeriesWB::adjusterChanged(Adjuster* a, double newval)
 {
   saveSettings();
+  // with the server, the change is a preview until it is sent with "set for this folder"
+  modified = client && client->isConnected();
   // the current image is updated only if it follows the series (see applyToCurrentImage)
   applyToCurrentImage(false);
 }
@@ -363,7 +520,7 @@ void TTSeriesWB::react(FakeProcEvent ev)
   // FakeEvExifTransmitted: the exif data (flash) and the file name are known, TTTweaker has
   // already reacted (it is registered before this tool).
   if ((ev == FakeEvExifTransmitted) || (ev == FakeEvProfileChanged))
-    applyToCurrentImage(false);
+    requestForCurrentImage(); // without server, applies the values of the tool
 }
 
 Glib::ustring TTSeriesWB::themeExport()

@@ -58,6 +58,7 @@ expliquent le *pourquoi*.
 | `tt*.cc/h` | les outils de l'onglet Useful |
 | `languages/default` | clés de traduction du fork, installées dans `<données>/esby/languages/` |
 | `server/` | `esbywb.py` : serveur et outil en ligne de commande de la balance des blancs par série (Python) |
+| `esbywbclient.*` | client du serveur `esbywb`, utilisé par TTSeriesWB (GIO, asynchrone) |
 
 ## Branchement sur l'upstream
 

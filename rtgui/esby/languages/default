@@ -79,10 +79,25 @@ TT_SERIESWB_LEARN_TOOLTIP;Sets the shift from the white balance of the current i
 TT_SERIESWB_MANUAL;White balance changed by hand (%1 K): left untouched.
 TT_SERIESWB_MIRED;Shift (mireds)
 TT_SERIESWB_MIRED_TOOLTIP;Shift applied to the camera white balance, in mireds (1000000 / kelvins). A positive value lowers the temperature, for a cooler rendering.
+TT_SERIESWB_MODIFIED;Value changed in the tool, not sent to the server.
 TT_SERIESWB_NO_CAMERA_WB;Camera white balance not available.
 TT_SERIESWB_NO_FLASH;No flash fired: not concerned.
 TT_SERIESWB_NO_IMAGE;No image.
 TT_SERIESWB_OUT_OF_RANGE;Not learned: shift %1 mireds, tint factor %2, out of the ranges of the tool.
+TT_SERIESWB_SERVER_CONNECTED;Server: connected, value per folder.
+TT_SERIESWB_SERVER_ERROR;Server error for %1.
+TT_SERIESWB_SERVER_UNAVAILABLE;Server unavailable: values of the tool.
+TT_SERIESWB_SET_DONE;Value set for %1.
+TT_SERIESWB_SET_FOLDER;Set for this folder
+TT_SERIESWB_SET_FOLDER_TOOLTIP;Sends the values of the tool to the server, for the folder of the image. The folders below inherit them.
+TT_SERIESWB_SET_PARENT;Set for the parent folder
+TT_SERIESWB_SET_PARENT_TOOLTIP;Sends the values of the tool to the server, for the parent folder (ex: the folder of a whole convention).
+TT_SERIESWB_SOURCE;Value of %1.
+TT_SERIESWB_SOURCE_DEFAULT;Default value (no folder declares one).
+TT_SERIESWB_UNSET;Back to inheritance
+TT_SERIESWB_UNSET_DONE;%1 inherits its value again.
+TT_SERIESWB_UNSET_NONE;%1 has no value of its own.
+TT_SERIESWB_UNSET_TOOLTIP;Removes the value of the folder of the image: it inherits the value of its parent folders again.
 TT_SERIESWB_VALUES;Image: %1 K, tint %2 (%5). Camera: %3 K, tint %4 (observer %6°).
 TT_UDLR_HIDE_ARROWS;Hide the move buttons (↑ ↓ ← →)
 TT_UDLR_LOCK_FAV;Lock the favorite and trash buttons

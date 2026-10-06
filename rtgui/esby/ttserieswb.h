@@ -23,6 +23,7 @@
 #include "guiutils.h"
 #include "widgets/basic/adjuster.h"
 #include "rtengine/procparams.h"
+#include "esbywbclient.h"
 
 class WhiteBalance;
 
@@ -44,6 +45,15 @@ protected:
     Gtk::Label* lbInfo;
     Gtk::EventBox* ebInfo; // clicking on the status line copies it to the clipboard
 
+    // esbywb server (step 3): value per folder, with inheritance
+    std::unique_ptr<EsbyWBClient> client;
+    Gtk::Button* btSetFolder;
+    Gtk::Button* btSetParent;
+    Gtk::Button* btUnset;
+    Gtk::Label* lbServer;
+    Glib::ustring currentSource; // folder defining the value of the current image (empty: default)
+    bool modified;               // the shift was changed in the tool and not sent to the server
+
     WhiteBalance* whitebalance;
 
     // white balance applied by this tool, per file (session only, the server will keep it later)
@@ -55,7 +65,14 @@ protected:
     Glib::ustring currentFile();
     void computeTarget(double camTemp, double camGreen, int& temp, double& green);
     bool sameWB(int t1, double g1, int t2, double g2);
-    void applyToCurrentImage(bool force);
+    void applyToCurrentImage(bool force, const EsbyWBFileState* serverState = nullptr);
+    void requestForCurrentImage();
+    void setFolderValue(bool parent);
+    void unsetFolderValue();
+    void updateServerStatus();
+    Glib::ustring currentFolder();
+    static Glib::ustring realPath(const Glib::ustring& path);
+    static bool isBelow(const Glib::ustring& path, const Glib::ustring& folder);
     void learnFromCurrentImage();
     void setInfo(const Glib::ustring& text);
     void loadSettings();

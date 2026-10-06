@@ -1,6 +1,6 @@
 # Balance des blancs par série : spécification
 
-Statut : étapes 1 (`ttserieswb.*`) et 2 (`server/esbywb.py`) implémentées ; étape 3 à faire.
+Statut : étapes 1 (`ttserieswb.*`), 2 (`server/esbywb.py`) et 3 (`esbywbclient.*`) implémentées.
 
 ## 1. Objectif
 
@@ -189,6 +189,10 @@ esbywb orphans                      # règles dont le dossier n'existe plus
 2. Le serveur et le protocole, avec `esbywb`. **Fait** : `server/esbywb.py` (Python 3,
    bibliothèque standard), tests dans `server/tests/`, service systemd dans `server/esbywb.service`.
 3. Le branchement de `TTSeriesWB` sur le serveur (lecture, apprentissage, notifications).
+   **Fait** : `esbywbclient.*` (GIO, asynchrone, reconnexion toutes les 10 secondes, cJSON).
+   Les curseurs de l'outil affichent la valeur du dossier de l'image ; les modifier est un
+   aperçu, envoyé au serveur par « définir pour ce dossier » ou « pour le dossier parent ».
+   Sans serveur, l'outil applique ses propres valeurs (comportement de l'étape 1).
 
 ## 12. Questions ouvertes
 
