@@ -24,8 +24,6 @@ const Glib::ustring SensorXTrans::TOOL_NAME = "sensorxtrans";
 
 SensorXTrans::SensorXTrans () : FoldableToolPanel(this, TOOL_NAME, M("TP_RAW_SENSOR_XTRANS_LABEL"))
 {
-    packBox = Gtk::manage (new ToolParamBlock ());
-    pack_start (*packBox);
 
     show_all ();
 }

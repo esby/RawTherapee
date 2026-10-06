@@ -410,6 +410,12 @@ ToolPanelCoordinator::ToolPanelCoordinator (bool batch, bool benchmark) :
     if (useRtFav)
       favorites.resize(options.favorites.size(), nullptr);
 
+    // the tools are registered from the upstream table (PANEL_TOOLS, getDefaultToolLayout()):
+    // the tools added upstream are registered without any change here, and the sub-tools use
+    // the upstream sub-tools container instead of a packBox added in each tool.
+    // the list below gave exactly the same tabs, order and sub-blocks.
+    registerToolsFromLayout();
+/*
     addfavoritePanel (colorPanel, whitebalance);
     addfavoritePanel (exposurePanel, toneCurve);
     addfavoritePanel (colorPanel, vibrance);
@@ -468,6 +474,7 @@ ToolPanelCoordinator::ToolPanelCoordinator (bool batch, bool benchmark) :
     addfavoritePanel (rawPanel, darkframe);
     addfavoritePanel (rawPanel, flatfield);
     addfavoritePanel (rawPanel, pdSharpening);
+*/
 
 //    int favoriteCount = 0; // this local variable was hiding the class member
     favoriteCount = 0;
@@ -609,12 +616,13 @@ for (const auto &panel_tool_layout : getDefaultToolLayout()) {
 
   //allowing those filters to be extracted from their entity
 
-    ToolVBox* box =  static_cast<ToolVBox*>(lensgeom->getPackBox());
+// configured by registerToolsFromLayout() (sub-tools container of the tool)
+//    ToolVBox* box =  static_cast<ToolVBox*>(lensgeom->getPackBox());
 
-    box->setBoxName("lensgeom");
-    box->setNextBox(transformPanel);
-    box->setPrevBox(transformPanel);
-    env->addVBox(box);
+//    box->setBoxName("lensgeom");
+//    box->setNextBox(transformPanel);
+//    box->setPrevBox(transformPanel);
+//    env->addVBox(box);
 
     // the favorite tab label is created below (favorite icon, Alt-f shortcut)
 //    toiF = Gtk::manage (new TextOrIcon ("star", M ("MAIN_TAB_FAVORITES"), M ("MAIN_TAB_FAVORITES_TOOLTIP")));
@@ -635,23 +643,26 @@ for (const auto &panel_tool_layout : getDefaultToolLayout()) {
     if ((!useRtFav) || (favoriteCount>0))
         toolPanelNotebook->append_page(*favoritePanelSW,  *toiF);
 
-    box =  static_cast<ToolVBox*>(sensorbayer->getPackBox());
-    box->setBoxName("sensorbayer");
-    box->setPrevBox(rawPanel);
-    box->setNextBox(rawPanel);
-    env->addVBox(box);
+// configured by registerToolsFromLayout() (sub-tools container of the tool)
+//    box =  static_cast<ToolVBox*>(sensorbayer->getPackBox());
+//    box->setBoxName("sensorbayer");
+//    box->setPrevBox(rawPanel);
+//    box->setNextBox(rawPanel);
+//    env->addVBox(box);
 
-    box =  static_cast<ToolVBox*>(sensorxtrans->getPackBox());
-    box->setBoxName("sensorxtrans");
-    box->setPrevBox(rawPanel);
-    box->setNextBox(rawPanel);
-    env->addVBox(box);
+// configured by registerToolsFromLayout() (sub-tools container of the tool)
+//    box =  static_cast<ToolVBox*>(sensorxtrans->getPackBox());
+//    box->setBoxName("sensorxtrans");
+//    box->setPrevBox(rawPanel);
+//    box->setNextBox(rawPanel);
+//    env->addVBox(box);
 
-    box =  static_cast<ToolVBox*>(resize->getPackBox());
-    box->setBoxName("resize");
-    box->setPrevBox(transformPanel);
-    box->setNextBox(transformPanel);
-    env->addVBox(box);
+// configured by registerToolsFromLayout() (sub-tools container of the tool)
+//    box =  static_cast<ToolVBox*>(resize->getPackBox());
+//    box->setBoxName("resize");
+//    box->setPrevBox(transformPanel);
+//    box->setNextBox(transformPanel);
+//    env->addVBox(box);
 
     toolPanelNotebook->append_page (*exposurePanelSW,  *toiE);
     toolPanelNotebook->append_page (*detailsPanelSW,   *toiD);
@@ -2525,6 +2536,53 @@ void ToolPanelCoordinator::on_notebook_switch_page(Gtk::Widget* /* page */, guin
   }
 }
 
+
+// registers every tool of the upstream table in its tab, and the sub-tools in the
+// sub-tools container of their parent tool. a sub-tools container is set up as a box
+// of its own (named after its tool), so its sub-tools can be moved out of it.
+void ToolPanelCoordinator::registerToolsFromLayout()
+{
+    // fixed order: the registration order is the order of the expanded states saved in options
+    const std::vector<std::pair<Panel, ToolVBox*>> panels = {
+        {Panel::EXPOSURE, exposurePanel},
+        {Panel::DETAILS, detailsPanel},
+        {Panel::COLOR, colorPanel},
+        {Panel::ADVANCED, advancedPanel},
+        {Panel::LOCALLAB, locallabPanel},
+        {Panel::TRANSFORM_PANEL, transformPanel},
+        {Panel::RAW, rawPanel},
+    };
+
+    std::function<void(Gtk::Box*, const std::vector<ToolTree>&, int)> registerTools =
+        [&](Gtk::Box* box, const std::vector<ToolTree>& tools, int level)
+    {
+        for (const auto& tool : tools)
+        {
+            FoldableToolPanel* panel = getFoldableToolPanel(tool);
+            if (panel == nullptr)
+                continue;
+            addfavoritePanel(box, panel, level);
+
+            if (!tool.children.empty())
+            {
+                ToolVBox* subBox = static_cast<ToolVBox*>(static_cast<Gtk::Box*>(panel->getSubToolsContainer()));
+                subBox->setBoxName(panel->getToolName());
+                subBox->setPrevBox(static_cast<ToolVBox*>(box));
+                subBox->setNextBox(static_cast<ToolVBox*>(box));
+                env->addVBox(subBox);
+                registerTools(panel->getSubToolsContainer(), tool.children, level + 1);
+            }
+        }
+    };
+
+    const ToolLayout& layout = getDefaultToolLayout();
+    for (const auto& panel : panels)
+    {
+        auto it = layout.find(panel.first);
+        if (it != layout.end())
+            registerTools(panel.second, it->second, 1);
+    }
+}
 
 // links the boxes used by moveLeft/moveRight, in the order of the notebook tabs.
 // favorite and trash tabs are not part of the ring, nor tabs absent from the notebook (locallab in batch mode).

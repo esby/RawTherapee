@@ -537,6 +537,7 @@ public:
     void on_notebook_switch_page(Gtk::Widget* page, guint page_num);
     void savePanelPositions(char fromState);
     void linkPanelRing();
+    void registerToolsFromLayout();
     Gtk::Widget* getToolPage(FoldableToolPanel* tool);
     void scrollToTool(FoldableToolPanel* tool, FoldableToolPanel* fallback = nullptr);
 

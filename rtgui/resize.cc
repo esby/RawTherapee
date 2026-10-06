@@ -172,11 +172,6 @@ Resize::Resize () : FoldableToolPanel(this, TOOL_NAME, M("TP_RESIZE_LABEL"), fal
     method->signal_changed().connect ( sigc::mem_fun(*this, &Resize::methodChanged) );
     sconn = spec->signal_changed().connect ( sigc::mem_fun(*this, &Resize::specChanged) );
 
-    packBox = Gtk::manage (new ToolParamBlock ());
-    pack_end (*packBox);
-    packBox->hide();
-    packBox->set_tooltip_markup (M("TP_PRSHARPENING_TOOLTIP"));
-
     getSubToolsContainer()->hide();
     getSubToolsContainer()->set_tooltip_markup (M("TP_PRSHARPENING_TOOLTIP"));
 
