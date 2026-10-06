@@ -56,6 +56,8 @@
 
 // there are several instances of Environement inside the application, usually one per editor window and one for the main application.
 
+class WBProvider;
+
 class Environment {
   protected:
      std::vector<ToolPanel*>& toolPanels;
@@ -113,6 +115,11 @@ class Environment {
      void setFavoritePos(ToolPanel *panel, int pos);
 
      ToolVBox* getFavoritePanel() { return favoritePanel; }
+
+     // white balance of the camera for the current image (ToolPanelCoordinator), used by TTSeriesWB
+     WBProvider* wbProvider = nullptr;
+     void setWBProvider(WBProvider* p) { wbProvider = p; }
+     WBProvider* getWBProvider() { return wbProvider; }
      ToolVBox* getTrashPanel() { return trashPanel; }
 
      //variables related code follow

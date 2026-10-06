@@ -37,6 +37,7 @@ expliquent le *pourquoi*.
 | TTLensCorrector | distorsion mémorisée par focale |
 | TTTweaker | rotation automatique (Panasonic), fermeture après enregistrement… |
 | TTVarDisplayer | afficher les variables, bouton de copie dans le presse-papier |
+| TTSeriesWB | décalage de la balance des blancs au flash, en mireds (voir `SPEC_series_wb.md`) |
 
 ## Fichiers de ce dossier
 

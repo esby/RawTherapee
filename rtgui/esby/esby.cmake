@@ -12,6 +12,7 @@ set(ESBYSOURCEFILES
     esby/ttfavoritecolorer.cc
     esby/ttisoprofiler.cc
     esby/ttlenscorrector.cc
+    esby/ttserieswb.cc
     esby/ttpanelcolorer.cc
     esby/ttsaver.cc
     esby/tttabhider.cc

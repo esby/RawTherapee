@@ -38,6 +38,7 @@
 #include "../rtengine/refreshmap.h"
 //#include "../rtexif/rtexif.h"
 #include "ttdep.h"
+#include "ttserieswb.h"
 #include "../rtengine/metadata.h"
 
 using namespace rtengine::procparams;
@@ -634,6 +635,7 @@ void ToolPanelCoordinator::esbyCreatePanels(bool benchmark)
         on_notebook_switch_page(nullptr, toolPanelNotebook->get_current_page());
     });
     env->setTrashPanel(trashPanel);
+    env->setWBProvider(this); // camera white balance, used by TTSeriesWB
 }
 
 // constructor: registration of the tools in their tabs
@@ -734,6 +736,7 @@ void ToolPanelCoordinator::esbyCreateUsefulTools()
     addPanel(usefulPanel, Gtk::manage(new TTUDLRHider()));
     addPanel(usefulPanel, Gtk::manage(new TTLensCorrector()));
     addPanel(usefulPanel, Gtk::manage(new TTTweaker()));
+    addPanel(usefulPanel, Gtk::manage(new TTSeriesWB())); // after TTTweaker: it may reset the white balance first
     addPanel(usefulPanel, Gtk::manage(new TTVarDisplayer()));
 }
 
