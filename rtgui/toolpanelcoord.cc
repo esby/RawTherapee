@@ -289,6 +289,7 @@ ToolPanelCoordinator::ToolPanelCoordinator (bool batch, bool benchmark) :
     batch(batch), // was lost during a merge: the member stayed uninitialized
     editDataProvider (nullptr),
     photoLoadedOnce(false),
+    ornamentSurface(new RTSurface("ornament1.svg")), // as upstream: read from the images folder
     prevPage(nullptr)
 {
     useRtFav = false;
@@ -545,7 +546,10 @@ for (const auto &panel_tool_layout : getDefaultToolLayout()) {
     // load panel endings
     for (int i = 0; i < NB_PANEL; i++) {
         vbPanelEnd[i] = Gtk::manage (new Gtk::Box(Gtk::ORIENTATION_VERTICAL));
-        imgPanelEnd[i] = Gtk::manage (new RTImage ("ornament1"));
+        // RTImage looks for an icon in the icon theme, ornament1.svg is in the images folder
+        // (it needed an extra search path in main.cc): the upstream RTSurface is used again.
+//        imgPanelEnd[i] = Gtk::manage (new RTImage ("ornament1"));
+        imgPanelEnd[i] = Gtk::manage (new Gtk::Image (ornamentSurface->get()));
         imgPanelEnd[i]->show();
         vbPanelEnd[i]->get_style_context()->add_class("PanelEnding");
         vbPanelEnd[i]->pack_start(*imgPanelEnd[i], Gtk::PACK_SHRINK);
