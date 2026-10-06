@@ -578,6 +578,9 @@ for (const auto &panel_tool_layout : getDefaultToolLayout()) {
 
 
 
+/*  the ring is now built by linkPanelRing(), once the pages are in the notebook:
+    this loop followed the handlePanel() order (transform before locallab) instead of the tab order,
+    it included the trash panel, and locallab while it is absent from the notebook in batch mode.
     for(int i=PANEL_SWITCHABLE_START; i< PANEL_SWITCHABLE_START + NB_PANEL_SWITCHABLE; i++) { //last panel is trash thus ignored
       printf(" %i",i);
       int modOp  = NB_PANEL_SWITCHABLE ; //-2 because we ignore first panel and trash panel
@@ -589,6 +592,11 @@ for (const auto &panel_tool_layout : getDefaultToolLayout()) {
       box2->setPrevBox(box1);
       box1->setNextBox(box2);
       env->addVBox(box1);
+    }
+*/
+    // every main box is registered (ttp profiles find the boxes by name), even the ones outside the ring
+    for(int i=PANEL_SWITCHABLE_START; i< PANEL_SWITCHABLE_START + NB_PANEL_SWITCHABLE; i++) {
+      env->addVBox(static_cast<ToolVBox*>(vbPanel[i]));
     }
     env->doLog=true;
     printf(" done.\n");
@@ -652,6 +660,8 @@ for (const auto &panel_tool_layout : getDefaultToolLayout()) {
     toolPanelNotebook->append_page(*metadata,         *toiM);
     toolPanelNotebook->append_page(*usefulPanelSW,    *toiU);
     toolPanelNotebook->append_page(*trashPanelSW,     *toiP);
+
+    linkPanelRing();
 
     toolPanelNotebook->set_current_page(0);
 
@@ -2434,6 +2444,41 @@ void ToolPanelCoordinator::on_notebook_switch_page(Gtk::Widget* /* page */, guin
   }
 }
 
+
+// links the boxes used by moveLeft/moveRight, in the order of the notebook tabs.
+// favorite and trash tabs are not part of the ring, nor tabs absent from the notebook (locallab in batch mode).
+void ToolPanelCoordinator::linkPanelRing()
+{
+    std::vector<ToolVBox*> ring;
+    for (int page = 0; page < toolPanelNotebook->get_n_pages(); page++)
+    {
+        Gtk::Widget* w = toolPanelNotebook->get_nth_page(page);
+        for (int i = PANEL_SWITCHABLE_START; i < PANEL_SWITCHABLE_START + NB_PANEL_SWITCHABLE; i++)
+        {
+            ToolVBox* box = static_cast<ToolVBox*>(vbPanel[i]);
+            if ((box != trashPanel) && (box->getParentSW() == w))
+            {
+                ring.push_back(box);
+                break;
+            }
+        }
+    }
+
+    const size_t n = ring.size();
+    for (size_t i = 0; i < n; i++)
+    {
+        ring[i]->setNextBox(ring[(i + 1) % n]);
+        ring[(i + 1) % n]->setPrevBox(ring[i]);
+    }
+
+    if (options.rtSettings.verbose)
+    {
+        printf("panel ring:");
+        for (auto box : ring)
+            printf(" %s", box->getBoxName().c_str());
+        printf("\n");
+    }
+}
 
 void ToolPanelCoordinator::savePanelPositions(char fromState)
 {
