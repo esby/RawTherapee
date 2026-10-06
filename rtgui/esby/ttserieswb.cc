@@ -34,17 +34,24 @@ static const int SERIESWB_MAXTEMP = 60000;
 static const double SERIESWB_MINGREEN = 0.02;
 static const double SERIESWB_MAXGREEN = 100.0;
 
+// ranges of the adjusters (a learned value outside them is refused, it was silently clamped)
+static const double SERIESWB_MIN_MIRED = -100.0;
+static const double SERIESWB_MAX_MIRED = 100.0;
+static const double SERIESWB_MIN_GREEN_FACTOR = 0.5;
+static const double SERIESWB_MAX_GREEN_FACTOR = 2.0;
+
 TTSeriesWB::TTSeriesWB() : FoldableToolPanel(this, "TTSeriesWB", M("TT_SERIESWB_LABEL"), false, true)
 {
   whitebalance = nullptr;
 
   // positive shift: lower temperature, cooler rendering (ex: 5044 K + 15.4 mireds = 4679 K)
-  adjMired = Gtk::manage(new Adjuster(M("TT_SERIESWB_MIRED"), -100.0, 100.0, 0.5, 0.0));
+  adjMired = Gtk::manage(new Adjuster(M("TT_SERIESWB_MIRED"), SERIESWB_MIN_MIRED, SERIESWB_MAX_MIRED, 0.5, 0.0));
   adjMired->setAdjusterListener(this);
   adjMired->set_tooltip_text(M("TT_SERIESWB_MIRED_TOOLTIP"));
   pack_start(*adjMired, Gtk::PACK_SHRINK, 0);
 
-  adjGreen = Gtk::manage(new Adjuster(M("TT_SERIESWB_GREEN"), 0.8, 1.25, 0.001, 1.0));
+//  adjGreen = Gtk::manage(new Adjuster(M("TT_SERIESWB_GREEN"), 0.8, 1.25, 0.001, 1.0));
+  adjGreen = Gtk::manage(new Adjuster(M("TT_SERIESWB_GREEN"), SERIESWB_MIN_GREEN_FACTOR, SERIESWB_MAX_GREEN_FACTOR, 0.001, 1.0));
   adjGreen->setAdjusterListener(this);
   adjGreen->set_tooltip_text(M("TT_SERIESWB_GREEN_TOOLTIP"));
   pack_start(*adjGreen, Gtk::PACK_SHRINK, 0);
@@ -226,6 +233,22 @@ void TTSeriesWB::learnFromCurrentImage()
   double mired = 1000000.0 / wb.temperature - 1000000.0 / camTemp;
   double green = wb.green / camGreen;
 
+  // the values of the current and camera white balances are shown, so the result can be checked
+  Glib::ustring values = Glib::ustring::compose(M("TT_SERIESWB_VALUES"),
+                                                wb.temperature, Glib::ustring::format(std::fixed, std::setprecision(3), wb.green),
+                                                (int) std::lround(camTemp), Glib::ustring::format(std::fixed, std::setprecision(3), camGreen),
+                                                wb.method);
+
+  if ((mired < SERIESWB_MIN_MIRED) || (mired > SERIESWB_MAX_MIRED)
+  || (green < SERIESWB_MIN_GREEN_FACTOR) || (green > SERIESWB_MAX_GREEN_FACTOR))
+  {
+    setInfo(Glib::ustring::compose(M("TT_SERIESWB_OUT_OF_RANGE"),
+                                   Glib::ustring::format(std::fixed, std::setprecision(1), mired),
+                                   Glib::ustring::format(std::fixed, std::setprecision(3), green))
+            + "\n" + values);
+    return;
+  }
+
   // the adjusters are set without re-applying: the current image already has this white balance
   adjMired->block(true);
   adjGreen->block(true);
@@ -237,7 +260,8 @@ void TTSeriesWB::learnFromCurrentImage()
   applied[file] = std::make_pair(wb.temperature, wb.green);
   setInfo(Glib::ustring::compose(M("TT_SERIESWB_LEARNED"),
                                  Glib::ustring::format(std::fixed, std::setprecision(1), mired),
-                                 Glib::ustring::format(std::fixed, std::setprecision(3), green)));
+                                 Glib::ustring::format(std::fixed, std::setprecision(3), green))
+          + "\n" + values);
 }
 
 void TTSeriesWB::adjusterChanged(Adjuster* a, double newval)

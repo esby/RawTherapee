@@ -80,6 +80,8 @@ TT_SERIESWB_MIRED_TOOLTIP;Shift applied to the camera white balance, in mireds (
 TT_SERIESWB_NO_CAMERA_WB;Camera white balance not available.
 TT_SERIESWB_NO_FLASH;No flash fired: not concerned.
 TT_SERIESWB_NO_IMAGE;No image.
+TT_SERIESWB_OUT_OF_RANGE;Not learned: shift %1 mireds, tint factor %2, out of the ranges of the tool.
+TT_SERIESWB_VALUES;Image: %1 K, tint %2 (%5). Camera: %3 K, tint %4.
 TT_UDLR_HIDE_ARROWS;Hide the move buttons (↑ ↓ ← →)
 TT_UDLR_LOCK_FAV;Lock the favorite and trash buttons
 TT_VAR_DISPLAYER_COPY;Copy to clipboard
