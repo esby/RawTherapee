@@ -27,5 +27,10 @@
 bool sortByFav(ToolPanel* p1, ToolPanel* p2);
 bool sortByOri(ToolPanel* p1, ToolPanel* p2);
 
+#include <map>
+#include <vector>
+// position of the panels in their original box, as if every panel was in it (see ttdep.cc)
+std::map<ToolPanel*, int> computeOriginalPositions(const std::vector<ToolPanel*>& panels, bool includeTrash);
+
 
 #endif

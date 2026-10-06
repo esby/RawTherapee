@@ -474,6 +474,16 @@ void ToolPanelCoordinator::linkPanelRing()
 
 void ToolPanelCoordinator::savePanelPositions(char fromState)
 {
+    // normal tabs: the panels put in the trash are not in their box anymore and the other
+    // panels are shifted. Saving the shifted positions made the trash panels come back at
+    // a wrong place: the positions are computed as if the trash panels were still in the box.
+    if (fromState == ENV_STATE_IN_NORM)
+    {
+        std::map<ToolPanel*, int> positions = computeOriginalPositions(env->getToolPanels(), true);
+        for (auto& pos : positions)
+            pos.first->setPosOri(pos.second);
+    }
+
     for (auto p : env->getToolPanels())
     {
         if (p->canBeIgnored())
@@ -481,11 +491,12 @@ void ToolPanelCoordinator::savePanelPositions(char fromState)
 
         if (fromState == ENV_STATE_IN_NORM)
         {
-            if (p->getOriginalBox() == nullptr)
-                continue;
-            int pos = p->getOriginalBox()->getPos(p);
-            if (pos > -1)
-                p->setPosOri(pos);
+            // done below for every panel at once (computeOriginalPositions)
+//            if (p->getOriginalBox() == nullptr)
+//                continue;
+//            int pos = p->getOriginalBox()->getPos(p);
+//            if (pos > -1)
+//                p->setPosOri(pos);
         }
         else if (fromState == ENV_STATE_IN_FAV)
         {
