@@ -17,6 +17,9 @@
  *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "ttsaver.h"
+#include <climits>
+#include <map>
+#include <set>
 #include "esbyoptions.h"
 #include "ttlog.h"
 #include "options.h"
@@ -437,6 +440,68 @@ void TTSaver::save_clicked (GdkEventButton* event)
 }
 
 
+// position of the panels in their original box, as if every panel was in it.
+// when the favorite tab is displayed, the favorite panels are not in their original box and
+// the other panels are shifted: the panels present in the box are taken in their current
+// order, and the absent ones are inserted back at their last known position (getPosOri()).
+// in a normal tab, the result is the position of the panel in its box (getPos()).
+// trash panels are ignored: their position is not saved.
+std::map<ToolPanel*, int> TTSaver::computeOriginalPositions(const std::vector<ToolPanel*>& panels)
+{
+  std::map<ToolVBox*, std::vector<std::pair<int, ToolPanel*>>> present;
+  std::map<ToolVBox*, std::vector<ToolPanel*>> absent;
+
+  for (auto p : panels)
+  {
+    FoldableToolPanel* fp = static_cast<FoldableToolPanel*>(p);
+    if ((fp == nullptr) || fp->canBeIgnored() || fp->getTrashButton()->get_active())
+      continue;
+    ToolVBox* box = fp->getOriginalBox();
+    if (box == nullptr)
+      continue;
+    int pos = box->getPos(fp);
+    if (pos >= 0)
+      present[box].push_back(std::make_pair(pos, p));
+    else
+      absent[box].push_back(p);
+  }
+
+  std::map<ToolPanel*, int> result;
+  std::set<ToolVBox*> boxes;
+  for (auto& b : present) boxes.insert(b.first);
+  for (auto& b : absent) boxes.insert(b.first);
+
+  for (auto box : boxes)
+  {
+    std::vector<std::pair<int, ToolPanel*>>& inBox = present[box];
+    std::sort(inBox.begin(), inBox.end(),
+              [](const std::pair<int, ToolPanel*>& a, const std::pair<int, ToolPanel*>& b) { return a.first < b.first; });
+    std::vector<ToolPanel*> order;
+    for (auto& e : inBox)
+      order.push_back(e.second);
+
+    // absent panels inserted back by increasing last known position, unknown positions at the end
+    std::vector<ToolPanel*>& out = absent[box];
+    std::stable_sort(out.begin(), out.end(), [](ToolPanel* a, ToolPanel* b) {
+      int pa = a->getPosOri() < 0 ? INT_MAX : a->getPosOri();
+      int pb = b->getPosOri() < 0 ? INT_MAX : b->getPosOri();
+      return pa < pb;
+    });
+    for (auto p : out)
+    {
+      int pos = p->getPosOri();
+      if ((pos < 0) || (pos > (int)order.size()))
+        order.push_back(p);
+      else
+        order.insert(order.begin() + pos, p);
+    }
+
+    for (size_t i = 0; i < order.size(); i++)
+      result[order[i]] = i;
+  }
+  return result;
+}
+
 Glib::ustring TTSaver::themeExport()
 {
   Glib::ustring favSettings = getToolName() + ":"  + "favorite:";
@@ -461,17 +526,23 @@ Glib::ustring TTSaver::themeExport()
 
   std::stable_sort (panels.begin(), panels.end(), sortByOri);
 
+  std::map<ToolPanel*, int> originalPositions = computeOriginalPositions(panels);
+
   for (size_t i=0; i<panels.size(); i++)
   {
     FoldableToolPanel* p = static_cast<FoldableToolPanel*> (panels.at(i));
     if ((p != nullptr)
     && (!p->canBeIgnored()))
     {
-      int posOri = p->getOriginalBox()->getPos(p); // maybe todo getPos()
+//      int posOri = p->getOriginalBox()->getPos(p); // maybe todo getPos()
       // the panel is not in its original box when saving from the favorite or trash tab:
       // the position saved when leaving the normal tabs is used instead of -1.
-      if (posOri < 0)
-        posOri = p->getPosOri();
+//      if (posOri < 0)
+//        posOri = p->getPosOri();
+      // note: the line above mixed two position systems when saving from the favorite tab:
+      // the favorites used their position in the full box, the other panels their position in
+      // the box without the favorites. The positions are now computed in the full box.
+      int posOri = originalPositions.count(p) ? originalPositions[p] : p->getPosOri();
       if (!(p->getTrashButton()->get_active()))
          oriSettings += p->getToolName()+ "(" + p->getOriginalBox()->getBoxName() + ":" + IntToString(posOri) + ") ";
 

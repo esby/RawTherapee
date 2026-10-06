@@ -19,6 +19,7 @@
 #ifndef _THEMETOOL_SAVER_H_
 #define _THEMETOOL_SAVER_H_
 
+#include <map>
 #include <memory>
 #include <gtkmm.h>
 #include "toolpanel.h"
@@ -70,6 +71,7 @@ public:
     void deploy();
 
     void themeImport(std::ifstream& myfile);
+    std::map<ToolPanel*, int> computeOriginalPositions(const std::vector<ToolPanel*>& panels);
     Glib::ustring themeExport();
 };
 
