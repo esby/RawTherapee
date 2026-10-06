@@ -150,8 +150,9 @@ void MovableToolPanel::moveUp () {
   if ((npos > -1) && (box->getPanel(npos) != nullptr)){
 //     printf("- realized.\n");
      box->reorder_child(*getExpander(), npos); 
-     updateLabelInfo();
      MovableToolPanel* other = box->getPanel(pos); // since we swapped it's pos and not npos
+     updatePositionsAfterSwap(other, pos, npos);
+     updateLabelInfo();
      if (other != nullptr)
        other->updateLabelInfo();
   }//else  printf("- canceled.\n");
@@ -182,12 +183,30 @@ void MovableToolPanel::moveDown () {
   if ((npos < count) && (box->getPanel(npos) != nullptr)){
 //     printf("- realized.\n");
      box->reorder_child(*getExpander(), npos);     
-     updateLabelInfo();
      MovableToolPanel* other = box->getPanel(pos); // since we swapped it's pos and not npos
+     updatePositionsAfterSwap(other, pos, npos);
+     updateLabelInfo();
      if (other != nullptr)
        other->updateLabelInfo();
   }//else  printf("- canceled.\n");
 
+}
+
+// called by moveUp/moveDown: this panel went from pos to npos, the other panel from npos to pos.
+void MovableToolPanel::updatePositionsAfterSwap(MovableToolPanel* other, int pos, int npos)
+{
+  if (env->state == ENV_STATE_IN_FAV)
+  {
+    setPosFav(npos);
+    if (other != nullptr)
+      other->setPosFav(pos);
+  }
+  else
+  {
+    setPosOri(npos);
+    if (other != nullptr)
+      other->setPosOri(pos);
+  }
 }
 
 void MovableToolPanel::moveLeft() {

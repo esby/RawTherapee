@@ -119,6 +119,7 @@ class MovableToolPanel
     void moveDown();
     void moveLeft();
     void moveRight();
+    void updatePositionsAfterSwap(MovableToolPanel* other, int pos, int npos);
     void updateLabelInfo ();
 
     void                setToolName(Glib::ustring _name) { toolName = _name; }

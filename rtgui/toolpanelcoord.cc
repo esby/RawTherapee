@@ -2128,6 +2128,8 @@ void ToolPanelCoordinator::toolSelected(ToolMode tool)
     GThreadLock lock; // All GUI access from idle_add callbacks or separate thread HAVE to be protected
     notebookconn.block(true); // "signal_switch_page" event is blocked to avoid unsubscribing Locallab (allows a correct behavior when switching to another tool using toolbar)
 
+/*  replaced by getToolPage(): 'favorites' is empty when useRtFav is false,
+    and nothing was returned when useRtFav is true.
     auto checkFavorite = [this](FoldableToolPanel* tool) {
     if (!useRtFav) {
         for (auto fav : favorites) {
@@ -2138,6 +2140,7 @@ void ToolPanelCoordinator::toolSelected(ToolMode tool)
         return false;
       }
     };
+*/
 
    //todo: the code is never called ?
    
@@ -2145,7 +2148,11 @@ void ToolPanelCoordinator::toolSelected(ToolMode tool)
         case TMCropSelect: {
             toolBar->blockEditDeactivation(false); // To allow deactivating Locallab when switching to another tool using toolbar
             crop->setExpanded(true);
-            toolPanelNotebook->set_current_page(toolPanelNotebook->page_num(checkFavorite(crop) ? *favoritePanelSW : *transformPanelSW));
+//            toolPanelNotebook->set_current_page(toolPanelNotebook->page_num(checkFavorite(crop) ? *favoritePanelSW : *transformPanelSW));
+            {
+                Gtk::Widget* page = getToolPage(crop);
+                toolPanelNotebook->set_current_page(toolPanelNotebook->page_num(page ? *page : *transformPanelSW));
+            }
             prevPage = toolPanelNotebook->get_nth_page(toolPanelNotebook->get_current_page()); // Updating prevPage as "signal_switch_page" event
             break;
         }
@@ -2153,7 +2160,11 @@ void ToolPanelCoordinator::toolSelected(ToolMode tool)
         case TMSpotWB: {
             toolBar->blockEditDeactivation(false); // To allow deactivating Locallab when switching to another tool using toolbar
             whitebalance->setExpanded(true);
-            toolPanelNotebook->set_current_page(toolPanelNotebook->page_num(checkFavorite(whitebalance) ? *favoritePanelSW : *colorPanelSW));
+//            toolPanelNotebook->set_current_page(toolPanelNotebook->page_num(checkFavorite(whitebalance) ? *favoritePanelSW : *colorPanelSW));
+            {
+                Gtk::Widget* page = getToolPage(whitebalance);
+                toolPanelNotebook->set_current_page(toolPanelNotebook->page_num(page ? *page : *colorPanelSW));
+            }
             prevPage = toolPanelNotebook->get_nth_page(toolPanelNotebook->get_current_page()); // Updating prevPage as "signal_switch_page" event
             break;
         }
@@ -2161,12 +2172,22 @@ void ToolPanelCoordinator::toolSelected(ToolMode tool)
         case TMStraighten: {
             toolBar->blockEditDeactivation(false); // To allow deactivating Locallab when switching to another tool using toolbar
             rotate->setExpanded(true);
+/*
             bool isFavorite = checkFavorite(rotate);
             if (!isFavorite) {
                 isFavorite = checkFavorite(lensgeom);
                 lensgeom->setExpanded(true);
             }
             toolPanelNotebook->set_current_page(toolPanelNotebook->page_num(isFavorite ? *favoritePanelSW : *transformPanelSW));
+*/
+            {
+                Gtk::Widget* page = getToolPage(rotate);
+                if (page == nullptr) { // the tool is inside lensgeom: lensgeom location is used
+                    lensgeom->setExpanded(true);
+                    page = getToolPage(lensgeom);
+                }
+                toolPanelNotebook->set_current_page(toolPanelNotebook->page_num(page ? *page : *transformPanelSW));
+            }
             prevPage = toolPanelNotebook->get_nth_page(toolPanelNotebook->get_current_page()); // Updating prevPage as "signal_switch_page" event
             break;
         }
@@ -2175,12 +2196,22 @@ void ToolPanelCoordinator::toolSelected(ToolMode tool)
             toolBar->blockEditDeactivation(false); // To allow deactivating Locallab when switching to another tool using toolbar
             perspective->setControlLineEditMode(true);
             perspective->setExpanded(true);
+/*
             bool isFavorite = checkFavorite(perspective);
             if (!isFavorite) {
                 isFavorite = checkFavorite(lensgeom);
                 lensgeom->setExpanded(true);
             }
             toolPanelNotebook->set_current_page(toolPanelNotebook->page_num(isFavorite ? *favoritePanelSW : *transformPanelSW));
+*/
+            {
+                Gtk::Widget* page = getToolPage(perspective);
+                if (page == nullptr) { // the tool is inside lensgeom: lensgeom location is used
+                    lensgeom->setExpanded(true);
+                    page = getToolPage(lensgeom);
+                }
+                toolPanelNotebook->set_current_page(toolPanelNotebook->page_num(page ? *page : *transformPanelSW));
+            }
             prevPage = toolPanelNotebook->get_nth_page(toolPanelNotebook->get_current_page()); // Updating prevPage as "signal_switch_page" event
             break;
         }
@@ -2254,6 +2285,14 @@ void ToolPanelCoordinator::on_notebook_switch_page(Gtk::Widget* /* page */, guin
       if (options.rtSettings.verbose)
         printf("%c -> normal panel\n", env->state);
     }
+
+   // the positions are saved from the tab we are leaving, before the panels are moved.
+   // this keeps the moves done by the user (up/down/left/right), otherwise moveToOriginal()
+   // and moveToFavorite() would put the panels back to the positions loaded from the ttp profile.
+   // note: positions are only reliable in the state we leave:
+   // - normal tabs: every panel not in the trash is in its original box.
+   // - favorite tab: every favorite panel is in the favorite box.
+   savePanelPositions(env->prevState);
 
    // we only checks outside of fav <> fav or trash <> trash interactions
    if (!((env->state == env->prevState)
@@ -2391,6 +2430,45 @@ void ToolPanelCoordinator::on_notebook_switch_page(Gtk::Widget* /* page */, guin
   }
 }
 
+
+void ToolPanelCoordinator::savePanelPositions(char fromState)
+{
+    for (auto p : env->getToolPanels())
+    {
+        if (p->canBeIgnored())
+            continue;
+
+        if (fromState == ENV_STATE_IN_NORM)
+        {
+            if (p->getOriginalBox() == nullptr)
+                continue;
+            int pos = p->getOriginalBox()->getPos(p);
+            if (pos > -1)
+                p->setPosOri(pos);
+        }
+        else if (fromState == ENV_STATE_IN_FAV)
+        {
+            int pos = favoritePanel->getPos(p);
+            if (pos > -1)
+                p->setPosFav(pos);
+        }
+    }
+}
+
+// replaces the upstream favorite check, which relied on the 'favorites' vector (unused with the esby favorites).
+// returns the page where the tool is displayed, nullptr if the tool is inside a sub-block (lensgeom, ...).
+Gtk::Widget* ToolPanelCoordinator::getToolPage(FoldableToolPanel* tool)
+{
+    if (tool->getFavoriteButton()->get_active())
+        return favoritePanelSW;
+    if (tool->getTrashButton()->get_active())
+        return trashPanelSW;
+
+    ToolVBox* box = tool->getOriginalBox();
+    if ((box == nullptr) || (box->getParentSW() == nullptr))
+        return nullptr;
+    return box->getParentSW();
+}
 
 FoldableToolPanel *ToolPanelCoordinator::getFoldableToolPanel(Tool tool) const
 {

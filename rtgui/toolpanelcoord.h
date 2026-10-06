@@ -535,6 +535,8 @@ public:
 
     void setEditProvider(EditDataProvider *provider);
     void on_notebook_switch_page(Gtk::Widget* page, guint page_num);
+    void savePanelPositions(char fromState);
+    Gtk::Widget* getToolPage(FoldableToolPanel* tool);
 
     void setProgressListener(rtengine::ProgressListener *pl);
 
