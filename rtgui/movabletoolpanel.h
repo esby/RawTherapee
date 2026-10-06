@@ -30,8 +30,11 @@
 #include "rtdef.h"
 #include "guiutils.h"
 #include "environment.h"
+#include "../rtengine/noncopyable.h"
 
-class MovableToolPanel
+// NonCopyable: ToolPanel was NonCopyable upstream, it was lost when ToolPanel started to derive from this class
+class MovableToolPanel :
+    public rtengine::NonCopyable
 {
     protected:
     // 0 for favorite tabs.

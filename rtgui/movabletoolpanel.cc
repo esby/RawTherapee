@@ -27,6 +27,16 @@ using namespace rtengine::procparams;
 
 MovableToolPanel::MovableToolPanel (Glib::ustring _toolName )  
 {
+    // these members were only set by initVBox() (or never): they must not be read uninitialized
+    env = nullptr;
+    reacted = false;
+    originalBox = nullptr;
+    favoriteBox = nullptr;
+    trashBox = nullptr;
+    labelWidget = nullptr;
+    labelBox = nullptr;
+    buttonBox = nullptr;
+
     setToolName(_toolName);
     plocation = PANEL_ON_NORMAL; // normal panel location
 

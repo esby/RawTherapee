@@ -137,7 +137,7 @@ virtual MyExpander*    getExpander     ()
     }
     virtual void           setDefaults     (const rtengine::procparams::ProcParams* defParams, const ParamsEdited* pedited = nullptr) {}
     virtual void           autoOpenCurve   () {}
-    virtual bool           canBeIgnored()      { return true; } // useful for determining if the panel is skippable or not.
+    bool                   canBeIgnored() override { return true; } // useful for determining if the panel is skippable or not.
     void                   setNeed100Percent(bool b) { need100Percent = b; }
     bool                   getNeed100Percent() { return need100Percent; }
 
@@ -259,7 +259,7 @@ public:
 
     void setLevel (int level);
 
-    bool canBeIgnored() {return false;}
+    bool canBeIgnored() override {return false;}
 
     // Functions that want to receive an enabled/disabled event from this class
     // will have to receive it from MyExpander directly, we do not create
