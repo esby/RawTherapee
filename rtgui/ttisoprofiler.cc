@@ -125,10 +125,16 @@ void TTIsoProfiler::react(FakeProcEvent ev)
        }
        
        // we load the i-1 profile, supposed it exists.
-       i = i -1;
-       printf("DEBUG: %s i=%zu listIsos.size()=%zu \n", getToolName().c_str(), i, listIsos.size());
-       if ((i>=0) && (i<listIsos.size()))
+       // note: i is a size_t, (i>=0) was always true and i-1 wrapped around when i == 0.
+       // the result was right because of the (i<listIsos.size()) test, but by accident.
+//       i = i -1;
+//       printf("DEBUG: %s i=%zu listIsos.size()=%zu \n", getToolName().c_str(), i, listIsos.size());
+//       if ((i>=0) && (i<listIsos.size()))
+       if ((i > 0) && (i <= listIsos.size()) && (i <= listPaths.size()))
        {
+         i = i - 1;
+         if (options.rtSettings.verbose)
+           printf("DEBUG: %s i=%zu listIsos.size()=%zu \n", getToolName().c_str(), i, listIsos.size());
 //         printf("loading profile= %s \n", listPaths[i].c_str());
          printf("%s: loading profile: %s \n",getToolName().c_str(),listPaths[i].c_str());
          load_profile(listPaths[i]);
@@ -142,6 +148,8 @@ void TTIsoProfiler::profileBoxChanged()
 {
    Glib::ustring name =  profilbox->get_active_text() ;
    int row = profilbox->get_active_row_number();
+   if ((row < 0) || ((size_t)row >= paths.size())) // no selection
+     return;
    Glib::ustring path = paths[row];
    printf("%s preparing to load Filename [%s] - %s",getToolName().c_str(), name.c_str(), + path.c_str());
    load_profile(path);
@@ -387,6 +395,7 @@ void TTIsoProfiler::autoload_clicked (GdkEventButton* event)
 
 bool isNumber(const Glib::ustring &line) 
 {
+ if (line.empty()) return false; // line[0] is undefined on an empty string
  if (line[0] == '0') return true;
  return (atoi(line.c_str()));
 }
@@ -401,6 +410,8 @@ void TTIsoProfiler::save_clicked (GdkEventButton* event)
 
    auto it = std::find(names.begin(), names.end(), name ) ;
    int index= std::distance(names.begin(), it);
+   if ((it == names.end()) || ((size_t)index >= paths.size()))
+     return;
 
    
    Glib::ustring path = paths[index];
