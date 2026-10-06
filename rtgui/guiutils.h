@@ -27,7 +27,8 @@
 #include <cairomm/cairomm.h>
 
 #include "threadutils.h"
-#include "rtdef.h"
+//#include "rtdef.h"
+#include "esby/rtdef.h" // relative path: guiutils.h is also included by rtengine, which has no esby include path
 #include "rtimage.h"
 
 #include "../rtengine/coord.h"
