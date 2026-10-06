@@ -156,6 +156,11 @@ void TTTabHider::deployLate()
   cbHideUseful->set_active (esbySettings().TTPHideUseful);
   cbHideTrash->set_active (esbySettings().TTPHideTrash);
 
+  // the locallab tab is not in the notebook in batch mode: its checkbox cannot do anything
+  bool hasLocal = (getTabPage(PANEL_NAME_LOCALLAB) != nullptr);
+  cbHideLocal->set_sensitive(hasLocal);
+  lbHideLocal->set_sensitive(hasLocal);
+
   cbHideFavorite->signal_clicked().connect( sigc::mem_fun(this, &TTTabHider::hide_favorite_clicked));
   cbHideExposure->signal_clicked().connect( sigc::mem_fun(this, &TTTabHider::hide_exposure_clicked));
   cbHideDetails->signal_clicked().connect( sigc::mem_fun(this, &TTTabHider::hide_details_clicked));

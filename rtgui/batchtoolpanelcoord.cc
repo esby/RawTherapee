@@ -38,7 +38,6 @@ BatchToolPanelCoordinator::BatchToolPanelCoordinator (FilePanel* parent) : ToolP
         toolBar->setBatchMode ();
     }
 
-    env->setMetadataState(false);
     for (size_t i = 0; i < toolPanels.size(); i++) {
         toolPanels[i]->setBatchMode (true);
     }
