@@ -976,7 +976,8 @@ void ToolPanelCoordinator::imageTypeChanged(bool isRaw, bool isBayer, bool isXtr
             idle_register.add(
                 [this, isGainMapSupported]() -> bool
                 {
-                    rawPanelSW->set_sensitive(true);
+//                    rawPanelSW->set_sensitive(true);
+                    esbySetRawToolsSensitive(true); // esby-hook: raw tools may be moved to other tabs
                     sensorxtrans->FoldableToolPanel::hide();
                     xtransprocess->FoldableToolPanel::hide();
                     bayerrawexposure->FoldableToolPanel::show();
@@ -998,7 +999,8 @@ void ToolPanelCoordinator::imageTypeChanged(bool isRaw, bool isBayer, bool isXtr
             idle_register.add(
                 [this, isGainMapSupported]() -> bool
                 {
-                    rawPanelSW->set_sensitive(true);
+//                    rawPanelSW->set_sensitive(true);
+                    esbySetRawToolsSensitive(true); // esby-hook: raw tools may be moved to other tabs
                     sensorxtrans->FoldableToolPanel::show();
                     xtransprocess->FoldableToolPanel::show();
                     xtransrawexposure->FoldableToolPanel::show();
@@ -1020,7 +1022,8 @@ void ToolPanelCoordinator::imageTypeChanged(bool isRaw, bool isBayer, bool isXtr
             idle_register.add(
                 [this, isGainMapSupported]() -> bool
                 {
-                    rawPanelSW->set_sensitive(true);
+//                    rawPanelSW->set_sensitive(true);
+                    esbySetRawToolsSensitive(true); // esby-hook: raw tools may be moved to other tabs
                     sensorbayer->FoldableToolPanel::hide();
                     bayerprocess->FoldableToolPanel::hide();
                     bayerpreprocess->FoldableToolPanel::hide();
@@ -1041,7 +1044,8 @@ void ToolPanelCoordinator::imageTypeChanged(bool isRaw, bool isBayer, bool isXtr
             idle_register.add(
                 [this]() -> bool
                 {
-                    rawPanelSW->set_sensitive(true);
+//                    rawPanelSW->set_sensitive(true);
+                    esbySetRawToolsSensitive(true); // esby-hook: raw tools may be moved to other tabs
                     sensorbayer->FoldableToolPanel::hide();
                     bayerprocess->FoldableToolPanel::hide();
                     bayerpreprocess->FoldableToolPanel::hide();
@@ -1062,7 +1066,8 @@ void ToolPanelCoordinator::imageTypeChanged(bool isRaw, bool isBayer, bool isXtr
         idle_register.add(
             [this]() -> bool
             {
-                rawPanelSW->set_sensitive(false);
+//                rawPanelSW->set_sensitive(false);
+                esbySetRawToolsSensitive(false); // esby-hook: raw tools may be moved to other tabs
                 sensorbayer->FoldableToolPanel::hide();
                 bayerprocess->FoldableToolPanel::hide();
                 bayerpreprocess->FoldableToolPanel::hide();

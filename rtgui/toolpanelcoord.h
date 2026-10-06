@@ -551,6 +551,7 @@ public:
     void esbyImageOpened(int pp3versionFromThumbnail);
     void esbyEventReceived(const rtengine::ProcEvent& ev);
     void esbySetFileName(const Glib::ustring& fileName);
+    void esbySetRawToolsSensitive(bool sensitive);
     void esbyCreatePanels(bool benchmark);
     void esbyRegisterTools();
     void esbyCreateUsefulTools();

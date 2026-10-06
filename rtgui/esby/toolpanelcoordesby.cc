@@ -878,3 +878,26 @@ void ToolPanelCoordinator::esbySetFileName(const Glib::ustring& fileName)
       printf("filename value transmitted by variables \n");
     env->setVar("Fname",fileName);
 }
+
+// imageTypeChanged(): upstream makes the whole raw tab insensitive for a non-raw image.
+// with the esby fork, the raw tab may contain other tools, and the raw tools may be moved
+// to other tabs: the raw tools themselves (RAW_PANEL_TOOLS, sub-tools included) are made
+// (in)sensitive instead, wherever they are.
+void ToolPanelCoordinator::esbySetRawToolsSensitive(bool sensitive)
+{
+    std::function<void(const std::vector<ToolTree>&)> setSensitive = [&](const std::vector<ToolTree>& tools)
+    {
+        for (const auto& tool : tools)
+        {
+            FoldableToolPanel* panel = getFoldableToolPanel(tool);
+            if ((panel != nullptr) && (panel->getExpander() != nullptr))
+                panel->getExpander()->set_sensitive(sensitive);
+            setSensitive(tool.children);
+        }
+    };
+
+    const ToolLayout& layout = getDefaultToolLayout();
+    auto it = layout.find(Panel::RAW);
+    if (it != layout.end())
+        setSensitive(it->second);
+}
