@@ -49,6 +49,7 @@ public:
     void deployLate();
     void react(FakeProcEvent ev);
     void enabledChanged  ();
+    bool getFocalLength(int& fl);
 
     bool canBeEnabled() {return true;}
     void load_data();

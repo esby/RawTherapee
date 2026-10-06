@@ -60,6 +60,25 @@ void TTLensCorrector::deploy()
   }
 }
 
+// reads the focal length from the FLen variable.
+// returns false when the variable does not exist or is not a number
+// (std::stoi throws in that case, the exception was not caught).
+bool TTLensCorrector::getFocalLength(int& fl)
+{
+  RtVariable* v = env->getVariableByName("FLen");
+  if (v == nullptr)
+    return false;
+  try
+  {
+    fl = std::stoi(v->toString());
+  }
+  catch (const std::exception&)
+  {
+    return false;
+  }
+  return true;
+}
+
 void TTLensCorrector::react(FakeProcEvent ev)
 {
 
@@ -74,10 +93,14 @@ void TTLensCorrector::react(FakeProcEvent ev)
        if (lensfile) 
        { // Vérifie si l'ouverture a réussi
          double dv = distortion->getDistorValue();
-         RtVariable* d = env->getVariableByName("FLen");
-         int fl = std::stoi(d->toString());
+//         RtVariable* d = env->getVariableByName("FLen");
+//         int fl = std::stoi(d->toString());
+         int fl;
+         if (getFocalLength(fl))
+         {
          printf("%f %i \n", dv, fl);
          lensfile << fl << " " << dv << std::endl; // Écrit et ajoute un saut de ligne
+         }
        } 
        else 
        {
@@ -96,9 +119,14 @@ void TTLensCorrector::react(FakeProcEvent ev)
 
   int key;
 
-  RtVariable* d = env->getVariableByName("FLen");
+//  RtVariable* d = env->getVariableByName("FLen");
 
-  key = std::stoi(d->toString());
+//  key = std::stoi(d->toString());
+  if (!getFocalLength(key))
+  {
+    printf("no focal length available, no distortion correction applied\n");
+  }
+  else
   if (vid.find(key) != vid.end()) 
   {
     double d = vid[key];
