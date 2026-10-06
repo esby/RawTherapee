@@ -83,6 +83,20 @@ void ToolVBoxDef::swapPanels(int pos1, int pos2)
 }
 
 
+// returns the position following the last panel of the box:
+// main tabs end with a separator and an ornament that must stay at the end.
+int ToolVBoxDef::getEndPos()
+{
+  panelList = box->get_children ();
+  int endPos = 0;
+  for (size_t i = 0; i < panelList.size(); i++)
+  {
+    if (dynamic_cast<MyExpander*>(panelList[i]) != nullptr)
+      endPos = i + 1;
+  }
+  return endPos;
+}
+
 // we initiate the nextBox too sinec it's circular
 void ToolVBoxDef::setPrevBox(Gtk::VBox* _box) {
   prevBox = _box;

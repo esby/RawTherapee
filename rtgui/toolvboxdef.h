@@ -77,6 +77,7 @@ class ToolVBoxDef
 
       virtual int getPos(MovableToolPanel* panel);
       virtual MovableToolPanel* getPanel(int pos);
+      virtual int getEndPos();
 
       // return the box a panel should be moved to when using left arrow.
       virtual Gtk::VBox* getPrevBox();

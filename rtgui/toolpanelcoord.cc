@@ -2429,12 +2429,16 @@ void ToolPanelCoordinator::on_notebook_switch_page(Gtk::Widget* /* page */, guin
 */
 
     //putting the ending panels and separator to the end
+    // note: pos was larger than the number of children, so both widgets were moved to the end
+    // in that order, the separator ending up after the ornament. -1 means "at the end".
     for(int i=0; i< NB_PANEL; i++){
-      int pos = toolPanels.size()-1;
-      Gtk::Widget* w = static_cast<Gtk::Widget*>(vbPanelEnd[i]);
-      vbPanel[i]->reorder_child(*w, pos);
-      w =(Gtk::Widget*)hsPanelEnd[i];
-      vbPanel[i]->reorder_child(*w, pos-1);
+//      int pos = toolPanels.size()-1;
+//      Gtk::Widget* w = static_cast<Gtk::Widget*>(vbPanelEnd[i]);
+//      vbPanel[i]->reorder_child(*w, pos);
+//      w =(Gtk::Widget*)hsPanelEnd[i];
+//      vbPanel[i]->reorder_child(*w, pos-1);
+      vbPanel[i]->reorder_child(*hsPanelEnd[i], -1);
+      vbPanel[i]->reorder_child(*vbPanelEnd[i], -1);
      }
    }
     // we update label info all the time

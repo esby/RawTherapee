@@ -229,12 +229,15 @@ void MovableToolPanel::moveLeft() {
     else
       adj->set_value(adj->get_upper());
 
+    // computed before adding the panel: position after the last panel, before the separator and the ornament
+    int endPos = nbox->getEndPos();
     box->remove(*this->getExpander());
     nbox->pack_start(*this->getExpander(), false,false);
    if (!env->moveLeftToBottom)
        nbox->reorder_child(*this->getExpander(), 0);             
     else
-      nbox->reorder_child(*this->getExpander(), nbox->size()-1);
+//      nbox->reorder_child(*this->getExpander(), nbox->size()-1);
+      nbox->reorder_child(*this->getExpander(), endPos);
 
 //    printf("page %i \n" , page_num);
 
@@ -271,12 +274,15 @@ void MovableToolPanel::moveRight() {
     else 
       adj->set_value(adj->get_upper());
 
+    // computed before adding the panel: position after the last panel, before the separator and the ornament
+    int endPos = nbox->getEndPos();
     box->remove(*this->getExpander());
     nbox->pack_start(*this->getExpander(), false,false);
     if (env->moveRightToTop)
        nbox->reorder_child(*this->getExpander(), 0);   
     else
-      nbox->reorder_child(*this->getExpander(), nbox->size()-1);
+//      nbox->reorder_child(*this->getExpander(), nbox->size()-1);
+      nbox->reorder_child(*this->getExpander(), endPos);
       
 
 //    printf("page %i \n" , page_num);
