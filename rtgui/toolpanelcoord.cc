@@ -2152,6 +2152,7 @@ void ToolPanelCoordinator::toolSelected(ToolMode tool)
             {
                 Gtk::Widget* page = getToolPage(crop);
                 toolPanelNotebook->set_current_page(toolPanelNotebook->page_num(page ? *page : *transformPanelSW));
+                scrollToTool(crop);
             }
             prevPage = toolPanelNotebook->get_nth_page(toolPanelNotebook->get_current_page()); // Updating prevPage as "signal_switch_page" event
             break;
@@ -2164,6 +2165,7 @@ void ToolPanelCoordinator::toolSelected(ToolMode tool)
             {
                 Gtk::Widget* page = getToolPage(whitebalance);
                 toolPanelNotebook->set_current_page(toolPanelNotebook->page_num(page ? *page : *colorPanelSW));
+                scrollToTool(whitebalance);
             }
             prevPage = toolPanelNotebook->get_nth_page(toolPanelNotebook->get_current_page()); // Updating prevPage as "signal_switch_page" event
             break;
@@ -2187,6 +2189,7 @@ void ToolPanelCoordinator::toolSelected(ToolMode tool)
                     page = getToolPage(lensgeom);
                 }
                 toolPanelNotebook->set_current_page(toolPanelNotebook->page_num(page ? *page : *transformPanelSW));
+                scrollToTool(rotate, lensgeom);
             }
             prevPage = toolPanelNotebook->get_nth_page(toolPanelNotebook->get_current_page()); // Updating prevPage as "signal_switch_page" event
             break;
@@ -2211,6 +2214,7 @@ void ToolPanelCoordinator::toolSelected(ToolMode tool)
                     page = getToolPage(lensgeom);
                 }
                 toolPanelNotebook->set_current_page(toolPanelNotebook->page_num(page ? *page : *transformPanelSW));
+                scrollToTool(perspective, lensgeom);
             }
             prevPage = toolPanelNotebook->get_nth_page(toolPanelNotebook->get_current_page()); // Updating prevPage as "signal_switch_page" event
             break;
@@ -2468,6 +2472,39 @@ Gtk::Widget* ToolPanelCoordinator::getToolPage(FoldableToolPanel* tool)
     if ((box == nullptr) || (box->getParentSW() == nullptr))
         return nullptr;
     return box->getParentSW();
+}
+
+// scrolls the current tab so that the tool is displayed at the top.
+// this is done in a short timeout: the tool may just have been moved by on_notebook_switch_page(),
+// and its position is only known once GTK has recomputed the layout. An idle callback is not enough:
+// the layout is driven by the frame clock and can be delayed until the next frame.
+// fallback is used when the tool itself is not displayed (ex: rotate inside a folded lensgeom).
+void ToolPanelCoordinator::scrollToTool(FoldableToolPanel* tool, FoldableToolPanel* fallback)
+{
+    Glib::signal_timeout().connect_once([this, tool, fallback]() {
+        Gtk::ScrolledWindow* sw = dynamic_cast<Gtk::ScrolledWindow*>(
+            toolPanelNotebook->get_nth_page(toolPanelNotebook->get_current_page()));
+        if (sw == nullptr)
+            return;
+
+        // the ToolVBox is wrapped in a Gtk::Viewport by Gtk::ScrolledWindow::add()
+        Gtk::Widget* content = sw->get_child();
+        Gtk::Bin* viewport = dynamic_cast<Gtk::Bin*>(content);
+        if ((viewport != nullptr) && (viewport->get_child() != nullptr))
+            content = viewport->get_child();
+        if (content == nullptr)
+            return;
+
+        MyExpander* exp = tool->getExpander();
+        if (((exp == nullptr) || !exp->get_mapped()) && (fallback != nullptr))
+            exp = fallback->getExpander();
+        if ((exp == nullptr) || !exp->get_mapped())
+            return;
+
+        int x, y;
+        if (exp->translate_coordinates(*content, 0, 0, x, y))
+            sw->get_vadjustment()->set_value(y); // the adjustment clamps the value itself
+    }, 50);
 }
 
 FoldableToolPanel *ToolPanelCoordinator::getFoldableToolPanel(Tool tool) const
