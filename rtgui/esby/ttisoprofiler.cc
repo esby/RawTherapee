@@ -17,6 +17,7 @@
  *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "ttisoprofiler.h"
+#include "esbyoptions.h"
 #include "ttlog.h"
 #include "options.h"
 #include "guiutils.h"
@@ -134,7 +135,7 @@ void TTIsoProfiler::react(FakeProcEvent ev)
        if ((i > 0) && (i <= listIsos.size()) && (i <= listPaths.size()))
        {
          i = i - 1;
-         if (options.rtSettings.verbose)
+         if (esbyOptions().rtSettings.verbose)
            printf("DEBUG: %s i=%zu listIsos.size()=%zu \n", getToolName().c_str(), i, listIsos.size());
 //         printf("loading profile= %s \n", listPaths[i].c_str());
          TT_LOG("%s: loading profile: %s \n",getToolName().c_str(),listPaths[i].c_str());
@@ -154,14 +155,14 @@ void TTIsoProfiler::profileBoxChanged()
    Glib::ustring path = paths[row];
    TT_LOG("%s preparing to load Filename [%s] - %s",getToolName().c_str(), name.c_str(), + path.c_str());
    load_profile(path);
-   if( options.rtSettings.verbose ) 
+   if( esbyOptions().rtSettings.verbose )
      printf("Loaded profile : %s - %s\n", name.c_str(), path.c_str());
 }
 
 void TTIsoProfiler::parseProfileFolder()
 {
-   Glib::ustring lp1 = options.getUserProfilePath();
-   Glib::ustring lp2 = options.getGlobalProfilePath();
+   Glib::ustring lp1 = esbyOptions().getUserProfilePath();
+   Glib::ustring lp2 = esbyOptions().getGlobalProfilePath();
 
    Glib::ustring p1 = Glib::build_filename(lp1,"Partial");
    Glib::ustring p2 = Glib::build_filename(lp2,"Partial");
@@ -206,7 +207,7 @@ void TTIsoProfiler::parseProfileFolder()
 
                 if (lastdot != Glib::ustring::npos && lastdot <= currDir.size() - 4 && !currDir.casefold().compare (lastdot, 4, paramFileExtension)) {
                     // file found
-                    if( options.rtSettings.verbose ) {
+                    if( esbyOptions().rtSettings.verbose ) {
                         printf ("ttp profile detected %s... \n", fname.c_str());
                     }
 
@@ -461,7 +462,7 @@ void TTIsoProfiler::themeImport(std::ifstream& myfile)
     std::string name;
     std::string path;
  
-    if (options.rtSettings.verbose)
+    if (esbyOptions().rtSettings.verbose)
       printf("parsing line: %s\n", line.c_str());
 
     if (getline(tokensplitter, token, ':'))
@@ -488,7 +489,7 @@ void TTIsoProfiler::themeImport(std::ifstream& myfile)
              if (getline(tokensplitter, token,'\n'))
              {
                path = token;
-               if (options.rtSettings.verbose)
+               if (esbyOptions().rtSettings.verbose)
                  printf("ttp: %s read values: iso= %s name= %s path=%s \n", getToolName().c_str(),  iso.c_str(), name.c_str(), path.c_str());
                save_profile(iso,name,path);
              }

@@ -16,12 +16,14 @@
  */
 #pragma once
 
-#include <cstdio>
 #include "options.h"
-#include "esbyoptions.h"
 
-// console traces of the esby tools (favorites, moves, tt*), only displayed in verbose mode.
-// TT_LOG is used like printf, and can be used anywhere a statement is expected (ex: after an else).
-// error messages are not concerned: they are always displayed.
-#define TT_VERBOSE (esbyOptions().rtSettings.verbose)
-#define TT_LOG(...) do { if (TT_VERBOSE) printf(__VA_ARGS__); } while (0)
+// access to the RawTherapee options from the esby code.
+// upstream replaced the global variable 'options' by the App singleton
+// (App::get().options() to read, App::get().mut_options() to modify):
+// after the merge, only this function has to change, ex:
+//   inline Options& esbyOptions() { return App::get().mut_options(); }
+inline Options& esbyOptions()
+{
+    return options;
+}

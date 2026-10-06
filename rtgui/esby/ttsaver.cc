@@ -17,6 +17,7 @@
  *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "ttsaver.h"
+#include "esbyoptions.h"
 #include "ttlog.h"
 #include "options.h"
 #include "guiutils.h"
@@ -76,7 +77,7 @@ TTSaver::TTSaver () : FoldableToolPanel(this,"ttsaver",M("TP_SAVER_LABEL"),false
 
        parseProfileFolder();
 
-       cbAutoloadSettings->set_active(options.TTPAutoload);
+       cbAutoloadSettings->set_active(esbyOptions().TTPAutoload);
        buttonSave->signal_button_release_event().connect_notify( sigc::mem_fun(*this, &TTSaver::save_clicked) );
        cbAutoloadSettings->signal_button_release_event().connect_notify( sigc::mem_fun(*this, &TTSaver::autoload_clicked) );
        profilbox->signal_changed ().connect (sigc::mem_fun (*this, &TTSaver::profileBoxChanged));
@@ -91,9 +92,9 @@ TTSaver::~TTSaver()
 void TTSaver::deploy()
 {
 //   printf("DEBUG: TTSaver::deploy\n");
-  if (options.TTPAutoload)
+  if (esbyOptions().TTPAutoload)
   {
-    auto it = std::find(entries.begin(), entries.end(), options.TTPAutoloadValue ) ;
+    auto it = std::find(entries.begin(), entries.end(), esbyOptions().TTPAutoloadValue ) ;
     if (it != entries.end())
     {
       int index= std::distance(entries.begin(), it);
@@ -112,14 +113,14 @@ void TTSaver::profileBoxChanged()
    Glib::ustring fname = entries[row];
 //   printf("preparing to load Filename : %s - %s\n", filename.c_str(), fname.c_str());
    load_ttp_profile(fname);
-   if( options.rtSettings.verbose ) 
+   if( esbyOptions().rtSettings.verbose )
      printf("Loaded ttp profile : %s - %s\n", filename.c_str(), fname.c_str());
 }
 
 void TTSaver::parseProfileFolder()
 {
-   Glib::ustring p1 = options.getUserProfilePath();
-   Glib::ustring p2 = options.getGlobalProfilePath();
+   Glib::ustring p1 = esbyOptions().getUserProfilePath();
+   Glib::ustring p2 = esbyOptions().getGlobalProfilePath();
 
 //   printf("p1= %s \n",p1.c_str());
 //   printf("p2= %s \n",p2.c_str());
@@ -176,7 +177,7 @@ void TTSaver::parseProfileFolder()
 
                 if (lastdot != Glib::ustring::npos && lastdot <= currDir.size() - 4 && !currDir.casefold().compare (lastdot, 4, paramFileGuiExtension)) {
                     // file found
-                    if( options.rtSettings.verbose ) {
+                    if( esbyOptions().rtSettings.verbose ) {
                         printf ("ttp profile detected %s... \n", fname.c_str());
                     }
 
@@ -350,16 +351,16 @@ void TTSaver::autoload_clicked (GdkEventButton* event)
   }
 
   //the call happends before the value is changed, so we use a not
-  options.TTPAutoload = not cbAutoloadSettings->get_active();
+  esbyOptions().TTPAutoload = not cbAutoloadSettings->get_active();
 
-  if (!options.TTPAutoload)
+  if (!esbyOptions().TTPAutoload)
   {
     fname = "";
   }
 
-  options.TTPAutoloadValue =  fname;
+  esbyOptions().TTPAutoloadValue =  fname;
   enAutoloadSettingsLine->set_text(fname);
-  options.save();
+  esbyOptions().save();
 }
 
 void TTSaver::save_clicked (GdkEventButton* event)
@@ -374,7 +375,7 @@ void TTSaver::save_clicked (GdkEventButton* event)
     Glib::ustring filename =  profilbox->get_active_text() + paramFileGuiExtension;
 
     dialog.set_current_name (filename);
-    dialog.set_current_folder (options.getUserProfilePath()) ; 
+    dialog.set_current_folder (esbyOptions().getUserProfilePath()) ;
 
     //Add response buttons the the dialog:
     dialog.add_button(Gtk::StockID("gtk-cancel"), Gtk::RESPONSE_CANCEL);
@@ -635,7 +636,7 @@ if (true) //map[favoriteItems.at(i)]->getOriginalBox()->getBoxName() == "favorit
       && (!(p->canBeIgnored()))
       && (p->getPLocation() == PANEL_ON_UNDEF))
       {
-        if (options.rtSettings.verbose)
+        if (esbyOptions().rtSettings.verbose)
           printf("panel %s has a non correct location - it is probably absent from the ttp profile - correcting this\n", p->getToolName().c_str());
         p->moveToOriginal();
       }

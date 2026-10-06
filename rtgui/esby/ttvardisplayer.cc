@@ -17,6 +17,7 @@
  *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "ttvardisplayer.h"
+#include "esbyoptions.h"
 #include "ttlog.h"
 #include "options.h"
 #include "guiutils.h"
@@ -77,7 +78,7 @@ void TTVarDisplayer::copy_clicked ()
 
 	Gtk::Clipboard::get()->set_text(text);
 
-	if (options.rtSettings.verbose)
+	if (esbyOptions().rtSettings.verbose)
 		printf("TTVarDisplayer: %i variables copied to the clipboard\n", count);
 }
 

@@ -17,6 +17,7 @@
  *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "tttabhider.h"
+#include "esbyoptions.h"
 #include "ttlog.h"
 #include "options.h"
 #include "guiutils.h"
@@ -143,17 +144,17 @@ void TTTabHider::deploy()
 
 void TTTabHider::deployLate()
 {
-  cbHideFavorite->set_active (options.TTPHideFavorite);
-  cbHideExposure->set_active (options.TTPHideExposure);
-  cbHideDetails->set_active (options.TTPHideDetails);
-  cbHideColor->set_active (options.TTPHideColor);
-  cbHideAdvanced->set_active (options.TTPHideAdvanced);
-  cbHideLocal->set_active (options.TTPHideLocal);
-  cbHideTransform->set_active (options.TTPHideTransform);
-  cbHideRaw->set_active (options.TTPHideRaw);
-  cbHideMetadata->set_active (options.TTPHideMetadata);
-  cbHideUseful->set_active (options.TTPHideUseful);
-  cbHideTrash->set_active (options.TTPHideTrash);
+  cbHideFavorite->set_active (esbyOptions().TTPHideFavorite);
+  cbHideExposure->set_active (esbyOptions().TTPHideExposure);
+  cbHideDetails->set_active (esbyOptions().TTPHideDetails);
+  cbHideColor->set_active (esbyOptions().TTPHideColor);
+  cbHideAdvanced->set_active (esbyOptions().TTPHideAdvanced);
+  cbHideLocal->set_active (esbyOptions().TTPHideLocal);
+  cbHideTransform->set_active (esbyOptions().TTPHideTransform);
+  cbHideRaw->set_active (esbyOptions().TTPHideRaw);
+  cbHideMetadata->set_active (esbyOptions().TTPHideMetadata);
+  cbHideUseful->set_active (esbyOptions().TTPHideUseful);
+  cbHideTrash->set_active (esbyOptions().TTPHideTrash);
 
   cbHideFavorite->signal_clicked().connect( sigc::mem_fun(this, &TTTabHider::hide_favorite_clicked));
   cbHideExposure->signal_clicked().connect( sigc::mem_fun(this, &TTTabHider::hide_exposure_clicked));
@@ -205,7 +206,7 @@ void TTTabHider::save_clicked(GdkEventButton* event)
 if (event->button != 1) {
         return;
     }
-  options.save();
+  esbyOptions().save();
 
 }
 
@@ -246,58 +247,58 @@ void TTTabHider::hide_favorite_clicked()
 { 
 //  env->getToolPanelNotebook()->get_nth_page(0)->set_visible(not cbHideFavorite->get_active() );
   setTabVisible(PANEL_NAME_FAVORITE, not cbHideFavorite->get_active());
-  options.TTPHideFavorite = cbHideFavorite->get_active();
+  esbyOptions().TTPHideFavorite = cbHideFavorite->get_active();
 }
 
 void TTTabHider::hide_exposure_clicked ()
 { 
 //  env->getToolPanelNotebook()->get_nth_page(1)->set_visible(not cbHideExposure->get_active() );
   setTabVisible(PANEL_NAME_EXPOSURE, not cbHideExposure->get_active());
-  options.TTPHideExposure = cbHideExposure->get_active();
+  esbyOptions().TTPHideExposure = cbHideExposure->get_active();
 }
 
 void TTTabHider::hide_details_clicked ()
 { 
 //  env->getToolPanelNotebook()->get_nth_page(2)->set_visible(not cbHideDetails->get_active() );
   setTabVisible(PANEL_NAME_DETAILS, not cbHideDetails->get_active());
-  options.TTPHideDetails = cbHideDetails->get_active();
+  esbyOptions().TTPHideDetails = cbHideDetails->get_active();
 }
 
 void TTTabHider::hide_color_clicked ()
 { 
 //  env->getToolPanelNotebook()->get_nth_page(3)->set_visible(not cbHideColor->get_active() );
   setTabVisible(PANEL_NAME_COLOR, not cbHideColor->get_active());
-  options.TTPHideColor = cbHideColor->get_active();
+  esbyOptions().TTPHideColor = cbHideColor->get_active();
 }
 
 void TTTabHider::hide_advanced_clicked ()
 { 
 //  env->getToolPanelNotebook()->get_nth_page(4)->set_visible(not cbHideAdvanced->get_active() );
   setTabVisible(PANEL_NAME_WAVELET, not cbHideAdvanced->get_active());
-  options.TTPHideAdvanced = cbHideAdvanced->get_active();
+  esbyOptions().TTPHideAdvanced = cbHideAdvanced->get_active();
 }
 
 void TTTabHider::hide_local_clicked ()
 {
   TT_LOG("hiding local clicked, cbHideLocal=%d options.TTPHideLocal=%d \n",
-    cbHideLocal->get_active(), options.TTPHideLocal );
+    cbHideLocal->get_active(), esbyOptions().TTPHideLocal );
 //  env->getToolPanelNotebook()->get_nth_page(5)->set_visible(not cbHideLocal->get_active() );
   setTabVisible(PANEL_NAME_LOCALLAB, not cbHideLocal->get_active()); // absent in batch mode: nothing done
-  options.TTPHideLocal = cbHideLocal->get_active();
+  esbyOptions().TTPHideLocal = cbHideLocal->get_active();
 }
 
 void TTTabHider::hide_transform_clicked ()
 { 
 //  env->getToolPanelNotebook()->get_nth_page(6)->set_visible(not cbHideTransform->get_active() );
   setTabVisible(PANEL_NAME_TRANSFORM, not cbHideTransform->get_active());
-  options.TTPHideTransform = cbHideTransform->get_active();
+  esbyOptions().TTPHideTransform = cbHideTransform->get_active();
 }
 
 void TTTabHider::hide_raw_clicked ()
 { 
 //  env->getToolPanelNotebook()->get_nth_page(7)->set_visible(not cbHideRaw->get_active() );
   setTabVisible(PANEL_NAME_RAW, not cbHideRaw->get_active());
-  options.TTPHideRaw = cbHideRaw->get_active();
+  esbyOptions().TTPHideRaw = cbHideRaw->get_active();
 }
 
 void TTTabHider::hide_metadata_clicked ()
@@ -314,7 +315,7 @@ void TTTabHider::hide_metadata_clicked ()
         page->set_visible(not cbHideMetadata->get_active() );
     }
   }
-  options.TTPHideMetadata= cbHideMetadata->get_active();
+  esbyOptions().TTPHideMetadata= cbHideMetadata->get_active();
 }
 
 void TTTabHider::hide_useful_clicked ()
@@ -324,7 +325,7 @@ void TTTabHider::hide_useful_clicked ()
 //     increment = 1;
 //  env->getToolPanelNotebook()->get_nth_page(8+increment)->set_visible(not cbHideUseful->get_active() );
   setTabVisible(PANEL_NAME_USEFUL, not cbHideUseful->get_active());
-  options.TTPHideUseful = cbHideUseful->get_active();
+  esbyOptions().TTPHideUseful = cbHideUseful->get_active();
 }
 
 
@@ -335,7 +336,7 @@ void TTTabHider::hide_trash_clicked()
 //     increment = 1;
 //  env->getToolPanelNotebook()->get_nth_page(9+increment)->set_visible(not cbHideTrash->get_active() );
   setTabVisible(PANEL_NAME_TRASH, not cbHideTrash->get_active());
-  options.TTPHideTrash = cbHideTrash->get_active();
+  esbyOptions().TTPHideTrash = cbHideTrash->get_active();
 
 /* old code
 // basically the metadata panel is removed from the batchcoordinator process
