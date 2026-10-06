@@ -2080,7 +2080,13 @@ void FileBrowser::updateProfileList()
 
         // Hombre: ... does parentMenuId sounds like a hack?         ... Yes.
         int parentMenuId = !options.useBundledProfiles && currLabel->entry->parentFolderId == 1 ? 0 : currLabel->entry->parentFolderId;
-        subMenuList[parentMenuId]->attach (*mi, 0, 1, p, p + 1);
+//        subMenuList[parentMenuId]->attach (*mi, 0, 1, p, p + 1);
+        // the level 0 folder has no menu when it is not displayed by ProfileStore (displayLevel0 is false,
+        // ex: the global profile folder is missing while useBundledProfiles is set): subMenuList[1] was
+        // nullptr and attach() crashed. Such entries are attached to the root menu.
+        auto parentMenu = subMenuList.find(parentMenuId);
+        Gtk::Menu* menu = ((parentMenu != subMenuList.end()) && (parentMenu->second != nullptr)) ? parentMenu->second : subMenuList[0];
+        menu->attach (*mi, 0, 1, p, p + 1);
         p++;
 
         if (currLabel->entry->type == PSET_FILE) {
@@ -2121,7 +2127,13 @@ void FileBrowser::updateProfileList()
 
         // Hombre: ... does parentMenuId sounds like a hack?         ... yes.
         int parentMenuId = !options.useBundledProfiles && currLabel->entry->parentFolderId == 1 ? 0 : currLabel->entry->parentFolderId;
-        subMenuList[parentMenuId]->attach (*mi, 0, 1, p, p + 1);
+//        subMenuList[parentMenuId]->attach (*mi, 0, 1, p, p + 1);
+        // the level 0 folder has no menu when it is not displayed by ProfileStore (displayLevel0 is false,
+        // ex: the global profile folder is missing while useBundledProfiles is set): subMenuList[1] was
+        // nullptr and attach() crashed. Such entries are attached to the root menu.
+        auto parentMenu = subMenuList.find(parentMenuId);
+        Gtk::Menu* menu = ((parentMenu != subMenuList.end()) && (parentMenu->second != nullptr)) ? parentMenu->second : subMenuList[0];
+        menu->attach (*mi, 0, 1, p, p + 1);
         p++;
 
         if (currLabel->entry->type == PSET_FILE) {
