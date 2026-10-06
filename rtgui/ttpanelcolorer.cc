@@ -17,6 +17,7 @@
  *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "ttpanelcolorer.h"
+#include "ttlog.h"
 #include "options.h"
 #include "guiutils.h"
 #include "rtimage.h"
@@ -61,7 +62,7 @@ void TTPanelColorChooser::test()
   else
     e->show();
 
-  printf("test\n");
+  TT_LOG("test\n");
 }
 
 void TTPanelColorChooser::deploy()

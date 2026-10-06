@@ -17,6 +17,7 @@
  *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "ttudlrhider.h"
+#include "ttlog.h"
 #include "options.h"
 #include "guiutils.h"
 #include "rtimage.h"
@@ -153,7 +154,7 @@ void  TTUDLRHider::actOnPanel(ToolPanel* panel)
     }
     else
     { 
-      printf("loading the config by default for %s \n", panel->getToolName().c_str());
+      TT_LOG("loading the config by default for %s \n", panel->getToolName().c_str());
       panel->getMoveRButton()->show();
       panel->getMoveLButton()->show();
       panel->getMoveUButton()->show();

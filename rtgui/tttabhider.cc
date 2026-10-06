@@ -17,6 +17,7 @@
  *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "tttabhider.h"
+#include "ttlog.h"
 #include "options.h"
 #include "guiutils.h"
 #include "rtimage.h"
@@ -278,7 +279,7 @@ void TTTabHider::hide_advanced_clicked ()
 
 void TTTabHider::hide_local_clicked ()
 {
-  printf("hiding local clicked, cbHideLocal=%d options.TTPHideLocal=%d \n",   
+  TT_LOG("hiding local clicked, cbHideLocal=%d options.TTPHideLocal=%d \n",
     cbHideLocal->get_active(), options.TTPHideLocal );
 //  env->getToolPanelNotebook()->get_nth_page(5)->set_visible(not cbHideLocal->get_active() );
   setTabVisible(PANEL_NAME_LOCALLAB, not cbHideLocal->get_active()); // absent in batch mode: nothing done

@@ -18,6 +18,7 @@
  */
 //#include "toolpanel.h"
 #include "toolpanelcoord.h"
+#include "ttlog.h"
 #include "guiutils.h"
 
 using namespace rtengine::procparams;
@@ -44,7 +45,7 @@ Environment::~Environment()
 {
   //todo: free rt variable
   
-  printf("deleting rt variables due to the environment destruction \n");
+  TT_LOG("deleting rt variables due to the environment destruction \n");
   while (varList.size()>0)
   {
    delete (varList[0]);
@@ -56,7 +57,7 @@ Environment::~Environment()
 // Environment implementation
 MovableToolPanel* Environment::getPanel(Glib::ustring name)
 {
-  printf("call to a potentially slow method : getPanel of Environement\n");
+  TT_LOG("call to a potentially slow method : getPanel of Environement\n");
   for (size_t i=0; i<toolPanels.size(); i++)
    {
       MovableToolPanel* p = static_cast<MovableToolPanel*> (toolPanels[i]);
@@ -143,7 +144,7 @@ void Environment::addVBox(ToolVBox* box)
 
 void Environment::reAttachPanel(ToolPanel *panel, ToolVBox* box, int pos)
 {
-  printf("reattaching panel %s from %s to %s \n", panel->getToolName().c_str(), panel->getOriginalBox()->getBoxName().c_str(), box->getBoxName().c_str());
+  TT_LOG("reattaching panel %s from %s to %s \n", panel->getToolName().c_str(), panel->getOriginalBox()->getBoxName().c_str(), box->getBoxName().c_str());
 //  Gtk::Container* c = (Gtk::Container*)box;
   panel->getOriginalBox()->remPanel(panel);
   box->addPanel(panel, pos);
@@ -336,7 +337,7 @@ Glib::ustring Environment::getExifVariable(Glib::ustring name)
 {
   Glib::ustring pname = ROOT_EXIF_PREFIX + ':' + name;
   Glib::ustring sval =  getVarAsString(pname);
-  printf("%s= %s \n", pname.c_str(), sval.c_str());
+  TT_LOG("%s= %s \n", pname.c_str(), sval.c_str());
   return sval;
 }
 

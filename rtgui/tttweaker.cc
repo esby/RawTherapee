@@ -17,6 +17,7 @@
  *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "tttweaker.h"
+#include "ttlog.h"
 #include "options.h"
 #include "guiutils.h"
 #include "rtimage.h"
@@ -159,14 +160,14 @@ float checkCoarse(float f, CoarsePanel* coarse)
 {
   while (f>45) 
    {
-    printf("coarse rotating to the left\n");
+    TT_LOG("coarse rotating to the left\n");
      f = f -90;
      coarse->rotateLeft();
    }
 
   while (f<-45)
   {
-    printf("coarse rotating to the right\n");
+    TT_LOG("coarse rotating to the right\n");
     f = f +90;
     coarse->rotateRight();
   }
@@ -193,7 +194,7 @@ void TTTweaker::react(FakeProcEvent ev)
           bool d = env->getVarAsBool("disableAutoDistortionCorrection");
           if ( !d )
           {
-            printf("Clicking on auto distorsion correction button.\n");
+            TT_LOG("Clicking on auto distorsion correction button.\n");
             distortion->idPressed();
           }
       }
@@ -207,17 +208,17 @@ void TTTweaker::react(FakeProcEvent ev)
     {
       check_exif(); 
       Glib::ustring s_burst = env->getExifVariable("Exif:MakerNote:BurstMode");
-      printf("DEBUG: Exif:MakerNote:BurstMode= %s \n", s_burst.c_str());
+      TT_LOG("DEBUG: Exif:MakerNote:BurstMode= %s \n", s_burst.c_str());
       if (s_burst == "0")
       {
         Glib::ustring s_roll= env->getExifVariable("Exif:MakerNote:RollAngle");
-        printf("Rotating angle d=%s \n",s_roll.c_str());
+        TT_LOG("Rotating angle d=%s \n",s_roll.c_str());
         int i = atoi(s_roll.c_str()) ;
         short d;
         d = (short)i;
         d = d / 10;
 
-        printf("Rotating angle d=%i \n",d);
+        TT_LOG("Rotating angle d=%i \n",d);
         if (d!=0)
         {
           Glib::ustring s_orientation = env->getExifVariable("Exif:MakerNote:CameraOrientation");
@@ -243,7 +244,7 @@ void TTTweaker::react(FakeProcEvent ev)
           {
             d = -90-d;
             d = checkCoarse(d, coarse);
-            printf("rotate CCW detected d adjusted to d=%i \n",d);
+            TT_LOG("rotate CCW detected d adjusted to d=%i \n",d);
           }
           //other cases not handled
           // note: the ProcParams was allocated with new and never deleted (leak on every photo)
@@ -258,7 +259,7 @@ void TTTweaker::react(FakeProcEvent ev)
             pp->rotate.degree = d;
             rotate->read(pp);
             rotate->adjusterChanged(nullptr, d);
-            printf("%s auto rotating by degree=%i \n",getToolName().c_str(),d);
+            TT_LOG("%s auto rotating by degree=%i \n",getToolName().c_str(),d);
           }
         }
       }
@@ -270,7 +271,7 @@ void TTTweaker::react(FakeProcEvent ev)
     {
       // sleep(1); // note: sleep might not be multi platform
       std::this_thread::sleep_for(std::chrono::seconds(1));
-      printf("exiting the program after file saving was performed\n");
+      TT_LOG("exiting the program after file saving was performed\n");
       gtk_main_quit();
     }
 
@@ -278,7 +279,7 @@ void TTTweaker::react(FakeProcEvent ev)
     {
       // sleep(1); // note: sleep might not be multi platform
       std::this_thread::sleep_for(std::chrono::seconds(1));
-      printf("Reducting the program after file saving was performed\n");
+      TT_LOG("Reducting the program after file saving was performed\n");
       getToplevelWindow(this).iconify();
     }
   }
@@ -290,10 +291,10 @@ void TTTweaker::react(FakeProcEvent ev)
       if (whitebalance != nullptr)
       {
         int pp3version = env->getVarAsInt("pp3version");
-        printf("reading pp3version=%i \n", pp3version);
+        TT_LOG("reading pp3version=%i \n", pp3version);
         if ((pp3version > -1) && (pp3version < 329))
         {
-          printf("Resetting whitebalance to camera.\n");
+          TT_LOG("Resetting whitebalance to camera.\n");
           whitebalance->resetWBToCamera();
         }
       }
@@ -483,7 +484,7 @@ void TTTweaker::check_exif()
         Exiv2::ExifData &exifData = image->exifData();
 
         if (exifData.empty()) {
-            std::cerr << "Pas de données EXIF trouvées !" << std::endl;
+            if (TT_VERBOSE) std::cerr << "Pas de données EXIF trouvées !" << std::endl;
             return ;
         }
 
@@ -508,21 +509,21 @@ void TTTweaker::check_exif()
             Glib::ustring s = burstmode->value().toString();
             env->setVar(ROOT_EXIF_PREFIX + ":" + "Exif:MakerNote:BurstMode", s);
 
-            std::cout << "burstmode : " << burstmode->value() << std::endl;
+            if (TT_VERBOSE) std::cout << "burstmode : " << burstmode->value() << std::endl;
         } else {
-            std::cout << "bustmode non trouvé !" << std::endl;
+            if (TT_VERBOSE) std::cout << "bustmode non trouvé !" << std::endl;
         } 
 
         if (cameraorientation != exifData.end()) {  
             int i = atoi(cameraorientation->value().toString().c_str());
             std::string s =  getOrientationDescription (i);
 
-            std::cout << "cameraorientation r: " << cameraorientation->value() << std::endl;
-            std::cout << "cameraorientation i: " << i << std::endl;
-            std::cout << "cameraorientation s: " << s << std::endl;
+            if (TT_VERBOSE) std::cout << "cameraorientation r: " << cameraorientation->value() << std::endl;
+            if (TT_VERBOSE) std::cout << "cameraorientation i: " << i << std::endl;
+            if (TT_VERBOSE) std::cout << "cameraorientation s: " << s << std::endl;
             env->setVar(ROOT_EXIF_PREFIX + ":" + "Exif:MakerNote:CameraOrientation", s);
         } else {
-            std::cout << "cameraorientation non trouvé !" << std::endl;
+            if (TT_VERBOSE) std::cout << "cameraorientation non trouvé !" << std::endl;
         }
 
         if (pitch != exifData.end()) {
@@ -541,10 +542,10 @@ void TTTweaker::check_exif()
             std::string s = std::to_string(v);
 //            env->setVar(ROOT_EXIF_PREFIX + ":" +"Exif:MakerNote:PicthAngle", s);
             env->setVar(ROOT_EXIF_PREFIX + ":" +"Exif:MakerNote:PitchAngle", s);
-            std::cout << "Pitch Angle (s) : " << s << std::endl; // la valeur est multipliée par 10
+            if (TT_VERBOSE) std::cout << "Pitch Angle (s) : " << s << std::endl; // la valeur est multipliée par 10
 
         } else {
-            std::cout << "Pitch Angle non trouvé !" << std::endl;
+            if (TT_VERBOSE) std::cout << "Pitch Angle non trouvé !" << std::endl;
         }
 
         if (roll != exifData.end()) {
@@ -563,9 +564,9 @@ void TTTweaker::check_exif()
             int16_t v = static_cast<int16_t>(u);  // Conversion en signé
             std::string s = std::to_string(v);
             env->setVar(ROOT_EXIF_PREFIX + ":" +"Exif:MakerNote:RollAngle", s);
-            std::cout << "Roll Angle (s) : " << s << std::endl; // la valeur est multipliée par 10
+            if (TT_VERBOSE) std::cout << "Roll Angle (s) : " << s << std::endl; // la valeur est multipliée par 10
         } else {
-            std::cout << "Roll Angle non trouvé !" << std::endl;
+            if (TT_VERBOSE) std::cout << "Roll Angle non trouvé !" << std::endl;
         }
     } catch (Exiv2::Error &e) {
         std::cerr << "Erreur Exiv2 : " << e.what() << std::endl;

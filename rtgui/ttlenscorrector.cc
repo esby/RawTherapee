@@ -17,6 +17,7 @@
  *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "ttlenscorrector.h"
+#include "ttlog.h"
 #include "options.h"
 #include "guiutils.h"
 #include "rtimage.h"
@@ -98,7 +99,7 @@ void TTLensCorrector::react(FakeProcEvent ev)
          int fl;
          if (getFocalLength(fl))
          {
-         printf("%f %i \n", dv, fl);
+         TT_LOG("%f %i \n", dv, fl);
          lensfile << fl << " " << dv << std::endl; // Écrit et ajoute un saut de ligne
          }
        } 
@@ -113,7 +114,7 @@ void TTLensCorrector::react(FakeProcEvent ev)
 //   || (ev == FakeEvProfileChanged))
       if (distortion != nullptr)
       {
-          printf("applying distorsion correction.\n");
+          TT_LOG("applying distorsion correction.\n");
           env->setVar("disableAutoDistortionCorrection",true);
   load_data();
 
@@ -124,19 +125,19 @@ void TTLensCorrector::react(FakeProcEvent ev)
 //  key = std::stoi(d->toString());
   if (!getFocalLength(key))
   {
-    printf("no focal length available, no distortion correction applied\n");
+    TT_LOG("no focal length available, no distortion correction applied\n");
   }
   else
   if (vid.find(key) != vid.end()) 
   {
     double d = vid[key];
-    printf("found %i with %f \n", key, d);
+    TT_LOG("found %i with %f \n", key, d);
     value_not_found=false;
     distortion->setDistorValue(d);
   } 
   else 
   {
-    printf("no value found for %i \n", key);
+    TT_LOG("no value found for %i \n", key);
     value_not_found=true;
   }
 

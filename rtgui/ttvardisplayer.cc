@@ -17,6 +17,7 @@
  *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "ttvardisplayer.h"
+#include "ttlog.h"
 #include "options.h"
 #include "guiutils.h"
 #include "rtimage.h"
@@ -119,7 +120,7 @@ void TTVarDisplayer::react(FakeProcEvent ev)
 		}
 
 		// we feed the new values
-		printf("TTVarDisplayer React \n");
+		TT_LOG("TTVarDisplayer React \n");
 		for (size_t i=0; i<env->countVar(); i++)
 		{
 			RtVariable* d = env->getVariable(i);

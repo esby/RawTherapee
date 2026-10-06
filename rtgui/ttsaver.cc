@@ -17,6 +17,7 @@
  *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "ttsaver.h"
+#include "ttlog.h"
 #include "options.h"
 #include "guiutils.h"
 #include "rtimage.h"
@@ -222,7 +223,7 @@ void TTSaver::themeSplitter(std::ifstream& myfile)
   // must stay disabled until ToolPanelCoordinator::doDeployLate().
   bool previousDisableSwitchPageReaction = env->disableSwitchPageReaction;
   env->disableSwitchPageReaction = true;
-  printf("setting env_state to favorite");
+  TT_LOG("setting env_state to favorite");
   //todo this is wrong, it should be unchanged: either is it set to favorite at start, either to tool if executed from tool
   env->state = ENV_STATE_IN_FAV;
   env->prevState = ENV_STATE_IN_NORM;
@@ -420,8 +421,8 @@ void TTSaver::save_clicked (GdkEventButton* event)
         
         if ( std::find(entries.begin(),entries.end(),fname) == entries.end() )
         {
-          printf("name=[%s]\n",name.c_str());
-          printf("fname=[%s]\n",fname.c_str());
+          TT_LOG("name=[%s]\n",name.c_str());
+          TT_LOG("fname=[%s]\n",fname.c_str());
 
           profilbox->append(name);
           entries.push_back(fname);

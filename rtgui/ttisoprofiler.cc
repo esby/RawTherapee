@@ -17,6 +17,7 @@
  *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "ttisoprofiler.h"
+#include "ttlog.h"
 #include "options.h"
 #include "guiutils.h"
 #include "rtimage.h"
@@ -98,13 +99,13 @@ void TTIsoProfiler::react(FakeProcEvent ev)
    if ((ev == FakeEvExifTransmitted )
    || (ev == FakeEvProfileChanged))
    {
-     printf("TTIsoProfiler::react() \n");
+     TT_LOG("TTIsoProfiler::react() \n");
      if  (getExpander()->getEnabled())
      {
-       printf("expander enabled \n");
+       TT_LOG("expander enabled \n");
        RtVariable *v = env->getVariableByName("Iso");
        if (v == nullptr) {
-         printf("iso rtvariable not available yet \n");
+         TT_LOG("iso rtvariable not available yet \n");
          return;
        }
 
@@ -136,7 +137,7 @@ void TTIsoProfiler::react(FakeProcEvent ev)
          if (options.rtSettings.verbose)
            printf("DEBUG: %s i=%zu listIsos.size()=%zu \n", getToolName().c_str(), i, listIsos.size());
 //         printf("loading profile= %s \n", listPaths[i].c_str());
-         printf("%s: loading profile: %s \n",getToolName().c_str(),listPaths[i].c_str());
+         TT_LOG("%s: loading profile: %s \n",getToolName().c_str(),listPaths[i].c_str());
          load_profile(listPaths[i]);
        }
        }
@@ -151,7 +152,7 @@ void TTIsoProfiler::profileBoxChanged()
    if ((row < 0) || ((size_t)row >= paths.size())) // no selection
      return;
    Glib::ustring path = paths[row];
-   printf("%s preparing to load Filename [%s] - %s",getToolName().c_str(), name.c_str(), + path.c_str());
+   TT_LOG("%s preparing to load Filename [%s] - %s",getToolName().c_str(), name.c_str(), + path.c_str());
    load_profile(path);
    if( options.rtSettings.verbose ) 
      printf("Loaded profile : %s - %s\n", name.c_str(), path.c_str());
@@ -242,7 +243,7 @@ void TTIsoProfiler::parseProfileFolder()
 
 void TTIsoProfiler::load_profile(Glib::ustring path)
 {
-  printf("%s changing profile to %s \n", getToolName().c_str(), path.c_str());
+  TT_LOG("%s changing profile to %s \n", getToolName().c_str(), path.c_str());
   env->getProfilePanel()->changeProfile(path);
 
 }
@@ -420,7 +421,7 @@ void TTIsoProfiler::save_clicked (GdkEventButton* event)
    if (!isNumber(isolimit)) 
      return;
    
-   printf("recording iso= %s name= %s path=%s \n", isolimit.c_str(), name.c_str(), path.c_str());
+   TT_LOG("recording iso= %s name= %s path=%s \n", isolimit.c_str(), name.c_str(), path.c_str());
    save_profile(isolimit, name, path);
    affect_profiles();
  
@@ -437,7 +438,7 @@ Glib::ustring TTIsoProfiler::themeExport()
   for (i=0; i < entryIsos.size(); i++)
      settings = settings +  getToolName() + ":"  + listIsos[i] + ":" +  listNames[i] + ":" + listPaths[i] + "\n";
 
-  printf("Saving ttp format: \n %s \n", settings.c_str());
+  TT_LOG("Saving ttp format: \n %s \n", settings.c_str());
   return settings;  
 
 }

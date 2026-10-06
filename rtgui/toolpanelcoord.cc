@@ -19,6 +19,7 @@
 #include <iostream>
 
 #include "multilangmgr.h"
+#include "ttlog.h"
 #include "toolpanelcoord.h"
 #include "metadatapanel.h"
 #include "options.h"
@@ -316,7 +317,7 @@ ToolPanelCoordinator::ToolPanelCoordinator (bool batch, bool benchmark) :
 
     env =  new Environment(toolPanels, expList);
     isReaction = false;
-    printf("environment created: #%i \n",env->getEnvRef());
+    TT_LOG("environment created: #%i \n",env->getEnvRef());
     if (benchmark)
       env->setVar("benchmark", 1);
 
@@ -600,7 +601,7 @@ for (const auto &panel_tool_layout : getDefaultToolLayout()) {
       env->addVBox(static_cast<ToolVBox*>(vbPanel[i]));
     }
     env->doLog=true;
-    printf(" done.\n");
+    TT_LOG(" done.\n");
 
   //allowing those filters to be extracted from their entity
 
@@ -1108,7 +1109,7 @@ void ToolPanelCoordinator::doDeploy()
 void ToolPanelCoordinator::doDeployLate()
 {
 //    if ( options.rtSettings.verbose )
-      printf("late panel deployment for env=#%i \n", env->getEnvRef());
+      TT_LOG("late panel deployment for env=#%i \n", env->getEnvRef());
     for(auto toolPanel : toolPanels) 
     {   
 //      printf("panel nb=%i \n",  i);
@@ -1657,9 +1658,9 @@ void ToolPanelCoordinator::initImage(rtengine::StagedImageProcessor* ipc_, bool 
         env->setVar("Width", ipc->getFullWidth());
         env->setVar("Height", ipc->getFullHeight());
         // note: we will react later, on pp3 version tranmission
-        printf("partial exif values transmitted by variables \n");
+        TT_LOG("partial exif values transmitted by variables \n");
 
-        printf("transmitting full exif data via rtvar \n");
+        TT_LOG("transmitting full exif data via rtvar \n");
         if (pMetaData->hasExif ()) 
         {
           //todo recuperates exifdata
@@ -1667,7 +1668,7 @@ void ToolPanelCoordinator::initImage(rtengine::StagedImageProcessor* ipc_, bool 
  //         rtexif::TagDirectory* root = pMetaData->getRootExifData() ;
    //       parseDirectory(root,ROOT_EXIF_PREFIX,env);
           transmitExifData(pMetaData->getFileName(), env);
-          printf("full exif values tranmitted by variables \n");
+          TT_LOG("full exif values tranmitted by variables \n");
           doReact(FakeEvFullExifTransmitted);
         }
 
