@@ -562,7 +562,11 @@ Glib::ustring TTSeriesWB::themeExport()
   Glib::ustring s_flash = getToolName() + ":" + "flash_only " + std::string(cbFlashOnly->get_active() ? "1" : "0");
   Glib::ustring s_learn_tint = getToolName() + ":" + "learn_tint " + std::string(cbLearnTint->get_active() ? "1" : "0");
 
-  return s_active + "\n" + s_mired + "\n" + s_green + "\n" + s_flash + "\n" + s_learn_tint + "\n";
+//  return s_active + "\n" + s_mired + "\n" + s_green + "\n" + s_flash + "\n" + s_learn_tint + "\n";
+  // the shift and tint factor are working values (they change with the series), not a layout:
+  // they are kept in the options and on the server, not in the ttp profiles. A profile loaded at
+  // startup reset the learned shift to the value it was saved with.
+  return s_active + "\n" + s_flash + "\n" + s_learn_tint + "\n";
 }
 
 void TTSeriesWB::themeImport(std::ifstream& myfile)
@@ -585,6 +589,8 @@ void TTSeriesWB::themeImport(std::ifstream& myfile)
         {
           if (key == "active")
             getExpander()->setEnabled(value == "1");
+          // ignored: the "mired" and "green" lines of the older profiles must not reset the working values
+/*
           else if (key == "mired")
           {
             adjMired->block(true);
@@ -599,6 +605,7 @@ void TTSeriesWB::themeImport(std::ifstream& myfile)
             adjGreen->setValue(exactGreen);
             adjGreen->block(false);
           }
+*/
           else if (key == "flash_only")
             cbFlashOnly->set_active(value == "1");
           else if (key == "learn_tint")
