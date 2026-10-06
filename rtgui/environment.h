@@ -127,6 +127,9 @@ class Environment {
      Glib::ustring invokeCustomVariable();
 
      void setVar(Glib::ustring name, Glib::ustring value);
+     // empties the variables whose name starts with prefix
+     // (they are not deleted: a tool may still hold a pointer to them)
+     void clearVarsWithPrefix(const Glib::ustring& prefix);
      void setVar(Glib::ustring name, int value);
      void setVar(Glib::ustring name, double value);
      void setVar(Glib::ustring name, bool value);

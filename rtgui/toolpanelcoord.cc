@@ -33,6 +33,7 @@
 #include "../rtengine/refreshmap.h"
 //#include "../rtexif/rtexif.h"
 #include "ttdep.h"
+#include "../rtengine/metadata.h"
 
 using namespace rtengine::procparams;
 
@@ -1560,6 +1561,69 @@ void parseDirectory(rtexif::TagDirectory* d, Glib::ustring prefix, Environment* 
    }
 }*/
 
+// rtexif was removed upstream, the exif data is now read through Exiv2.
+// the variable names follow the old rtexif tree, so the existing names keep working:
+//   Exif.Image.Make            -> Make
+//   Exif.Photo.ExposureTime    -> Exif:ExposureTime
+//   Exif.<maker group>.Tag     -> Exif:MakerNote:Tag   (ex: Exif.Panasonic.RollAngle)
+//   Exif.Iop.Tag               -> Exif:Interoperability:Tag
+//   Exif.<other group>.Tag     -> <other group>:Tag    (ex: GPSInfo:GPSLatitude)
+static Glib::ustring exifVariableName(const Exiv2::Exifdatum& datum)
+{
+    const std::string group = datum.groupName();
+    const std::string tag = datum.tagName();
+
+    if (group == "Image")
+        return tag;
+    if (group == "Photo")
+        return "Exif:" + tag;
+    if (group == "Iop")
+        return "Exif:Interoperability:" + tag;
+    if (Exiv2::ExifTags::isMakerGroup(group))
+        return "Exif:MakerNote:" + tag;
+    return group + ":" + tag;
+}
+
+static void transmitExifData(const Glib::ustring& fname, Environment* env)
+{
+    // values of the previous image must not stay visible
+    env->clearVarsWithPrefix(ROOT_EXIF_PREFIX + ":");
+
+    try
+    {
+        rtengine::Exiv2Metadata meta(fname);
+        meta.load();
+        const Exiv2::ExifData& exifData = meta.exifData();
+        int count = 0;
+
+        for (const auto& datum : exifData)
+        {
+            if (datum.size() > 512) // binary blobs (thumbnails, unknown makernote data...)
+                continue;
+
+            // offsets to the sub-directories, they were not part of the rtexif tree
+            const std::string tag = datum.tagName();
+            if ((tag == "ExifTag") || (tag == "GPSTag") || (tag == "InteroperabilityTag"))
+                continue;
+
+            // print() gives the interpreted value, as rtexif valueToString() did
+            Glib::ustring value(datum.print(&exifData));
+            if (!value.validate()) // not valid utf-8, it could not be displayed
+                continue;
+
+            env->setVar(ROOT_EXIF_PREFIX + ":" + exifVariableName(datum), value);
+            count++;
+        }
+
+        if (options.rtSettings.verbose)
+            printf("%i exif values transmitted by variables\n", count);
+    }
+    catch (const std::exception& e) // Exiv2::Error derives from std::exception
+    {
+        printf("unable to transmit the exif data of %s: %s\n", fname.c_str(), e.what());
+    }
+}
+
 void ToolPanelCoordinator::initImage(rtengine::StagedImageProcessor* ipc_, bool raw)
 {
 
@@ -1597,6 +1661,7 @@ void ToolPanelCoordinator::initImage(rtengine::StagedImageProcessor* ipc_, bool 
           // Exiv2::ExifData exifdata = image_->exifData();
  //         rtexif::TagDirectory* root = pMetaData->getRootExifData() ;
    //       parseDirectory(root,ROOT_EXIF_PREFIX,env);
+          transmitExifData(pMetaData->getFileName(), env);
           printf("full exif values tranmitted by variables \n");
           doReact(FakeEvFullExifTransmitted);
         }

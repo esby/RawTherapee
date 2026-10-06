@@ -182,6 +182,16 @@ Glib::ustring Environment::invokeCustomVariable()
 }
 
 
+void Environment::clearVarsWithPrefix(const Glib::ustring& prefix)
+{
+  for (size_t i=0; i<varList.size(); i++)
+  {
+    RtVariable* v = varList[i];
+    if ((v != nullptr) && (v->getName().compare(0, prefix.length(), prefix) == 0))
+      v->setAsString("");
+  }
+}
+
 void Environment::setVar(Glib::ustring name, Glib::ustring value)
 { 
   RtVariable* d = nullptr;
