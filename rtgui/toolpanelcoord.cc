@@ -612,12 +612,14 @@ for (const auto &panel_tool_layout : getDefaultToolLayout()) {
     box->setPrevBox(transformPanel);
     env->addVBox(box);
 
-    toiF = Gtk::manage (new TextOrIcon ("star", M ("MAIN_TAB_FAVORITES"), M ("MAIN_TAB_FAVORITES_TOOLTIP")));
+    // the favorite tab label is created below (favorite icon, Alt-f shortcut)
+//    toiF = Gtk::manage (new TextOrIcon ("star", M ("MAIN_TAB_FAVORITES"), M ("MAIN_TAB_FAVORITES_TOOLTIP")));
     toiE = Gtk::manage (new TextOrIcon ("exposure", M ("MAIN_TAB_EXPOSURE"), M ("MAIN_TAB_EXPOSURE_TOOLTIP")));
     toiD = Gtk::manage (new TextOrIcon ("detail", M ("MAIN_TAB_DETAIL"), M ("MAIN_TAB_DETAIL_TOOLTIP")));
     toiC = Gtk::manage (new TextOrIcon ("color-circles", M ("MAIN_TAB_COLOR"), M ("MAIN_TAB_COLOR_TOOLTIP")));
     toiW = Gtk::manage (new TextOrIcon ("atom", M ("MAIN_TAB_ADVANCED"), M ("MAIN_TAB_ADVANCED_TOOLTIP")));
-    toiL = Gtk::manage (new TextOrIcon ("hand-open", M("MAIN_TAB_LOCALLAB"), M("MAIN_TAB_LOCALLAB_TOOLTIP")));
+//    toiL = Gtk::manage (new TextOrIcon ("hand-open", M("MAIN_TAB_LOCALLAB"), M("MAIN_TAB_LOCALLAB_TOOLTIP")));
+    toiL = Gtk::manage (new TextOrIcon ("rt-spot", M("MAIN_TAB_LOCALLAB"), M("MAIN_TAB_LOCALLAB_TOOLTIP"))); // upstream icon
     toiT = Gtk::manage (new TextOrIcon ("transform", M ("MAIN_TAB_TRANSFORM"), M ("MAIN_TAB_TRANSFORM_TOOLTIP")));
     toiR = Gtk::manage (new TextOrIcon ("bayer", M ("MAIN_TAB_RAW"), M ("MAIN_TAB_RAW_TOOLTIP")));
     toiM = Gtk::manage (new TextOrIcon ("metadata", M ("MAIN_TAB_METADATA"), M ("MAIN_TAB_METADATA_TOOLTIP")));
