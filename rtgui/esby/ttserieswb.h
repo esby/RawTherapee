@@ -56,6 +56,11 @@ protected:
 
     WhiteBalance* whitebalance;
 
+    // exact values of the shift and tint factor: the adjusters round their value to their
+    // precision, they only show these values (moving an adjuster sets them to its value)
+    double exactMired;
+    double exactGreen;
+
     // white balance applied by this tool, per file (session only, the server will keep it later)
     std::map<Glib::ustring, std::pair<int, double>> applied;
 

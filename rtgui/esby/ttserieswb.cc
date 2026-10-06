@@ -142,6 +142,9 @@ TTSeriesWB::TTSeriesWB() : FoldableToolPanel(this, "TTSeriesWB", M("TT_SERIESWB_
   cbFlashOnly->signal_toggled().connect([this]() { saveSettings(); });
   cbLearnTint->signal_toggled().connect([this]() { saveSettings(); });
 
+  exactMired = 0.0;
+  exactGreen = 1.0;
+
   // the values of the last session; a ttp profile loaded afterwards has the priority
   loading = false;
   loadSettings();
@@ -224,6 +227,8 @@ void TTSeriesWB::requestForCurrentImage()
     loading = true;
     adjMired->block(true);
     adjGreen->block(true);
+    exactMired = rule.mired;
+    exactGreen = rule.green;
     adjMired->setValue(rule.mired);
     adjGreen->setValue(rule.green);
     adjMired->block(false);
@@ -250,7 +255,7 @@ void TTSeriesWB::setFolderValue(bool parent)
     return;
   if (parent)
     folder = Glib::path_get_dirname(folder);
-  client->set(folder, adjMired->getValue(), adjGreen->getValue(), cbFlashOnly->get_active(),
+  client->set(folder, exactMired, exactGreen, cbFlashOnly->get_active(),
     [this, folder](bool ok, const Glib::ustring&) {
       setInfo(Glib::ustring::compose(M(ok ? "TT_SERIESWB_SET_DONE" : "TT_SERIESWB_SERVER_ERROR"), folder));
     });
@@ -272,6 +277,8 @@ void TTSeriesWB::loadSettings()
   const EsbySettings& s = esbySettings();
   adjMired->block(true);
   adjGreen->block(true);
+  exactMired = s.SeriesWBMired;
+  exactGreen = s.SeriesWBGreen;
   adjMired->setValue(s.SeriesWBMired);
   adjGreen->setValue(s.SeriesWBGreen);
   adjMired->block(false);
@@ -289,8 +296,8 @@ void TTSeriesWB::saveSettings()
     return;
   EsbySettings& s = esbySettings();
   s.SeriesWBEnabled = getExpander()->getEnabled();
-  s.SeriesWBMired = adjMired->getValue();
-  s.SeriesWBGreen = adjGreen->getValue();
+  s.SeriesWBMired = exactMired;
+  s.SeriesWBGreen = exactGreen;
   s.SeriesWBFlashOnly = cbFlashOnly->get_active();
   s.SeriesWBLearnTint = cbLearnTint->get_active();
 }
@@ -363,20 +370,24 @@ bool TTSeriesWB::getCameraWB(const WBParams& wb, double& temp, double& green)
 
 void TTSeriesWB::computeTarget(double camTemp, double camGreen, int& temp, double& green)
 {
-  double mired = 1000000.0 / camTemp + adjMired->getValue();
+  double mired = 1000000.0 / camTemp + exactMired;
   double t = (mired > 0.0) ? 1000000.0 / mired : SERIESWB_MAXTEMP;
   temp = (int) std::lround(std::max<double>(SERIESWB_MINTEMP, std::min<double>(SERIESWB_MAXTEMP, t)));
-  green = std::max(SERIESWB_MINGREEN, std::min(SERIESWB_MAXGREEN, camGreen * adjGreen->getValue()));
+  green = std::max(SERIESWB_MINGREEN, std::min(SERIESWB_MAXGREEN, camGreen * exactGreen));
 }
 
-// compared in mireds: the rounding of the shift (0.1 mired) and of the temperature (1 K) must not
-// make an image, for instance the reference of a learned shift, look different from its series
+// the rounding of RawTherapee must not make an image, for instance the reference of a learned
+// shift, look different from its series
 bool TTSeriesWB::sameWB(int t1, double g1, int t2, double g2)
 {
 //  return (std::abs(t1 - t2) <= 1) && (std::fabs(g1 - g2) <= 0.001);
   if ((t1 <= 0) || (t2 <= 0) || (g2 <= 0.0))
     return false;
-  return (std::fabs(1000000.0 / t1 - 1000000.0 / t2) <= 0.15) && (std::fabs(g1 / g2 - 1.0) <= 0.002);
+//  return (std::fabs(1000000.0 / t1 - 1000000.0 / t2) <= 0.15) && (std::fabs(g1 / g2 - 1.0) <= 0.002);
+  // the exact shift is kept: only the rounding of RawTherapee remains, the temperature in integer
+  // kelvins (1 K covers it at any temperature, a tolerance in mireds does not at low temperatures)
+  // and the tint shown with 3 decimals
+  return (std::abs(t1 - t2) <= 1) && (std::fabs(g1 / g2 - 1.0) <= 0.001);
 }
 
 void TTSeriesWB::setInfo(const Glib::ustring& text)
@@ -446,7 +457,7 @@ void TTSeriesWB::applyToCurrentImage(bool force, const EsbyWBFileState* serverSt
   }
   setInfo(Glib::ustring::compose(M("TT_SERIESWB_APPLIED"),
                                  (int) std::lround(camTemp), temp,
-                                 Glib::ustring::format(std::fixed, std::setprecision(1), adjMired->getValue()))
+                                 Glib::ustring::format(std::fixed, std::setprecision(1), exactMired))
           + (origin.empty() ? Glib::ustring() : "\n" + origin));
 }
 
@@ -477,8 +488,9 @@ void TTSeriesWB::learnFromCurrentImage()
 
   // rounded to the precision of the adjusters: the tool, the server and the reference image use the
   // same value (the reference keeps its white balance, see sameWB)
-  mired = std::round(mired * 10.0) / 10.0;
-  green = std::round(green * 1000.0) / 1000.0;
+//  mired = std::round(mired * 10.0) / 10.0;
+//  green = std::round(green * 1000.0) / 1000.0;
+  // no rounding anymore: the exact values are kept (exactMired, exactGreen), the adjusters show them
 
   // the values of the current and camera white balances are shown, so the result can be checked
   Glib::ustring values = Glib::ustring::compose(M("TT_SERIESWB_VALUES"),
@@ -500,6 +512,8 @@ void TTSeriesWB::learnFromCurrentImage()
   // the adjusters are set without re-applying: the current image already has this white balance
   adjMired->block(true);
   adjGreen->block(true);
+  exactMired = mired;
+  exactGreen = green;
   adjMired->setValue(mired);
   adjGreen->setValue(green);
   adjMired->block(false);
@@ -520,6 +534,11 @@ void TTSeriesWB::learnFromCurrentImage()
 
 void TTSeriesWB::adjusterChanged(Adjuster* a, double newval)
 {
+  // a value chosen with the adjuster: its rounding is wanted
+  if (a == adjMired)
+    exactMired = adjMired->getValue();
+  else if (a == adjGreen)
+    exactGreen = adjGreen->getValue();
   saveSettings();
   // with the server, the change is a preview until it is sent with "set for this folder"
   modified = client && client->isConnected();
@@ -538,8 +557,8 @@ void TTSeriesWB::react(FakeProcEvent ev)
 Glib::ustring TTSeriesWB::themeExport()
 {
   Glib::ustring s_active = getToolName() + ":" + "active " + std::string(getExpander()->getEnabled() ? "1" : "0");
-  Glib::ustring s_mired = getToolName() + ":" + "mired " + Glib::Ascii::dtostr(adjMired->getValue());
-  Glib::ustring s_green = getToolName() + ":" + "green " + Glib::Ascii::dtostr(adjGreen->getValue());
+  Glib::ustring s_mired = getToolName() + ":" + "mired " + Glib::Ascii::dtostr(exactMired);
+  Glib::ustring s_green = getToolName() + ":" + "green " + Glib::Ascii::dtostr(exactGreen);
   Glib::ustring s_flash = getToolName() + ":" + "flash_only " + std::string(cbFlashOnly->get_active() ? "1" : "0");
   Glib::ustring s_learn_tint = getToolName() + ":" + "learn_tint " + std::string(cbLearnTint->get_active() ? "1" : "0");
 
@@ -569,13 +588,15 @@ void TTSeriesWB::themeImport(std::ifstream& myfile)
           else if (key == "mired")
           {
             adjMired->block(true);
-            adjMired->setValue(Glib::Ascii::strtod(value));
+            exactMired = Glib::Ascii::strtod(value);
+            adjMired->setValue(exactMired);
             adjMired->block(false);
           }
           else if (key == "green")
           {
             adjGreen->block(true);
-            adjGreen->setValue(Glib::Ascii::strtod(value));
+            exactGreen = Glib::Ascii::strtod(value);
+            adjGreen->setValue(exactGreen);
             adjGreen->block(false);
           }
           else if (key == "flash_only")
