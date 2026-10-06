@@ -19,6 +19,9 @@
 #include "movabletoolpanel.h"
 #include "toolpanelcoord.h"
 
+// upper bound when walking the ring of boxes (avoids an endless loop)
+#define NB_PANEL_MAX_RING 32
+
 
 using namespace rtengine::procparams;
 
@@ -209,9 +212,27 @@ void MovableToolPanel::updatePositionsAfterSwap(MovableToolPanel* other, int pos
   }
 }
 
+// returns the first box of the ring, starting from start, whose tab is displayed:
+// a tab hidden by the tab hider cannot be selected, and the moved panel would not be visible anymore.
+ToolVBox* MovableToolPanel::findDisplayedBox(ToolVBox* start, bool forward)
+{
+  ToolVBox* b = start;
+  for (int i = 0; (i < NB_PANEL_MAX_RING) && (b != nullptr); i++)
+  {
+    Gtk::Container* sw = b->getParentSW();
+    if ((sw != nullptr) && sw->get_visible())
+      return b;
+    b = (ToolVBox*) (forward ? b->getNextBox() : b->getPrevBox());
+  }
+  return nullptr;
+}
+
 void MovableToolPanel::moveLeft() {
   ToolVBox* box =  originalBox;
-  ToolVBox* nbox = (ToolVBox*) originalBox->getPrevBox();
+//  ToolVBox* nbox = (ToolVBox*) originalBox->getPrevBox();
+  ToolVBox* nbox = findDisplayedBox((ToolVBox*) originalBox->getPrevBox(), false);
+  if ((nbox == nullptr) || (nbox == box)) // every other tab is hidden
+    return;
 
   if (env->state == ENV_STATE_IN_NORM)
   {
@@ -256,7 +277,10 @@ void MovableToolPanel::moveLeft() {
 
 void MovableToolPanel::moveRight() {
   ToolVBox* box =  originalBox;
-  ToolVBox* nbox = (ToolVBox*) originalBox->getNextBox();
+//  ToolVBox* nbox = (ToolVBox*) originalBox->getNextBox();
+  ToolVBox* nbox = findDisplayedBox((ToolVBox*) originalBox->getNextBox(), true);
+  if ((nbox == nullptr) || (nbox == box)) // every other tab is hidden
+    return;
 
   if (env->state == ENV_STATE_IN_NORM)
   {
