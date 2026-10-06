@@ -42,6 +42,7 @@ protected:
     Gtk::Button* btApply;
     Gtk::Button* btLearn;
     Gtk::Label* lbInfo;
+    Gtk::EventBox* ebInfo; // clicking on the status line copies it to the clipboard
 
     WhiteBalance* whitebalance;
 

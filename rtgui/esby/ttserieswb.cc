@@ -91,7 +91,27 @@ TTSeriesWB::TTSeriesWB() : FoldableToolPanel(this, "TTSeriesWB", M("TT_SERIESWB_
   lbInfo = Gtk::manage(new Gtk::Label(""));
   lbInfo->set_line_wrap(true);
   lbInfo->set_xalign(0.0);
-  pack_start(*lbInfo, Gtk::PACK_SHRINK, 0);
+//  pack_start(*lbInfo, Gtk::PACK_SHRINK, 0);
+
+  // a label does not receive the clicks: it is put in an event box
+  ebInfo = Gtk::manage(new Gtk::EventBox());
+  ebInfo->add(*lbInfo);
+  ebInfo->set_tooltip_text(M("TT_SERIESWB_COPY_TOOLTIP"));
+  ebInfo->add_events(Gdk::BUTTON_PRESS_MASK);
+  ebInfo->signal_button_press_event().connect([this](GdkEventButton* event) {
+    if ((event->type == GDK_BUTTON_PRESS) && (event->button == 1) && !lbInfo->get_text().empty())
+    {
+      Gtk::Clipboard::get()->set_text(lbInfo->get_text());
+      TT_LOG("TTSeriesWB: status line copied to the clipboard\n");
+    }
+    return true;
+  });
+  ebInfo->signal_realize().connect([this]() {
+    Glib::RefPtr<Gdk::Window> window = ebInfo->get_window();
+    if (window)
+      window->set_cursor(Gdk::Cursor::create(ebInfo->get_display(), "pointer"));
+  });
+  pack_start(*ebInfo, Gtk::PACK_SHRINK, 0);
 
   btApply->signal_clicked().connect([this]() { applyToCurrentImage(true); });
   btLearn->signal_clicked().connect([this]() { learnFromCurrentImage(); });

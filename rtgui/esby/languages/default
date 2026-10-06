@@ -67,6 +67,7 @@ TT_SAVER_AUTOLOAD_SETTINGS;Load this profile at startup
 TT_SERIESWB_APPLIED;Camera %1 K, series %2 K (%3 mireds).
 TT_SERIESWB_APPLY;Apply to this image
 TT_SERIESWB_APPLY_TOOLTIP;Applies the series white balance to the current image, even if its white balance was changed by hand or if no flash was fired.
+TT_SERIESWB_COPY_TOOLTIP;Click to copy this text to the clipboard.
 TT_SERIESWB_FLASH_ONLY;Only for the photos taken with a flash
 TT_SERIESWB_GREEN;Tint factor
 TT_SERIESWB_GREEN_TOOLTIP;Factor applied to the tint of the camera white balance.
