@@ -89,6 +89,9 @@ protected:
     static bool isBelow(const Glib::ustring& path, const Glib::ustring& folder);
     void learnFromCurrentImage();
     void setInfo(const Glib::ustring& text);
+    // status line, always the same structure: what happened, the series values, the image and camera values
+    void setStatus(const Glib::ustring& action, const rtengine::procparams::WBParams& wb, double camTemp, double camGreen,
+                   const Glib::ustring& origin = Glib::ustring());
     void loadSettings();
     void saveSettings();
     bool loading;

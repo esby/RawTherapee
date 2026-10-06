@@ -64,7 +64,8 @@ TT_LABELPICKER_PANEL_ALWAYS;Title color of the tools that are always active.
 TT_LABELPICKER_PANEL_CLICKED;Title color of the enabled tools.
 TT_LABELPICKER_TRASH;Color of the checked trash button.
 TT_SAVER_AUTOLOAD_SETTINGS;Load this profile at startup
-TT_SERIESWB_APPLIED;Camera %1 K, series %2 K (%3 mireds).
+TT_SERIESWB_ALREADY;The image already has the series white balance.
+TT_SERIESWB_APPLIED;Series white balance applied.
 TT_SERIESWB_APPLY;Apply to this image
 TT_SERIESWB_APPLY_TOOLTIP;Applies the series white balance to the current image, even if its white balance was changed by hand or if no flash was fired.
 TT_SERIESWB_COPY_TOOLTIP;Click to copy this text to the clipboard.
@@ -75,11 +76,11 @@ TT_SERIESWB_GREEN;Tint factor
 TT_SERIESWB_GREEN_TOOLTIP;Factor applied to the tint of the camera white balance.
 TT_SERIESWB_LABEL;Series White Balance
 TT_SERIESWB_LEARN;Learn from this image
-TT_SERIESWB_LEARNED;Shift learned: %1 mireds, tint factor %2, blue/red factor %3.
+TT_SERIESWB_LEARNED;Shift learned from this image.
 TT_SERIESWB_LEARNED_LOCAL;Server unavailable: kept in the tool, not sent.
 TT_SERIESWB_LEARN_TINT;Learn the tint and the blue/red equalizer too
 TT_SERIESWB_LEARN_TOOLTIP;Sets the shift from the white balance of the current image, compared to the camera white balance. With the server, it becomes the value of the folder of the image.
-TT_SERIESWB_MANUAL;White balance changed by hand (%1 K): left untouched.
+TT_SERIESWB_MANUAL;White balance changed by hand: left untouched.
 TT_SERIESWB_MIRED;Shift (mireds)
 TT_SERIESWB_MIRED_TOOLTIP;Shift applied to the camera white balance, in mireds (1000000 / kelvins). A positive value lowers the temperature, for a cooler rendering.
 TT_SERIESWB_MODIFIED;Value changed in the tool, not sent to the server.
@@ -95,6 +96,7 @@ TT_SERIESWB_SET_FOLDER;Set for this folder
 TT_SERIESWB_SET_FOLDER_TOOLTIP;Sends the values of the tool to the server, for the folder of the image. The folders below inherit them.
 TT_SERIESWB_SET_PARENT;Set for the parent folder
 TT_SERIESWB_SET_PARENT_TOOLTIP;Sends the values of the tool to the server, for the parent folder (ex: the folder of a whole convention).
+TT_SERIESWB_SHIFT;Series: shift %1 mireds, tint factor %2, blue/red factor %3.
 TT_SERIESWB_SOURCE;Value of %1.
 TT_SERIESWB_SOURCE_DEFAULT;Default value (no folder declares one).
 TT_SERIESWB_SOURCE_TOOL;Values of the tool (no folder declares one).

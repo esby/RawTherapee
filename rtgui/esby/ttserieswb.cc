@@ -418,6 +418,22 @@ bool TTSeriesWB::sameWB(int t1, double g1, double e1, int t2, double g2, double 
   return (std::abs(t1 - t2) <= 1) && (std::fabs(g1 / g2 - 1.0) <= 0.001) && (std::fabs(e1 / e2 - 1.0) <= 0.001);
 }
 
+void TTSeriesWB::setStatus(const Glib::ustring& action, const WBParams& wb, double camTemp, double camGreen,
+                           const Glib::ustring& origin)
+{
+  Glib::ustring series = Glib::ustring::compose(M("TT_SERIESWB_SHIFT"),
+                                                Glib::ustring::format(std::fixed, std::setprecision(1), exactMired),
+                                                Glib::ustring::format(std::fixed, std::setprecision(3), exactGreen),
+                                                Glib::ustring::format(std::fixed, std::setprecision(3), exactEqual));
+  Glib::ustring values = Glib::ustring::compose(M("TT_SERIESWB_VALUES"),
+                                                wb.temperature, Glib::ustring::format(std::fixed, std::setprecision(3), wb.green),
+                                                (int) std::lround(camTemp), Glib::ustring::format(std::fixed, std::setprecision(3), camGreen),
+                                                wb.method,
+                                                (wb.observer == rtengine::StandardObserver::TEN_DEGREES) ? "10" : "2",
+                                                Glib::ustring::format(std::fixed, std::setprecision(3), wb.equal));
+  setInfo(action + "\n" + series + "\n" + values + (origin.empty() ? Glib::ustring() : "\n" + origin));
+}
+
 void TTSeriesWB::setInfo(const Glib::ustring& text)
 {
   lbInfo->set_text(text);
@@ -464,7 +480,7 @@ void TTSeriesWB::applyToCurrentImage(bool force, const EsbyWBFileState* serverSt
 
   if (!force && cbFlashOnly->get_active() && !flashFired())
   {
-    setInfo(M("TT_SERIESWB_NO_FLASH"));
+    setStatus(M("TT_SERIESWB_NO_FLASH"), wb, camTemp, camGreen);
     return;
   }
 
@@ -483,11 +499,13 @@ void TTSeriesWB::applyToCurrentImage(bool force, const EsbyWBFileState* serverSt
 
   if (!wb.enabled || !follows)
   {
-    setInfo(Glib::ustring::compose(M("TT_SERIESWB_MANUAL"), wb.temperature));
+    setStatus(M("TT_SERIESWB_MANUAL"), wb, camTemp, camGreen);
     return;
   }
 
-  if (!((wb.method == "Custom") && sameWB(wb.temperature, wb.green, wb.equal, temp, green, equal)))
+  // the action says whether the image was changed now or already had the series white balance
+  bool alreadyApplied = (wb.method == "Custom") && sameWB(wb.temperature, wb.green, wb.equal, temp, green, equal);
+  if (!alreadyApplied)
     setWhiteBalance(temp, green, equal);
 
   applied[file] = AppliedWB{temp, green, equal};
@@ -499,10 +517,19 @@ void TTSeriesWB::applyToCurrentImage(bool force, const EsbyWBFileState* serverSt
            : currentSource.empty() ? M("TT_SERIESWB_SOURCE_TOOL")
            : Glib::ustring::compose(M("TT_SERIESWB_SOURCE"), currentSource);
   }
-  setInfo(Glib::ustring::compose(M("TT_SERIESWB_APPLIED"),
-                                 (int) std::lround(camTemp), temp,
-                                 Glib::ustring::format(std::fixed, std::setprecision(1), exactMired))
-          + (origin.empty() ? Glib::ustring() : "\n" + origin));
+//  setInfo(Glib::ustring::compose(M("TT_SERIESWB_APPLIED"),
+//                                 (int) std::lround(camTemp), temp,
+//                                 Glib::ustring::format(std::fixed, std::setprecision(1), exactMired))
+//          + (origin.empty() ? Glib::ustring() : "\n" + origin));
+  if (!alreadyApplied)
+  {
+    // the values of the image after the change
+    wb.method = "Custom";
+    wb.temperature = temp;
+    wb.green = green;
+    wb.equal = equal;
+  }
+  setStatus(M(alreadyApplied ? "TT_SERIESWB_ALREADY" : "TT_SERIESWB_APPLIED"), wb, camTemp, camGreen, origin);
 }
 
 // mired = mired(current white balance) - mired(camera); green = current green / camera green
@@ -588,21 +615,11 @@ void TTSeriesWB::learnFromCurrentImage()
     client->set(folder, mired, green, equal, cbFlashOnly->get_active(), nullptr);
     client->applied(realPath(file), wb.temperature, wb.green, wb.equal, folder);
     currentSource = folder;
-    setInfo(Glib::ustring::compose(M("TT_SERIESWB_LEARNED"),
-                                   Glib::ustring::format(std::fixed, std::setprecision(1), mired),
-                                   Glib::ustring::format(std::fixed, std::setprecision(3), green),
-                                   Glib::ustring::format(std::fixed, std::setprecision(3), equal))
-            + "\n" + Glib::ustring::compose(M("TT_SERIESWB_SET_DONE"), folder)
-            + "\n" + values);
+    setStatus(M("TT_SERIESWB_LEARNED"), wb, camTemp, camGreen, Glib::ustring::compose(M("TT_SERIESWB_SET_DONE"), folder));
     return;
   }
 
-  setInfo(Glib::ustring::compose(M("TT_SERIESWB_LEARNED"),
-                                 Glib::ustring::format(std::fixed, std::setprecision(1), mired),
-                                 Glib::ustring::format(std::fixed, std::setprecision(3), green),
-                                 Glib::ustring::format(std::fixed, std::setprecision(3), equal))
-          + "\n" + M("TT_SERIESWB_LEARNED_LOCAL")
-          + "\n" + values);
+  setStatus(M("TT_SERIESWB_LEARNED"), wb, camTemp, camGreen, M("TT_SERIESWB_LEARNED_LOCAL"));
 }
 
 void TTSeriesWB::adjusterChanged(Adjuster* a, double newval)
