@@ -20,6 +20,10 @@ set(ESBYSOURCEFILES
 
 list(APPEND NONCLISOURCEFILES ${ESBYSOURCEFILES})
 
+# the esby options are a member of Options (options.cc), which is also part of the CLI executable
+list(APPEND CLISOURCEFILES esby/esbysettings.cc)
+list(APPEND NONCLISOURCEFILES esby/esbysettings.cc)
+
 # the existing #include directives are kept unchanged:
 # - upstream files include the esby headers by name (ex: "movabletoolpanel.h"),
 # - esby files include the rtgui headers by name (ex: "toolpanel.h") or with "../rtengine/...".

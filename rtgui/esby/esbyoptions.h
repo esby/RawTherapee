@@ -27,3 +27,9 @@ inline Options& esbyOptions()
 {
     return options;
 }
+
+// options of the esby fork (EsbySettings, stored in the [TTP] group), member of Options
+inline EsbySettings& esbySettings()
+{
+    return esbyOptions().esby;
+}

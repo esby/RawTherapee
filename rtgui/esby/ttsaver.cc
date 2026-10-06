@@ -77,7 +77,7 @@ TTSaver::TTSaver () : FoldableToolPanel(this,"ttsaver",M("TP_SAVER_LABEL"),false
 
        parseProfileFolder();
 
-       cbAutoloadSettings->set_active(esbyOptions().TTPAutoload);
+       cbAutoloadSettings->set_active(esbySettings().TTPAutoload);
        buttonSave->signal_button_release_event().connect_notify( sigc::mem_fun(*this, &TTSaver::save_clicked) );
        cbAutoloadSettings->signal_button_release_event().connect_notify( sigc::mem_fun(*this, &TTSaver::autoload_clicked) );
        profilbox->signal_changed ().connect (sigc::mem_fun (*this, &TTSaver::profileBoxChanged));
@@ -92,9 +92,9 @@ TTSaver::~TTSaver()
 void TTSaver::deploy()
 {
 //   printf("DEBUG: TTSaver::deploy\n");
-  if (esbyOptions().TTPAutoload)
+  if (esbySettings().TTPAutoload)
   {
-    auto it = std::find(entries.begin(), entries.end(), esbyOptions().TTPAutoloadValue ) ;
+    auto it = std::find(entries.begin(), entries.end(), esbySettings().TTPAutoloadValue ) ;
     if (it != entries.end())
     {
       int index= std::distance(entries.begin(), it);
@@ -351,14 +351,14 @@ void TTSaver::autoload_clicked (GdkEventButton* event)
   }
 
   //the call happends before the value is changed, so we use a not
-  esbyOptions().TTPAutoload = not cbAutoloadSettings->get_active();
+  esbySettings().TTPAutoload = not cbAutoloadSettings->get_active();
 
-  if (!esbyOptions().TTPAutoload)
+  if (!esbySettings().TTPAutoload)
   {
     fname = "";
   }
 
-  esbyOptions().TTPAutoloadValue =  fname;
+  esbySettings().TTPAutoloadValue =  fname;
   enAutoloadSettingsLine->set_text(fname);
   esbyOptions().save();
 }

@@ -30,6 +30,7 @@
 #include <gtkmm/enums.h>
 #endif
 #include "../rtengine/settings.h"
+#include "esby/esbysettings.h" // esby-hook (relative path: options.h is also included by rtengine)
 #include <exception>
 
 #define STARTUPDIR_CURRENT 0
@@ -228,8 +229,6 @@ public:
     bool browserDirPanelOpened;
     bool editorFilmStripOpened;
     int historyPanelWidth;
-    Glib::ustring font;
-    Glib::ustring colorPickerFont;
     int windowX;
     int windowY;
     int windowWidth;
@@ -297,24 +296,7 @@ public:
     int externalEditorIndex;
     Glib::ustring CPBPath; // Custom Profile Builder's path
     CPBKeyType CPBKeys; // Custom Profile Builder's key type
-
-    bool TTPAutoload;  // to load the ttp profiles ot not by default
-    Glib::ustring TTPAutoloadValue; // the profile to load
-    bool TTPHideFavorite;
-    bool TTPHideExposure;
-    bool TTPHideDetails;
-    bool TTPHideColor;
-    bool TTPHideAdvanced;
-    bool TTPHideLocal;
-    bool TTPHideTransform;
-    bool TTPHideRaw;
-    bool TTPHideMetadata;
-    bool TTPHideUseful;
-    bool TTPHideTrash;
-
-    bool hideFavorite;
-    bool hideTrash;  
-    bool hideUseful;
+    EsbySettings esby; // esby-hook: options of the esby fork ([TTP] group)
     int editorToSendTo;
     enum EditorOutDir {
         EDITOR_OUT_DIR_TEMP,
@@ -577,5 +559,3 @@ extern bool gimpPlugin;
 extern bool remote;
 extern Glib::ustring versionString;
 extern Glib::ustring paramFileExtension;
-extern Glib::ustring paramFileGuiExtension;
-

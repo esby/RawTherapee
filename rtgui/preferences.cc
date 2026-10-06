@@ -2210,17 +2210,17 @@ void Preferences::storePreferences()
     moptions.thumbnailRankColorMode = thumbnailRankColorMode->get_active() ? Options::ThumbnailPropertyMode::XMP : Options::ThumbnailPropertyMode::PROCPARAMS;
 
    //todo define TTP code here.
-     moptions.TTPHideFavorite =  cbHideFavorite->get_active ();
-     moptions.TTPHideExposure =  cbHideExposure->get_active ();
-     moptions.TTPHideDetails =  cbHideDetails->get_active ();
-     moptions.TTPHideColor =  cbHideColor->get_active ();
-     moptions.TTPHideAdvanced =  cbHideAdvanced->get_active ();
-     moptions.TTPHideLocal =  cbHideLocal->get_active ();
-     moptions.TTPHideTransform =  cbHideTransform->get_active ();
-     moptions.TTPHideRaw =  cbHideRaw->get_active ();
-     moptions.TTPHideMetadata =  cbHideMetadata->get_active ();
-     moptions.TTPHideUseful =  cbHideUseful->get_active ();
-     moptions.TTPHideTrash =  cbHideTrash->get_active ();
+     moptions.esby.TTPHideFavorite =  cbHideFavorite->get_active ();
+     moptions.esby.TTPHideExposure =  cbHideExposure->get_active ();
+     moptions.esby.TTPHideDetails =  cbHideDetails->get_active ();
+     moptions.esby.TTPHideColor =  cbHideColor->get_active ();
+     moptions.esby.TTPHideAdvanced =  cbHideAdvanced->get_active ();
+     moptions.esby.TTPHideLocal =  cbHideLocal->get_active ();
+     moptions.esby.TTPHideTransform =  cbHideTransform->get_active ();
+     moptions.esby.TTPHideRaw =  cbHideRaw->get_active ();
+     moptions.esby.TTPHideMetadata =  cbHideMetadata->get_active ();
+     moptions.esby.TTPHideUseful =  cbHideUseful->get_active ();
+     moptions.esby.TTPHideTrash =  cbHideTrash->get_active ();
 }
 
 void Preferences::fillPreferences()
@@ -2486,16 +2486,16 @@ void Preferences::fillPreferences()
     thumbnailRankColorMode->set_active(moptions.thumbnailRankColorMode == Options::ThumbnailPropertyMode::XMP);
 
    //todo define TTP code
-    cbHideFavorite->set_active (moptions.TTPHideFavorite);
-    cbHideExposure->set_active (moptions.TTPHideExposure);
-    cbHideDetails->set_active (moptions.TTPHideDetails);
-    cbHideColor->set_active (moptions.TTPHideColor);
-    cbHideAdvanced->set_active (moptions.TTPHideAdvanced);
-    cbHideLocal->set_active (moptions.TTPHideLocal);
-    cbHideTransform->set_active (moptions.TTPHideTransform);
-    cbHideRaw->set_active (moptions.TTPHideRaw);
-    cbHideMetadata->set_active (moptions.TTPHideMetadata);
-    cbHideUseful->set_active (moptions.TTPHideUseful);
+    cbHideFavorite->set_active (moptions.esby.TTPHideFavorite);
+    cbHideExposure->set_active (moptions.esby.TTPHideExposure);
+    cbHideDetails->set_active (moptions.esby.TTPHideDetails);
+    cbHideColor->set_active (moptions.esby.TTPHideColor);
+    cbHideAdvanced->set_active (moptions.esby.TTPHideAdvanced);
+    cbHideLocal->set_active (moptions.esby.TTPHideLocal);
+    cbHideTransform->set_active (moptions.esby.TTPHideTransform);
+    cbHideRaw->set_active (moptions.esby.TTPHideRaw);
+    cbHideMetadata->set_active (moptions.esby.TTPHideMetadata);
+    cbHideUseful->set_active (moptions.esby.TTPHideUseful);
 
 }
 
