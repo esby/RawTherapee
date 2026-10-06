@@ -71,8 +71,10 @@ Accroches actuelles :
 - `rtgui/CMakeLists.txt` : `include(esby/esby.cmake)`
 - `rtgui/options.h/.cc` : membre `EsbySettings esby`, lecture, sauvegarde, fichier de traduction
 - `rtgui/preferences.h/.cc` : membre `esbyPanel`, onglet *Tools*, remplissage, enregistrement
-- `rtgui/toolpanelcoord.cc` : appels `esby*()` dans le constructeur et dans `initImage()`
-- `rtgui/editorpanel.cc` : ouverture d'image, événements, nom de fichier
+- `rtgui/toolpanelcoord.cc` : appels `esby*()` dans le constructeur, dans `initImage()`, et
+  `esbySetRawToolsSensitive()` dans `imageTypeChanged()` (les outils RAW sont grisés
+  individuellement pour une image non RAW, au lieu de l'onglet Raw entier)
+- `rtgui/editorpanel.cc` : ouverture d'image, événements, nom de fichier, enregistrement
 
 Autres modifications du code upstream, plus profondes :
 
@@ -100,8 +102,11 @@ git difftool -d $(git merge-base HEAD reference/dev) HEAD
 ## Conventions
 
 - **Accroches** : une ligne par accroche, marquée `// esby-hook`. Le code va dans ce dossier.
-- **Options** : passer par `esbyOptions()` et `esbySettings()`, jamais par la variable
-  globale `options` (elle n'existe plus dans l'upstream récent).
+- **Options** : passer par `esbyOptions()` et `esbySettings()` (qui s'appuient sur le
+  singleton `App` de l'upstream), jamais directement par `App::get()`.
+- **Includes** : `rtengine` inclut aussi des en-têtes de `rtgui` (ex : `labgrid.h` →
+  `toolpanel.h`), donc `esby.cmake` ajoute `rtgui/` et `rtgui/esby/` aux chemins de `rtengine`.
+  Après une mise à jour, prétraiter tous les fichiers de `rtengine` permet de le vérifier.
 - **Traces** : `TT_LOG(...)` plutôt que `printf` ; les erreurs restent affichées en permanence.
 - **Commentaires** : le code mis en commentaire est conservé ; quand une ligne est
   remplacée, l'ancienne reste en commentaire au-dessus.
@@ -122,19 +127,16 @@ git merge reference/dev
 
 Points d'attention :
 
-1. **Options** : l'upstream a remplacé la variable globale `options` par le singleton `App`.
-   Adapter `esbyOptions()` dans `esbyoptions.h` (`return App::get().mut_options();`), puis les
-   accroches de `options.cc`.
-2. **Arborescence** : les outils sont passés dans `rtgui/tools/`, les fenêtres dans
-   `rtgui/windows/`, les widgets dans `rtgui/widgets/` ; vérifier les chemins d'inclusion de
-   `esby.cmake`.
-3. **Constructeur de `ToolPanelCoordinator`** : repartir du constructeur upstream et le
-   compléter par les méthodes `esby*()` (approche « B »), au lieu de garder le code upstream
-   mis en commentaire.
+1. **Conflits** : prendre la version upstream, puis y replacer les accroches `esby-hook`.
+2. **Variables globales** : l'upstream regroupe peu à peu ses variables globales dans le
+   singleton `App` (`App::get()`) ; les chercher dans `rtgui/esby/` si la compilation échoue.
+3. **Arborescence** : les outils sont dans `rtgui/tools/`, les fenêtres dans `rtgui/windows/`,
+   les widgets dans `rtgui/widgets/` ; corriger les `#include` du fork si un fichier déménage.
 4. **Nouveaux outils upstream** : rien à faire, ils sont enregistrés depuis la table
-   `PANEL_TOOLS` (`registerToolsFromLayout()`).
+   `PANEL_TOOLS` (`registerToolsFromLayout()`). Un outil déclaré comme sous-outil (ex : Crop
+   Guide dans Crop) suit son outil parent, y compris dans Favorites.
 5. **Fusionner souvent** : quelques dizaines de commits se fusionnent facilement, plusieurs
-   centaines beaucoup moins.
+   centaines beaucoup moins (la mise à jour d'octobre 2026 couvrait 634 commits).
 
 Après la fusion : compiler avec `brt_r new`, puis tester démarrage, déplacements, favoris,
 profils `.ttp`, Préférences (*Tools*), ouverture d'image (TTVarDisplayer, TTTweaker) et
@@ -142,7 +144,10 @@ Batch Editor.
 
 ## Reste à faire
 
-- Mise à jour depuis `reference` (634 commits d'écart en octobre 2026), avec l'approche B.
+- Constructeur de `ToolPanelCoordinator` : repartir du constructeur upstream et le compléter
+  par les méthodes `esby*()` (approche « B »), au lieu de garder le code upstream mis en
+  commentaire. Pas urgent : la mise à jour d'octobre 2026 s'est fusionnée automatiquement.
+- Profils `.ttp` : la position d'origine des outils mis à la corbeille n'est pas enregistrée.
 - Signaler à l'upstream le crash de `FileBrowser::updateProfileList()` (dossier de profils
   global absent).
 - `ToolParamBlock` converti en `ToolVBox*` (`toolvboxdef`, `registerToolsFromLayout`) :
