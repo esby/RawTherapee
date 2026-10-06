@@ -331,6 +331,10 @@ ToolPanelCoordinator::ToolPanelCoordinator (bool batch, bool benchmark) :
     usefulPanel->setEnvironment(env);
  
     env->setFavoritePanel(favoritePanel);
+    // used by TTSaver after loading a ttp profile: the panels are then laid out for the favorite tab.
+    env->setResyncCallback([this]() {
+        on_notebook_switch_page(nullptr, toolPanelNotebook->get_current_page());
+    });
     env->setTrashPanel(trashPanel);
 
     coarse              = Gtk::manage(new CoarsePanel ());

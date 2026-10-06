@@ -199,6 +199,9 @@ void TTSaver::resetFavoriteAndTrashState()
 
 void TTSaver::themeSplitter(std::ifstream& myfile)
 {
+  // the previous value is restored at the end: during the autoload (deploy), the reaction
+  // must stay disabled until ToolPanelCoordinator::doDeployLate().
+  bool previousDisableSwitchPageReaction = env->disableSwitchPageReaction;
   env->disableSwitchPageReaction = true;
   printf("setting env_state to favorite");
   //todo this is wrong, it should be unchanged: either is it set to favorite at start, either to tool if executed from tool
@@ -244,7 +247,14 @@ void TTSaver::themeSplitter(std::ifstream& myfile)
 
   
  }
- env->disableSwitchPageReaction = false;
+// env->disableSwitchPageReaction = false;
+ env->disableSwitchPageReaction = previousDisableSwitchPageReaction;
+
+ // the panels are now laid out as if the favorite tab was displayed (env->state == ENV_STATE_IN_FAV).
+ // if another tab is displayed (ex: the profile was loaded from the useful tab), the layout and
+ // env->state are resynchronized with it; otherwise moveUp/moveDown would act on the favorite box.
+ if (!env->disableSwitchPageReaction)
+   env->resyncWithCurrentPage();
 
 //printf("panel positionning done\n");
 

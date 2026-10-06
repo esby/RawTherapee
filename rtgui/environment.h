@@ -19,6 +19,7 @@
 #ifndef __RTENVIRONMENT__
 #define __RTENVIRONMENT__
 
+#include <functional>
 #include <gtkmm.h>
 #include <glibmm.h>
 #include "../rtengine/rtengine.h"
@@ -94,6 +95,11 @@ class Environment {
      
      size_t countPanel();
      void setFavoritePanel(ToolVBox* p);
+
+     // resynchronizes the panel layout with the tab currently displayed (set by ToolPanelCoordinator)
+     std::function<void()> resyncCallback;
+     void setResyncCallback(std::function<void()> cb) { resyncCallback = cb; }
+     void resyncWithCurrentPage() { if (resyncCallback) resyncCallback(); }
      void setTrashPanel(ToolVBox* p);
 
      void setToolPanelNotebook(Gtk::Notebook* _toolPanelNotebook) { toolPanelNotebook = _toolPanelNotebook;}
