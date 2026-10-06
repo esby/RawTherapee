@@ -36,6 +36,8 @@ protected:
     Adjuster* adjMired;
     Adjuster* adjGreen;
     Gtk::CheckButton* cbFlashOnly;
+    Gtk::Label* lbLearnTint;
+    Gtk::CheckButton* cbLearnTint;
     Gtk::Label* lbFlashOnly;
     Gtk::Button* btApply;
     Gtk::Button* btLearn;

@@ -73,6 +73,7 @@ TT_SERIESWB_GREEN_TOOLTIP;Factor applied to the tint of the camera white balance
 TT_SERIESWB_LABEL;Series White Balance
 TT_SERIESWB_LEARN;Learn from this image
 TT_SERIESWB_LEARNED;Shift learned: %1 mireds, tint factor %2.
+TT_SERIESWB_LEARN_TINT;Learn the tint too (green / magenta cast)
 TT_SERIESWB_LEARN_TOOLTIP;Sets the shift from the white balance of the current image, compared to the camera white balance.
 TT_SERIESWB_MANUAL;White balance changed by hand (%1 K): left untouched.
 TT_SERIESWB_MIRED;Shift (mireds)
@@ -81,7 +82,7 @@ TT_SERIESWB_NO_CAMERA_WB;Camera white balance not available.
 TT_SERIESWB_NO_FLASH;No flash fired: not concerned.
 TT_SERIESWB_NO_IMAGE;No image.
 TT_SERIESWB_OUT_OF_RANGE;Not learned: shift %1 mireds, tint factor %2, out of the ranges of the tool.
-TT_SERIESWB_VALUES;Image: %1 K, tint %2 (%5). Camera: %3 K, tint %4.
+TT_SERIESWB_VALUES;Image: %1 K, tint %2 (%5). Camera: %3 K, tint %4 (observer %6°).
 TT_UDLR_HIDE_ARROWS;Hide the move buttons (↑ ↓ ← →)
 TT_UDLR_LOCK_FAV;Lock the favorite and trash buttons
 TT_VAR_DISPLAYER_COPY;Copy to clipboard

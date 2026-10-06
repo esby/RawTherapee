@@ -20,6 +20,7 @@
 #include "variable.h"
 #include "wbprovider.h"
 #include "tools/whitebalance.h"
+#include "rtengine/colortemp.h"
 #include <cmath>
 #include <iomanip>
 #include <fstream>
@@ -64,6 +65,17 @@ TTSeriesWB::TTSeriesWB() : FoldableToolPanel(this, "TTSeriesWB", M("TT_SERIESWB_
   flashBox->pack_start(*lbFlashOnly, Gtk::PACK_SHRINK, 0);
   flashBox->pack_end(*cbFlashOnly, Gtk::PACK_SHRINK, 0);
   pack_start(*flashBox, Gtk::PACK_SHRINK, 0);
+
+  // the tint is learned only on demand: a flash mixed with ambient light shifts the temperature,
+  // a tint correction (green / magenta) is only needed for some fluorescent or LED lights
+  Gtk::HBox* learnTintBox = Gtk::manage(new Gtk::HBox());
+  learnTintBox->set_spacing(4);
+  lbLearnTint = Gtk::manage(new Gtk::Label(M("TT_SERIESWB_LEARN_TINT")));
+  cbLearnTint = Gtk::manage(new Gtk::CheckButton());
+  cbLearnTint->set_active(false);
+  learnTintBox->pack_start(*lbLearnTint, Gtk::PACK_SHRINK, 0);
+  learnTintBox->pack_end(*cbLearnTint, Gtk::PACK_SHRINK, 0);
+  pack_start(*learnTintBox, Gtk::PACK_SHRINK, 0);
 
   Gtk::HBox* buttonBox = Gtk::manage(new Gtk::HBox());
   buttonBox->set_spacing(4);
@@ -240,13 +252,15 @@ void TTSeriesWB::learnFromCurrentImage()
   }
 
   double mired = 1000000.0 / wb.temperature - 1000000.0 / camTemp;
-  double green = wb.green / camGreen;
+//  double green = wb.green / camGreen;
+  double green = cbLearnTint->get_active() ? wb.green / camGreen : 1.0;
 
   // the values of the current and camera white balances are shown, so the result can be checked
   Glib::ustring values = Glib::ustring::compose(M("TT_SERIESWB_VALUES"),
                                                 wb.temperature, Glib::ustring::format(std::fixed, std::setprecision(3), wb.green),
                                                 (int) std::lround(camTemp), Glib::ustring::format(std::fixed, std::setprecision(3), camGreen),
-                                                wb.method);
+                                                wb.method,
+                                                (wb.observer == rtengine::StandardObserver::TEN_DEGREES) ? "10" : "2");
 
   if ((mired < SERIESWB_MIN_MIRED) || (mired > SERIESWB_MAX_MIRED)
   || (green < SERIESWB_MIN_GREEN_FACTOR) || (green > SERIESWB_MAX_GREEN_FACTOR))
@@ -293,8 +307,9 @@ Glib::ustring TTSeriesWB::themeExport()
   Glib::ustring s_mired = getToolName() + ":" + "mired " + Glib::Ascii::dtostr(adjMired->getValue());
   Glib::ustring s_green = getToolName() + ":" + "green " + Glib::Ascii::dtostr(adjGreen->getValue());
   Glib::ustring s_flash = getToolName() + ":" + "flash_only " + std::string(cbFlashOnly->get_active() ? "1" : "0");
+  Glib::ustring s_learn_tint = getToolName() + ":" + "learn_tint " + std::string(cbLearnTint->get_active() ? "1" : "0");
 
-  return s_active + "\n" + s_mired + "\n" + s_green + "\n" + s_flash + "\n";
+  return s_active + "\n" + s_mired + "\n" + s_green + "\n" + s_flash + "\n" + s_learn_tint + "\n";
 }
 
 void TTSeriesWB::themeImport(std::ifstream& myfile)
@@ -331,6 +346,8 @@ void TTSeriesWB::themeImport(std::ifstream& myfile)
           }
           else if (key == "flash_only")
             cbFlashOnly->set_active(value == "1");
+          else if (key == "learn_tint")
+            cbLearnTint->set_active(value == "1");
         }
       }
       else
