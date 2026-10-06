@@ -1606,6 +1606,11 @@ static void transmitExifData(const Glib::ustring& fname, Environment* env)
             if ((tag == "ExifTag") || (tag == "GPSTag") || (tag == "InteroperabilityTag"))
                 continue;
 
+            // tags unknown to Exiv2 are named after their number (ex: 0x002c), their value
+            // cannot be interpreted and is mostly a long list of numbers: they are skipped.
+            if (tag.compare(0, 2, "0x") == 0)
+                continue;
+
             // print() gives the interpreted value, as rtexif valueToString() did
             Glib::ustring value(datum.print(&exifData));
             if (!value.validate()) // not valid utf-8, it could not be displayed
