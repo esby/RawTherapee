@@ -101,10 +101,7 @@ class ServerTest(unittest.TestCase):
             task = asyncio.ensure_future(self.server.run(ev))
             await ev.wait()
             ready.set()
-            try:
-                await task
-            except asyncio.CancelledError:
-                pass
+            await task
 
         self.thread = threading.Thread(target=lambda: self.loop.run_until_complete(start()), daemon=True)
         self.thread.start()
@@ -116,8 +113,8 @@ class ServerTest(unittest.TestCase):
     def tearDown(self):
         for client in self.clients:
             client.close()
-        for task in asyncio.all_tasks(self.loop):
-            self.loop.call_soon_threadsafe(task.cancel)
+        # clean shutdown: listening socket and open connections closed before the loop stops
+        asyncio.run_coroutine_threadsafe(self.server.stop(), self.loop).result(5)
         self.thread.join(5)
         self.loop.close()
         self.tmp.cleanup()

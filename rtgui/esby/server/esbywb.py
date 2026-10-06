@@ -28,6 +28,7 @@ import argparse
 import asyncio
 import json
 import os
+import signal
 import socket
 import sys
 import tempfile
@@ -178,6 +179,10 @@ class Server:
         self.state = state
         self.socket_path = socket_path
         self.subscribers = set()
+        self.connections = set()   # writers of the open connections, closed by stop()
+        self.handlers = set()      # tasks handling the connections, awaited by stop()
+        self.server = None
+        self.stopping = None       # shutdown task, shared by the callers of stop()
 
     async def broadcast(self, path):
         message = (json.dumps({"event": "rule_changed", "path": path}) + "\n").encode()
@@ -221,6 +226,8 @@ class Server:
         raise ValueError("unknown operation: %r" % op)
 
     async def handle_client(self, reader, writer):
+        self.connections.add(writer)
+        self.handlers.add(asyncio.current_task())
         try:
             while True:
                 line = await reader.readline()
@@ -240,6 +247,8 @@ class Server:
             pass
         finally:
             self.subscribers.discard(writer)
+            self.connections.discard(writer)
+            self.handlers.discard(asyncio.current_task())
             writer.close()
             try:
                 await writer.wait_closed()
@@ -248,12 +257,50 @@ class Server:
 
     async def run(self, ready=None):
         prepare_socket(self.socket_path)
-        server = await asyncio.start_unix_server(self.handle_client, path=self.socket_path)
+        self.server = await asyncio.start_unix_server(self.handle_client, path=self.socket_path)
         os.chmod(self.socket_path, 0o600)  # the user only
+        # SIGTERM (systemctl stop) and SIGINT (Ctrl+C): clean shutdown, the socket file is removed.
+        # Only possible in the main thread (the tests run the server in another thread).
+        loop = asyncio.get_running_loop()
+        for sig in (signal.SIGTERM, signal.SIGINT):
+            try:
+                loop.add_signal_handler(sig, lambda: asyncio.ensure_future(self.stop()))
+            except (NotImplementedError, RuntimeError, ValueError):
+                pass
         if ready is not None:
             ready.set()
-        async with server:
-            await server.serve_forever()
+        try:
+            await self.server.serve_forever()
+        except asyncio.CancelledError:
+            pass
+        finally:
+            await self.stop()
+
+    async def stop(self):
+        """closes the listening socket, then the open connections, and waits for them.
+        Every caller (run() and an explicit stop) waits for the same shutdown."""
+        if self.stopping is None:
+            self.stopping = asyncio.ensure_future(self._shutdown())
+        await asyncio.shield(self.stopping)
+
+    async def _shutdown(self):
+        if self.server is None:
+            return
+        server = self.server
+        server.close()
+        # a connection accepted just before may not have started its handler yet: accepting it,
+        # creating its transport and starting its handler take several iterations of the loop
+        await asyncio.sleep(0.05)
+        for writer in list(self.connections):
+            writer.close()
+        handlers = [task for task in self.handlers if task is not asyncio.current_task()]
+        if handlers:
+            await asyncio.gather(*handlers, return_exceptions=True)
+        await server.wait_closed()
+        try:
+            os.unlink(self.socket_path)
+        except FileNotFoundError:
+            pass
 
 
 def prepare_socket(path):
