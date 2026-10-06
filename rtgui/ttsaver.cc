@@ -447,6 +447,10 @@ Glib::ustring TTSaver::themeExport()
     && (!p->canBeIgnored()))
     {
       int posOri = p->getOriginalBox()->getPos(p); // maybe todo getPos()
+      // the panel is not in its original box when saving from the favorite or trash tab:
+      // the position saved when leaving the normal tabs is used instead of -1.
+      if (posOri < 0)
+        posOri = p->getPosOri();
       if (!(p->getTrashButton()->get_active()))
          oriSettings += p->getToolName()+ "(" + p->getOriginalBox()->getBoxName() + ":" + IntToString(posOri) + ") ";
 
