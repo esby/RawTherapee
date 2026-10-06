@@ -60,9 +60,7 @@ set(NONCLISOURCEFILES
     epd.cc
     eventmapper.cc
     exiffiltersettings.cc
-    exifpanel.cc 
-    environment.cc
-    toolvboxdef.cc 
+    exifpanel.cc
     exportpanel.cc
     externaleditorpreferences.cc
     extprog.cc
@@ -167,7 +165,6 @@ set(NONCLISOURCEFILES
     toolbar.cc
     toollocationpref.cc
     toolpanel.cc
-    movabletoolpanel.cc
     toolpanelcoord.cc
     vibrance.cc
     vignetting.cc
@@ -176,18 +173,10 @@ set(NONCLISOURCEFILES
     xtransprocess.cc
     xtransrawexposure.cc
     zoompanel.cc
-    variable.cc 
-    ttdep.cc
-    ttsaver.cc 
-    ttfavoritecolorer.cc 
-    ttpanelcolorer.cc 
-    ttudlrhider.cc 
-    tttabhider.cc 
-    tttweaker.cc
-    ttlenscorrector.cc
-    ttvardisplayer.cc
-    ttisoprofiler.cc
-    )
+)
+
+# esby-hook: sources and include paths of the esby fork (favorites, tool moves, tt* tools)
+include(${CMAKE_CURRENT_SOURCE_DIR}/esby/esby.cmake)
 
 include_directories(BEFORE ${CMAKE_CURRENT_BINARY_DIR})
 

@@ -1,0 +1,26 @@
+# esby fork: favorites, tool moves (up/down/left/right), trash and useful tabs, tt* tools.
+# included by rtgui/CMakeLists.txt, right after the NONCLISOURCEFILES list.
+
+set(ESBYSOURCEFILES
+    esby/environment.cc
+    esby/movabletoolpanel.cc
+    esby/toolvboxdef.cc
+    esby/variable.cc
+    esby/ttdep.cc
+    esby/ttfavoritecolorer.cc
+    esby/ttisoprofiler.cc
+    esby/ttlenscorrector.cc
+    esby/ttpanelcolorer.cc
+    esby/ttsaver.cc
+    esby/tttabhider.cc
+    esby/tttweaker.cc
+    esby/ttudlrhider.cc
+    esby/ttvardisplayer.cc
+    )
+
+list(APPEND NONCLISOURCEFILES ${ESBYSOURCEFILES})
+
+# the existing #include directives are kept unchanged:
+# - upstream files include the esby headers by name (ex: "movabletoolpanel.h"),
+# - esby files include the rtgui headers by name (ex: "toolpanel.h") or with "../rtengine/...".
+include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/esby)
