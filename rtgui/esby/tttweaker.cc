@@ -343,10 +343,14 @@ void TTTweaker::enabledChanged  ()
           Gtk::Label* l = findTitleLabel(w);
           if (l)
           {
+             // the tool labels use markup (set_markup in MyExpander / FoldableToolPanel):
+             // set_label() parsed them as markup, and failed on '&' (ex: "Noir & Blanc").
              if (cbToolNameUntranslated->get_active())
-                l->set_label(ptoolname);
+//                l->set_label(ptoolname);
+                l->set_markup(escapeHtmlChars(ptoolname));
              else
-                l->set_label(p->getOriginalUILabel());
+//                l->set_label(p->getOriginalUILabel());
+                l->set_markup(escapeHtmlChars(p->getOriginalUILabel()));
               
             if (cbToolNameAsToolTip->get_active())
             {
