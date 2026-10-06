@@ -539,7 +539,8 @@ void TTTweaker::check_exif()
             }
             int16_t v = static_cast<int16_t>(u);  // Conversion en signé
             std::string s = std::to_string(v);
-            env->setVar(ROOT_EXIF_PREFIX + ":" +"Exif:MakerNote:PicthAngle", s);
+//            env->setVar(ROOT_EXIF_PREFIX + ":" +"Exif:MakerNote:PicthAngle", s);
+            env->setVar(ROOT_EXIF_PREFIX + ":" +"Exif:MakerNote:PitchAngle", s);
             std::cout << "Pitch Angle (s) : " << s << std::endl; // la valeur est multipliée par 10
 
         } else {
