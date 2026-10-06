@@ -219,11 +219,6 @@ FILECHOOSER_FILTER_LCP;Lens correction profiles
 FILECHOOSER_FILTER_PP;Processing profiles
 FILECHOOSER_FILTER_SAME;Same format as current photo
 FILECHOOSER_FILTER_TIFF;TIFF files
-FILECHOOSER_FILTER_TTP;Tool layout profiles
-GENERAL_MOVE_DOWN;↓
-GENERAL_MOVE_LEFT;←
-GENERAL_MOVE_RIGHT;→
-GENERAL_MOVE_UP;↑
 GENERAL_ABOUT;About
 GENERAL_AFTER;After
 GENERAL_APPLY;Apply
@@ -252,9 +247,6 @@ GENERAL_PORTRAIT;Portrait
 GENERAL_RESET;Reset
 GENERAL_SAVE;Save
 GENERAL_SAVE_AS;Save as...
-GENERAL_STATE_FAVORITE;★ F
-GENERAL_STATE_NORMAL; Normal
-GENERAL_STATE_TRASH;☢ T
 GENERAL_SLIDER;Slider
 GENERAL_UNCHANGED;(Unchanged)
 GENERAL_WARNING;Warning
@@ -1779,10 +1771,8 @@ MAIN_TAB_EXIF;Exif
 MAIN_TAB_EXPORT; Fast Export
 MAIN_TAB_EXPOSURE;Exposure
 MAIN_TAB_EXPOSURE_TOOLTIP;Shortcut: <b>Alt-e</b>
-MAIN_TAB_FAVORITE;Favorites
 MAIN_TAB_FAVORITES;Favorites
 MAIN_TAB_FAVORITES_TOOLTIP;Shortcut: <b>Alt-u</b>
-MAIN_TAB_FAVORITE_TOOLTIP;Shortcut: <b>Alt-f</b>
 MAIN_TAB_FILTER; Filter
 MAIN_TAB_INSPECT; Inspect
 MAIN_TAB_IPTC;IPTC
@@ -1794,10 +1784,6 @@ MAIN_TAB_RAW;Raw
 MAIN_TAB_RAW_TOOLTIP;Shortcut: <b>Alt-r</b>
 MAIN_TAB_TRANSFORM;Transform
 MAIN_TAB_TRANSFORM_TOOLTIP;Shortcut: <b>Alt-t</b>
-MAIN_TAB_TRASH;Trash
-MAIN_TAB_TRASH_TOOLTIP;Shortcut: <b>Alt-p</b>
-MAIN_TAB_USEFUL;Useful
-MAIN_TAB_USEFUL_TOOLTIP;Shortcut: <b>Alt-u</b>
 MAIN_TOOLTIP_BACKCOLOR0;Background color of the preview: <b>theme-based</b>\nShortcut: <b>9</b>
 MAIN_TOOLTIP_BACKCOLOR1;Background color of the preview: <b>black</b>\nShortcut: <b>9</b>
 MAIN_TOOLTIP_BACKCOLOR2;Background color of the preview: <b>white</b>\nShortcut: <b>9</b>
@@ -2111,8 +2097,6 @@ PREFERENCES_SINGLETABVERTAB;Single Editor Tab Mode, Vertical Tabs
 PREFERENCES_SND_HELP;Enter a full file path to set a sound, or leave blank for no sound.\nFor system sounds on Windows use 'SystemDefault', 'SystemAsterisk' etc., and on Linux use 'complete', 'window-attention' etc.
 PREFERENCES_SND_LNGEDITPROCDONE;Editor processing done
 PREFERENCES_SND_QUEUEDONE;Queue processing done
-PREFERENCES_SND_TEST_BATCHQUEUEDONE;Test
-PREFERENCES_SND_TEST_LNGEDITPROCDONE;Test
 PREFERENCES_SND_THRESHOLDSECS;After seconds
 PREFERENCES_SPOTLOC;Define Spot method for Selective Editing
 PREFERENCES_STARTUPIMDIR;Image Directory at Startup
@@ -2124,7 +2108,6 @@ PREFERENCES_TAB_GENERAL;General
 PREFERENCES_TAB_IMPROC;Image Processing
 PREFERENCES_TAB_PERFORMANCE;Performance
 PREFERENCES_TAB_SOUND;Sounds
-PREFERENCES_THEME_TOOL;Tools
 PREFERENCES_THUMBNAIL_INSPECTOR_JPEG;Embedded JPEG preview
 PREFERENCES_THUMBNAIL_INSPECTOR_MODE;Image to show
 PREFERENCES_THUMBNAIL_INSPECTOR_RAW;Neutral raw rendering
@@ -2661,7 +2644,6 @@ TP_EXPOSURE_TCMODE_STANDARD;Standard
 TP_EXPOSURE_TCMODE_WEIGHTEDSTD;Weighted Standard
 TP_EXPOS_BLACKPOINT_LABEL;Raw Black Points
 TP_EXPOS_WHITEPOINT_LABEL;Raw White Points
-TP_FAVORITE_COLORER_LABEL;Favorite and Trash Button Colors
 TP_FILMNEGATIVE_BLUE;Blue ratio
 TP_FILMNEGATIVE_BLUEBALANCE;Cool/Warm
 TP_FILMNEGATIVE_COLORSPACE;Inversion color space:
@@ -3740,7 +3722,6 @@ TP_METADATA_STRIP;Strip all metadata
 TP_METADATA_TUNNEL;Copy unchanged
 TP_NEUTRAL;Reset
 TP_NEUTRAL_TOOLTIP;Resets exposure sliders to neutral values.\nApplies to the same controls that Auto Levels applies to, regardless of whether you used Auto Levels or not.
-TP_PANEL_COLORER_LABEL;Tool Title Colors
 TP_PCVIGNETTE_FEATHER;Feather
 TP_PCVIGNETTE_FEATHER_TOOLTIP;Feathering:\n0 = corners only,\n50 = halfway to center,\n100 = to center.
 TP_PCVIGNETTE_LABEL;Vignette Filter
@@ -3997,8 +3978,6 @@ TP_ROTATE_DEGREE;Degree
 TP_ROTATE_LABEL;Rotate
 TP_ROTATE_SELECTLINE;Select Straight Line
 TP_SAVEDIALOG_OK_TOOLTIP;Shortcut: <b>Ctrl-Enter</b>
-TP_SAVER_LABEL;Tool Layout Profiles
-TP_SAVER_TOOLTIP;Tool layout profile (.ttp): favorite, trash and position of every tool, and the settings of the tools of the Useful tab.
 TP_SHADOWSHLIGHTS_HIGHLIGHTS;Highlights
 TP_SHADOWSHLIGHTS_HLTONALW;Highlights tonal width
 TP_SHADOWSHLIGHTS_LABEL;Shadows/Highlights
@@ -4040,17 +4019,6 @@ TP_SPOT_DEFAULT_SIZE;Default spot size
 TP_SPOT_ENTRYCHANGED;Point changed
 TP_SPOT_HINT;Click on this button to be able to operate on the preview area.\n\nTo edit a spot, hover the white mark locating an edited area, making the editing geometry appear.\n\nTo add a spot, press Ctrl and left mouse button, drag the circle (Ctrl key can be released) to a source location, then release the mouse button.\n\nTo move the source or destination spot, hover its center then drag it.\n\nThe inner circle (maximum effect area) and the 'feather' circle can be resized by hovering them (the circle becomes orange) and dragging it (the circle becomes red).\n\nWhen the changes are done, right click outside any spot to end the Spot editing mode, or click on this button again.
 TP_SPOT_LABEL;Spot Removal
-TP_THEMETOOL_HIDE_ADVANCED;Hide the Advanced tab
-TP_THEMETOOL_HIDE_COLOR;Hide the Color tab
-TP_THEMETOOL_HIDE_DETAIL;Hide the Detail tab
-TP_THEMETOOL_HIDE_EXPOSURE;Hide the Exposure tab
-TP_THEMETOOL_HIDE_FAVORITE;Hide the Favorites tab
-TP_THEMETOOL_HIDE_LOCAL;Hide the Local tab
-TP_THEMETOOL_HIDE_METADATA;Hide the Metadata tab
-TP_THEMETOOL_HIDE_RAW;Hide the Raw tab
-TP_THEMETOOL_HIDE_TRANSFORM;Hide the Transform tab
-TP_THEMETOOL_HIDE_TRASH;Hide the Trash tab
-TP_THEMETOOL_HIDE_USEFUL;Hide the Useful tab
 TP_TM_FATTAL_AMOUNT;Amount
 TP_TM_FATTAL_ANCHOR;Anchor
 TP_TM_FATTAL_LABEL;Dynamic Range Compression
@@ -4065,19 +4033,6 @@ TP_TONE_EQUALIZER_DETAIL;Regularization
 TP_TONE_EQUALIZER_LABEL;Tone Equalizer
 TP_TONE_EQUALIZER_PIVOT;Pivot (Ev)
 TP_TONE_EQUALIZER_SHOW_COLOR_MAP;Show tonal map
-TP_TT_HIDE_ADVANCED;Hide the Advanced tab
-TP_TT_HIDE_COLOR;Hide the Color tab
-TP_TT_HIDE_DETAIL;Hide the Detail tab
-TP_TT_HIDE_EXPOSURE;Hide the Exposure tab
-TP_TT_HIDE_FAVORITE;Hide the Favorites tab
-TP_TT_HIDE_LOCAL;Hide the Local tab
-TP_TT_HIDE_METADATA;Hide the Metadata tab
-TP_TT_HIDE_RAW;Hide the Raw tab
-TP_TT_HIDE_TRANSFORM;Hide the Transform tab
-TP_TT_HIDE_TRASH;Hide the Trash tab
-TP_TT_HIDE_USEFUL;Hide the Useful tab
-TP_TT_TAB_HIDDER;Tab Hider
-TP_UDLR_HIDER_LABEL;Move Buttons
 TP_VIBRANCE_AVOIDCOLORSHIFT;Avoid color shift
 TP_VIBRANCE_CURVEEDITOR_SKINTONES;HH
 TP_VIBRANCE_CURVEEDITOR_SKINTONES_LABEL;Skin-tones
@@ -4454,31 +4409,6 @@ TP_WBALANCE_TUNGSTEN;Tungsten
 TP_WBALANCE_WATER1;UnderWater 1
 TP_WBALANCE_WATER2;UnderWater 2
 TP_WBALANCE_WATER_HEADER;UnderWater
-TTLENS_CORRECTOR_DIST;Apply the distortion saved for the focal length
-TTLENS_CORRECTOR_LABEL;Distortion by Focal Length
-TTP_ISO;Minimum ISO
-TTP_PROFILE;Profile
-TTTW_AUTO_DISTOR_CORR;Automatic distortion correction
-TTTW_AUTO_HORI_CORR;Automatic horizon correction (Panasonic)
-TTTW_CLOSE_AFTER_SAVE_SE;Close after saving (single editor)
-TTTW_LABEL;Tweaker
-TTTW_MIN_AFTER_SAVE_ME;Minimize after saving (multiple editors)
-TTTW_RESET_WB_RT4_PPT;Reset the white balance to camera for RawTherapee 4 profiles
-TTTW_TOOLNAME_AS_TOOLTIP;Show the internal tool name as tooltip
-TTTW_TOOLNAME_UNTRANSLATED;Show the internal tool names as titles
-TT_ISO_PROFILER;Profile by ISO
-TT_LABELPICKER_FAVORITE;Color of the checked favorite button.
-TT_LABELPICKER_PANEL_ALWAYS;Title color of the tools that are always active.
-TT_LABELPICKER_PANEL_CLICKED;Title color of the enabled tools.
-TT_LABELPICKER_TRASH;Color of the checked trash button.
-TT_SAVER_AUTOLOAD_SETTINGS;Load this profile at startup
-TT_UDLR_HIDE_ARROWS;Hide the move buttons (↑ ↓ ← →)
-TT_UDLR_LOCK_FAV;Lock the favorite and trash buttons
-TT_VAR_DISPLAYER_COPY;Copy to clipboard
-TT_VAR_DISPLAYER_COPY_TOOLTIP;Copies every transmitted variable (name = value) to the clipboard.
-TT_VAR_DISPLAYER_LABEL;Variables
-TT_VAR_DISPLAYER_LABEL_VARIABLES;Variables
-TT_VAR_DISPLAYER_LABEL_OPERATORS;Operators
 ZOOMPANEL_100;(100%)
 ZOOMPANEL_NEWCROPWINDOW;Open (new) detail window
 ZOOMPANEL_ZOOM100;Zoom to 100%\nShortcut: <b>z</b>

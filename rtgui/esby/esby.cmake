@@ -24,6 +24,9 @@ list(APPEND NONCLISOURCEFILES ${ESBYSOURCEFILES})
 list(APPEND CLISOURCEFILES esby/esbysettings.cc)
 list(APPEND NONCLISOURCEFILES esby/esbysettings.cc)
 
+# translation file of the esby keys, loaded after the upstream language files (see esbyTranslationFile())
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/esby/languages/default" DESTINATION "${DATADIR}/esby/languages")
+
 # the existing #include directives are kept unchanged:
 # - upstream files include the esby headers by name (ex: "movabletoolpanel.h"),
 # - esby files include the rtgui headers by name (ex: "toolpanel.h") or with "../rtengine/...".

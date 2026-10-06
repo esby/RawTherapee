@@ -15,8 +15,17 @@
  *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "esbysettings.h"
+#include <glibmm/miscutils.h>
+#include "options.h" // argv0
 
 Glib::ustring paramFileGuiExtension = ".ttp";
+
+Glib::ustring esbyTranslationFile()
+{
+    // installed by rtgui/esby/esby.cmake, outside the languages folder:
+    // every file of the languages folder is listed as a language in the preferences.
+    return Glib::build_filename(argv0, "esby", "languages", "default");
+}
 
 // called by Options::readFromFile(), the code was moved from options.cc
 void EsbySettings::readFromFile(Glib::KeyFile& keyFile)

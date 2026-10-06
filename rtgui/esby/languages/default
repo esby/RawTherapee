@@ -1,0 +1,73 @@
+#00 esby fork translation file: keys used by the esby code (favorites, tool moves, tt* tools).
+#01 loaded after the upstream files (locale, language, default): it only provides the keys missing from them.
+#02 installed in <data dir>/esby/languages by rtgui/esby/esby.cmake.
+FILECHOOSER_FILTER_TTP;Tool layout profiles
+GENERAL_MOVE_DOWN;↓
+GENERAL_MOVE_LEFT;←
+GENERAL_MOVE_RIGHT;→
+GENERAL_MOVE_UP;↑
+GENERAL_STATE_FAVORITE;★ F
+GENERAL_STATE_NORMAL; Normal
+GENERAL_STATE_TRASH;☢ T
+MAIN_TAB_FAVORITE;Favorites
+MAIN_TAB_FAVORITE_TOOLTIP;Shortcut: <b>Alt-f</b>
+MAIN_TAB_TRASH;Trash
+MAIN_TAB_TRASH_TOOLTIP;Shortcut: <b>Alt-p</b>
+MAIN_TAB_USEFUL;Useful
+MAIN_TAB_USEFUL_TOOLTIP;Shortcut: <b>Alt-u</b>
+PREFERENCES_SND_TEST_BATCHQUEUEDONE;Test
+PREFERENCES_SND_TEST_LNGEDITPROCDONE;Test
+PREFERENCES_THEME_TOOL;Tools
+TP_FAVORITE_COLORER_LABEL;Favorite and Trash Button Colors
+TP_PANEL_COLORER_LABEL;Tool Title Colors
+TP_SAVER_LABEL;Tool Layout Profiles
+TP_SAVER_TOOLTIP;Tool layout profile (.ttp): favorite, trash and position of every tool, and the settings of the tools of the Useful tab.
+TP_THEMETOOL_HIDE_ADVANCED;Hide the Advanced tab
+TP_THEMETOOL_HIDE_COLOR;Hide the Color tab
+TP_THEMETOOL_HIDE_DETAIL;Hide the Detail tab
+TP_THEMETOOL_HIDE_EXPOSURE;Hide the Exposure tab
+TP_THEMETOOL_HIDE_FAVORITE;Hide the Favorites tab
+TP_THEMETOOL_HIDE_LOCAL;Hide the Local tab
+TP_THEMETOOL_HIDE_METADATA;Hide the Metadata tab
+TP_THEMETOOL_HIDE_RAW;Hide the Raw tab
+TP_THEMETOOL_HIDE_TRANSFORM;Hide the Transform tab
+TP_THEMETOOL_HIDE_TRASH;Hide the Trash tab
+TP_THEMETOOL_HIDE_USEFUL;Hide the Useful tab
+TP_TT_HIDE_ADVANCED;Hide the Advanced tab
+TP_TT_HIDE_COLOR;Hide the Color tab
+TP_TT_HIDE_DETAIL;Hide the Detail tab
+TP_TT_HIDE_EXPOSURE;Hide the Exposure tab
+TP_TT_HIDE_FAVORITE;Hide the Favorites tab
+TP_TT_HIDE_LOCAL;Hide the Local tab
+TP_TT_HIDE_METADATA;Hide the Metadata tab
+TP_TT_HIDE_RAW;Hide the Raw tab
+TP_TT_HIDE_TRANSFORM;Hide the Transform tab
+TP_TT_HIDE_TRASH;Hide the Trash tab
+TP_TT_HIDE_USEFUL;Hide the Useful tab
+TP_TT_TAB_HIDDER;Tab Hider
+TP_UDLR_HIDER_LABEL;Move Buttons
+TTLENS_CORRECTOR_DIST;Apply the distortion saved for the focal length
+TTLENS_CORRECTOR_LABEL;Distortion by Focal Length
+TTP_ISO;Minimum ISO
+TTP_PROFILE;Profile
+TTTW_AUTO_DISTOR_CORR;Automatic distortion correction
+TTTW_AUTO_HORI_CORR;Automatic horizon correction (Panasonic)
+TTTW_CLOSE_AFTER_SAVE_SE;Close after saving (single editor)
+TTTW_LABEL;Tweaker
+TTTW_MIN_AFTER_SAVE_ME;Minimize after saving (multiple editors)
+TTTW_RESET_WB_RT4_PPT;Reset the white balance to camera for RawTherapee 4 profiles
+TTTW_TOOLNAME_AS_TOOLTIP;Show the internal tool name as tooltip
+TTTW_TOOLNAME_UNTRANSLATED;Show the internal tool names as titles
+TT_ISO_PROFILER;Profile by ISO
+TT_LABELPICKER_FAVORITE;Color of the checked favorite button.
+TT_LABELPICKER_PANEL_ALWAYS;Title color of the tools that are always active.
+TT_LABELPICKER_PANEL_CLICKED;Title color of the enabled tools.
+TT_LABELPICKER_TRASH;Color of the checked trash button.
+TT_SAVER_AUTOLOAD_SETTINGS;Load this profile at startup
+TT_UDLR_HIDE_ARROWS;Hide the move buttons (↑ ↓ ← →)
+TT_UDLR_LOCK_FAV;Lock the favorite and trash buttons
+TT_VAR_DISPLAYER_COPY;Copy to clipboard
+TT_VAR_DISPLAYER_COPY_TOOLTIP;Copies every transmitted variable (name = value) to the clipboard.
+TT_VAR_DISPLAYER_LABEL;Variables
+TT_VAR_DISPLAYER_LABEL_OPERATORS;Operators
+TT_VAR_DISPLAYER_LABEL_VARIABLES;Variables

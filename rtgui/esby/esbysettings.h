@@ -22,6 +22,9 @@
 // extension of the ttp (tool layout) profiles
 extern Glib::ustring paramFileGuiExtension;
 
+// translation file of the esby fork (keys of the esby code), loaded after the upstream files
+Glib::ustring esbyTranslationFile();
+
 // options of the esby fork, stored in the [TTP] group of the options file.
 // it is a member of Options (Options::esby): it follows the copies made by the
 // preferences dialog (moptions), and only a few hooks are needed in options.h / options.cc.

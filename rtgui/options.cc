@@ -3049,7 +3049,8 @@ void Options::load(bool lightweight)
         }
     }
 
-    langMgr.load(options.language, {localeTranslation, languageTranslation, defaultTranslation});
+//    langMgr.load(options.language, {localeTranslation, languageTranslation, defaultTranslation});
+    langMgr.load(options.language, {localeTranslation, languageTranslation, defaultTranslation, esbyTranslationFile()}); // esby-hook
 
     rtengine::init(&options.rtSettings, argv0, rtdir, !lightweight);
 }
