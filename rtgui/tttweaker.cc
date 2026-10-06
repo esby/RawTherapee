@@ -531,7 +531,11 @@ void TTTweaker::check_exif()
 
            if (datum.count() > 0) {
              // Récupère la première valeur convertie en int
+#if EXIV2_TEST_VERSION(0,28,0)
              u = static_cast<uint16_t>(datum.toInt64());   // ou datum.toInt64() si Exiv2 < 0.28
+#else
+             u = static_cast<uint16_t>(datum.toLong());    // Exiv2 < 0.28: toInt64() does not exist yet
+#endif
             }
             int16_t v = static_cast<int16_t>(u);  // Conversion en signé
             std::string s = std::to_string(v);
@@ -548,7 +552,11 @@ void TTTweaker::check_exif()
 
            if (datum.count() > 0) {
              // Récupère la première valeur convertie en int
+#if EXIV2_TEST_VERSION(0,28,0)
              u = static_cast<uint16_t>(datum.toInt64());   // ou datum.toInt64() si Exiv2 < 0.28
+#else
+             u = static_cast<uint16_t>(datum.toLong());    // Exiv2 < 0.28: toInt64() does not exist yet
+#endif
             }
 
             int16_t v = static_cast<int16_t>(u);  // Conversion en signé
