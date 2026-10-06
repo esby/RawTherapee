@@ -74,6 +74,7 @@ TT_SERIESWB_GREEN_TOOLTIP;Factor applied to the tint of the camera white balance
 TT_SERIESWB_LABEL;Series White Balance
 TT_SERIESWB_LEARN;Learn from this image
 TT_SERIESWB_LEARNED;Shift learned: %1 mireds, tint factor %2.
+TT_SERIESWB_LEARNED_LOCAL;Server unavailable: kept in the tool, not sent.
 TT_SERIESWB_LEARN_TINT;Learn the tint too (green / magenta cast)
 TT_SERIESWB_LEARN_TOOLTIP;Sets the shift from the white balance of the current image, compared to the camera white balance. With the server, it becomes the value of the folder of the image.
 TT_SERIESWB_MANUAL;White balance changed by hand (%1 K): left untouched.
@@ -94,6 +95,7 @@ TT_SERIESWB_SET_PARENT;Set for the parent folder
 TT_SERIESWB_SET_PARENT_TOOLTIP;Sends the values of the tool to the server, for the parent folder (ex: the folder of a whole convention).
 TT_SERIESWB_SOURCE;Value of %1.
 TT_SERIESWB_SOURCE_DEFAULT;Default value (no folder declares one).
+TT_SERIESWB_SOURCE_TOOL;Values of the tool (no folder declares one).
 TT_SERIESWB_UNSET;Back to inheritance
 TT_SERIESWB_UNSET_DONE;%1 inherits its value again.
 TT_SERIESWB_UNSET_NONE;%1 has no value of its own.

@@ -223,18 +223,23 @@ void TTSeriesWB::requestForCurrentImage()
       applyToCurrentImage(false);
       return;
     }
-    // the tool shows the value of the folder (the local settings are kept for the cases without server)
-    loading = true;
-    adjMired->block(true);
-    adjGreen->block(true);
-    exactMired = rule.mired;
-    exactGreen = rule.green;
-    adjMired->setValue(rule.mired);
-    adjGreen->setValue(rule.green);
-    adjMired->block(false);
-    adjGreen->block(false);
-    cbFlashOnly->set_active(rule.flashOnly);
-    loading = false;
+    // the tool shows the value of the folder (the local settings are kept for the cases without server).
+    // no folder declares a value (empty source): the default value of the server only means that, the
+    // values of the tool (last learned or set) are kept, they are the default value of the user.
+    if (!rule.source.empty())
+    {
+      loading = true;
+      adjMired->block(true);
+      adjGreen->block(true);
+      exactMired = rule.mired;
+      exactGreen = rule.green;
+      adjMired->setValue(rule.mired);
+      adjGreen->setValue(rule.green);
+      adjMired->block(false);
+      adjGreen->block(false);
+      cbFlashOnly->set_active(rule.flashOnly);
+      loading = false;
+    }
     currentSource = rule.source;
     modified = false;
 
@@ -452,7 +457,7 @@ void TTSeriesWB::applyToCurrentImage(bool force, const EsbyWBFileState* serverSt
   {
     client->applied(realPath(file), temp, green, currentSource);
     origin = modified ? M("TT_SERIESWB_MODIFIED")
-           : currentSource.empty() ? M("TT_SERIESWB_SOURCE_DEFAULT")
+           : currentSource.empty() ? M("TT_SERIESWB_SOURCE_TOOL")
            : Glib::ustring::compose(M("TT_SERIESWB_SOURCE"), currentSource);
   }
   setInfo(Glib::ustring::compose(M("TT_SERIESWB_APPLIED"),
@@ -545,6 +550,7 @@ void TTSeriesWB::learnFromCurrentImage()
   setInfo(Glib::ustring::compose(M("TT_SERIESWB_LEARNED"),
                                  Glib::ustring::format(std::fixed, std::setprecision(1), mired),
                                  Glib::ustring::format(std::fixed, std::setprecision(3), green))
+          + "\n" + M("TT_SERIESWB_LEARNED_LOCAL")
           + "\n" + values);
 }
 
