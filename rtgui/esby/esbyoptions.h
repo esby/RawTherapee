@@ -17,6 +17,7 @@
 #pragma once
 
 #include "options.h"
+#include "rtengine/rtapp.h"
 
 // access to the RawTherapee options from the esby code.
 // upstream replaced the global variable 'options' by the App singleton
@@ -25,7 +26,8 @@
 //   inline Options& esbyOptions() { return App::get().mut_options(); }
 inline Options& esbyOptions()
 {
-    return options;
+//    return options;
+    return App::get().mut_options();
 }
 
 // options of the esby fork (EsbySettings, stored in the [TTP] group), member of Options

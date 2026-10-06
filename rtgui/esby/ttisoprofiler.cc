@@ -17,6 +17,7 @@
  *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "ttisoprofiler.h"
+#include "rtengine/rtapp.h"
 #include "esbyoptions.h"
 #include "ttlog.h"
 #include "options.h"
@@ -205,7 +206,7 @@ void TTIsoProfiler::parseProfileFolder()
             } else {
                 size_t lastdot = currDir.find_last_of ('.');
 
-                if (lastdot != Glib::ustring::npos && lastdot <= currDir.size() - 4 && !currDir.casefold().compare (lastdot, 4, paramFileExtension)) {
+                if (lastdot != Glib::ustring::npos && lastdot <= currDir.size() - 4 && !currDir.casefold().compare (lastdot, 4, App::PARAM_FILE_EXTENSION)) {
                     // file found
                     if( esbyOptions().rtSettings.verbose ) {
                         printf ("ttp profile detected %s... \n", fname.c_str());

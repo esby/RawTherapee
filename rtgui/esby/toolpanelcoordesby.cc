@@ -22,6 +22,7 @@
 #include <iostream>
 
 #include "multilangmgr.h"
+#include "esbyoptions.h"
 #include "ttlog.h"
 #include "toolpanelcoord.h"
 #include "metadatapanel.h"
@@ -48,9 +49,9 @@ void ToolPanelCoordinator::addfavoritePanel (Gtk::Box* where, FoldableToolPanel*
 {
   if (useRtFav){
     auto name = panel->getToolName();
-    auto it = std::find(options.favorites.begin(), options.favorites.end(), name);
-    if (it != options.favorites.end()) {
-        int index = std::distance(options.favorites.begin(), it);
+    auto it = std::find(esbyOptions().favorites.begin(), esbyOptions().favorites.end(), name);
+    if (it != esbyOptions().favorites.end()) {
+        int index = std::distance(esbyOptions().favorites.begin(), it);
         favorites[index] = panel;
     } else {
         addPanel(where, panel, level);
@@ -84,7 +85,7 @@ void ToolPanelCoordinator::doDeployLate()
 
 void ToolPanelCoordinator::doReact(FakeProcEvent ev)
 {
-    if ( options.rtSettings.verbose ) 
+    if ( esbyOptions().rtSettings.verbose ) 
       printf("enabling panel reac for envId=%i\n", env->getId());
 
     if (!isReaction)
@@ -204,7 +205,7 @@ static void transmitExifData(const Glib::ustring& fname, Environment* env)
             count++;
         }
 
-        if (options.rtSettings.verbose)
+        if (esbyOptions().rtSettings.verbose)
             printf("%i exif values transmitted by variables\n", count);
     }
     catch (const std::exception& e) // Exiv2::Error derives from std::exception
@@ -214,30 +215,30 @@ static void transmitExifData(const Glib::ustring& fname, Environment* env)
 }
 
 void ToolPanelCoordinator::on_notebook_switch_page(Gtk::Widget* /* page */, guint page_num){
-  if (options.rtSettings.verbose)
+  if (esbyOptions().rtSettings.verbose)
     printf(" on_notebook_switch_page called\n");
   if (!env->disableSwitchPageReaction)
     {
 
     env->prevState = env->state;
-    if (options.rtSettings.verbose)     
+    if (esbyOptions().rtSettings.verbose)     
       printf("notebook switch page %c-> ", env->prevState);
     if (toolPanelNotebook->get_current_page() == toolPanelNotebook->page_num(*favoritePanelSW))
     {
        env->state = ENV_STATE_IN_FAV;      
-       if (options.rtSettings.verbose)
+       if (esbyOptions().rtSettings.verbose)
          printf("%c -> favorite panel\n", env->state);
     }
     else 
     if (toolPanelNotebook->get_current_page() == toolPanelNotebook->page_num(*trashPanelSW)) 
     {
        env->state = ENV_STATE_IN_TRASH;
-       if (options.rtSettings.verbose)
+       if (esbyOptions().rtSettings.verbose)
          printf("%c -> trash panel\n", env->state);
     }else
     {
       env->state = ENV_STATE_IN_NORM;
-      if (options.rtSettings.verbose)
+      if (esbyOptions().rtSettings.verbose)
         printf("%c -> normal panel\n", env->state);
     }
 
@@ -462,7 +463,7 @@ void ToolPanelCoordinator::linkPanelRing()
         ring[(i + 1) % n]->setPrevBox(ring[i]);
     }
 
-    if (options.rtSettings.verbose)
+    if (esbyOptions().rtSettings.verbose)
     {
         printf("panel ring:");
         for (auto box : ring)
@@ -548,7 +549,7 @@ void ToolPanelCoordinator::scrollToTool(FoldableToolPanel* tool, FoldableToolPan
 void ToolPanelCoordinator::esbyTransmitImageData(const rtengine::FramesMetaData* pMetaData)
 {
        const rtengine::FramesMetaData* idata = ipc->getInitialImage()->getMetaData();
-       if( options.rtSettings.verbose ) 
+       if( esbyOptions().rtSettings.verbose ) 
        printf("transmiting some data via rtvar \n");
        //todo add idata to rtvar?
         env->setVar("Iso", idata->getISOSpeed());
@@ -628,7 +629,7 @@ void ToolPanelCoordinator::esbyCreatePanels(bool benchmark)
 void ToolPanelCoordinator::esbyRegisterTools()
 {
     if (useRtFav)
-      favorites.resize(options.favorites.size(), nullptr);
+      favorites.resize(esbyOptions().favorites.size(), nullptr);
 
     // the tools are registered from the upstream table (PANEL_TOOLS, getDefaultToolLayout()):
     // the tools added upstream are registered without any change here, and the sub-tools use
@@ -730,7 +731,7 @@ void ToolPanelCoordinator::esbyCreateScrolledWindows()
 {
     trashPanelSW       = Gtk::manage(new MyScrolledWindow());
     usefulPanelSW      = Gtk::manage(new MyScrolledWindow());
-    updateVScrollbars(options.hideTPVScrollbar);
+    updateVScrollbars(esbyOptions().hideTPVScrollbar);
 }
 
 // constructor: tab boxes set up (handlePanel), environment boxes, labels of the esby tabs
@@ -749,7 +750,7 @@ void ToolPanelCoordinator::esbyLayoutPanels()
     handlePanel(usefulPanel, usefulPanelSW, panelIter++, 4);       //8
     handlePanel(trashPanel, trashPanelSW, panelIter++, 4);         //9
 
-    if ( options.rtSettings.verbose )
+    if ( esbyOptions().rtSettings.verbose )
       printf("panel handling performed. \n");
 
 
@@ -826,10 +827,10 @@ void ToolPanelCoordinator::esbyAppendPages()
 // constructor: deployment of the tools (ttp profile...)
 void ToolPanelCoordinator::esbyDeploy()
 {
-    if ( options.rtSettings.verbose )
+    if ( esbyOptions().rtSettings.verbose )
       printf("Starting toolpanel deployment\n");
     doDeploy();
-    if ( options.rtSettings.verbose )
+    if ( esbyOptions().rtSettings.verbose )
       printf("Panel deployment finished\n");
 }
 
@@ -848,7 +849,7 @@ void ToolPanelCoordinator::esbyImageOpened(int pp3versionFromThumbnail)
 {
     int pp3version = pp3versionFromThumbnail;
     env->setVar("pp3version", pp3version );
-    if( options.rtSettings.verbose )
+    if( esbyOptions().rtSettings.verbose )
       printf("pp3version transmitted by variables = %i \n", pp3version);
 
     // we react to the data added
@@ -873,7 +874,7 @@ void ToolPanelCoordinator::esbyEventReceived(const rtengine::ProcEvent& ev)
 void ToolPanelCoordinator::esbySetFileName(const Glib::ustring& fileName)
 {
     // note: we will react later, on pp3 version tranmission
-    if( options.rtSettings.verbose )
+    if( esbyOptions().rtSettings.verbose )
       printf("filename value transmitted by variables \n");
     env->setVar("Fname",fileName);
 }

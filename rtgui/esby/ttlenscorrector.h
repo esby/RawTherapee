@@ -24,7 +24,7 @@
 #include "toolpanel.h"
 #include "../rtengine/rawimage.h"
 #include "guiutils.h"
-#include "distortion.h"
+#include "tools/distortion.h"
 
 
 class TTLensCorrector : public ToolParamBlock, public FoldableToolPanel {

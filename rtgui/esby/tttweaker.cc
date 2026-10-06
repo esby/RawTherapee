@@ -17,6 +17,7 @@
  *  along with RawTherapee.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "tttweaker.h"
+#include "rtengine/rtapp.h"
 #include "ttlog.h"
 #include "options.h"
 #include "guiutils.h"
@@ -267,7 +268,7 @@ void TTTweaker::react(FakeProcEvent ev)
 
   if (ev == FakeEvFileSaved)
   {
-    if (cbCloseAfterSave->get_active() && simpleEditor)
+    if (cbCloseAfterSave->get_active() && App::get().isSimpleEditor())
     {
       // sleep(1); // note: sleep might not be multi platform
       std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -275,7 +276,7 @@ void TTTweaker::react(FakeProcEvent ev)
       gtk_main_quit();
     }
 
-    if (cbReduceAfterSave->get_active() && !simpleEditor)
+    if (cbReduceAfterSave->get_active() && !App::get().isSimpleEditor())
     {
       // sleep(1); // note: sleep might not be multi platform
       std::this_thread::sleep_for(std::chrono::seconds(1));

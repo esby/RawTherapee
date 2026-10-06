@@ -16,7 +16,7 @@
  */
 #include "esbypreferences.h"
 #include "multilangmgr.h"
-#include "preferences.h"
+#include "windows/preferences.h"
 #include "soundman.h" //needed for testing sound.
 
 // sound test buttons of the sounds tab (Preferences methods, the buttons are created in getSoundsPanel())

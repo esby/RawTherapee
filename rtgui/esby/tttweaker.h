@@ -25,9 +25,9 @@
 #include "../rtengine/rawimage.h"
 #include "guiutils.h"
 #include "coarsepanel.h"
-#include "distortion.h"
-#include "whitebalance.h"
-#include "rotate.h"
+#include "tools/distortion.h"
+#include "tools/whitebalance.h"
+#include "tools/rotate.h"
 
 
 class TTTweaker : public ToolParamBlock, public FoldableToolPanel {
