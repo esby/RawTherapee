@@ -85,6 +85,8 @@ protected:
     void unsetFolderValue();
     void updateServerStatus();
     Glib::ustring currentFolder();
+    Glib::ustring seriesFile();   // the original file (ESBY_ORIGIN) or the current one, links resolved
+    bool fromOrigin();            // the original file given by ESBY_ORIGIN is used
     static Glib::ustring realPath(const Glib::ustring& path);
     static bool isBelow(const Glib::ustring& path, const Glib::ustring& folder);
     void learnFromCurrentImage();

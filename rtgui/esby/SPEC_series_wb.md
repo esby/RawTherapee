@@ -181,6 +181,10 @@ esbywb orphans                      # règles dont le dossier n'existe plus
   toute modification dans RawTherapee.
 - **Disques externes** : le chemin dépend du point de montage ; une règle déclarée sur un disque
   monté ailleurs ne sera pas retrouvée (`move` permet de corriger).
+- **Copie locale avant ouverture** (ex : `rt_queue`, qui copie le RAW dans `~/Images/raws`) : le
+  lanceur passe le chemin complet du fichier d'origine dans la variable d'environnement
+  `ESBY_ORIGIN`. TTSeriesWB l'utilise comme dossier de série (et comme nom de fichier pour le
+  serveur) si l'image ouverte porte le même nom de fichier.
 
 ## 11. Étapes de réalisation
 

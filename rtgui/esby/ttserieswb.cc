@@ -200,12 +200,41 @@ bool TTSeriesWB::isBelow(const Glib::ustring& path, const Glib::ustring& folder)
   return (path == folder) || (folder == "/") || (path.compare(0, folder.size() + 1, folder + "/") == 0);
 }
 
-Glib::ustring TTSeriesWB::currentFolder()
+// ESBY_ORIGIN: full path of the original file, set by a launcher script (ex: rt_queue) that copies the
+// raw file to a local cache folder before opening it: the folder of the series is the original one.
+// It is used only if the current image has the same file name, so another image opened in the same
+// instance does not get the folder of another series.
+bool TTSeriesWB::fromOrigin()
+{
+  const char* origin = g_getenv("ESBY_ORIGIN");
+  Glib::ustring file = currentFile();
+  return (origin != nullptr) && (*origin != '\0') && !file.empty()
+      && (Glib::path_get_basename(origin) == Glib::path_get_basename(file));
+}
+
+Glib::ustring TTSeriesWB::seriesFile()
 {
   if (env == nullptr)
     return "";
   Glib::ustring file = currentFile();
-  return file.empty() ? Glib::ustring() : realPath(Glib::path_get_dirname(file));
+  if (file.empty())
+    return "";
+  if (fromOrigin())
+  {
+    Glib::ustring origin = g_getenv("ESBY_ORIGIN");
+    return Glib::build_filename(realPath(Glib::path_get_dirname(origin)), Glib::path_get_basename(origin));
+  }
+  return Glib::build_filename(realPath(Glib::path_get_dirname(file)), Glib::path_get_basename(file));
+}
+
+Glib::ustring TTSeriesWB::currentFolder()
+{
+//  if (env == nullptr)
+//    return "";
+//  Glib::ustring file = currentFile();
+//  return file.empty() ? Glib::ustring() : realPath(Glib::path_get_dirname(file));
+  Glib::ustring file = seriesFile();
+  return file.empty() ? Glib::ustring() : Glib::ustring(Glib::path_get_dirname(file));
 }
 
 // asks the server the value of the folder of the current image, then the white balance it applied
@@ -256,7 +285,7 @@ void TTSeriesWB::requestForCurrentImage()
     currentSource = rule.source;
     modified = false;
 
-    client->fileState(realPath(file), [this, file](bool ok, const EsbyWBFileState& state) {
+    client->fileState(seriesFile(), [this, file](bool ok, const EsbyWBFileState& state) {
       if (currentFile() != file)
         return;
       applyToCurrentImage(false, ok ? &state : nullptr);
@@ -431,7 +460,10 @@ void TTSeriesWB::setStatus(const Glib::ustring& action, const WBParams& wb, doub
                                                 wb.method,
                                                 (wb.observer == rtengine::StandardObserver::TEN_DEGREES) ? "10" : "2",
                                                 Glib::ustring::format(std::fixed, std::setprecision(3), wb.equal));
-  setInfo(action + "\n" + series + "\n" + values + (origin.empty() ? Glib::ustring() : "\n" + origin));
+  Glib::ustring folder;
+  if (fromOrigin())
+    folder = "\n" + Glib::ustring::compose(M("TT_SERIESWB_ORIGIN"), currentFolder());
+  setInfo(action + "\n" + series + "\n" + values + (origin.empty() ? Glib::ustring() : "\n" + origin) + folder);
 }
 
 void TTSeriesWB::setInfo(const Glib::ustring& text)
@@ -512,7 +544,7 @@ void TTSeriesWB::applyToCurrentImage(bool force, const EsbyWBFileState* serverSt
   Glib::ustring origin;
   if (client && client->isConnected())
   {
-    client->applied(realPath(file), temp, green, equal, currentSource);
+    client->applied(seriesFile(), temp, green, equal, currentSource);
     origin = modified ? M("TT_SERIESWB_MODIFIED")
            : currentSource.empty() ? M("TT_SERIESWB_SOURCE_TOOL")
            : Glib::ustring::compose(M("TT_SERIESWB_SOURCE"), currentSource);
@@ -613,7 +645,7 @@ void TTSeriesWB::learnFromCurrentImage()
   {
     Glib::ustring folder = currentFolder();
     client->set(folder, mired, green, equal, cbFlashOnly->get_active(), nullptr);
-    client->applied(realPath(file), wb.temperature, wb.green, wb.equal, folder);
+    client->applied(seriesFile(), wb.temperature, wb.green, wb.equal, folder);
     currentSource = folder;
     setStatus(M("TT_SERIESWB_LEARNED"), wb, camTemp, camGreen, Glib::ustring::compose(M("TT_SERIESWB_SET_DONE"), folder));
     return;
