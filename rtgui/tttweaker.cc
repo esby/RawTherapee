@@ -246,8 +246,11 @@ void TTTweaker::react(FakeProcEvent ev)
             printf("rotate CCW detected d adjusted to d=%i \n",d);
           }
           //other cases not handled
-          rtengine::procparams::ProcParams* pp;
-          pp = new ProcParams();
+          // note: the ProcParams was allocated with new and never deleted (leak on every photo)
+//          rtengine::procparams::ProcParams* pp;
+//          pp = new ProcParams();
+          rtengine::procparams::ProcParams params;
+          rtengine::procparams::ProcParams* pp = &params;
           rotate->write(pp);
           if ((pp->rotate.degree == 0) 
           &&  (pp->rotate.degree != d))
