@@ -33,3 +33,8 @@ install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/esby/languages/default" DESTINATION "
 # - upstream files include the esby headers by name (ex: "movabletoolpanel.h"),
 # - esby files include the rtgui headers by name (ex: "toolpanel.h") or with "../rtengine/...".
 include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/esby)
+
+# rtengine includes some rtgui headers (ex: improccoordinator.cc -> labgrid.h -> toolpanel.h),
+# which include the esby headers, and the esby headers include rtgui headers by name.
+# These paths are appended after the rtengine ones, so they never hide an rtengine header.
+target_include_directories(rtengine PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/esby)
