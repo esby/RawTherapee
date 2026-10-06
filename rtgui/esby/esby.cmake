@@ -3,6 +3,7 @@
 
 set(ESBYSOURCEFILES
     esby/environment.cc
+    esby/toolpanelcoordesby.cc
     esby/movabletoolpanel.cc
     esby/toolvboxdef.cc
     esby/variable.cc
