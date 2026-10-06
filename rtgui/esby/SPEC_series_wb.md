@@ -1,6 +1,6 @@
 # Balance des blancs par série : spécification
 
-Statut : étape 1 implémentée (`ttserieswb.*`, outil seul, sans serveur) ; étapes 2 et 3 à faire.
+Statut : étapes 1 (`ttserieswb.*`) et 2 (`server/esbywb.py`) implémentées ; étape 3 à faire.
 
 ## 1. Objectif
 
@@ -186,7 +186,8 @@ esbywb orphans                      # règles dont le dossier n'existe plus
 1. `TTSeriesWB` sans serveur : décalage réglé dans l'outil, application à l'ouverture, suivi de
    série en mémoire. Permet de valider le calcul et le comportement. **Fait.** Le décalage est
    enregistré dans le profil `.ttp` ; le suivi de série ne dure que le temps de la session.
-2. Le serveur et le protocole, avec `esbywb`.
+2. Le serveur et le protocole, avec `esbywb`. **Fait** : `server/esbywb.py` (Python 3,
+   bibliothèque standard), tests dans `server/tests/`, service systemd dans `server/esbywb.service`.
 3. Le branchement de `TTSeriesWB` sur le serveur (lecture, apprentissage, notifications).
 
 ## 12. Questions ouvertes

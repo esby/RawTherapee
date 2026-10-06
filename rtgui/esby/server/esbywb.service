@@ -1,0 +1,20 @@
+# systemd user service for the esbywb server (series white balance, esby fork of RawTherapee)
+#
+# installation:
+#   mkdir -p ~/.config/systemd/user
+#   cp esbywb.service ~/.config/systemd/user/
+#   (adapt ExecStart to the location of esbywb.py)
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now esbywb
+#
+# logs: journalctl --user -u esbywb
+
+[Unit]
+Description=esbywb, series white balance server (RawTherapee esby fork)
+
+[Service]
+ExecStart=%h/rt-dev/rt_esby/rtgui/esby/server/esbywb.py serve
+Restart=on-failure
+
+[Install]
+WantedBy=default.target

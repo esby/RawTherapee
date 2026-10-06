@@ -57,6 +57,7 @@ expliquent le *pourquoi*.
 | `ttdep.*` | fonctions de tri des panneaux |
 | `tt*.cc/h` | les outils de l'onglet Useful |
 | `languages/default` | clés de traduction du fork, installées dans `<données>/esby/languages/` |
+| `server/` | `esbywb.py` : serveur et outil en ligne de commande de la balance des blancs par série (Python) |
 
 ## Branchement sur l'upstream
 
