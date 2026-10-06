@@ -230,6 +230,15 @@ void TTSeriesWB::learnFromCurrentImage()
     return;
   }
 
+  // "Camera" method: the engine applies the camera multipliers, the temperature and tint shown by
+  // the white balance tool may still be the values of the profile (ex: a profile applied before the
+  // image data was available). The current white balance is then the camera one.
+  if (wb.method == "Camera")
+  {
+    wb.temperature = (int) std::lround(camTemp);
+    wb.green = camGreen;
+  }
+
   double mired = 1000000.0 / wb.temperature - 1000000.0 / camTemp;
   double green = wb.green / camGreen;
 
