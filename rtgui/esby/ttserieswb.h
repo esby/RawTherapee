@@ -81,7 +81,9 @@ protected:
     void setWhiteBalance(int temp, double green, double equal);
     void applyToCurrentImage(bool force, const EsbyWBFileState* serverState = nullptr);
     void requestForCurrentImage();
-    void setFolderValue(bool parent);
+    void setFolderValue(bool seriesRoot);
+    Glib::ustring findSeriesRoot(const Glib::ustring& folder);
+    Glib::ustring pendingAction; // action shown by the next status (ex: kept after a learn)
     void unsetFolderValue();
     void updateServerStatus();
     Glib::ustring currentFolder();

@@ -87,6 +87,7 @@ TT_SERIESWB_MODIFIED;Value changed in the tool, not sent to the server.
 TT_SERIESWB_NO_CAMERA_WB;Camera white balance not available.
 TT_SERIESWB_NO_FLASH;No flash fired: not concerned.
 TT_SERIESWB_NO_IMAGE;No image.
+TT_SERIESWB_NO_MARKER;(no marker file found: %1, parent folder used)
 TT_SERIESWB_ORIGIN;Series folder of the original file (ESBY_ORIGIN): %1.
 TT_SERIESWB_OUT_OF_RANGE;Not learned: shift %1 mireds, tint factor %2, blue/red factor %3, out of the ranges of the tool.
 TT_SERIESWB_SERVER_CONNECTED;Server: connected, value per folder.
@@ -97,6 +98,8 @@ TT_SERIESWB_SET_FOLDER;Set for this folder
 TT_SERIESWB_SET_FOLDER_TOOLTIP;Sends the values of the tool to the server, for the folder of the image. The folders below inherit them.
 TT_SERIESWB_SET_PARENT;Set for the parent folder
 TT_SERIESWB_SET_PARENT_TOOLTIP;Sends the values of the tool to the server, for the parent folder (ex: the folder of a whole convention).
+TT_SERIESWB_SET_ROOT;Set for the series root
+TT_SERIESWB_SET_ROOT_TOOLTIP;Sends the values of the tool to the server, for the series root: the first folder, from the folder of the image upwards, containing a marker file (%1, option SeriesWBMarkers). Without marker file, the parent folder is used.
 TT_SERIESWB_SHIFT;Series: shift %1 mireds, tint factor %2, blue/red factor %3.
 TT_SERIESWB_SOURCE;Value of %1.
 TT_SERIESWB_SOURCE_DEFAULT;Default value (no folder declares one).

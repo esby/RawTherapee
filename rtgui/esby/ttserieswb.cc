@@ -104,8 +104,11 @@ TTSeriesWB::TTSeriesWB() : FoldableToolPanel(this, "TTSeriesWB", M("TT_SERIESWB_
   serverBox->set_spacing(4);
   btSetFolder = Gtk::manage(new Gtk::Button(M("TT_SERIESWB_SET_FOLDER")));
   btSetFolder->set_tooltip_text(M("TT_SERIESWB_SET_FOLDER_TOOLTIP"));
-  btSetParent = Gtk::manage(new Gtk::Button(M("TT_SERIESWB_SET_PARENT")));
-  btSetParent->set_tooltip_text(M("TT_SERIESWB_SET_PARENT_TOOLTIP"));
+//  btSetParent = Gtk::manage(new Gtk::Button(M("TT_SERIESWB_SET_PARENT")));
+//  btSetParent->set_tooltip_text(M("TT_SERIESWB_SET_PARENT_TOOLTIP"));
+  // series root: the first folder above the image containing a marker file (SeriesWBMarkers)
+  btSetParent = Gtk::manage(new Gtk::Button(M("TT_SERIESWB_SET_ROOT")));
+  btSetParent->set_tooltip_text(Glib::ustring::compose(M("TT_SERIESWB_SET_ROOT_TOOLTIP"), esbySettings().SeriesWBMarkers));
   btUnset = Gtk::manage(new Gtk::Button(M("TT_SERIESWB_UNSET")));
   btUnset->set_tooltip_text(M("TT_SERIESWB_UNSET_TOOLTIP"));
   serverBox->pack_start(*btSetFolder, Gtk::PACK_EXPAND_WIDGET, 0);
@@ -295,16 +298,64 @@ void TTSeriesWB::requestForCurrentImage()
 
 // sends the values of the tool to the server, for the folder of the image or its parent.
 // the server then notifies the change, and the image is updated by the event.
-void TTSeriesWB::setFolderValue(bool parent)
+// the first folder, from the folder of the image upwards, containing one of the marker files
+// (SeriesWBMarkers, separated by ';'), or an empty string when there is none
+Glib::ustring TTSeriesWB::findSeriesRoot(const Glib::ustring& folder)
+{
+  std::vector<Glib::ustring> markers;
+  std::istringstream list(esbySettings().SeriesWBMarkers);
+  std::string marker;
+  while (std::getline(list, marker, ';'))
+  {
+    if (!marker.empty())
+      markers.push_back(marker);
+  }
+
+  Glib::ustring dir = folder;
+  while (!dir.empty())
+  {
+    for (const auto& m : markers)
+    {
+      if (Glib::file_test(Glib::build_filename(dir, m), Glib::FILE_TEST_EXISTS))
+        return dir;
+    }
+    Glib::ustring parent = Glib::path_get_dirname(dir);
+    if (parent == dir) // root reached
+      break;
+    dir = parent;
+  }
+  return "";
+}
+
+// sends the values of the tool to the server, for the folder of the image or the series root.
+// the server then notifies the change, and the image is updated by the event.
+void TTSeriesWB::setFolderValue(bool seriesRoot)
 {
   Glib::ustring folder = currentFolder();
   if (folder.empty() || !client || !client->isConnected())
     return;
-  if (parent)
-    folder = Glib::path_get_dirname(folder);
+  Glib::ustring note;
+  if (seriesRoot)
+  {
+//    folder = Glib::path_get_dirname(folder);
+    Glib::ustring root = findSeriesRoot(folder);
+    if (root.empty())
+    {
+      // no marker file: the parent folder, as before
+      folder = Glib::path_get_dirname(folder);
+      note = Glib::ustring::compose(M("TT_SERIESWB_NO_MARKER"), esbySettings().SeriesWBMarkers);
+    }
+    else
+      folder = root;
+  }
+  pendingAction = Glib::ustring::compose(M("TT_SERIESWB_SET_DONE"), folder) + (note.empty() ? Glib::ustring() : " " + note);
   client->set(folder, exactMired, exactGreen, exactEqual, cbFlashOnly->get_active(),
     [this, folder](bool ok, const Glib::ustring&) {
-      setInfo(Glib::ustring::compose(M(ok ? "TT_SERIESWB_SET_DONE" : "TT_SERIESWB_SERVER_ERROR"), folder));
+      if (!ok)
+      {
+        pendingAction.clear();
+        setInfo(Glib::ustring::compose(M("TT_SERIESWB_SERVER_ERROR"), folder));
+      }
     });
 }
 
@@ -450,8 +501,10 @@ bool TTSeriesWB::sameWB(int t1, double g1, double e1, int t2, double g2, double 
 void TTSeriesWB::setStatus(const Glib::ustring& action, const WBParams& wb, double camTemp, double camGreen,
                            const Glib::ustring& origin)
 {
+  // a shift like -0.00001 (rounding of the integer kelvins) was shown "-0.0"
+  double shownMired = (std::fabs(exactMired) < 0.05) ? 0.0 : exactMired;
   Glib::ustring series = Glib::ustring::compose(M("TT_SERIESWB_SHIFT"),
-                                                Glib::ustring::format(std::fixed, std::setprecision(1), exactMired),
+                                                Glib::ustring::format(std::fixed, std::setprecision(1), shownMired),
                                                 Glib::ustring::format(std::fixed, std::setprecision(3), exactGreen),
                                                 Glib::ustring::format(std::fixed, std::setprecision(3), exactEqual));
   Glib::ustring values = Glib::ustring::compose(M("TT_SERIESWB_VALUES"),
@@ -463,7 +516,13 @@ void TTSeriesWB::setStatus(const Glib::ustring& action, const WBParams& wb, doub
   Glib::ustring folder;
   if (fromOrigin())
     folder = "\n" + Glib::ustring::compose(M("TT_SERIESWB_ORIGIN"), currentFolder());
-  setInfo(action + "\n" + series + "\n" + values + (origin.empty() ? Glib::ustring() : "\n" + origin) + folder);
+  Glib::ustring shownAction = action;
+  if (!pendingAction.empty()) // action of a learn or a "set", kept over the refresh it causes
+  {
+    shownAction = pendingAction;
+    pendingAction.clear();
+  }
+  setInfo(shownAction + "\n" + series + "\n" + values + (origin.empty() ? Glib::ustring() : "\n" + origin) + folder);
 }
 
 void TTSeriesWB::setInfo(const Glib::ustring& text)
@@ -647,6 +706,8 @@ void TTSeriesWB::learnFromCurrentImage()
     client->set(folder, mired, green, equal, cbFlashOnly->get_active(), nullptr);
     client->applied(seriesFile(), wb.temperature, wb.green, wb.equal, folder);
     currentSource = folder;
+    // the server notifies the change, and the refresh of the image would replace this action
+    pendingAction = M("TT_SERIESWB_LEARNED") + " " + Glib::ustring::compose(M("TT_SERIESWB_SET_DONE"), folder);
     setStatus(M("TT_SERIESWB_LEARNED"), wb, camTemp, camGreen, Glib::ustring::compose(M("TT_SERIESWB_SET_DONE"), folder));
     return;
   }

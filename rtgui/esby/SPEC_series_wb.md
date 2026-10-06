@@ -139,7 +139,9 @@ Exemple :
 **Actions** :
 
 - définir la valeur pour le dossier de l'image ;
-- définir la valeur pour le dossier parent (pour déclarer une convention entière) ;
+- définir la valeur pour la racine de la série : le premier dossier, en remontant depuis celui de
+  l'image, qui contient un fichier repère (option `SeriesWBMarkers`, par défaut
+  `fields.conf;.esby-series`) ; à défaut, le dossier parent ;
 - apprendre de cette image : `mired = mired(balance actuelle) − mired(boîtier)` ;
 - revenir à l'héritage (supprime la règle du dossier) ;
 - rattacher l'image à la série / la détacher.

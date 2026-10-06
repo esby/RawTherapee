@@ -103,6 +103,10 @@ void EsbySettings::readFromFile(Glib::KeyFile& keyFile)
                     SeriesWBFlashOnly     = keyFile.get_boolean ("TTP", "SeriesWBFlashOnly");
                 }
 
+                if (keyFile.has_key ("TTP", "SeriesWBMarkers")) {
+                    SeriesWBMarkers       = keyFile.get_string ("TTP", "SeriesWBMarkers");
+                }
+
                 if (keyFile.has_key ("TTP", "SeriesWBLearnTint")) {
                     SeriesWBLearnTint     = keyFile.get_boolean ("TTP", "SeriesWBLearnTint");
                 }
@@ -131,4 +135,5 @@ void EsbySettings::saveToFile(Glib::KeyFile& keyFile) const
         keyFile.set_double  ("TTP", "SeriesWBEqual", SeriesWBEqual);
         keyFile.set_boolean ("TTP", "SeriesWBFlashOnly", SeriesWBFlashOnly);
         keyFile.set_boolean ("TTP", "SeriesWBLearnTint", SeriesWBLearnTint);
+        keyFile.set_string  ("TTP", "SeriesWBMarkers", SeriesWBMarkers);
 }

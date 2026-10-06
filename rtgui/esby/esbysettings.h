@@ -53,6 +53,8 @@ public:
     double SeriesWBEqual = 1.0;
     bool SeriesWBFlashOnly = true;
     bool SeriesWBLearnTint = false;
+    // marker files of a series root folder, separated by ';' ("Set for the series root")
+    Glib::ustring SeriesWBMarkers = "fields.conf;.esby-series";
 
     void readFromFile(Glib::KeyFile& keyFile);
     void saveToFile(Glib::KeyFile& keyFile) const;
