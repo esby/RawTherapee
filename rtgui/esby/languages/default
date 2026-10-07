@@ -56,6 +56,8 @@ TTTW_CLOSE_AFTER_SAVE_SE;Close after saving (single editor)
 TTTW_LABEL;Tweaker
 TTTW_MIN_AFTER_SAVE_ME;Minimize after saving (multiple editors)
 TTTW_RESET_WB_RT4_PPT;Reset the white balance to camera for RawTherapee 4 profiles
+TTTW_TABS_NO_ARROWS;Tab bar without scroll arrows
+TTTW_TABS_NO_ARROWS_TOOLTIP;Every visible tab is shown, without scroll arrows (a click at the end of the bar moved one tab only). The tabs must fit in the panel: hide the unused ones with the tab hider, otherwise the panel gets wider. Right click on the tab bar shows the menu of all the tabs.
 TTTW_TOOLNAME_AS_TOOLTIP;Show the internal tool name as tooltip
 TTTW_TOOLNAME_UNTRANSLATED;Show the internal tool names as titles
 TT_ISO_PROFILER;Profile by ISO

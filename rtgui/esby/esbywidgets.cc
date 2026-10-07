@@ -28,7 +28,10 @@ void esbyInstallCompactCss()
     Glib::RefPtr<Gtk::CssProvider> css = Gtk::CssProvider::create();
     try
     {
-        css->load_from_data("button." ESBY_COMPACT_CLASS " { padding: 0px 3px; min-width: 0px; min-height: 0px; }");
+//        css->load_from_data("button." ESBY_COMPACT_CLASS " { padding: 0px 3px; min-width: 0px; min-height: 0px; }");
+        // the tabs of the tool panel are compact too: with the 3 tabs of the fork, they did not fit
+        css->load_from_data("button." ESBY_COMPACT_CLASS " { padding: 0px 3px; min-width: 0px; min-height: 0px; }\n"
+                            "#ToolPanelNotebook tab { padding: 2px 4px; min-width: 0px; }");
     }
     catch (const Glib::Error&)
     {

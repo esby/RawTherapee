@@ -41,6 +41,7 @@ protected:
     Gtk::HBox* themeBox5;
     Gtk::HBox* themeBox6;
     Gtk::HBox* themeBox7;
+    Gtk::HBox* themeBox8;
 
     Gtk::Label* lbAutoDistortionCorrect;
     Gtk::CheckButton* cbAutoDistortionCorrect; 
@@ -62,6 +63,9 @@ protected:
 
     Gtk::Label* lbToolNameUntranslated;
     Gtk::CheckButton* cbToolNameUntranslated;
+    Gtk::Label* lbTabsNoArrows;
+    Gtk::CheckButton* cbTabsNoArrows;
+    void tabsNoArrowsChanged();
 
     CoarsePanel* coarse;
     Rotate* rotate;

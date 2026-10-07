@@ -840,6 +840,21 @@ void ToolPanelCoordinator::esbyAppendPages()
 
     linkPanelRing();
 
+    // right click on the tab bar: menu of all the tabs, to reach one that is scrolled out of view.
+    // the tab labels are icons (TextOrIcon): the menu needs the names.
+    toolPanelNotebook->popup_enable();
+    const std::vector<std::pair<Gtk::Widget*, const char*>> tabNames = {
+        {favoritePanelSW, "MAIN_TAB_FAVORITE"}, {exposurePanelSW, "MAIN_TAB_EXPOSURE"},
+        {detailsPanelSW, "MAIN_TAB_DETAIL"}, {colorPanelSW, "MAIN_TAB_COLOR"},
+        {advancedPanelSW, "MAIN_TAB_ADVANCED"}, {locallabPanelSW, "MAIN_TAB_LOCALLAB"},
+        {transformPanelSW, "MAIN_TAB_TRANSFORM"}, {rawPanelSW, "MAIN_TAB_RAW"},
+        {metadata, "MAIN_TAB_METADATA"}, {usefulPanelSW, "MAIN_TAB_USEFUL"}, {trashPanelSW, "MAIN_TAB_TRASH"}};
+    for (const auto& tab : tabNames)
+    {
+        if ((tab.first != nullptr) && (toolPanelNotebook->page_num(*tab.first) >= 0))
+            toolPanelNotebook->set_menu_label_text(*tab.first, M(tab.second));
+    }
+
     toolPanelNotebook->set_current_page(0);
 }
 

@@ -110,6 +110,17 @@ TTTweaker::TTTweaker() : FoldableToolPanel(this,"TTTweaker",M("TTTW_LABEL"),fals
 
   pack_start(*themeBox7, Gtk::PACK_SHRINK, 0);
 
+  // tab bar without scroll arrows: a click at the end of the bar no longer moves one tab only,
+  // but every visible tab must fit (hide the unused ones with the tab hider)
+  themeBox8 = Gtk::manage(new Gtk::HBox());
+  lbTabsNoArrows = Gtk::manage(new Gtk::Label(M("TTTW_TABS_NO_ARROWS")));
+  cbTabsNoArrows = Gtk::manage(new Gtk::CheckButton());
+  lbTabsNoArrows->set_tooltip_text(M("TTTW_TABS_NO_ARROWS_TOOLTIP"));
+  cbTabsNoArrows->set_tooltip_text(M("TTTW_TABS_NO_ARROWS_TOOLTIP"));
+  themeBox8->pack_start(*lbTabsNoArrows, Gtk::PACK_SHRINK, 0);
+  themeBox8->pack_end(*cbTabsNoArrows, Gtk::PACK_SHRINK, 0);
+  pack_start(*themeBox8, Gtk::PACK_SHRINK, 0);
+
 }
 
 void TTTweaker::deploy()
@@ -141,6 +152,14 @@ void TTTweaker::deploy()
 //   cbAutoDistortionCorrect->signal_clicked().connect( sigc::mem_fun(this, &TTTweaker::enabledChanged));
    cbToolNameAsToolTip->signal_clicked().connect( sigc::mem_fun(this, &TTTweaker::enabledChanged));
    cbToolNameUntranslated->signal_clicked().connect( sigc::mem_fun(this, &TTTweaker::enabledChanged));
+   cbTabsNoArrows->signal_toggled().connect( sigc::mem_fun(this, &TTTweaker::tabsNoArrowsChanged));
+}
+
+void TTTweaker::tabsNoArrowsChanged()
+{
+  Gtk::Notebook* notebook = env->getToolPanelNotebook();
+  if (notebook != nullptr)
+    notebook->set_scrollable(!cbTabsNoArrows->get_active());
 }
 
 float normalizeRotation(float f)
@@ -374,6 +393,7 @@ Glib::ustring TTTweaker::themeExport()
   Glib::ustring s_reset_wb = getToolName() + ":"  + "enable_reset_wb " + std::string( cbResetWBForRt4Profiles->get_active() ? "1" : "0" ) ;
   Glib::ustring s_auto_rotate = getToolName() + ":"  + "enable_auto_rotate " + std::string( cbAutoRotateCorrect->get_active() ? "1" : "0" ) ;
   Glib::ustring s_toolname_as_tooltip = getToolName() + ":"  + "enable_toolname_as_tooltip " + std::string( cbToolNameAsToolTip->get_active() ? "1" : "0" ) ;
+  Glib::ustring s_tabs_no_arrows = getToolName() + ":"  + "enable_tabs_no_arrows " + std::string( cbTabsNoArrows->get_active() ? "1" : "0" ) ;
   Glib::ustring s_toolname_on_right = getToolName() + ":"  + "enable_toolname_untranslated " + std::string( cbToolNameUntranslated->get_active() ? "1" : "0" ) ;
 
 
@@ -386,6 +406,7 @@ Glib::ustring TTTweaker::themeExport()
        + s_toolname_as_tooltip + "\n" \
        // was: + s_toolname_on_right (no newline: the next tool line was glued to this one)
        + s_toolname_on_right + "\n" \
+       + s_tabs_no_arrows + "\n" \
 ;
 }
 
@@ -473,6 +494,14 @@ void TTTweaker::themeImport(std::ifstream& myfile)
             if(getline(tokensplitter, token, ' '))
             { 
               cbToolNameUntranslated->set_active((token == "1") ? true: false);
+            }
+          }
+
+          if (token == "enable_tabs_no_arrows")
+          {
+            if(getline(tokensplitter, token, ' '))
+            {
+              cbTabsNoArrows->set_active((token == "1") ? true: false);
             }
           }
 
