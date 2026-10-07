@@ -89,19 +89,26 @@ TTSeriesWB::TTSeriesWB() : FoldableToolPanel(this, "TTSeriesWB", M("TT_SERIESWB_
   learnTintBox->pack_end(*cbLearnTint, Gtk::PACK_SHRINK, 0);
   pack_start(*learnTintBox, Gtk::PACK_SHRINK, 0);
 
-  Gtk::HBox* buttonBox = Gtk::manage(new Gtk::HBox());
-  buttonBox->set_spacing(4);
+//  Gtk::HBox* buttonBox = Gtk::manage(new Gtk::HBox());
+  // flow box: the buttons go to the next line when the side panel is narrow
+  Gtk::FlowBox* buttonBox = Gtk::manage(new Gtk::FlowBox());
+  buttonBox->set_selection_mode(Gtk::SELECTION_NONE);
+  buttonBox->set_column_spacing(4);
+  buttonBox->set_row_spacing(2);
   btApply = Gtk::manage(new Gtk::Button(M("TT_SERIESWB_APPLY")));
   btApply->set_tooltip_text(M("TT_SERIESWB_APPLY_TOOLTIP"));
   btLearn = Gtk::manage(new Gtk::Button(M("TT_SERIESWB_LEARN")));
   btLearn->set_tooltip_text(M("TT_SERIESWB_LEARN_TOOLTIP"));
-  buttonBox->pack_start(*btApply, Gtk::PACK_EXPAND_WIDGET, 0);
-  buttonBox->pack_start(*btLearn, Gtk::PACK_EXPAND_WIDGET, 0);
+  buttonBox->add(*btApply);
+  buttonBox->add(*btLearn);
   pack_start(*buttonBox, Gtk::PACK_SHRINK, 0);
 
   // esbywb server: the value is declared per folder, the folders below inherit it
-  Gtk::HBox* serverBox = Gtk::manage(new Gtk::HBox());
-  serverBox->set_spacing(4);
+//  Gtk::HBox* serverBox = Gtk::manage(new Gtk::HBox());
+  Gtk::FlowBox* serverBox = Gtk::manage(new Gtk::FlowBox());
+  serverBox->set_selection_mode(Gtk::SELECTION_NONE);
+  serverBox->set_column_spacing(4);
+  serverBox->set_row_spacing(2);
   btSetFolder = Gtk::manage(new Gtk::Button(M("TT_SERIESWB_SET_FOLDER")));
   btSetFolder->set_tooltip_text(M("TT_SERIESWB_SET_FOLDER_TOOLTIP"));
 //  btSetParent = Gtk::manage(new Gtk::Button(M("TT_SERIESWB_SET_PARENT")));
@@ -111,17 +118,19 @@ TTSeriesWB::TTSeriesWB() : FoldableToolPanel(this, "TTSeriesWB", M("TT_SERIESWB_
   btSetParent->set_tooltip_text(Glib::ustring::compose(M("TT_SERIESWB_SET_ROOT_TOOLTIP"), esbySettings().SeriesWBMarkers));
   btUnset = Gtk::manage(new Gtk::Button(M("TT_SERIESWB_UNSET")));
   btUnset->set_tooltip_text(M("TT_SERIESWB_UNSET_TOOLTIP"));
-  serverBox->pack_start(*btSetFolder, Gtk::PACK_EXPAND_WIDGET, 0);
-  serverBox->pack_start(*btSetParent, Gtk::PACK_EXPAND_WIDGET, 0);
-  serverBox->pack_start(*btUnset, Gtk::PACK_EXPAND_WIDGET, 0);
+  serverBox->add(*btSetFolder);
+  serverBox->add(*btSetParent);
+  serverBox->add(*btUnset);
   pack_start(*serverBox, Gtk::PACK_SHRINK, 0);
 
   lbServer = Gtk::manage(new Gtk::Label(""));
   lbServer->set_xalign(0.0);
+  lbServer->set_line_wrap(true);
   pack_start(*lbServer, Gtk::PACK_SHRINK, 0);
 
   lbInfo = Gtk::manage(new Gtk::Label(""));
   lbInfo->set_line_wrap(true);
+  lbInfo->set_line_wrap_mode(Pango::WRAP_WORD_CHAR); // the paths have long parts without spaces
   lbInfo->set_xalign(0.0);
 //  pack_start(*lbInfo, Gtk::PACK_SHRINK, 0);
 

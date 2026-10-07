@@ -4,6 +4,7 @@
 set(ESBYSOURCEFILES
     esby/environment.cc
     esby/esbywbclient.cc
+    esby/esbywidgets.cc
     esby/esbypreferences.cc
     esby/toolpanelcoordesby.cc
     esby/movabletoolpanel.cc

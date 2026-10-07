@@ -18,6 +18,7 @@
  */
 #include "movabletoolpanel.h"
 #include "toolpanelcoord.h"
+#include "esbywidgets.h"
 
 // upper bound when walking the ring of boxes (avoids an endless loop)
 #define NB_PANEL_MAX_RING 32
@@ -51,6 +52,11 @@ MovableToolPanel::MovableToolPanel (Glib::ustring _toolName )
     moveDButton = Gtk::manage (new Gtk::Button (M("GENERAL_MOVE_DOWN")));
     moveRButton = Gtk::manage (new Gtk::Button (M("GENERAL_MOVE_RIGHT")));
     moveLButton = Gtk::manage (new Gtk::Button (M("GENERAL_MOVE_LEFT")));
+
+    // compact buttons: with the default padding, the header of a tool was wider than the side panel
+    esbyInstallCompactCss();
+    for (Gtk::Widget* b : std::vector<Gtk::Widget*>{favoriteButton, trashButton, moveUButton, moveDButton, moveRButton, moveLButton})
+        b->get_style_context()->add_class(ESBY_COMPACT_CLASS);
     fudlrBox = Gtk::manage (new Gtk::HBox ());
 
    //move buttons listeners
@@ -81,6 +87,9 @@ void MovableToolPanel::initVBox(ToolVBox* _originalBox, ToolVBox* _favoriteBox, 
      env = _env;   
      buttonBox = getExpander()->getButtonHBox();
      buttonBox->pack_start(*fudlrBox); //, Gtk::PACK_EXPAND_WIDGET, true, 0); 
+
+     // the title is shortened with "..." when the side panel is narrow, instead of widening the tool
+     esbyMakeTitleShrinkable(getExpander());
 
      originalBox = _originalBox;
      favoriteBox = _favoriteBox;
