@@ -45,6 +45,8 @@ TTSaver::TTSaver () : FoldableToolPanel(this,"ttsaver",M("TP_SAVER_LABEL"),false
 	themeBox1->pack_start(*themeLabel, Gtk::PACK_SHRINK, 4);
 
         profilbox = Gtk::manage (new MyComboBoxText ());
+        // no keyboard focus: with it, the up / down keys changed the selected profile, which loads it
+        profilbox->set_can_focus(false);
 
         profilbox->set_tooltip_text (M("TP_SAVER_TOOLTIP"));
         themeBox1->pack_start(*profilbox, Gtk::PACK_EXPAND_WIDGET, 4); //, Gtk::PACK_SHRINK, 0);
@@ -83,7 +85,8 @@ TTSaver::TTSaver () : FoldableToolPanel(this,"ttsaver",M("TP_SAVER_LABEL"),false
        cbAutoloadSettings->set_active(esbySettings().TTPAutoload);
        buttonSave->signal_button_release_event().connect_notify( sigc::mem_fun(*this, &TTSaver::save_clicked) );
        cbAutoloadSettings->signal_button_release_event().connect_notify( sigc::mem_fun(*this, &TTSaver::autoload_clicked) );
-       profilbox->signal_changed ().connect (sigc::mem_fun (*this, &TTSaver::profileBoxChanged));
+//       profilbox->signal_changed ().connect (sigc::mem_fun (*this, &TTSaver::profileBoxChanged));
+       profilboxChanged = profilbox->signal_changed ().connect (sigc::mem_fun (*this, &TTSaver::profileBoxChanged));
 
 }
 
@@ -116,7 +119,8 @@ void TTSaver::profileBoxChanged()
    Glib::ustring fname = entries[row];
 //   printf("preparing to load Filename : %s - %s\n", filename.c_str(), fname.c_str());
    load_ttp_profile(fname);
-   if( esbyOptions().rtSettings.verbose )
+//   if( esbyOptions().rtSettings.verbose )
+   // always shown: a profile loaded unexpectedly (autoload, selection) restores its tool positions
      printf("Loaded ttp profile : %s - %s\n", filename.c_str(), fname.c_str());
 }
 
@@ -436,6 +440,33 @@ void TTSaver::save_clicked (GdkEventButton* event)
 
           profilbox->append(name);
           entries.push_back(fname);
+        }
+
+        // the saved profile becomes the selected one, without loading it (the list kept showing the
+        // previous profile, which made it look like the current one)
+        auto saved = std::find(entries.begin(), entries.end(), fname);
+        if (saved != entries.end())
+        {
+          profilboxChanged.block(true);
+          profilbox->set_active(std::distance(entries.begin(), saved));
+          profilboxChanged.block(false);
+        }
+
+        // the profile loaded at startup is another one: every new instance (one per image with
+        // rt_queue) would load it again, with its tool positions. The user chooses.
+        if (esbySettings().TTPAutoload && (esbySettings().TTPAutoloadValue != fname))
+        {
+          Gtk::MessageDialog question(getToplevelWindow(this),
+                                      Glib::ustring::compose(M("TT_SAVER_AUTOLOAD_REPLACE"),
+                                                             Glib::path_get_basename(esbySettings().TTPAutoloadValue),
+                                                             Glib::path_get_basename(fname)),
+                                      false, Gtk::MESSAGE_QUESTION, Gtk::BUTTONS_YES_NO, true);
+          if (question.run() == Gtk::RESPONSE_YES)
+          {
+            esbySettings().TTPAutoloadValue = fname;
+            enAutoloadSettingsLine->set_text(fname);
+            esbyOptions().save();
+          }
         }
 
         done = true;

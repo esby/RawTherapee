@@ -40,6 +40,7 @@ protected:
     Gtk::Button* buttonLoad;
     Gtk::Button* buttonSave;
     sigc::connection s;
+    sigc::connection profilboxChanged; // blocked to select a profile without loading it
     MyComboBoxText* profilbox;
 
     Gtk::Label* lbAutoloadSettings;

@@ -63,6 +63,7 @@ TT_LABELPICKER_FAVORITE;Color of the checked favorite button.
 TT_LABELPICKER_PANEL_ALWAYS;Title color of the tools that are always active.
 TT_LABELPICKER_PANEL_CLICKED;Title color of the enabled tools.
 TT_LABELPICKER_TRASH;Color of the checked trash button.
+TT_SAVER_AUTOLOAD_REPLACE;The profile loaded at startup is %1.\nReplace it with %2?
 TT_SAVER_AUTOLOAD_SETTINGS;Load this profile at startup
 TT_SERIESWB_ALREADY;The image already has the series white balance.
 TT_SERIESWB_APPLIED;Series white balance applied.
