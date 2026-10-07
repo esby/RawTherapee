@@ -40,7 +40,10 @@ import time
 PROTOCOL_VERSION = 1
 
 # equal: factor applied to the blue/red equalizer of the white balance (1.0 for the camera)
-DEFAULT_RULE = {"mired": 0.0, "green": 1.0, "equal": 1.0, "flash_only": True, "comment": ""}
+# mode: "shift" (shift from the camera white balance) or "auto" (fixed white balance of the series,
+# exposure model); auto: the model of the auto mode, serialized by TTSeriesWB (kept as it is)
+DEFAULT_RULE = {"mired": 0.0, "green": 1.0, "equal": 1.0, "flash_only": True, "comment": "",
+                "mode": "shift", "auto": ""}
 
 # ranges of the TTSeriesWB tool: a value outside them is refused
 LIMITS = {"mired": (-100.0, 100.0), "green": (0.5, 2.0), "equal": (0.5, 2.0)}
@@ -145,11 +148,14 @@ class State:
         rule["source"] = None
         return rule
 
-    def set_rule(self, folder, mired, green=1.0, flash_only=True, comment="", equal=1.0):
+    def set_rule(self, folder, mired, green=1.0, flash_only=True, comment="", equal=1.0, mode="shift", auto=""):
         check_limits(mired=mired, green=green, equal=equal)
+        if mode not in ("shift", "auto"):
+            raise ValueError("unknown mode: %r" % mode)
         folder = normalize(folder)
         self.rules[folder] = {"mired": float(mired), "green": float(green), "equal": float(equal),
-                              "flash_only": bool(flash_only), "comment": str(comment)}
+                              "flash_only": bool(flash_only), "comment": str(comment),
+                              "mode": mode, "auto": str(auto)}
         self.save()
         return folder
 
@@ -230,7 +236,8 @@ class Server:
         if op == "set":
             folder = self.state.set_rule(request["path"], request["mired"], request.get("green", 1.0),
                                          request.get("flash_only", True), request.get("comment", ""),
-                                         request.get("equal", 1.0))
+                                         request.get("equal", 1.0), request.get("mode", "shift"),
+                                         request.get("auto", ""))
             await self.broadcast(folder)
             return {"path": folder}
         if op == "unset":
@@ -391,6 +398,11 @@ class Client:
 
 
 def format_rule(rule):
+    if rule.get("mode", "shift") == "auto":
+        text = "auto (%s)" % (rule.get("auto") or "no reference")
+        if rule.get("comment"):
+            text += "  # " + rule["comment"]
+        return text
     mired = rule["mired"] if abs(rule["mired"]) >= 0.05 else 0.0  # no "-0.0"
     text = "%+.1f mireds, tint x%.3f, blue/red x%.3f" % (mired, rule["green"], rule.get("equal", 1.0))
     if not rule.get("flash_only", True):
@@ -474,7 +486,7 @@ def run_command(client, args):
 
 # tags looked at for the analysis: settings, flash, and the candidates found in the raw files
 # (0x1300: GH5 scene measurement candidate; 0x8007: flash really used, S5 II in TTL)
-DEFAULT_EXIF_TAGS = ("Model,ISO,ExposureTime,FNumber,LightValue,Flash,"
+DEFAULT_EXIF_TAGS = ("Model,ISO,ExposureTime,FNumber,LightValue,Flash,AFAssistLamp,"
                      "PanasonicRaw_CameraIFD_0x1300,Panasonic_0x8007,ColorTempKelvin")
 
 

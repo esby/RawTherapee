@@ -63,6 +63,18 @@ protected:
     double exactGreen;
     double exactEqual;
 
+    // modes: shift from the camera white balance, or auto (fixed white balance, exposure model)
+    enum { MODE_SHIFT = 0, MODE_AUTO = 1 };
+    int mode;
+    EsbyWBAuto autoModel;
+    MyComboBoxText* cbMode;
+    Adjuster* adjSync;          // synchronization speed (1/x s): high speed sync above
+    Gtk::Label* lbAuto;         // description of the auto model
+    void modeChanged();
+    void updateModeWidgets();
+    double shutter();           // shutter time of the current image (s), 0 if unknown
+    Glib::ustring describeAuto();
+
     // white balance applied by this tool, per file (session only, the server will keep it later)
     struct AppliedWB
     {
@@ -76,7 +88,7 @@ protected:
     bool getCurrentWB(rtengine::procparams::WBParams& wb);
     bool flashFired();
     Glib::ustring currentFile();
-    void computeTarget(double camTemp, double camGreen, int& temp, double& green, double& equal);
+    bool computeTarget(double camTemp, double camGreen, int& temp, double& green, double& equal);
     bool sameWB(int t1, double g1, double e1, int t2, double g2, double e2);
     void setWhiteBalance(int temp, double green, double equal);
     void applyToCurrentImage(bool force, const EsbyWBFileState* serverState = nullptr);

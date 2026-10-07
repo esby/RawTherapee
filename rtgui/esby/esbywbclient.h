@@ -24,6 +24,25 @@
 
 struct cJSON;
 
+// model of the auto mode of TTSeriesWB (fixed white balance of the series, exposure model):
+// - normal flash: reference white balance (refT, refG, refE) at the shutter time refShutter, and the
+//   exposure coefficient k (mireds per second of exposure: the ambient light adds up with the time);
+// - high speed sync (shutter time <= sync): its own white balance (hssT, hssG, hssE), constant.
+// A tint (refG, hssG) of 0 means the tint of the camera white balance.
+struct EsbyWBAuto
+{
+    bool hasRef = false;
+    double refT = 0.0, refG = 0.0, refE = 1.0, refShutter = 0.0;
+    double k = 0.0;
+    bool hasHss = false;
+    double hssT = 0.0, hssG = 0.0, hssE = 1.0;
+    double sync = 1.0 / 250.0;
+
+    bool isHss(double shutter) const { return (shutter > 0.0) && (shutter <= sync * 1.05); }
+    Glib::ustring serialize() const;
+    static EsbyWBAuto parse(const Glib::ustring& text);
+};
+
 // value of a folder, resolved by the server (source: folder defining it, empty for the default value)
 struct EsbyWBRule
 {
@@ -33,6 +52,8 @@ struct EsbyWBRule
     bool flashOnly = true;
     Glib::ustring comment;
     Glib::ustring source;
+    Glib::ustring mode = "shift"; // "shift" or "auto"
+    Glib::ustring autoModel;      // EsbyWBAuto::serialize()
 };
 
 // white balance applied to a file, as recorded by the server
@@ -65,7 +86,8 @@ public:
     bool isConnected() const { return connected; }
 
     void get(const Glib::ustring& folder, RuleCallback callback);
-    void set(const Glib::ustring& folder, double mired, double green, double equal, bool flashOnly, DoneCallback callback);
+    void set(const Glib::ustring& folder, double mired, double green, double equal, bool flashOnly,
+             const Glib::ustring& mode, const Glib::ustring& autoModel, DoneCallback callback);
     void unset(const Glib::ustring& folder, DoneCallback callback);
     void fileState(const Glib::ustring& file, FileCallback callback);
     void applied(const Glib::ustring& file, int temperature, double green, double equal, const Glib::ustring& source);

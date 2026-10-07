@@ -19,6 +19,8 @@
 #include <cjson/cJSON.h>
 #include <giomm/unixsocketaddress.h>
 #include <unistd.h>
+#include <sstream>
+#include <vector>
 
 // seconds between two connection attempts when the server is not available
 static const unsigned int ESBYWB_RETRY_SECONDS = 10;
@@ -280,12 +282,17 @@ void EsbyWBClient::get(const Glib::ustring& folder, RuleCallback callback)
             rule.flashOnly = jsonBool(answer, "flash_only", true);
             rule.comment = jsonString(answer, "comment");
             rule.source = jsonString(answer, "source"); // null for the default value
+            rule.mode = jsonString(answer, "mode");
+            if (rule.mode.empty())
+                rule.mode = "shift";
+            rule.autoModel = jsonString(answer, "auto");
         }
         callback(answer != nullptr, rule);
     });
 }
 
-void EsbyWBClient::set(const Glib::ustring& folder, double mired, double green, double equal, bool flashOnly, DoneCallback callback)
+void EsbyWBClient::set(const Glib::ustring& folder, double mired, double green, double equal, bool flashOnly,
+                       const Glib::ustring& mode, const Glib::ustring& autoModel, DoneCallback callback)
 {
     cJSON* request = cJSON_CreateObject();
     cJSON_AddStringToObject(request, "op", "set");
@@ -294,6 +301,8 @@ void EsbyWBClient::set(const Glib::ustring& folder, double mired, double green, 
     cJSON_AddNumberToObject(request, "green", green);
     cJSON_AddNumberToObject(request, "equal", equal);
     cJSON_AddBoolToObject(request, "flash_only", flashOnly);
+    cJSON_AddStringToObject(request, "mode", mode.c_str());
+    cJSON_AddStringToObject(request, "auto", autoModel.c_str());
     send(request, [callback](cJSON* answer) {
         if (callback)
             callback(answer != nullptr, answer ? Glib::ustring() : Glib::ustring("failed"));
@@ -360,4 +369,37 @@ void EsbyWBClient::observe(const Glib::ustring& file, const std::map<std::string
     for (const auto& t : texts)
         cJSON_AddStringToObject(request, t.first.c_str(), t.second.c_str());
     send(request, nullptr);
+}
+
+// refT;refG;refE;refShutter;k;hssT;hssG;hssE;sync;hasRef;hasHss (locale independent numbers)
+Glib::ustring EsbyWBAuto::serialize() const
+{
+    const double values[] = {refT, refG, refE, refShutter, k, hssT, hssG, hssE, sync,
+                             hasRef ? 1.0 : 0.0, hasHss ? 1.0 : 0.0};
+    Glib::ustring text;
+    for (size_t i = 0; i < sizeof(values) / sizeof(values[0]); i++)
+    {
+        if (i > 0)
+            text += ";";
+        text += Glib::Ascii::dtostr(values[i]);
+    }
+    return text;
+}
+
+EsbyWBAuto EsbyWBAuto::parse(const Glib::ustring& text)
+{
+    EsbyWBAuto a;
+    std::vector<double> v;
+    std::string part;
+    std::istringstream list(text);
+    while (std::getline(list, part, ';'))
+        v.push_back(Glib::Ascii::strtod(part));
+    if (v.size() < 11)
+        return a; // empty or unknown: no reference
+    a.refT = v[0]; a.refG = v[1]; a.refE = v[2]; a.refShutter = v[3]; a.k = v[4];
+    a.hssT = v[5]; a.hssG = v[6]; a.hssE = v[7];
+    a.sync = (v[8] > 0.0) ? v[8] : 1.0 / 250.0;
+    a.hasRef = (v[9] != 0.0) && (a.refT > 0.0);
+    a.hasHss = (v[10] != 0.0) && (a.hssT > 0.0);
+    return a;
 }

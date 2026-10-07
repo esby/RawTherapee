@@ -51,6 +51,8 @@ public:
     double SeriesWBMired = 0.0;
     double SeriesWBGreen = 1.0;
     double SeriesWBEqual = 1.0;
+    int SeriesWBMode = 0;              // 0: shift from the camera white balance, 1: auto (exposure model)
+    Glib::ustring SeriesWBAuto;        // model of the auto mode (EsbyWBAuto::serialize())
     bool SeriesWBFlashOnly = true;
     bool SeriesWBLearnTint = false;
     // marker files of a series root folder, separated by ';' ("Set for the series root")

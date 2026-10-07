@@ -71,6 +71,15 @@ TT_SERIESWB_ALREADY;The image already has the series white balance.
 TT_SERIESWB_APPLIED;Series white balance applied.
 TT_SERIESWB_APPLY;Apply to this image
 TT_SERIESWB_APPLY_TOOLTIP;Applies the series white balance to the current image, even if its white balance was changed by hand or if no flash was fired.
+TT_SERIESWB_AUTO_HSS;High speed sync (1/%2 s and faster): %1 K.
+TT_SERIESWB_AUTO_LEARNED_COEF;Exposure coefficient learned: %1 mireds per second; this image is the new reference.
+TT_SERIESWB_AUTO_LEARNED_HSS;High speed sync reference learned: %1 K.
+TT_SERIESWB_AUTO_LEARNED_REF;Normal flash reference learned: %1 K at 1/%2 s.
+TT_SERIESWB_AUTO_NEED_HSS;Auto mode: no reference for the high speed sync yet, image left untouched.
+TT_SERIESWB_AUTO_NEED_REF;Auto mode: no reference for the normal flash yet, image left untouched.
+TT_SERIESWB_AUTO_NO_HSS;High speed sync (1/%1 s and faster): no reference.
+TT_SERIESWB_AUTO_NO_REF;Normal flash: no reference (learn on an image).
+TT_SERIESWB_AUTO_REF;Normal flash: %1 K at 1/%2 s, %3 mireds per second of exposure.
 TT_SERIESWB_COPY_TOOLTIP;Click to copy this text to the clipboard.
 TT_SERIESWB_EQUAL;Blue/red equalizer factor
 TT_SERIESWB_EQUAL_TOOLTIP;Factor applied to the blue/red equalizer of the white balance (1.0 for the camera white balance).
@@ -86,6 +95,10 @@ TT_SERIESWB_LEARN_TOOLTIP;Sets the shift from the white balance of the current i
 TT_SERIESWB_MANUAL;White balance changed by hand: left untouched.
 TT_SERIESWB_MIRED;Shift (mireds)
 TT_SERIESWB_MIRED_TOOLTIP;Shift applied to the camera white balance, in mireds (1000000 / kelvins). A positive value lowers the temperature, for a cooler rendering.
+TT_SERIESWB_MODE;Mode
+TT_SERIESWB_MODE_AUTO;Auto (exposure)
+TT_SERIESWB_MODE_SHIFT;Shift from the camera
+TT_SERIESWB_MODE_TOOLTIP;Shift from the camera: a shift is applied to the camera white balance.\nAuto: fixed white balance of the series, warmer when the shutter time is longer (ambient light), with its own value in high speed sync. The learn chooses what it updates from the shutter speed of the image.
 TT_SERIESWB_MODIFIED;Value changed in the tool, not sent to the server.
 TT_SERIESWB_NO_CAMERA_WB;Camera white balance not available.
 TT_SERIESWB_NO_FLASH;No flash fired: not concerned.
@@ -107,6 +120,8 @@ TT_SERIESWB_SHIFT;Series: shift %1 mireds, tint factor %2, blue/red factor %3.
 TT_SERIESWB_SOURCE;Value of %1.
 TT_SERIESWB_SOURCE_DEFAULT;Default value (no folder declares one).
 TT_SERIESWB_SOURCE_TOOL;Values of the tool (no folder declares one).
+TT_SERIESWB_SYNC;Sync speed (1/x s)
+TT_SERIESWB_SYNC_TOOLTIP;Shutter speeds from this one up are taken as high speed sync (HSS): their white balance is constant.
 TT_SERIESWB_UNSET;Back to inheritance
 TT_SERIESWB_UNSET_DONE;%1 inherits its value again.
 TT_SERIESWB_UNSET_NONE;%1 has no value of its own.

@@ -50,6 +50,19 @@ TTSeriesWB::TTSeriesWB() : FoldableToolPanel(this, "TTSeriesWB", M("TT_SERIESWB_
 {
   whitebalance = nullptr;
 
+  // mode: shift from the camera white balance, or auto (fixed white balance, exposure model)
+  Gtk::HBox* modeBox = Gtk::manage(new Gtk::HBox());
+  modeBox->set_spacing(4);
+  modeBox->pack_start(*Gtk::manage(new Gtk::Label(M("TT_SERIESWB_MODE"))), Gtk::PACK_SHRINK, 0);
+  cbMode = Gtk::manage(new MyComboBoxText());
+  cbMode->append(M("TT_SERIESWB_MODE_SHIFT"));
+  cbMode->append(M("TT_SERIESWB_MODE_AUTO"));
+  cbMode->set_active(0);
+  cbMode->set_tooltip_text(M("TT_SERIESWB_MODE_TOOLTIP"));
+  modeBox->pack_start(*cbMode, Gtk::PACK_EXPAND_WIDGET, 0);
+  pack_start(*modeBox, Gtk::PACK_SHRINK, 0);
+  mode = MODE_SHIFT;
+
   // positive shift: lower temperature, cooler rendering (ex: 5044 K + 15.4 mireds = 4679 K)
 //  adjMired = Gtk::manage(new Adjuster(M("TT_SERIESWB_MIRED"), SERIESWB_MIN_MIRED, SERIESWB_MAX_MIRED, 0.5, 0.0));
   // step 0.1: with 0.5, a learned shift was rounded enough to change the reference image itself
@@ -68,6 +81,17 @@ TTSeriesWB::TTSeriesWB() : FoldableToolPanel(this, "TTSeriesWB", M("TT_SERIESWB_
   adjEqual->setAdjusterListener(this);
   adjEqual->set_tooltip_text(M("TT_SERIESWB_EQUAL_TOOLTIP"));
   pack_start(*adjEqual, Gtk::PACK_SHRINK, 0);
+
+  // auto mode: synchronization speed and description of the model
+  adjSync = Gtk::manage(new Adjuster(M("TT_SERIESWB_SYNC"), 30.0, 1000.0, 10.0, 250.0));
+  adjSync->setAdjusterListener(this);
+  adjSync->set_tooltip_text(M("TT_SERIESWB_SYNC_TOOLTIP"));
+  pack_start(*adjSync, Gtk::PACK_SHRINK, 0);
+  lbAuto = Gtk::manage(new Gtk::Label(""));
+  lbAuto->set_line_wrap(true);
+  lbAuto->set_line_wrap_mode(Pango::WRAP_WORD_CHAR);
+  lbAuto->set_xalign(0.0);
+  pack_start(*lbAuto, Gtk::PACK_SHRINK, 0);
 
   Gtk::HBox* flashBox = Gtk::manage(new Gtk::HBox());
   flashBox->set_spacing(4);
@@ -160,6 +184,7 @@ TTSeriesWB::TTSeriesWB() : FoldableToolPanel(this, "TTSeriesWB", M("TT_SERIESWB_
   btSetParent->signal_clicked().connect([this]() { setFolderValue(true); });
   btUnset->signal_clicked().connect([this]() { unsetFolderValue(); });
   cbFlashOnly->signal_toggled().connect([this]() { saveSettings(); });
+  cbMode->signal_changed().connect([this]() { modeChanged(); });
   cbLearnTint->signal_toggled().connect([this]() { saveSettings(); });
 
   exactMired = 0.0;
@@ -292,6 +317,13 @@ void TTSeriesWB::requestForCurrentImage()
       adjGreen->block(false);
       adjEqual->block(false);
       cbFlashOnly->set_active(rule.flashOnly);
+      mode = (rule.mode == "auto") ? MODE_AUTO : MODE_SHIFT;
+      autoModel = EsbyWBAuto::parse(rule.autoModel);
+      cbMode->set_active(mode);
+      adjSync->block(true);
+      adjSync->setValue(std::lround(1.0 / autoModel.sync));
+      adjSync->block(false);
+      updateModeWidgets();
       loading = false;
     }
     currentSource = rule.source;
@@ -359,6 +391,7 @@ void TTSeriesWB::setFolderValue(bool seriesRoot)
   }
   pendingAction = Glib::ustring::compose(M("TT_SERIESWB_SET_DONE"), folder) + (note.empty() ? Glib::ustring() : " " + note);
   client->set(folder, exactMired, exactGreen, exactEqual, cbFlashOnly->get_active(),
+              (mode == MODE_AUTO) ? "auto" : "shift", autoModel.serialize(),
     [this, folder](bool ok, const Glib::ustring&) {
       if (!ok)
       {
@@ -396,6 +429,13 @@ void TTSeriesWB::loadSettings()
   adjEqual->block(false);
   cbFlashOnly->set_active(s.SeriesWBFlashOnly);
   cbLearnTint->set_active(s.SeriesWBLearnTint);
+  mode = (s.SeriesWBMode == MODE_AUTO) ? MODE_AUTO : MODE_SHIFT;
+  autoModel = EsbyWBAuto::parse(s.SeriesWBAuto);
+  cbMode->set_active(mode);
+  adjSync->block(true);
+  adjSync->setValue(std::lround(1.0 / autoModel.sync));
+  adjSync->block(false);
+  updateModeWidgets();
   getExpander()->setEnabled(s.SeriesWBEnabled);
   loading = false;
 }
@@ -410,6 +450,8 @@ void TTSeriesWB::saveSettings()
   s.SeriesWBMired = exactMired;
   s.SeriesWBGreen = exactGreen;
   s.SeriesWBEqual = exactEqual;
+  s.SeriesWBMode = mode;
+  s.SeriesWBAuto = autoModel.serialize();
   s.SeriesWBFlashOnly = cbFlashOnly->get_active();
   s.SeriesWBLearnTint = cbLearnTint->get_active();
 }
@@ -480,13 +522,86 @@ bool TTSeriesWB::getCameraWB(const WBParams& wb, double& temp, double& green)
   return (temp > 0.0) && (green > 0.0); // nothing is returned when no image is loaded
 }
 
-void TTSeriesWB::computeTarget(double camTemp, double camGreen, int& temp, double& green, double& equal)
+// target white balance of the current image. false in auto mode when the model has no value for the
+// regime of the image (normal flash or high speed sync): the image is not changed then.
+bool TTSeriesWB::computeTarget(double camTemp, double camGreen, int& temp, double& green, double& equal)
 {
+  if (mode == MODE_AUTO)
+  {
+    double t = shutter();
+    double mired, g, e;
+    if (autoModel.isHss(t))
+    {
+      if (!autoModel.hasHss)
+        return false;
+      mired = 1000000.0 / autoModel.hssT;
+      g = (autoModel.hssG > 0.0) ? autoModel.hssG : camGreen;
+      e = autoModel.hssE;
+    }
+    else
+    {
+      if (!autoModel.hasRef)
+        return false;
+      // the ambient light adds up with the shutter time: k mireds per second of exposure
+      mired = 1000000.0 / autoModel.refT;
+      if ((t > 0.0) && (autoModel.refShutter > 0.0))
+        mired += autoModel.k * (t - autoModel.refShutter);
+      g = (autoModel.refG > 0.0) ? autoModel.refG : camGreen;
+      e = autoModel.refE;
+    }
+    double tk = (mired > 0.0) ? 1000000.0 / mired : SERIESWB_MAXTEMP;
+    temp = (int) std::lround(std::max<double>(SERIESWB_MINTEMP, std::min<double>(SERIESWB_MAXTEMP, tk)));
+    green = std::max(SERIESWB_MINGREEN, std::min(SERIESWB_MAXGREEN, g));
+    equal = std::max(SERIESWB_MIN_EQUAL, std::min(SERIESWB_MAX_EQUAL, e));
+    return true;
+  }
+
   double mired = 1000000.0 / camTemp + exactMired;
   double t = (mired > 0.0) ? 1000000.0 / mired : SERIESWB_MAXTEMP;
   temp = (int) std::lround(std::max<double>(SERIESWB_MINTEMP, std::min<double>(SERIESWB_MAXTEMP, t)));
   green = std::max(SERIESWB_MINGREEN, std::min(SERIESWB_MAXGREEN, camGreen * exactGreen));
   equal = std::max(SERIESWB_MIN_EQUAL, std::min(SERIESWB_MAX_EQUAL, 1.0 * exactEqual)); // camera: 1.0
+  return true;
+}
+
+double TTSeriesWB::shutter()
+{
+  return (env != nullptr) ? env->getVarAsDouble("SpeedValue") : 0.0;
+}
+
+Glib::ustring TTSeriesWB::describeAuto()
+{
+  Glib::ustring normal = autoModel.hasRef
+    ? Glib::ustring::compose(M("TT_SERIESWB_AUTO_REF"), std::lround(autoModel.refT),
+                             (autoModel.refShutter > 0.0) ? std::lround(1.0 / autoModel.refShutter) : 0,
+                             Glib::ustring::format(std::fixed, std::setprecision(1), autoModel.k))
+    : M("TT_SERIESWB_AUTO_NO_REF");
+  Glib::ustring hss = autoModel.hasHss
+    ? Glib::ustring::compose(M("TT_SERIESWB_AUTO_HSS"), std::lround(autoModel.hssT), std::lround(1.0 / autoModel.sync))
+    : Glib::ustring::compose(M("TT_SERIESWB_AUTO_NO_HSS"), std::lround(1.0 / autoModel.sync));
+  return normal + "\n" + hss;
+}
+
+void TTSeriesWB::updateModeWidgets()
+{
+  bool autoMode = (mode == MODE_AUTO);
+  adjMired->set_visible(!autoMode);
+  adjGreen->set_visible(!autoMode);
+  adjEqual->set_visible(!autoMode);
+  adjSync->set_visible(autoMode);
+  lbAuto->set_visible(autoMode);
+  lbAuto->set_text(autoMode ? describeAuto() : Glib::ustring());
+}
+
+void TTSeriesWB::modeChanged()
+{
+  if (loading)
+    return;
+  mode = (cbMode->get_active_row_number() == MODE_AUTO) ? MODE_AUTO : MODE_SHIFT;
+  updateModeWidgets();
+  saveSettings();
+  modified = client && client->isConnected(); // to send with "set for this folder"
+  applyToCurrentImage(false);
 }
 
 // the rounding of RawTherapee must not make an image, for instance the reference of a learned
@@ -531,6 +646,8 @@ void TTSeriesWB::setStatus(const Glib::ustring& action, const WBParams& wb, doub
     shownAction = pendingAction;
     pendingAction.clear();
   }
+  if (mode == MODE_AUTO)
+    series = M("TT_SERIESWB_MODE_AUTO") + ": " + describeAuto();
   setInfo(shownAction + "\n" + series + "\n" + values + (origin.empty() ? Glib::ustring() : "\n" + origin) + folder);
 }
 
@@ -586,7 +703,11 @@ void TTSeriesWB::applyToCurrentImage(bool force, const EsbyWBFileState* serverSt
 
   int temp;
   double green, equal;
-  computeTarget(camTemp, camGreen, temp, green, equal);
+  if (!computeTarget(camTemp, camGreen, temp, green, equal))
+  {
+    setStatus(M(autoModel.isHss(shutter()) ? "TT_SERIESWB_AUTO_NEED_HSS" : "TT_SERIESWB_AUTO_NEED_REF"), wb, camTemp, camGreen);
+    return;
+  }
 
   auto it = applied.find(file);
   bool follows = force
@@ -674,6 +795,68 @@ void TTSeriesWB::learnFromCurrentImage()
                                                 (wb.observer == rtengine::StandardObserver::TEN_DEGREES) ? "10" : "2",
                                                 Glib::ustring::format(std::fixed, std::setprecision(3), wb.equal));
 
+  // auto mode: the learn chooses what it updates, from the shutter time of the image
+  if (mode == MODE_AUTO)
+  {
+    int seriesTemp = 0;
+    double seriesGreen = 1.0, seriesEqual = 1.0;
+    bool learnedAgain = computeTarget(camTemp, camGreen, seriesTemp, seriesGreen, seriesEqual)
+                     && (wb.method == "Custom") && sameWB(wb.temperature, wb.green, wb.equal, seriesTemp, seriesGreen, seriesEqual);
+    double t = shutter();
+    double g = cbLearnTint->get_active() ? wb.green : 0.0; // 0: the tint of the camera white balance
+    double e = cbLearnTint->get_active() ? wb.equal : 1.0;
+    Glib::ustring what;
+    if (autoModel.isHss(t))
+    {
+      // high speed sync: its own white balance, the same at every shutter speed
+      autoModel.hssT = wb.temperature;
+      autoModel.hssG = g;
+      autoModel.hssE = e;
+      autoModel.hasHss = true;
+      what = Glib::ustring::compose(M("TT_SERIESWB_AUTO_LEARNED_HSS"), wb.temperature);
+    }
+    else
+    {
+      // a second reference at a clearly different shutter time gives the exposure coefficient
+      if (autoModel.hasRef && (t > 0.0) && (autoModel.refShutter > 0.0)
+      && (std::fabs(t - autoModel.refShutter) > std::max(0.002, 0.2 * autoModel.refShutter)))
+      {
+        double k = (1000000.0 / wb.temperature - 1000000.0 / autoModel.refT) / (t - autoModel.refShutter);
+        autoModel.k = std::max(-2000.0, std::min(2000.0, k));
+        what = Glib::ustring::compose(M("TT_SERIESWB_AUTO_LEARNED_COEF"),
+                                      Glib::ustring::format(std::fixed, std::setprecision(1), autoModel.k));
+      }
+      else
+        what = Glib::ustring::compose(M("TT_SERIESWB_AUTO_LEARNED_REF"), wb.temperature,
+                                      (t > 0.0) ? std::lround(1.0 / t) : 0);
+      autoModel.refT = wb.temperature;
+      autoModel.refG = g;
+      autoModel.refE = e;
+      autoModel.refShutter = t;
+      autoModel.hasRef = true;
+    }
+    updateModeWidgets();
+    applied[file] = AppliedWB{wb.temperature, wb.green, wb.equal};
+    saveSettings();
+    Options::save();
+    modified = false;
+    if (client && client->isConnected())
+    {
+      Glib::ustring folder = findSeriesRoot(currentFolder());
+      if (folder.empty())
+        folder = currentFolder();
+      client->set(folder, exactMired, exactGreen, exactEqual, cbFlashOnly->get_active(), "auto", autoModel.serialize(), nullptr);
+      client->applied(seriesFile(), wb.temperature, wb.green, wb.equal, folder);
+      observe(learnedAgain ? "learn-unchanged" : "learn");
+      currentSource = folder;
+      setStatus(what, wb, camTemp, camGreen, Glib::ustring::compose(M("TT_SERIESWB_SET_DONE"), folder));
+      pendingAction = what + " " + Glib::ustring::compose(M("TT_SERIESWB_SET_DONE"), folder);
+      return;
+    }
+    setStatus(what, wb, camTemp, camGreen, M("TT_SERIESWB_LEARNED_LOCAL"));
+    return;
+  }
+
   if ((mired < SERIESWB_MIN_MIRED) || (mired > SERIESWB_MAX_MIRED)
   || (green < SERIESWB_MIN_GREEN_FACTOR) || (green > SERIESWB_MAX_GREEN_FACTOR)
   || (equal < SERIESWB_MIN_EQUAL) || (equal > SERIESWB_MAX_EQUAL))
@@ -724,7 +907,7 @@ void TTSeriesWB::learnFromCurrentImage()
     Glib::ustring folder = findSeriesRoot(currentFolder());
     if (folder.empty())
       folder = currentFolder();
-    client->set(folder, mired, green, equal, cbFlashOnly->get_active(), nullptr);
+    client->set(folder, mired, green, equal, cbFlashOnly->get_active(), "shift", autoModel.serialize(), nullptr);
     client->applied(seriesFile(), wb.temperature, wb.green, wb.equal, folder);
     // a learn on an image that already had the series white balance learns the same value again:
     // no new information for the analysis
@@ -749,6 +932,11 @@ void TTSeriesWB::adjusterChanged(Adjuster* a, double newval)
     exactGreen = adjGreen->getValue();
   else if (a == adjEqual)
     exactEqual = adjEqual->getValue();
+  else if (a == adjSync)
+  {
+    autoModel.sync = 1.0 / std::max(1.0, adjSync->getValue());
+    updateModeWidgets();
+  }
   saveSettings();
   // with the server, the change is a preview until it is sent with "set for this folder"
   modified = client && client->isConnected();
@@ -798,7 +986,7 @@ void TTSeriesWB::observe(const Glib::ustring& kind)
   if ((iso > 0.0) && (fnumber > 0.0) && (shutter > 0.0))
     numbers["light_value"] = std::log2(fnumber * fnumber / shutter) - std::log2(iso / 100.0);
   std::map<std::string, Glib::ustring> texts = {
-    {"kind", kind}, {"method", wb.method}, {"source", currentSource}, {"series_root", findSeriesRoot(currentFolder())},
+    {"kind", kind}, {"method", wb.method}, {"mode", (mode == MODE_AUTO) ? "auto" : "shift"}, {"auto", autoModel.serialize()}, {"source", currentSource}, {"series_root", findSeriesRoot(currentFolder())},
     {"camera", env->getVarAsString("Camera")}, {"lens", trimmed(env->getVarAsString("Lens"))},
     {"flash", env->getExifVariable("Exif:Flash")}};
   client->observe(file, numbers, texts);

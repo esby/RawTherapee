@@ -41,6 +41,19 @@ class StateTest(unittest.TestCase):
         self.state.record_applied(os.path.join(self.hall, "P1.RW2"), 4679, 0.856, self.lucca, equal=1.08)
         self.assertEqual(self.state.file_state(os.path.join(self.hall, "P1.RW2"))["E"], 1.08)
 
+    def test_auto_mode(self):
+        self.state.set_rule(self.lucca, 0, mode="auto", auto="4956;1.03;1.065;0.0167;86;4492;1.1;1.065;0.004;1;1")
+        rule = self.state.resolve(self.group)
+        self.assertEqual((rule["mode"], rule["auto"][:4]), ("auto", "4956"))
+        self.assertIn("auto (4956", esbywb.format_rule(rule))
+        with self.assertRaises(ValueError):
+            self.state.set_rule(self.lucca, 0, mode="other")
+
+    def test_rule_without_mode(self):
+        # rules written before the auto mode: shift mode
+        self.state.rules[self.lucca] = {"mired": 15.0, "green": 1.0, "flash_only": True, "comment": ""}
+        self.assertEqual(self.state.resolve(self.group)["mode"], "shift")
+
     def test_limits(self):
         for kwargs in ({"mired": 250}, {"mired": -101}, {"mired": 0, "green": 3}, {"mired": 0, "equal": 0.2}):
             with self.assertRaises(ValueError):

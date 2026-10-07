@@ -218,6 +218,27 @@ envoie au serveur une observation à chaque Learn et à chaque enregistrement (v
 `server/README.md`). Une modulation automatique ne sera ajoutée que si l'analyse de ces
 observations montre une relation nette.
 
+## 11 ter. Mode Auto (octobre 2026)
+
+Mesures à la pipette sur une feuille blanche (S5 II, X3 et AD200 en manuel) :
+
+- l'ouverture et l'ISO ne changent pas la bonne balance (ils agissent autant sur le flash que sur
+  l'ambiance), alors que la balance automatique du boîtier dérive ;
+- sous la vitesse de synchronisation, la bonne balance se réchauffe proportionnellement au temps de
+  pose (l'ambiance s'accumule, l'éclair ne dure qu'un instant) : environ 82 mireds par seconde dans
+  la pièce du test ;
+- en HSS (dès 1/250 s avec ce matériel), la bonne balance est constante, plus chaude et plus verte.
+
+Le mode Auto de TTSeriesWB en découle : une balance de référence pour l'éclair normal (température,
+teinte, égaliseur, vitesse), un coefficient de pose (mireds par seconde) et une balance propre au HSS
+au-delà d'un seuil de synchronisation réglable. Le Learn choisit ce qu'il met à jour selon la vitesse
+de l'image : la balance HSS, la référence normale, ou le coefficient de pose (seconde référence à une
+vitesse nettement différente). Sans valeur pour le régime d'une image, l'outil ne la modifie pas.
+Sur les mesures du test, trois Learn suffisent à reproduire les autres photos à environ 1 mired près.
+
+Le mode et le modèle sont stockés par dossier sur le serveur (`mode`, `auto`) et dans les options.
+Le mode « Shift » (décalage par rapport au boîtier) reste disponible.
+
 ## 12. Questions ouvertes
 
 - Faut-il moduler le décalage selon la part de lumière ambiante (vitesse, ouverture, ISO,
