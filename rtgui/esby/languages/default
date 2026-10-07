@@ -79,7 +79,7 @@ TT_SERIESWB_LEARN;Learn from this image
 TT_SERIESWB_LEARNED;Shift learned from this image.
 TT_SERIESWB_LEARNED_LOCAL;Server unavailable: kept in the tool, not sent.
 TT_SERIESWB_LEARN_TINT;Learn the tint and the blue/red equalizer too
-TT_SERIESWB_LEARN_TOOLTIP;Sets the shift from the white balance of the current image, compared to the camera white balance. With the server, it becomes the value of the folder of the image.
+TT_SERIESWB_LEARN_TOOLTIP;Sets the shift from the white balance of the current image, compared to the camera white balance. With the server, it becomes the value of the series root (marker file), or of the folder of the image without marker file.
 TT_SERIESWB_MANUAL;White balance changed by hand: left untouched.
 TT_SERIESWB_MIRED;Shift (mireds)
 TT_SERIESWB_MIRED_TOOLTIP;Shift applied to the camera white balance, in mireds (1000000 / kelvins). A positive value lowers the temperature, for a cooler rendering.
@@ -88,7 +88,7 @@ TT_SERIESWB_NO_CAMERA_WB;Camera white balance not available.
 TT_SERIESWB_NO_FLASH;No flash fired: not concerned.
 TT_SERIESWB_NO_IMAGE;No image.
 TT_SERIESWB_NO_MARKER;(no marker file found: %1, parent folder used)
-TT_SERIESWB_ORIGIN;Series folder of the original file (ESBY_ORIGIN): %1.
+TT_SERIESWB_ORIGIN;Folder of the original image (ESBY_ORIGIN): %1.
 TT_SERIESWB_OUT_OF_RANGE;Not learned: shift %1 mireds, tint factor %2, blue/red factor %3, out of the ranges of the tool.
 TT_SERIESWB_SERVER_CONNECTED;Server: connected, value per folder.
 TT_SERIESWB_SERVER_ERROR;Server error for %1.

@@ -105,6 +105,9 @@ plus.
 
 ## 7. Protocole
 
+Le serveur refuse les valeurs hors des plages de l'outil : décalage de −100 à +100 mireds, facteurs
+de teinte et d'égaliseur de 0,5 à 2,0.
+
 Messages JSON, un par ligne, sur la socket. Chaque requête porte un identifiant `id`, repris
 dans la réponse. Les événements du serveur n'ont pas d'`id`.
 
@@ -142,7 +145,9 @@ Exemple :
 - définir la valeur pour la racine de la série : le premier dossier, en remontant depuis celui de
   l'image, qui contient un fichier repère (option `SeriesWBMarkers`, par défaut
   `fields.conf;.esby-series`) ; à défaut, le dossier parent ;
-- apprendre de cette image : `mired = mired(balance actuelle) − mired(boîtier)` ;
+- apprendre de cette image : `mired = mired(balance actuelle) − mired(boîtier)` ; avec le serveur,
+  la valeur apprise devient celle de la racine de la série (fichier repère), ou du dossier de l'image
+  à défaut ;
 - revenir à l'héritage (supprime la règle du dossier) ;
 - rattacher l'image à la série / la détacher.
 

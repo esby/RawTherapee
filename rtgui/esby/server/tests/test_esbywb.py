@@ -41,6 +41,15 @@ class StateTest(unittest.TestCase):
         self.state.record_applied(os.path.join(self.hall, "P1.RW2"), 4679, 0.856, self.lucca, equal=1.08)
         self.assertEqual(self.state.file_state(os.path.join(self.hall, "P1.RW2"))["E"], 1.08)
 
+    def test_limits(self):
+        for kwargs in ({"mired": 250}, {"mired": -101}, {"mired": 0, "green": 3}, {"mired": 0, "equal": 0.2}):
+            with self.assertRaises(ValueError):
+                self.state.set_rule(self.lucca, **kwargs)
+        self.assertNotIn(self.lucca, self.state.rules)
+
+    def test_no_negative_zero(self):
+        self.assertTrue(esbywb.format_rule({"mired": -0.00001, "green": 1.0}).startswith("+0.0 mireds"))
+
     def test_rule_without_equal(self):
         # rules written before the equalizer was handled: the default factor applies
         self.state.rules[self.lucca] = {"mired": 15.0, "green": 1.0, "flash_only": True, "comment": ""}

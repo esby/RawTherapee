@@ -38,6 +38,16 @@ PROTOCOL_VERSION = 1
 # equal: factor applied to the blue/red equalizer of the white balance (1.0 for the camera)
 DEFAULT_RULE = {"mired": 0.0, "green": 1.0, "equal": 1.0, "flash_only": True, "comment": ""}
 
+# ranges of the TTSeriesWB tool: a value outside them is refused
+LIMITS = {"mired": (-100.0, 100.0), "green": (0.5, 2.0), "equal": (0.5, 2.0)}
+
+
+def check_limits(**values):
+    for name, value in values.items():
+        low, high = LIMITS[name]
+        if not (low <= float(value) <= high):
+            raise ValueError("%s %s out of range [%s, %s]" % (name, value, low, high))
+
 
 # ---------------------------------------------------------------------------------------
 # locations
@@ -129,6 +139,7 @@ class State:
         return rule
 
     def set_rule(self, folder, mired, green=1.0, flash_only=True, comment="", equal=1.0):
+        check_limits(mired=mired, green=green, equal=equal)
         folder = normalize(folder)
         self.rules[folder] = {"mired": float(mired), "green": float(green), "equal": float(equal),
                               "flash_only": bool(flash_only), "comment": str(comment)}
@@ -359,7 +370,8 @@ class Client:
 
 
 def format_rule(rule):
-    text = "%+.1f mireds, tint x%.3f, blue/red x%.3f" % (rule["mired"], rule["green"], rule.get("equal", 1.0))
+    mired = rule["mired"] if abs(rule["mired"]) >= 0.05 else 0.0  # no "-0.0"
+    text = "%+.1f mireds, tint x%.3f, blue/red x%.3f" % (mired, rule["green"], rule.get("equal", 1.0))
     if not rule.get("flash_only", True):
         text += ", all photos"
     if rule.get("comment"):

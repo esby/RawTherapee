@@ -702,7 +702,13 @@ void TTSeriesWB::learnFromCurrentImage()
   modified = false;
   if (client && client->isConnected())
   {
-    Glib::ustring folder = currentFolder();
+//    Glib::ustring folder = currentFolder();
+    // the learned value is the one of the series: it is set for the series root (marker file),
+    // or for the folder of the image when there is no marker file. A learn used to create a rule
+    // on the folder of the image (ex: .../shooting/pp), hiding the value of the convention.
+    Glib::ustring folder = findSeriesRoot(currentFolder());
+    if (folder.empty())
+      folder = currentFolder();
     client->set(folder, mired, green, equal, cbFlashOnly->get_active(), nullptr);
     client->applied(seriesFile(), wb.temperature, wb.green, wb.equal, folder);
     currentSource = folder;
