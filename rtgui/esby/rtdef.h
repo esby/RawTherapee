@@ -42,6 +42,7 @@ enum FakeProcEvent {
     FakeEvPP3Transmitted=5,
     FakeEvShowAllTriggered=6,
     FakeEvFullExifTransmitted=7,
+    FakeEvImageClosed=8, // EditorPanel::close(), before the profile is saved
     nbFakeEvents
     }; 
 

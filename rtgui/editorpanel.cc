@@ -1324,6 +1324,7 @@ void EditorPanel::open (Thumbnail* tmb, rtengine::InitialImage* isrc)
 void EditorPanel::close ()
 {
     if (ipc) {
+        tpc->doReact(FakeEvImageClosed); // esby-hook: last state of the image (TTSeriesWB observations)
         saveProfile ();
         // close image processor and the current thumbnail
         tpc->closeImage ();    // this call stops image processing

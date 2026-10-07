@@ -804,6 +804,30 @@ void TTSeriesWB::observe(const Glib::ustring& kind)
   client->observe(file, numbers, texts);
 }
 
+// final white balance of the image (saved or closed): kind = <event>-camera, -series or -manual
+void TTSeriesWB::observeFinal(const Glib::ustring& event)
+{
+  WBParams wb;
+  if (getCurrentWB(wb))
+  {
+    Glib::ustring kind = event + "-manual";
+    auto it = applied.find(currentFile());
+    // the series white balance, to recognize an image corrected by the series in a former session
+    double camTemp, camGreen;
+    int temp = 0;
+    double green = 1.0, equal = 1.0;
+    if (getCameraWB(wb, camTemp, camGreen))
+      computeTarget(camTemp, camGreen, temp, green, equal);
+    if (wb.method == "Camera")
+      kind = event + "-camera";
+    else if (((it != applied.end()) && sameWB(wb.temperature, wb.green, wb.equal,
+                                              it->second.temperature, it->second.green, it->second.equal))
+          || ((temp > 0) && sameWB(wb.temperature, wb.green, wb.equal, temp, green, equal)))
+      kind = event + "-series";
+    observe(kind);
+  }
+}
+
 void TTSeriesWB::react(FakeProcEvent ev)
 {
   // FakeEvExifTransmitted: the exif data (flash) and the file name are known, TTTweaker has
@@ -811,29 +835,12 @@ void TTSeriesWB::react(FakeProcEvent ev)
   if ((ev == FakeEvExifTransmitted) || (ev == FakeEvProfileChanged))
     requestForCurrentImage(); // without server, applies the values of the tool
 
-  // the image is saved: its white balance is the final one, observed for the analysis
+  // the image is saved, or closed (the profile is saved then, ex: rt_queue, one instance per image):
+  // its white balance is the final one, observed for the analysis
   if ((ev == FakeEvFileSaved) && getExpander()->getEnabled())
-  {
-    WBParams wb;
-    if (getCurrentWB(wb))
-    {
-      Glib::ustring kind = "saved-manual";
-      auto it = applied.find(currentFile());
-      // the series white balance, to recognize an image corrected by the series in a former session
-      double camTemp, camGreen;
-      int temp = 0;
-      double green = 1.0, equal = 1.0;
-      if (getCameraWB(wb, camTemp, camGreen))
-        computeTarget(camTemp, camGreen, temp, green, equal);
-      if (wb.method == "Camera")
-        kind = "saved-camera";
-      else if (((it != applied.end()) && sameWB(wb.temperature, wb.green, wb.equal,
-                                                it->second.temperature, it->second.green, it->second.equal))
-            || ((temp > 0) && sameWB(wb.temperature, wb.green, wb.equal, temp, green, equal)))
-        kind = "saved-series";
-      observe(kind);
-    }
-  }
+    observeFinal("saved");
+  if ((ev == FakeEvImageClosed) && getExpander()->getEnabled())
+    observeFinal("closed");
 }
 
 Glib::ustring TTSeriesWB::themeExport()

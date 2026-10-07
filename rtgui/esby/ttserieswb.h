@@ -95,6 +95,7 @@ protected:
     // sends to the server the correction of the current image (kind: learn, saved-manual, saved-series,
     // saved-camera) with its exposure, for the analysis of the link between the shift and the exposure
     void observe(const Glib::ustring& kind);
+    void observeFinal(const Glib::ustring& event); // saved or closed: kind from the white balance
     void setInfo(const Glib::ustring& text);
     // status line, always the same structure: what happened, the series values, the image and camera values
     void setStatus(const Glib::ustring& action, const rtengine::procparams::WBParams& wb, double camTemp, double camGreen,

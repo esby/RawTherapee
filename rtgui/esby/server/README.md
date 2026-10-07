@@ -32,11 +32,19 @@ refroidit le rendu.
 
 ## Observations
 
-Avec le serveur, TTSeriesWB envoie une **observation** à chaque Learn et à chaque enregistrement
-d'image : balance de l'image et du boîtier, décalage, nature (`learn`, `saved-manual`,
-`saved-series`, `saved-camera`), exposition (ISO, ouverture, vitesse, `light_value`), boîtier,
-objectif, flash. Une seule observation est gardée par fichier, la plus récente. Elles servent à
-vérifier si le décalage suit l'exposition, avant toute correction automatique.
+Avec le serveur, TTSeriesWB envoie une **observation** à chaque Learn, à chaque enregistrement
+d'image depuis l'éditeur, et à la fermeture de chaque image (quand son profil est enregistré) :
+balance de l'image et du boîtier, décalage, exposition (ISO, ouverture, vitesse, `light_value`),
+boîtier, objectif, flash, et nature de l'observation :
+
+- `learn` : décalage appris sur une image corrigée à la main ;
+- `learn-unchanged` : Learn sur une image qui avait déjà la balance de la série (sans information) ;
+- `saved-…` ou `closed-…`, suivi de `manual` (retouche à la main), `series` (balance de la série)
+  ou `camera` (balance du boîtier).
+
+Une seule observation est gardée par fichier, la plus récente. Elles servent à vérifier si le
+décalage suit l'exposition, avant toute correction automatique ; les plus instructives sont les
+retouches à la main (`learn`, `…-manual`).
 
 ```bash
 ./esbywb.py observations > obs.csv            # CSV
