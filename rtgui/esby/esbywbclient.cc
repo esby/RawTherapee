@@ -348,3 +348,16 @@ void EsbyWBClient::applied(const Glib::ustring& file, int temperature, double gr
         cJSON_AddStringToObject(request, "source", source.c_str());
     send(request, nullptr);
 }
+
+void EsbyWBClient::observe(const Glib::ustring& file, const std::map<std::string, double>& numbers,
+                           const std::map<std::string, Glib::ustring>& texts)
+{
+    cJSON* request = cJSON_CreateObject();
+    cJSON_AddStringToObject(request, "op", "observe");
+    cJSON_AddStringToObject(request, "file", file.c_str());
+    for (const auto& n : numbers)
+        cJSON_AddNumberToObject(request, n.first.c_str(), n.second);
+    for (const auto& t : texts)
+        cJSON_AddStringToObject(request, t.first.c_str(), t.second.c_str());
+    send(request, nullptr);
+}

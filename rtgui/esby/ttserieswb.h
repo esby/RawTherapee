@@ -92,6 +92,9 @@ protected:
     static Glib::ustring realPath(const Glib::ustring& path);
     static bool isBelow(const Glib::ustring& path, const Glib::ustring& folder);
     void learnFromCurrentImage();
+    // sends to the server the correction of the current image (kind: learn, saved-manual, saved-series,
+    // saved-camera) with its exposure, for the analysis of the link between the shift and the exposure
+    void observe(const Glib::ustring& kind);
     void setInfo(const Glib::ustring& text);
     // status line, always the same structure: what happened, the series values, the image and camera values
     void setStatus(const Glib::ustring& action, const rtengine::procparams::WBParams& wb, double camTemp, double camGreen,

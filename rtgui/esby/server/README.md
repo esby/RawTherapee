@@ -30,6 +30,20 @@ ou en service systemd utilisateur, voir `esbywb.service`.
 bleu/rouge, 1.0 par défaut) et `--all` (aussi pour les photos sans flash). Un décalage positif
 refroidit le rendu.
 
+## Observations
+
+Avec le serveur, TTSeriesWB envoie une **observation** à chaque Learn et à chaque enregistrement
+d'image : balance de l'image et du boîtier, décalage, nature (`learn`, `saved-manual`,
+`saved-series`, `saved-camera`), exposition (ISO, ouverture, vitesse, `light_value`), boîtier,
+objectif, flash. Une seule observation est gardée par fichier, la plus récente. Elles servent à
+vérifier si le décalage suit l'exposition, avant toute correction automatique.
+
+```bash
+./esbywb.py observations > obs.csv            # CSV
+./esbywb.py observations --exif > obs.csv     # + balises lues par exiftool dans chaque fichier
+./esbywb.py observations --exif "Model,LightValue,PanasonicRaw_CameraIFD_0x1300" > obs.csv
+```
+
 ## Tests
 
 ```bash

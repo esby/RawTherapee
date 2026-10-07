@@ -156,6 +156,23 @@ class ServerTest(unittest.TestCase):
         self.assertEqual(client.request("file_state", file=os.path.join(self.folder, "P1.RW2"))["state"]["T"], 4679)
         self.assertIsNone(client.request("file_state", file=os.path.join(self.folder, "P2.RW2"))["state"])
 
+    def test_observations(self):
+        import io
+        client = self.client()
+        f1 = os.path.join(self.folder, "P1.RW2")
+        client.request("observe", file=f1, kind="learn", mired=15.4, iso=200, shutter=0.0125, fnumber=2.8)
+        client.request("observe", file=f1, kind="saved-manual", mired=16.0, iso=200, shutter=0.0125, fnumber=2.8)
+        client.request("observe", file=os.path.join(self.folder, "P2.RW2"), kind="saved-series", mired=15.4)
+        observations = client.request("observations")["observations"]
+        self.assertEqual(len(observations), 2)              # one per file, the last one
+        self.assertEqual(observations[f1]["kind"], "saved-manual")
+        self.assertIn("time", observations[f1])
+        out = io.StringIO()
+        esbywb.write_observations_csv(observations, None, out)
+        lines = out.getvalue().strip().splitlines()
+        self.assertEqual(len(lines), 3)
+        self.assertTrue(lines[0].startswith("file,kind,mired"))
+
     def test_errors_do_not_stop_the_server(self):
         s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         s.connect(self.socket_path)
@@ -212,6 +229,21 @@ class ServerTest(unittest.TestCase):
         self.assertIn("+15.0 mireds", text)
         self.assertIn("source: " + self.folder, text)
         self.assertEqual(out[-1], self.folder)
+
+
+class ExifTest(unittest.TestCase):
+    """--exif reads the tags with exiftool (skipped without exiftool or sample file)"""
+    SAMPLE = "/mnt/user-data/uploads/P2655548.RW2"
+
+    @unittest.skipUnless(os.path.isfile(SAMPLE) and __import__("shutil").which("exiftool"), "no exiftool or sample")
+    def test_exif_columns(self):
+        import io
+        sample = esbywb.normalize(self.SAMPLE)
+        out = io.StringIO()
+        esbywb.write_observations_csv({sample: {"kind": "learn", "mired": 15.4}}, "Model,ISO,Flash,PanasonicRaw_CameraIFD_0x1300", out)
+        header, row = out.getvalue().strip().splitlines()
+        self.assertIn("exif:PanasonicRaw_CameraIFD_0x1300", header)
+        self.assertIn("DC-GH5", row)
 
 
 class StaleSocketTest(unittest.TestCase):

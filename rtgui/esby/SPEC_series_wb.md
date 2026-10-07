@@ -206,6 +206,18 @@ esbywb orphans                      # règles dont le dossier n'existe plus
    aperçu, envoyé au serveur par « définir pour ce dossier » ou « pour le dossier parent ».
    Sans serveur, l'outil applique ses propres valeurs (comportement de l'étape 1).
 
+## 11 bis. Observations (collecte avant une modulation automatique)
+
+Les tests sur le GH5 et le S5 II (octobre 2026) montrent que la puissance du flash et la correction
+TTL ne sont enregistrées nulle part ; seul le déclenchement l'est (`Exif:Flash`). En TTL, le S5 II
+indique si le flash a servi (`Panasonic_0x8007` = 2) et sa balance automatique tient compte du
+préflash. Le GH5 enregistre une mesure de la scène non identifiée (`PanasonicRaw_CameraIFD_0x1300`).
+
+Pour savoir si le décalage d'une série suit l'exposition (`LightValue`, ou `0x1300`), TTSeriesWB
+envoie au serveur une observation à chaque Learn et à chaque enregistrement (voir
+`server/README.md`). Une modulation automatique ne sera ajoutée que si l'analyse de ces
+observations montre une relation nette.
+
 ## 12. Questions ouvertes
 
 - Faut-il moduler le décalage selon la part de lumière ambiante (vitesse, ouverture, ISO,

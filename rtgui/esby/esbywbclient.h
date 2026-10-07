@@ -69,6 +69,9 @@ public:
     void unset(const Glib::ustring& folder, DoneCallback callback);
     void fileState(const Glib::ustring& file, FileCallback callback);
     void applied(const Glib::ustring& file, int temperature, double green, double equal, const Glib::ustring& source);
+    // a correction observed by TTSeriesWB (learn, save), kept by the server for an analysis
+    void observe(const Glib::ustring& file, const std::map<std::string, double>& numbers,
+                 const std::map<std::string, Glib::ustring>& texts);
 
     void setEventCallback(EventCallback callback) { onEvent = callback; }
     void setStatusCallback(StatusCallback callback) { onStatus = callback; }

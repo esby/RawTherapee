@@ -720,6 +720,7 @@ void TTSeriesWB::learnFromCurrentImage()
       folder = currentFolder();
     client->set(folder, mired, green, equal, cbFlashOnly->get_active(), nullptr);
     client->applied(seriesFile(), wb.temperature, wb.green, wb.equal, folder);
+    observe("learn");
     currentSource = folder;
     setStatus(M("TT_SERIESWB_LEARNED"), wb, camTemp, camGreen, Glib::ustring::compose(M("TT_SERIESWB_SET_DONE"), folder));
     // the server notifies the change, and the refresh of the image would replace this action.
@@ -747,12 +748,75 @@ void TTSeriesWB::adjusterChanged(Adjuster* a, double newval)
   applyToCurrentImage(false);
 }
 
+void TTSeriesWB::observe(const Glib::ustring& kind)
+{
+  if (!client || !client->isConnected())
+    return;
+  Glib::ustring file = seriesFile();
+  WBParams wb;
+  double camTemp, camGreen;
+  if (file.empty() || !getCurrentWB(wb) || !getCameraWB(wb, camTemp, camGreen) || !wb.enabled)
+    return;
+  if (wb.method == "Camera") // the engine applies the camera white balance (see learnFromCurrentImage)
+  {
+    wb.temperature = (int) std::lround(camTemp);
+    wb.green = camGreen;
+    wb.equal = 1.0;
+  }
+  if (wb.temperature <= 0)
+    return;
+
+  double iso = env->getVarAsDouble("Iso");
+  double fnumber = env->getVarAsDouble("FnumValue");
+  double shutter = env->getVarAsDouble("SpeedValue");
+  std::map<std::string, double> numbers = {
+    {"mired", 1000000.0 / wb.temperature - 1000000.0 / camTemp},
+    {"green", wb.green / camGreen},
+    {"equal", wb.equal},
+    {"image_T", (double) wb.temperature}, {"image_G", wb.green},
+    {"camera_T", camTemp}, {"camera_G", camGreen},
+    {"series_mired", exactMired}, {"series_green", exactGreen}, {"series_equal", exactEqual},
+    {"iso", iso}, {"fnumber", fnumber}, {"shutter", shutter}};
+  // light value of the settings (as exiftool computes it): log2(N^2 / t) - log2(ISO / 100)
+  if ((iso > 0.0) && (fnumber > 0.0) && (shutter > 0.0))
+    numbers["light_value"] = std::log2(fnumber * fnumber / shutter) - std::log2(iso / 100.0);
+  std::map<std::string, Glib::ustring> texts = {
+    {"kind", kind}, {"method", wb.method}, {"source", currentSource}, {"series_root", findSeriesRoot(currentFolder())},
+    {"camera", env->getVarAsString("Camera")}, {"lens", env->getVarAsString("Lens")},
+    {"flash", env->getExifVariable("Exif:Flash")}};
+  client->observe(file, numbers, texts);
+}
+
 void TTSeriesWB::react(FakeProcEvent ev)
 {
   // FakeEvExifTransmitted: the exif data (flash) and the file name are known, TTTweaker has
   // already reacted (it is registered before this tool).
   if ((ev == FakeEvExifTransmitted) || (ev == FakeEvProfileChanged))
     requestForCurrentImage(); // without server, applies the values of the tool
+
+  // the image is saved: its white balance is the final one, observed for the analysis
+  if ((ev == FakeEvFileSaved) && getExpander()->getEnabled())
+  {
+    WBParams wb;
+    if (getCurrentWB(wb))
+    {
+      Glib::ustring kind = "saved-manual";
+      auto it = applied.find(currentFile());
+      // the series white balance, to recognize an image corrected by the series in a former session
+      double camTemp, camGreen;
+      int temp = 0;
+      double green = 1.0, equal = 1.0;
+      if (getCameraWB(wb, camTemp, camGreen))
+        computeTarget(camTemp, camGreen, temp, green, equal);
+      if (wb.method == "Camera")
+        kind = "saved-camera";
+      else if (((it != applied.end()) && sameWB(wb.temperature, wb.green, wb.equal,
+                                                it->second.temperature, it->second.green, it->second.equal))
+            || ((temp > 0) && sameWB(wb.temperature, wb.green, wb.equal, temp, green, equal)))
+        kind = "saved-series";
+      observe(kind);
+    }
+  }
 }
 
 Glib::ustring TTSeriesWB::themeExport()

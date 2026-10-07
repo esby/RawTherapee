@@ -568,6 +568,9 @@ void ToolPanelCoordinator::esbyTransmitImageData(const rtengine::FramesMetaData*
         env->setVar("Iso", idata->getISOSpeed());
         env->setVar("Fnum",  Glib::ustring(idata->apertureToString(idata->getFNumber())));
         env->setVar("Speed", Glib::ustring(idata->shutterToString(idata->getShutterSpeed())));
+        // as numbers too (Fnum and Speed are formatted texts): used by TTSeriesWB for its observations
+        env->setVar("FnumValue", (double) idata->getFNumber());
+        env->setVar("SpeedValue", (double) idata->getShutterSpeed());
         env->setVar("FLen", idata->getFocalLen());
         env->setVar("Ecomp", Glib::ustring(idata->expcompToString(idata->getExpComp(),true)));
         env->setVar("Lens", idata->getLens());

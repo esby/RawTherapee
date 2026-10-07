@@ -20,18 +20,22 @@ Unix socket, with one JSON message per line.
     esbywb unset <folder>                    back to the inherited value
     esbywb move <old> <new>                  after renaming a folder
     esbywb orphans                           rules whose folder does not exist anymore
+    esbywb observations [--exif [TAGS]]      corrections observed by TTSeriesWB, as CSV
 
 Only the Python standard library is used.
 """
 
 import argparse
 import asyncio
+import csv
 import json
 import os
 import signal
 import socket
+import subprocess
 import sys
 import tempfile
+import time
 
 PROTOCOL_VERSION = 1
 
@@ -97,6 +101,7 @@ class State:
         self.filename = filename
         self.rules = {}   # folder -> rule
         self.files = {}   # file -> {"T": int, "G": float, "source": folder or None}
+        self.observations = {}  # file -> last correction observed by TTSeriesWB (learn, save)
         self.load()
 
     def load(self):
@@ -107,6 +112,7 @@ class State:
             return
         self.rules = data.get("rules", {})
         self.files = data.get("files", {})
+        self.observations = data.get("observations", {})
 
     def save(self):
         """atomic write: temporary file in the same folder, then rename"""
@@ -115,7 +121,8 @@ class State:
         fd, tmp = tempfile.mkstemp(prefix=".state-", dir=folder)
         try:
             with os.fdopen(fd, "w", encoding="utf-8") as f:
-                json.dump({"version": PROTOCOL_VERSION, "rules": self.rules, "files": self.files},
+                json.dump({"version": PROTOCOL_VERSION, "rules": self.rules, "files": self.files,
+                           "observations": self.observations},
                           f, indent=1, sort_keys=True, ensure_ascii=False)
             os.replace(tmp, self.filename)
         except BaseException:
@@ -181,6 +188,15 @@ class State:
     def file_state(self, filename):
         return self.files.get(normalize(filename))
 
+    def observe(self, observation):
+        """keeps the last observation of a file; the server adds the time"""
+        observation = dict(observation)
+        filename = normalize(observation.pop("file"))
+        observation["time"] = time.strftime("%Y-%m-%d %H:%M:%S")
+        self.observations[filename] = observation
+        self.save()
+        return filename
+
 
 # ---------------------------------------------------------------------------------------
 # server
@@ -234,6 +250,11 @@ class Server:
             return {}
         if op == "file_state":
             return {"state": self.state.file_state(request["file"])}
+        if op == "observe":
+            fields = {k: v for k, v in request.items() if k not in ("op", "id")}
+            return {"file": self.state.observe(fields)}
+        if op == "observations":
+            return {"observations": self.state.observations}
         if op == "subscribe":
             self.subscribers.add(writer)
             return {}
@@ -402,6 +423,9 @@ def main(argv=None):
     p.add_argument("old")
     p.add_argument("new")
     sub.add_parser("orphans", help="rules whose folder does not exist anymore")
+    p = sub.add_parser("observations", help="corrections observed by TTSeriesWB, as CSV on stdout")
+    p.add_argument("--exif", nargs="?", const=DEFAULT_EXIF_TAGS, default=None, metavar="TAGS",
+                   help="add tags read by exiftool in each file (comma separated, default: %s)" % DEFAULT_EXIF_TAGS)
 
     args = parser.parse_args(argv)
 
@@ -439,7 +463,52 @@ def run_command(client, args):
         for rule in client.request("list")["rules"]:
             if not os.path.isdir(rule["path"]):
                 print(rule["path"])
+    elif args.command == "observations":
+        write_observations_csv(client.request("observations")["observations"], args.exif, sys.stdout)
     return 0
+
+
+# ---------------------------------------------------------------------------------------
+# observations
+# ---------------------------------------------------------------------------------------
+
+# tags looked at for the analysis: settings, flash, and the candidates found in the raw files
+# (0x1300: GH5 scene measurement candidate; 0x8007: flash really used, S5 II in TTL)
+DEFAULT_EXIF_TAGS = ("Model,ISO,ExposureTime,FNumber,LightValue,Flash,"
+                     "PanasonicRaw_CameraIFD_0x1300,Panasonic_0x8007,ColorTempKelvin")
+
+
+def read_exif(files, tags):
+    """tags read by exiftool in the existing files: {file: {tag: value}} (raw values)"""
+    existing = [f for f in files if os.path.isfile(f)]
+    if not existing:
+        return {}
+    command = ["exiftool", "-j", "-n", "-u", "-s"] + ["-" + t for t in tags] + existing
+    try:
+        output = subprocess.run(command, capture_output=True, text=True, check=False).stdout
+    except FileNotFoundError:
+        raise SystemExit("esbywb: exiftool not found (Debian: apt install libimage-exiftool-perl)")
+    result = {}
+    for entry in json.loads(output or "[]"):
+        result[normalize(entry.get("SourceFile", ""))] = entry
+    return result
+
+
+def write_observations_csv(observations, exif_tags, out):
+    fields = []
+    for obs in observations.values():
+        for key in obs:
+            if key not in fields:
+                fields.append(key)
+    tags = [t for t in exif_tags.split(",") if t] if exif_tags else []
+    exif = read_exif(list(observations), tags) if tags else {}
+
+    writer = csv.writer(out, lineterminator="\n")
+    writer.writerow(["file"] + fields + ["exif:" + t for t in tags])
+    for filename in sorted(observations):
+        obs = observations[filename]
+        values = exif.get(filename, {})
+        writer.writerow([filename] + [obs.get(f, "") for f in fields] + [values.get(t, "") for t in tags])
 
 
 if __name__ == "__main__":
