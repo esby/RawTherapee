@@ -38,6 +38,19 @@ expliquent le *pourquoi*.
 | TTTweaker | rotation automatique (Panasonic), fermeture après enregistrement… |
 | TTVarDisplayer | afficher les variables, bouton de copie dans le presse-papier |
 | TTSeriesWB | décalage de la balance des blancs au flash, en mireds (voir `SPEC_series_wb.md`) |
+| TTSeriesExposure | exposition par séquence : cible apprise à la pipette (Ctrl+clic) sur une référence, appliquée d'un clic aux autres photos |
+
+### TTSeriesExposure : séquences
+
+- La séquence d'une photo est son **dossier numéroté** (celui qui contient `pp/`), qu'elle soit dans
+  `pp/` ou déjà dans `pp/dpp/`. `ESBY_ORIGIN` (voir `rt_queue`) donne le chemin d'origine.
+- Si le `fields.conf` de ce dossier ne crédite qu'**un modèle** (une ligne `credit_cosplayer:` qui
+  commence par `model:`), un écart de plus de 3 minutes (option `SeriesExpGap`) entre deux photos
+  démarre une nouvelle séquence. Sans `fields.conf`, le nombre de modèles est lu dans le nom du
+  dossier (`NNN - jour - crédits - …`) ; crédit vide ou inconnu : le dossier entier.
+- La pipette lit la luminosité après la compensation d'exposition, la luminosité, le contraste et la
+  compression des hautes lumières de l'outil Exposition, avant les courbes (`EUID_ToneCurve1`).
+- Les cibles sont dans `~/.config/RawTherapee5-esby/esby-exposure-targets.ini`.
 
 ## Fichiers de ce dossier
 

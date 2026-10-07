@@ -15,6 +15,7 @@ set(ESBYSOURCEFILES
     esby/ttisoprofiler.cc
     esby/ttlenscorrector.cc
     esby/ttserieswb.cc
+    esby/ttseriesexposure.cc
     esby/ttpanelcolorer.cc
     esby/ttsaver.cc
     esby/tttabhider.cc

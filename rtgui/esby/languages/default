@@ -67,6 +67,22 @@ TT_LABELPICKER_PANEL_CLICKED;Title color of the enabled tools.
 TT_LABELPICKER_TRASH;Color of the checked trash button.
 TT_SAVER_AUTOLOAD_REPLACE;The profile loaded at startup is %1.\nReplace it with %2?
 TT_SAVER_AUTOLOAD_SETTINGS;Load this profile at startup
+TT_SERIESEXP_APPLIED;Gap %1 EV, exposure compensation %2 EV.
+TT_SERIESEXP_GAP;New sequence after (min)
+TT_SERIESEXP_GAP_TOOLTIP;With one model (fields.conf of the folder), more than this time between two photos of the folder starts a new sequence.
+TT_SERIESEXP_LABEL;Series Exposure
+TT_SERIESEXP_NO_IMAGE;No image.
+TT_SERIESEXP_NO_TARGET;No target for this sequence: ctrl + click on the reference image first.
+TT_SERIESEXP_NO_TARGET_YET;No target yet.
+TT_SERIESEXP_NO_VALUE;No value under the pipette.
+TT_SERIESEXP_PIPETTE;Pipette
+TT_SERIESEXP_PIPETTE_TOOLTIP;Ctrl + click on the reference area (a face) of the reference image: its brightness becomes the target of the sequence.\nClick on the same area of another image of the sequence: its exposure compensation is set to reach the target. A second click refines the correction.
+TT_SERIESEXP_SEQ_FOLDER;Sequence: %1 (%2 models, whole folder).
+TT_SERIESEXP_SEQ_PART;Sequence: %1, part %2/%3 (from %4).
+TT_SERIESEXP_SEQ_UNKNOWN;Sequence: %1 (whole folder).
+TT_SERIESEXP_SEQ_WAIT;Reading the capture times of the folder...
+TT_SERIESEXP_TARGET;Target: %1 (learned on %2).
+TT_SERIESEXP_TARGET_SET;Target of the sequence set: %1.
 TT_SERIESWB_ALREADY;The image already has the series white balance.
 TT_SERIESWB_APPLIED;Series white balance applied.
 TT_SERIESWB_APPLY;Apply to this image

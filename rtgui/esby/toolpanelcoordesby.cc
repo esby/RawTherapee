@@ -39,6 +39,7 @@
 //#include "../rtexif/rtexif.h"
 #include "ttdep.h"
 #include "ttserieswb.h"
+#include "ttseriesexposure.h"
 #include "esbywidgets.h"
 #include "../rtengine/metadata.h"
 
@@ -741,6 +742,7 @@ void ToolPanelCoordinator::esbyCreateUsefulTools()
     addPanel(usefulPanel, Gtk::manage(new TTLensCorrector()));
     addPanel(usefulPanel, Gtk::manage(new TTTweaker()));
     addPanel(usefulPanel, Gtk::manage(new TTSeriesWB())); // after TTTweaker: it may reset the white balance first
+    addPanel(usefulPanel, Gtk::manage(new TTSeriesExposure()));
     addPanel(usefulPanel, Gtk::manage(new TTVarDisplayer()));
 
     // the long labels of the useful tools wrap: the widest tab sets the width of the whole panel

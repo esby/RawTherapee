@@ -53,6 +53,9 @@ public:
     double SeriesWBEqual = 1.0;
     int SeriesWBMode = 0;              // 0: shift from the camera white balance, 1: auto (exposure model)
     Glib::ustring SeriesWBAuto;        // model of the auto mode (EsbyWBAuto::serialize())
+
+    // TTSeriesExposure: minutes between two photos of a one model folder starting a new sequence
+    double SeriesExpGap = 3.0;
     bool SeriesWBFlashOnly = true;
     bool SeriesWBLearnTint = false;
     // marker files of a series root folder, separated by ';' ("Set for the series root")
