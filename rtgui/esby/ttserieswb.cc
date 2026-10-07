@@ -690,6 +690,12 @@ void TTSeriesWB::learnFromCurrentImage()
   adjMired->block(true);
   adjGreen->block(true);
   adjEqual->block(true);
+  // the image already had the series white balance (the values of the tool, before this learn)
+  int seriesTemp = 0;
+  double seriesGreen = 1.0, seriesEqual = 1.0;
+  computeTarget(camTemp, camGreen, seriesTemp, seriesGreen, seriesEqual);
+  bool learnedAgain = (wb.method == "Custom") && sameWB(wb.temperature, wb.green, wb.equal, seriesTemp, seriesGreen, seriesEqual);
+
   exactMired = mired;
   exactGreen = green;
   exactEqual = equal;
@@ -720,7 +726,9 @@ void TTSeriesWB::learnFromCurrentImage()
       folder = currentFolder();
     client->set(folder, mired, green, equal, cbFlashOnly->get_active(), nullptr);
     client->applied(seriesFile(), wb.temperature, wb.green, wb.equal, folder);
-    observe("learn");
+    // a learn on an image that already had the series white balance learns the same value again:
+    // no new information for the analysis
+    observe(learnedAgain ? "learn-unchanged" : "learn");
     currentSource = folder;
     setStatus(M("TT_SERIESWB_LEARNED"), wb, camTemp, camGreen, Glib::ustring::compose(M("TT_SERIESWB_SET_DONE"), folder));
     // the server notifies the change, and the refresh of the image would replace this action.
@@ -748,6 +756,13 @@ void TTSeriesWB::adjusterChanged(Adjuster* a, double newval)
   applyToCurrentImage(false);
 }
 
+// the lens names of some cameras end with many spaces
+static Glib::ustring trimmed(const Glib::ustring& text)
+{
+  Glib::ustring::size_type end = text.find_last_not_of(" \t");
+  return (end == Glib::ustring::npos) ? Glib::ustring() : text.substr(0, end + 1);
+}
+
 void TTSeriesWB::observe(const Glib::ustring& kind)
 {
   if (!client || !client->isConnected())
@@ -766,7 +781,9 @@ void TTSeriesWB::observe(const Glib::ustring& kind)
   if (wb.temperature <= 0)
     return;
 
-  double iso = env->getVarAsDouble("Iso");
+//  double iso = env->getVarAsDouble("Iso");
+  // the ISO is transmitted as an integer: read as a double, it gave 0 (and no light value)
+  double iso = env->getVarAsInt("Iso");
   double fnumber = env->getVarAsDouble("FnumValue");
   double shutter = env->getVarAsDouble("SpeedValue");
   std::map<std::string, double> numbers = {
@@ -782,7 +799,7 @@ void TTSeriesWB::observe(const Glib::ustring& kind)
     numbers["light_value"] = std::log2(fnumber * fnumber / shutter) - std::log2(iso / 100.0);
   std::map<std::string, Glib::ustring> texts = {
     {"kind", kind}, {"method", wb.method}, {"source", currentSource}, {"series_root", findSeriesRoot(currentFolder())},
-    {"camera", env->getVarAsString("Camera")}, {"lens", env->getVarAsString("Lens")},
+    {"camera", env->getVarAsString("Camera")}, {"lens", trimmed(env->getVarAsString("Lens"))},
     {"flash", env->getExifVariable("Exif:Flash")}};
   client->observe(file, numbers, texts);
 }
