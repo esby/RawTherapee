@@ -712,9 +712,10 @@ void TTSeriesWB::learnFromCurrentImage()
     client->set(folder, mired, green, equal, cbFlashOnly->get_active(), nullptr);
     client->applied(seriesFile(), wb.temperature, wb.green, wb.equal, folder);
     currentSource = folder;
-    // the server notifies the change, and the refresh of the image would replace this action
-    pendingAction = M("TT_SERIESWB_LEARNED") + " " + Glib::ustring::compose(M("TT_SERIESWB_SET_DONE"), folder);
     setStatus(M("TT_SERIESWB_LEARNED"), wb, camTemp, camGreen, Glib::ustring::compose(M("TT_SERIESWB_SET_DONE"), folder));
+    // the server notifies the change, and the refresh of the image would replace this action.
+    // set after setStatus(), which uses and clears it.
+    pendingAction = M("TT_SERIESWB_LEARNED") + " " + Glib::ustring::compose(M("TT_SERIESWB_SET_DONE"), folder);
     return;
   }
 
