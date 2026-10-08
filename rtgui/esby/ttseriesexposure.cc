@@ -984,24 +984,33 @@ void TTSeriesExposure::offsetChanged()
   adjOffset->setValue(offset);
   adjOffset->block(false);
   // the offset is 0 while the variables of a new image or sequence are loading: nothing is done then
-  if (!getExpander()->getEnabled() || !sequenceReady || !shared->isLoaded() || exposureIsAutomatic())
+  if (!getExpander()->getEnabled() || !sequenceReady || !shared->isLoaded())
     return;
+  if (exposureIsAutomatic())
+  {
+    if (std::fabs(offset - shownOffset) >= 0.005)
+      setInfo(M("TT_SERIESEXP_AUTOMATIC"));
+    return;
+  }
 
   // the image is only recalculated in the active window: N instances would recalculate together,
   // the others do it when they get the focus
   Gtk::Window* window = dynamic_cast<Gtk::Window*>(get_toplevel());
   if ((window != nullptr) && !focusConnected)
   {
+    // the window becomes active in the default handler of focus-in: the change is applied just after
     window->signal_focus_in_event().connect([this](GdkEventFocus*) {
       if (offsetPending)
-        offsetChanged();
+        Glib::signal_idle().connect_once([this]() { if (offsetPending) offsetChanged(); });
       return false;
-    }, false);
+    }, true);
     focusConnected = true;
   }
   if ((window != nullptr) && !window->is_active())
   {
     offsetPending = true;
+    setInfo(Glib::ustring::compose(M("TT_SERIESEXP_OFFSET_PENDING"),
+                                   Glib::ustring::format(std::showpos, std::fixed, std::setprecision(2), offset)));
     return;
   }
   offsetPending = false;
