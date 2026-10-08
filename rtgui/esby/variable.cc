@@ -1,8 +1,6 @@
 /*
  *  This file is part of RawTherapee.
  *
- *  Copyright (c) 2004-2010 Gabor Horvath <hgabor@rawtherapee.com>
- *
  *  RawTherapee is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation, either version 3 of the License, or
@@ -18,189 +16,173 @@
  */
 #include "variable.h"
 
-using namespace rtengine::procparams;
+#include <cmath>
+#include <cstdlib>
+#include <string>
 
-
-// RtVariableStore dummy implementation
-int RtVariableStore::getAsInt() { return -1;}
-double RtVariableStore::getAsDouble(){ return -1;}
-Glib::ustring RtVariableStore::getAsString(){return "";}
-bool RtVariableStore::getAsBool(){return false;}
-
-void RtVariableStore::setAsInt(int v){}
-void RtVariableStore::setAsDouble(double v){}
-void RtVariableStore::setAsString(Glib::ustring v){}
-void RtVariableStore::setAsBool(bool v){}
-
-
-// class RtVariableIntStore 
-int RtVariableIntStore::getAsInt()
+const char* rtVariableScopeName(RtVariableScope scope)
 {
-  return value;
+  switch (scope)
+  {
+    case RtVariableScope::Internal: return "internal";
+    case RtVariableScope::Exif:     return "exif";
+    case RtVariableScope::Image:    return "image";
+    case RtVariableScope::Sequence: return "sequence";
+    case RtVariableScope::Ancestor: return "ancestor";
+    case RtVariableScope::Global:   return "global";
+  }
+  return "";
 }
 
-void RtVariableIntStore::setAsInt(int v)
+namespace
 {
-  value = v;
-}
-// class RtVariableDoubleStore
-double RtVariableDoubleStore::getAsDouble()
-{
-  return value;
-}
 
-void RtVariableDoubleStore::setAsDouble(double v)
+// strict parsing: the whole string must be a number, otherwise ok is false
+double parseNumber(const Glib::ustring& s, bool& ok)
 {
-  value = v;
-}
-
-// class RtVariableStringStore
-Glib::ustring RtVariableStringStore::getAsString()
-{
-  return value;
+  const std::string str = s.raw();
+  const char* begin = str.c_str();
+  char* end = nullptr;
+  double d = std::strtod(begin, &end);
+  while (end != nullptr && (*end == ' ' || *end == '\t'))
+    end++;
+  ok = (end != begin) && (end != nullptr) && (*end == '\0');
+  return ok ? d : 0.0;
 }
 
-void RtVariableStringStore::setAsString(Glib::ustring v)
-{
-  //todo: should the string be copied ?
-  value = v;
 }
 
-// class RtVariableBoolStore 
-bool RtVariableBoolStore::getAsBool()
-{
-  return value;
-}
-
-void RtVariableBoolStore::setAsBool(bool v)
-{
-  value = v;
-}
-
-
-// class RtVariable
 RtVariable::RtVariable(Glib::ustring _name, Environment* _env)
+  : name(_name), env(_env), scope(RtVariableScope::Internal)
 {
-  type = RT_VARIABLE_TYPE_UNDEF;
-  value = nullptr;
-  name = _name;
-  env = _env;
+  // the exif variables are recognised by their prefix (rti:...)
+  if (name.compare(0, ROOT_EXIF_PREFIX.length() + 1, ROOT_EXIF_PREFIX + ":") == 0)
+    scope = RtVariableScope::Exif;
 }
 
-RtVariable::~RtVariable() 
-{
-  if (value != nullptr)
-    delete value;
-}
-Environment* RtVariable::getEnv() 
+Environment* RtVariable::getEnv()
 {
   return env;
 }
 
-void RtVariable::setName(Glib::ustring _name) 
+void RtVariable::setName(Glib::ustring _name)
 {
-  name = _name; 
+  name = _name;
 }
-Glib::ustring RtVariable::getName() 
+
+Glib::ustring RtVariable::getName()
 {
   return name;
 }
 
-int RtVariable::getAsInt() 
-{ 
-  if (type == RT_VARIABLE_TYPE_INT ) 
-    return static_cast<RtVariableIntStore*>(value)->getAsInt(); 
+int RtVariable::getType()
+{
+  switch (value.index())
+  {
+    case 1: return RT_VARIABLE_TYPE_INT;
+    case 2: return RT_VARIABLE_TYPE_DOUBLE;
+    case 3: return RT_VARIABLE_TYPE_STRING;
+    case 4: return RT_VARIABLE_TYPE_BOOL;
+  }
+  return RT_VARIABLE_TYPE_UNDEF;
+}
+
+bool RtVariable::isDefined()
+{
+  return value.index() != 0;
+}
+
+int RtVariable::getAsInt()
+{
+  if (auto p = std::get_if<int>(&value))
+    return *p;
+  if (auto p = std::get_if<double>(&value))
+    return static_cast<int>(std::lround(*p));
+  if (auto p = std::get_if<bool>(&value))
+    return *p ? 1 : 0;
+  if (auto p = std::get_if<Glib::ustring>(&value))
+  {
+    bool ok;
+    double d = parseNumber(*p, ok);
+    return ok ? static_cast<int>(std::lround(d)) : 0;
+  }
   return 0;
 }
 
-double RtVariable::getAsDouble() 
-{  
-  if (type == RT_VARIABLE_TYPE_DOUBLE ) 
-    return static_cast<RtVariableDoubleStore*>(value)->getAsDouble() ; 
-  return 0;
+double RtVariable::getAsDouble()
+{
+  if (auto p = std::get_if<double>(&value))
+    return *p;
+  if (auto p = std::get_if<int>(&value))
+    return *p;
+  if (auto p = std::get_if<bool>(&value))
+    return *p ? 1.0 : 0.0;
+  if (auto p = std::get_if<Glib::ustring>(&value))
+  {
+    bool ok;
+    return parseNumber(*p, ok);
+  }
+  return 0.0;
 }
 
-Glib::ustring RtVariable::getAsString() 
-{  
-  if (type == RT_VARIABLE_TYPE_STRING ) 
-    return static_cast<RtVariableStringStore*>(value)->getAsString() ; 
-  return "";
+Glib::ustring RtVariable::getAsString()
+{
+  // a string variable gives its value; the other types give their text form
+  if (auto p = std::get_if<Glib::ustring>(&value))
+    return *p;
+  return toString();
 }
 
-bool RtVariable::getAsBool() 
-{  
-  if (type == RT_VARIABLE_TYPE_BOOL ) 
-    return static_cast<RtVariableBoolStore*>(value)->getAsBool() ; 
+bool RtVariable::getAsBool()
+{
+  if (auto p = std::get_if<bool>(&value))
+    return *p;
+  if (auto p = std::get_if<int>(&value))
+    return *p != 0;
+  if (auto p = std::get_if<double>(&value))
+    return *p != 0.0;
+  if (auto p = std::get_if<Glib::ustring>(&value))
+  {
+    Glib::ustring s = p->lowercase();
+    return s == "true" || s == "yes" || s == "on" || s == "1";
+  }
   return false;
-}
-
-int RtVariable::getType() 
-{ 
-  return type;
 }
 
 void RtVariable::setAsInt(int v)
 {
-  if (type != RT_VARIABLE_TYPE_INT)
-  {
-if (value!= nullptr) delete value;
-value = new RtVariableIntStore();
-type = RT_VARIABLE_TYPE_INT;
-  }
-  value->setAsInt(v);
+  value = v;
 }
 
 void RtVariable::setAsDouble(double v)
 {
-  if (type != RT_VARIABLE_TYPE_DOUBLE)
-  {
-if (value!= nullptr) delete value;
-value = new RtVariableDoubleStore();
-type = RT_VARIABLE_TYPE_DOUBLE;
-  }
-  value->setAsDouble(v);
+  value = v;
 }
 
 void RtVariable::setAsString(Glib::ustring v)
 {
-  if (type != RT_VARIABLE_TYPE_STRING)
-  {
-if (value!= nullptr) delete value;
-value = new RtVariableStringStore();
-type = RT_VARIABLE_TYPE_STRING;
-  }
-  value->setAsString(v);
+  value = v;
 }
-
 
 void RtVariable::setAsBool(bool v)
 {
-  if (type != RT_VARIABLE_TYPE_BOOL)
-  {
-if (value!= nullptr) delete value;
-value = new RtVariableBoolStore();
-type = RT_VARIABLE_TYPE_BOOL;
- }
-  value->setAsBool(v);
-   }
-
-Glib::ustring RtVariable::toString() 
-{
-  if (type == RT_VARIABLE_TYPE_STRING) return getAsString();
-  if (type == RT_VARIABLE_TYPE_INT)
-  {  
- return std::to_string(getAsInt());//g_strdup_printf("%i", getAsInt());
-  }
-
-  if (type == RT_VARIABLE_TYPE_DOUBLE)
-  {
- return std::to_string(getAsDouble());//g_strdup_printf("%f", getAsDouble());
-  }
-
-  if (type == RT_VARIABLE_TYPE_BOOL)
- return getAsBool() ? "true" : "false";
-  return "";
+  value = v;
 }
 
+void RtVariable::clear()
+{
+  value = std::monostate();
+}
 
-
+Glib::ustring RtVariable::toString()
+{
+  if (auto p = std::get_if<Glib::ustring>(&value))
+    return *p;
+  if (auto p = std::get_if<int>(&value))
+    return std::to_string(*p);
+  if (auto p = std::get_if<double>(&value))
+    return std::to_string(*p); // same text as before (6 decimals), the copy of the variables relies on it
+  if (auto p = std::get_if<bool>(&value))
+    return *p ? "true" : "false";
+  return "";
+}

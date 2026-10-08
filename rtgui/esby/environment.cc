@@ -193,84 +193,36 @@ void Environment::clearVarsWithPrefix(const Glib::ustring& prefix)
   }
 }
 
-void Environment::setVar(Glib::ustring name, Glib::ustring value)
-{ 
-  RtVariable* d = nullptr;
-  RtVariable* e = nullptr;
-  for (size_t i=0; i<varList.size(); i++)
-   {
-      e = static_cast<RtVariable*> (varList[i]);
-      if (e != nullptr)
-        if (e->getName() == name)
-          d = e;
-   }
+// the variable of this name, created (undefined) when it does not exist yet
+RtVariable* Environment::findOrCreateVariable(const Glib::ustring& name)
+{
+  RtVariable* d = getVariableByName(name);
+  if (d == nullptr)
+  {
+    d = new RtVariable(name, this);
+    varList.push_back(d);
+  }
+  return d;
+}
 
-   if (d == nullptr)
-   {
-     d = new RtVariable(name, this);
-     varList.push_back(d);
-   }
-   d->setAsString(value);
+void Environment::setVar(Glib::ustring name, Glib::ustring value)
+{
+  findOrCreateVariable(name)->setAsString(value);
 }
 
 void Environment::setVar(Glib::ustring name, int value)
 {
-  RtVariable* d = nullptr;
-  RtVariable* e = nullptr;
-  for (size_t i=0; i<varList.size(); i++)
-   {
-      e = static_cast<RtVariable*> (varList[i]);
-      if (e != nullptr)
-        if (e->getName() == name)
-          d = e;
-   }
-
-   if (d == nullptr)
-   {
-     d = new RtVariable(name, this);
-     varList.push_back(d);
-   }
-   d->setAsInt(value);
+  findOrCreateVariable(name)->setAsInt(value);
 }
 
 void Environment::setVar(Glib::ustring name, double value)
 {
-  RtVariable* d = nullptr;
-  RtVariable* e = nullptr;
-  for (size_t i=0; i<varList.size(); i++)
-   {
-      e = static_cast<RtVariable*> (varList[i]);
-      if (e != nullptr)
-        if (e->getName() == name)
-          d = e;
-   }
-
-   if (d == nullptr)
-   {
-     d = new RtVariable(name, this);
-     varList.push_back(d);
-   }
-   d->setAsDouble(value);
+  findOrCreateVariable(name)->setAsDouble(value);
 }
 
 void Environment::setVar(Glib::ustring name, bool value)
 {
-  RtVariable* d = nullptr;
-  RtVariable* e = nullptr;
-  for (size_t i=0; i<varList.size(); i++)
-   {
-      e = static_cast<RtVariable*> (varList[i]);
-      if (e != nullptr)
-        if (e->getName() == name)
-          d = e;
-   }
-
-   if (d == nullptr)
-   {
-     d = new RtVariable(name, this);
-     varList.push_back(d);
-   }
-   d->setAsBool(value);
+  findOrCreateVariable(name)->setAsBool(value);
 }
 
 RtVariable* Environment::getVariableByName(Glib::ustring name)

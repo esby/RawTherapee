@@ -127,6 +127,7 @@ class Environment {
      size_t countVar(){return varList.size();}
      RtVariable* getVariable(int pos);
      RtVariable* getVariableByName(Glib::ustring name);
+     RtVariable* findOrCreateVariable(const Glib::ustring& name);
 
      Glib::ustring getVariableName(int pos);
  
