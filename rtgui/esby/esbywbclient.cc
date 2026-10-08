@@ -74,6 +74,7 @@ void EsbyWBClient::connect()
     connecting = true;
     cancellable = Gio::Cancellable::create();
     socketClient = Gio::SocketClient::create();
+    socketClient->set_enable_proxy(false); // a local socket, never through a proxy
     std::shared_ptr<bool> isAlive = alive;
     socketClient->connect_async(Gio::UnixSocketAddress::create(socketPath()), cancellable,
         [this, isAlive](Glib::RefPtr<Gio::AsyncResult>& result) {

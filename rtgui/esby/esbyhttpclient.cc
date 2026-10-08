@@ -81,6 +81,7 @@ void EsbyHttpClient::post(const Glib::ustring& path, cJSON* body, Callback callb
                      + "\r\n" + json;
 
     request->socketClient = Gio::SocketClient::create();
+    request->socketClient->set_enable_proxy(false);
     request->socketClient->connect_to_host_async(host, port,
         [this, request](Glib::RefPtr<Gio::AsyncResult>& result) {
             if (!*request->alive)
