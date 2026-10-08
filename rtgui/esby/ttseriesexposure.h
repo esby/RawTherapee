@@ -66,6 +66,10 @@ protected:
     Glib::ustring offsetFile;    // image the old/new values below belong to
     double toggleOld, toggleNew; // compensations before and after the last offset change
     bool toggleShowsNew;
+    bool hasShownOffset;         // shownOffset is known for offsetFile
+    double shownOffset;          // offset included in the compensation shown by this instance
+    bool offsetPending;          // a change came while the window was not active: applied on focus
+    bool focusConnected;
     double sequenceOffset();
     void offsetChanged();
     void offsetAdjusted();

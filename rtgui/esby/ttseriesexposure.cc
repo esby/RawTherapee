@@ -49,6 +49,10 @@ TTSeriesExposure::TTSeriesExposure() :
   sharedConnected = false;
   toggleOld = toggleNew = 0.0;
   toggleShowsNew = true;
+  hasShownOffset = false;
+  shownOffset = 0.0;
+  offsetPending = false;
+  focusConnected = false;
 
   // the pipette of the first tone curve of the exposure tool: values after the exposure
   // compensation, the brightness, the contrast and the highlight compression, before the curves
@@ -983,10 +987,30 @@ void TTSeriesExposure::offsetChanged()
   if (!getExpander()->getEnabled() || !sequenceReady || !shared->isLoaded() || exposureIsAutomatic())
     return;
 
+  // the image is only recalculated in the active window: N instances would recalculate together,
+  // the others do it when they get the focus
+  Gtk::Window* window = dynamic_cast<Gtk::Window*>(get_toplevel());
+  if ((window != nullptr) && !focusConnected)
+  {
+    window->signal_focus_in_event().connect([this](GdkEventFocus*) {
+      if (offsetPending)
+        offsetChanged();
+      return false;
+    }, false);
+    focusConnected = true;
+  }
+  if ((window != nullptr) && !window->is_active())
+  {
+    offsetPending = true;
+    return;
+  }
+  offsetPending = false;
+
   Glib::ustring file = originalFile();
   if (file != offsetFile)
   {
     offsetFile = file;
+    hasShownOffset = false;
     btToggle->hide();
   }
   Glib::ustring name = Glib::path_get_basename(file);
@@ -994,18 +1018,26 @@ void TTSeriesExposure::offsetChanged()
   double current = currentExpComp();
   // without record, an image at 0 (default profile) is taken as untouched, with no offset
   bool known = readApplied(name, applied, &appliedOffset);
-  if (!known && (std::fabs(current) >= 0.005))
-    return; // never handled by the tool and changed by hand: left alone
-  if (std::fabs(offset - appliedOffset) < 0.005)
+  if (!hasShownOffset)
+  {
+    // first look at this image: the offset it was given. The same file may be open in another
+    // instance, which records its own changes: this instance compares with what it shows
+    shownOffset = (known && (std::fabs(current - applied) < 0.005)) ? appliedOffset : 0.0;
+    hasShownOffset = true;
+  }
+  if (std::fabs(offset - shownOffset) < 0.005)
     return; // nothing new
-  if (known && (std::fabs(current - applied) >= 0.005))
+  // untouched: the compensation of the tool without its offset, plus the offset shown here
+  double base = known ? applied - appliedOffset : 0.0;
+  if (std::fabs(current - (base + shownOffset)) >= 0.005)
   {
     setInfo(Glib::ustring::compose(M("TT_SERIESEXP_OFFSET_NOT_APPLIED"),
-                                   Glib::ustring::format(std::showpos, std::fixed, std::setprecision(2), appliedOffset),
+                                   Glib::ustring::format(std::showpos, std::fixed, std::setprecision(2), shownOffset),
                                    Glib::ustring::format(std::showpos, std::fixed, std::setprecision(2), offset)));
     return;
   }
-  double comp = std::max(SERIESEXP_MIN_COMP, std::min(SERIESEXP_MAX_COMP, current - appliedOffset + offset));
+  double comp = std::max(SERIESEXP_MIN_COMP, std::min(SERIESEXP_MAX_COMP, current - shownOffset + offset));
+  shownOffset = offset;
   if (!btToggle->is_visible())
     toggleOld = current; // the value before the first change seen on this image
   toggleNew = comp;
