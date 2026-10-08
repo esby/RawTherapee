@@ -75,6 +75,7 @@ protected:
     static int countModels(const Glib::ustring& folder);
     static double captureTime(const Glib::ustring& file);
     void startSequence();
+    void publishSequence();
     void sequenceScanned();
 
     bool measure(double& luminance);

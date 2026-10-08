@@ -39,6 +39,31 @@ class TTVarDisplayer : public ToolParamBlock, public FoldableToolPanel {
 		std::vector<Gtk::Entry*> varLabel;
 		std::vector<Gtk::Entry*> varEntry;
 
+		// shared variables (esby server)
+		struct SharedRow
+		{
+			Gtk::HBox* box;
+			Gtk::Label* label;
+			Gtk::Entry* value;
+			Gtk::Label* originLabel;
+			Gtk::Button* unset;
+			Glib::ustring name;
+			Glib::ustring origin; // key where the value is set (folder, folder#sequence, *)
+		};
+		Gtk::Label* lbShared;
+		Gtk::VBox* sharedBox;
+		std::vector<SharedRow> sharedRows;
+		Gtk::HBox* addBox;
+		Gtk::Entry* addName;
+		Gtk::Entry* addValue;
+		MyComboBoxText* addWhere;
+		bool sharedConnected;
+
+		void refreshVariables();
+		void refreshShared();
+		void createSharedRow();
+		void sharedValueChanged(size_t index);
+
 
 	public:
 
@@ -50,6 +75,7 @@ class TTVarDisplayer : public ToolParamBlock, public FoldableToolPanel {
 		void react(FakeProcEvent ev);
 		void enabledChanged  ();
 		void copy_clicked ();
+		void add_clicked ();
 
     bool canBeEnabled() {return true;}
 };

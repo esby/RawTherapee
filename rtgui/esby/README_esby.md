@@ -76,6 +76,21 @@ automatique ; `no_match` n'a pas de repli. `no_reference` (service redémarré o
 nouvelle référence silencieuse à partir du RAW et du choix mémorisés. Exposition automatique ou
 correspondance d'histogramme actives : aucune correction.
 
+### Variables partagées
+
+Le serveur `esbywb` garde aussi des variables nommées (nombre, texte ou booléen), posées sur une
+séquence, un dossier (héritées en dessous) ou en global ; la plus proche l'emporte (voir
+`server/README.md`). Pour l'image ouverte, elles sont copiées dans les variables de
+l'environnement, avec leur portée et leur provenance : un outil les lit comme les autres
+(`env->getVarAsDouble("SeriesExpGap")`). Une variable partagée ne remplace jamais une variable
+interne ou Exif du même nom. La séquence est celle de TTSeriesExposure (quand il est actif) ;
+sinon, le dossier numéroté de l'image.
+
+Le panneau des variables (TTVarDisplayer) les affiche à part : valeur modifiable (Entrée : changée
+là où elle est posée), provenance, bouton pour la retirer, et une ligne pour en ajouter une
+(séquence, dossier, dossier parent ou global). Un changement fait dans une instance ou en ligne de
+commande est vu aussitôt par toutes les instances ouvertes.
+
 ## Fichiers de ce dossier
 
 | Fichier | Rôle |
@@ -88,14 +103,15 @@ correspondance d'histogramme actives : aucune correction.
 | `esbysettings.*` | options du fork (groupe `[TTP]` du fichier d'options), membre `Options::esby` |
 | `esbyoptions.h` | `esbyOptions()` et `esbySettings()` : accès aux options |
 | `esbypreferences.*` | onglet *Tools* des Préférences, membre `Preferences::esbyPanel` |
-| `variable.*` | variables d'environnement (`RtVariable`) |
+| `variable.*` | variables d'environnement (`RtVariable`) : valeur typée, portée, provenance |
+| `esbysharedvars.*` | variables partagées de l'image ouverte, chargées depuis le serveur `esbywb` |
 | `rtdef.h` | constantes : noms des boîtes, états, nombre d'onglets |
 | `ttlog.h` | `TT_LOG()` / `TT_VERBOSE` : traces affichées seulement avec `Verbose=true` |
 | `ttdep.*` | fonctions de tri des panneaux |
 | `tt*.cc/h` | les outils de l'onglet Useful |
 | `languages/default` | clés de traduction du fork, installées dans `<données>/esby/languages/` |
 | `server/` | `esbywb.py` : serveur et outil en ligne de commande de la balance des blancs par série (Python) |
-| `esbywbclient.*` | client du serveur `esbywb`, utilisé par TTSeriesWB (GIO, asynchrone) |
+| `esbywbclient.*` | client du serveur `esbywb`, utilisé par TTSeriesWB et les variables partagées (GIO, asynchrone) |
 
 ## Branchement sur l'upstream
 

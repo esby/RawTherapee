@@ -4,6 +4,7 @@
 set(ESBYSOURCEFILES
     esby/environment.cc
     esby/esbywbclient.cc
+    esby/esbysharedvars.cc
     esby/esbyhttpclient.cc
     esby/esbywidgets.cc
     esby/esbypreferences.cc

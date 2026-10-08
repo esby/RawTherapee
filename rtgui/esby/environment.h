@@ -20,6 +20,7 @@
 #define __RTENVIRONMENT__
 
 #include <functional>
+#include <memory>
 #include <gtkmm.h>
 #include <glibmm.h>
 #include "../rtengine/rtengine.h"
@@ -57,6 +58,7 @@
 // there are several instances of Environement inside the application, usually one per editor window and one for the main application.
 
 class WBProvider;
+class EsbySharedVariables;
 
 class Environment {
   protected:
@@ -69,6 +71,7 @@ class Environment {
      std::vector<RtVariable*> varList;
      int customVariableCount; // for creating unique custom variable
      ProfilePanel* profilepanel ;
+     std::unique_ptr<EsbySharedVariables> sharedVars; // created at the first use
 
   public:
      int envId;
@@ -128,6 +131,8 @@ class Environment {
      RtVariable* getVariable(int pos);
      RtVariable* getVariableByName(Glib::ustring name);
      RtVariable* findOrCreateVariable(const Glib::ustring& name);
+     // shared variables of the opened image (esby server), see esbysharedvars.h
+     EsbySharedVariables* sharedVariables();
 
      Glib::ustring getVariableName(int pos);
  

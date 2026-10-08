@@ -19,6 +19,7 @@
 #include "esbyoptions.h"
 #include "multilangmgr.h"
 #include "variable.h"
+#include "esbysharedvars.h"
 #include "tools/tonecurve.h"
 #include "rtengine/color.h"
 #include "rtengine/procparams.h"
@@ -261,6 +262,17 @@ double TTSeriesExposure::captureTime(const Glib::ustring& file)
   }
 }
 
+// the sequence is known: ready, and given to the shared variables (a variable can be set on it)
+void TTSeriesExposure::publishSequence()
+{
+  sequenceReady = true;
+  if (env == nullptr)
+    return;
+  Glib::ustring::size_type hash = sequenceKey.find('#');
+  env->sharedVariables()->setSequence(originalFile(),
+                                      (hash == Glib::ustring::npos) ? Glib::ustring() : sequenceKey.substr(hash + 1));
+}
+
 void TTSeriesExposure::startSequence()
 {
   sequenceReady = false;
@@ -279,7 +291,7 @@ void TTSeriesExposure::startSequence()
     sequenceText = (models > 1)
       ? Glib::ustring::compose(M("TT_SERIESEXP_SEQ_FOLDER"), Glib::path_get_basename(folder), models)
       : Glib::ustring::compose(M("TT_SERIESEXP_SEQ_UNKNOWN"), Glib::path_get_basename(folder));
-    sequenceReady = true;
+    publishSequence();
     setInfo("");
     measureCurrent(false);
     return;
@@ -378,7 +390,7 @@ void TTSeriesExposure::sequenceScanned()
   {
     sequenceKey = folder;
     sequenceText = Glib::ustring::compose(M("TT_SERIESEXP_SEQ_UNKNOWN"), Glib::path_get_basename(folder));
-    sequenceReady = true;
+    publishSequence();
     setInfo("");
     measureCurrent(false);
     return;
@@ -401,7 +413,7 @@ void TTSeriesExposure::sequenceScanned()
   sequenceKey = folder + "#" + start;
   sequenceText = Glib::ustring::compose(M("TT_SERIESEXP_SEQ_PART"), Glib::path_get_basename(folder),
                                         (int) part + 1, (int) starts.size(), start.substr(11));
-  sequenceReady = true;
+  publishSequence();
   setInfo("");
   measureCurrent(false);
 }

@@ -171,3 +171,14 @@ TT_VAR_DISPLAYER_COPY_TOOLTIP;Copies every transmitted variable (name = value) t
 TT_VAR_DISPLAYER_LABEL;Variables
 TT_VAR_DISPLAYER_LABEL_OPERATORS;Operators
 TT_VAR_DISPLAYER_LABEL_VARIABLES;Variables
+TT_VAR_DISPLAYER_SHARED_ADD_TOOLTIP;Adds the variable to the esby server, set on the chosen place (sequence of the image, its folder, the parent folder, or every image).
+TT_VAR_DISPLAYER_SHARED_FOLDER;Folder
+TT_VAR_DISPLAYER_SHARED_FOR;Shared variables: %1
+TT_VAR_DISPLAYER_SHARED_GLOBAL;Global
+TT_VAR_DISPLAYER_SHARED_NAME;name
+TT_VAR_DISPLAYER_SHARED_PARENT;Parent folder
+TT_VAR_DISPLAYER_SHARED_SEQUENCE;Sequence
+TT_VAR_DISPLAYER_SHARED_UNAVAILABLE;Shared variables: esby server unavailable
+TT_VAR_DISPLAYER_SHARED_UNSET_TOOLTIP;Removes the variable where it is set: the inherited value applies again.
+TT_VAR_DISPLAYER_SHARED_VALUE;value
+TT_VAR_DISPLAYER_SHARED_VALUE_TOOLTIP;Enter: changes the value where it is set (shown on the right), for every image concerned and every opened RawTherapee.

@@ -19,6 +19,7 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <vector>
 #include <giomm.h>
 #include <glibmm.h>
 
@@ -66,6 +67,20 @@ struct EsbyWBFileState
     Glib::ustring source;
 };
 
+// shared variable, as resolved by the server (var_get): typed value, scope and origin
+// type: RT_VARIABLE_TYPE_INT, _DOUBLE, _STRING or _BOOL (variable.h)
+struct EsbyVarValue
+{
+    Glib::ustring name;
+    int type = 2;
+    int i = 0;
+    double d = 0.0;
+    Glib::ustring s;
+    bool b = false;
+    Glib::ustring scope;  // sequence, ancestor or global
+    Glib::ustring origin; // key where it is set: folder, folder#sequence, or * (global)
+};
+
 // client of the esbywb server (rtgui/esby/server/esbywb.py, step 3 of SPEC_series_wb.md).
 // One connection on the local Unix socket, JSON lines. Everything is asynchronous and runs in
 // the GLib main loop (the callbacks are called there): the interface never waits for the server.
@@ -78,6 +93,8 @@ public:
     using DoneCallback = std::function<void(bool ok, const Glib::ustring& error)>;
     using EventCallback = std::function<void(const Glib::ustring& path)>;
     using StatusCallback = std::function<void(bool connected)>;
+    using VarsCallback = std::function<void(bool ok, const std::vector<EsbyVarValue>& variables)>;
+    using VariableEventCallback = std::function<void(const Glib::ustring& path, const Glib::ustring& name)>;
 
     EsbyWBClient();
     ~EsbyWBClient();
@@ -95,7 +112,16 @@ public:
     void observe(const Glib::ustring& file, const std::map<std::string, double>& numbers,
                  const std::map<std::string, Glib::ustring>& texts);
 
+    // shared variables. path: a folder, or "global"; sequence: empty for the folder itself
+    void varGet(const Glib::ustring& path, const Glib::ustring& sequence, VarsCallback callback);
+    void varSet(const Glib::ustring& path, const Glib::ustring& sequence, const EsbyVarValue& value,
+                DoneCallback callback);
+    void varUnset(const Glib::ustring& path, const Glib::ustring& sequence, const Glib::ustring& name,
+                  DoneCallback callback);
+
+    // rule_changed (white balance) and variable_changed events are given to different callbacks
     void setEventCallback(EventCallback callback) { onEvent = callback; }
+    void setVariableEventCallback(VariableEventCallback callback) { onVariableEvent = callback; }
     void setStatusCallback(StatusCallback callback) { onStatus = callback; }
 
     static Glib::ustring socketPath();
@@ -128,5 +154,6 @@ private:
     sigc::connection retryConnection;
 
     EventCallback onEvent;
+    VariableEventCallback onVariableEvent;
     StatusCallback onStatus;
 };

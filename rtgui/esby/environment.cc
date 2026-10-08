@@ -19,6 +19,7 @@
 //#include "toolpanel.h"
 #include "toolpanelcoord.h"
 #include "ttlog.h"
+#include "esbysharedvars.h"
 #include "guiutils.h"
 
 using namespace rtengine::procparams;
@@ -45,6 +46,7 @@ Environment::~Environment()
 {
   //todo: free rt variable
   
+  sharedVars.reset(); // before the variables it fills
   TT_LOG("deleting rt variables due to the environment destruction \n");
   while (varList.size()>0)
   {
@@ -191,6 +193,13 @@ void Environment::clearVarsWithPrefix(const Glib::ustring& prefix)
     if ((v != nullptr) && (v->getName().compare(0, prefix.length(), prefix) == 0))
       v->setAsString("");
   }
+}
+
+EsbySharedVariables* Environment::sharedVariables()
+{
+  if (!sharedVars)
+    sharedVars.reset(new EsbySharedVariables(this));
+  return sharedVars.get();
 }
 
 // the variable of this name, created (undefined) when it does not exist yet
