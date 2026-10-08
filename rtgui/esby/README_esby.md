@@ -52,6 +52,30 @@ expliquent le *pourquoi*.
   compression des hautes lumières de l'outil Exposition, avant les courbes (`EUID_ToneCurve1`).
 - Les cibles sont dans `~/.config/RawTherapee5-esby/esby-exposure-targets.ini`.
 
+### TTSeriesExposure : service externe de mesure d'exposition (optionnel)
+
+Option `SeriesExpService` (`hôte:port`, vide par défaut) ; jeton éventuel dans la variable
+d'environnement `ESBY_EXPOSURE_TOKEN`, envoyé en `Authorization: Bearer`. Le service n'est pas fourni :
+il doit répondre en JSON (POST) à :
+
+- `/reference {session, raw, point?, af_point?}` : le visage de référence de la séquence (`point` :
+  clic de la pipette ; sinon le visage proche de `af_point`, ou le plus grand). Réponse : `status`,
+  `choice` ;
+- `/measure {session, raw, min_similarity, af_point?}` : `status` (`ok`, `no_face`, `no_match`,
+  `no_reference`, `unmeasurable`, `unreadable`), `delta_ev` (exposition à ajouter par rapport à la
+  référence, mesurée dans le RAW linéaire), `similarity`, `clipped_fraction`, et pour `no_face`
+  éventuellement `fallback_af {delta_ev}`.
+
+Positions en 0 à 1 de l'image affichée (orientation EXIF appliquée). Session : la clé de séquence.
+
+Application : compensation = compensation de la référence + `delta_ev` (absolue, donc idempotente).
+Automatique si similarité ≥ `SeriesExpAutoSimilarity` (0,6), part écrêtée ≤ `SeriesExpMaxClipped`
+(5 %), |`delta_ev`| ≤ `SeriesExpMaxEv` (2 IL) et image non retouchée (compensation appliquée par
+l'outil, ou 0 sans trace) ; sinon proposée. Le repli sur la zone AF (`no_face`) n'est jamais
+automatique ; `no_match` n'a pas de repli. `no_reference` (service redémarré ou session oubliée) :
+nouvelle référence silencieuse à partir du RAW et du choix mémorisés. Exposition automatique ou
+correspondance d'histogramme actives : aucune correction.
+
 ## Fichiers de ce dossier
 
 | Fichier | Rôle |

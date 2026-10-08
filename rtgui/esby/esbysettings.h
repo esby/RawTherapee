@@ -56,6 +56,12 @@ public:
 
     // TTSeriesExposure: minutes between two photos of a one model folder starting a new sequence
     double SeriesExpGap = 3.0;
+    // external exposure measuring service ("host:port", empty: none; token in ESBY_EXPOSURE_TOKEN)
+    Glib::ustring SeriesExpService;
+    double SeriesExpAutoSimilarity = 0.6;  // automatic application from this similarity
+    double SeriesExpMinSimilarity = 0.45;  // below: no match
+    double SeriesExpMaxClipped = 0.05;     // automatic application up to this clipped fraction
+    double SeriesExpMaxEv = 2.0;           // automatic application up to this gap with the reference
     bool SeriesWBFlashOnly = true;
     bool SeriesWBLearnTint = false;
     // marker files of a series root folder, separated by ';' ("Set for the series root")

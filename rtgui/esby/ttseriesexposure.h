@@ -25,6 +25,7 @@
 #include "guiutils.h"
 #include "editcallbacks.h"
 #include "widgets/basic/adjuster.h"
+#include "esbyhttpclient.h"
 
 class ToneCurve;
 
@@ -41,6 +42,14 @@ protected:
     Gtk::ToggleButton* tbPipette;
     Adjuster* adjGap;            // time between two photos starting a new sequence (minutes)
     Gtk::Label* lbInfo;
+
+    // external measuring service (face detection and recognition, measure in the raw data)
+    std::unique_ptr<EsbyHttpClient> service;
+    Gtk::Button* btReference;    // the current image becomes the reference (face near the AF point)
+    Gtk::Button* btMeasure;      // measure the current image again
+    Gtk::Button* btApply;        // apply the suggested compensation
+    double suggestedComp;
+    bool hasSuggestion;
 
     ToneCurve* tonecurve;
 
@@ -75,6 +84,25 @@ protected:
     bool readTarget(double& luminance, Glib::ustring& reference);
     void writeTarget(double luminance, const Glib::ustring& reference);
     void setInfo(const Glib::ustring& action);
+
+    // service: sequence reference (kept with the target: raw, point, AF point, compensation)
+    struct ServiceRef
+    {
+        bool valid = false;
+        Glib::ustring raw;
+        bool hasPoint = false;
+        double px = 0.0, py = 0.0;
+        double comp = 0.0;
+    };
+    bool readServiceRef(ServiceRef& ref);
+    void writeServiceRef(const ServiceRef& ref);
+    bool readApplied(const Glib::ustring& file, double& comp);
+    void writeApplied(const Glib::ustring& file, double comp);
+    static bool readAfPoint(const Glib::ustring& file, double& x, double& y);
+    void setReference(bool hasPoint, double px, double py);
+    void measureCurrent(bool manual, bool retried = false);
+    void setSuggestion(double comp, const Glib::ustring& text);
+    bool exposureIsAutomatic();
 
 public:
     TTSeriesExposure();

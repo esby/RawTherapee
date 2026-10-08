@@ -111,6 +111,26 @@ void EsbySettings::readFromFile(Glib::KeyFile& keyFile)
                     SeriesExpGap          = keyFile.get_double ("TTP", "SeriesExpGap");
                 }
 
+                if (keyFile.has_key ("TTP", "SeriesExpService")) {
+                    SeriesExpService      = keyFile.get_string ("TTP", "SeriesExpService");
+                }
+
+                if (keyFile.has_key ("TTP", "SeriesExpAutoSimilarity")) {
+                    SeriesExpAutoSimilarity = keyFile.get_double ("TTP", "SeriesExpAutoSimilarity");
+                }
+
+                if (keyFile.has_key ("TTP", "SeriesExpMinSimilarity")) {
+                    SeriesExpMinSimilarity = keyFile.get_double ("TTP", "SeriesExpMinSimilarity");
+                }
+
+                if (keyFile.has_key ("TTP", "SeriesExpMaxClipped")) {
+                    SeriesExpMaxClipped   = keyFile.get_double ("TTP", "SeriesExpMaxClipped");
+                }
+
+                if (keyFile.has_key ("TTP", "SeriesExpMaxEv")) {
+                    SeriesExpMaxEv        = keyFile.get_double ("TTP", "SeriesExpMaxEv");
+                }
+
                 if (keyFile.has_key ("TTP", "SeriesWBFlashOnly")) {
                     SeriesWBFlashOnly     = keyFile.get_boolean ("TTP", "SeriesWBFlashOnly");
                 }
@@ -148,6 +168,11 @@ void EsbySettings::saveToFile(Glib::KeyFile& keyFile) const
         keyFile.set_integer ("TTP", "SeriesWBMode", SeriesWBMode);
         keyFile.set_string  ("TTP", "SeriesWBAuto", SeriesWBAuto);
         keyFile.set_double  ("TTP", "SeriesExpGap", SeriesExpGap);
+        keyFile.set_string  ("TTP", "SeriesExpService", SeriesExpService);
+        keyFile.set_double  ("TTP", "SeriesExpAutoSimilarity", SeriesExpAutoSimilarity);
+        keyFile.set_double  ("TTP", "SeriesExpMinSimilarity", SeriesExpMinSimilarity);
+        keyFile.set_double  ("TTP", "SeriesExpMaxClipped", SeriesExpMaxClipped);
+        keyFile.set_double  ("TTP", "SeriesExpMaxEv", SeriesExpMaxEv);
         keyFile.set_boolean ("TTP", "SeriesWBFlashOnly", SeriesWBFlashOnly);
         keyFile.set_boolean ("TTP", "SeriesWBLearnTint", SeriesWBLearnTint);
         keyFile.set_string  ("TTP", "SeriesWBMarkers", SeriesWBMarkers);

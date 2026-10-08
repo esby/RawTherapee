@@ -22,6 +22,7 @@
 #include "tools/tonecurve.h"
 #include "rtengine/color.h"
 #include "rtengine/procparams.h"
+#include <cjson/cJSON.h>
 #include <exiv2/exiv2.hpp>
 #include <algorithm>
 #include <cmath>
@@ -52,6 +53,45 @@ TTSeriesExposure::TTSeriesExposure() :
   tbPipette = Gtk::manage(new Gtk::ToggleButton(M("TT_SERIESEXP_PIPETTE")));
   tbPipette->set_tooltip_text(M("TT_SERIESEXP_PIPETTE_TOOLTIP"));
   pack_start(*tbPipette, Gtk::PACK_SHRINK, 0);
+
+  // external measuring service: reference, measure and apply buttons
+  Gtk::FlowBox* serviceBox = Gtk::manage(new Gtk::FlowBox());
+  serviceBox->set_selection_mode(Gtk::SELECTION_NONE);
+  serviceBox->set_column_spacing(4);
+  serviceBox->set_row_spacing(2);
+  btReference = Gtk::manage(new Gtk::Button(M("TT_SERIESEXP_REFERENCE")));
+  btReference->set_tooltip_text(M("TT_SERIESEXP_REFERENCE_TOOLTIP"));
+  btMeasure = Gtk::manage(new Gtk::Button(M("TT_SERIESEXP_MEASURE")));
+  btMeasure->set_tooltip_text(M("TT_SERIESEXP_MEASURE_TOOLTIP"));
+  btApply = Gtk::manage(new Gtk::Button(M("TT_SERIESEXP_APPLY")));
+  btApply->set_tooltip_text(M("TT_SERIESEXP_APPLY_TOOLTIP"));
+  btApply->set_sensitive(false);
+  serviceBox->add(*btReference);
+  serviceBox->add(*btMeasure);
+  serviceBox->add(*btApply);
+  pack_start(*serviceBox, Gtk::PACK_SHRINK, 0);
+  suggestedComp = 0.0;
+  hasSuggestion = false;
+  service.reset(new EsbyHttpClient());
+  service->setAddress(esbySettings().SeriesExpService);
+  const char* token = g_getenv("ESBY_EXPOSURE_TOKEN");
+  if (token != nullptr)
+    service->setToken(token);
+  btReference->set_sensitive(service->isEnabled());
+  btMeasure->set_sensitive(service->isEnabled());
+  btReference->signal_clicked().connect([this]() { setReference(false, 0.0, 0.0); });
+  btMeasure->signal_clicked().connect([this]() { measureCurrent(true); });
+  btApply->signal_clicked().connect([this]() {
+    if (hasSuggestion)
+    {
+      setExpComp(suggestedComp);
+      writeApplied(Glib::path_get_basename(originalFile()), suggestedComp);
+      hasSuggestion = false;
+      btApply->set_sensitive(false);
+      setInfo(Glib::ustring::compose(M("TT_SERIESEXP_APPLIED_SUGGESTION"),
+                                     Glib::ustring::format(std::showpos, std::fixed, std::setprecision(2), suggestedComp)));
+    }
+  });
 
   adjGap = Gtk::manage(new Adjuster(M("TT_SERIESEXP_GAP"), 1.0, 30.0, 0.5, 3.0));
   adjGap->setAdjusterListener(this);
@@ -241,6 +281,7 @@ void TTSeriesExposure::startSequence()
       : Glib::ustring::compose(M("TT_SERIESEXP_SEQ_UNKNOWN"), Glib::path_get_basename(folder));
     sequenceReady = true;
     setInfo("");
+    measureCurrent(false);
     return;
   }
 
@@ -339,6 +380,7 @@ void TTSeriesExposure::sequenceScanned()
     sequenceText = Glib::ustring::compose(M("TT_SERIESEXP_SEQ_UNKNOWN"), Glib::path_get_basename(folder));
     sequenceReady = true;
     setInfo("");
+    measureCurrent(false);
     return;
   }
 
@@ -361,6 +403,7 @@ void TTSeriesExposure::sequenceScanned()
                                         (int) part + 1, (int) starts.size(), start.substr(11));
   sequenceReady = true;
   setInfo("");
+  measureCurrent(false);
 }
 
 // ---------------------------------------------------------------------------------------
@@ -411,6 +454,17 @@ bool TTSeriesExposure::button1Pressed(int modifierKey)
   if (!measure(luminance))
   {
     setInfo(M("TT_SERIESEXP_NO_VALUE"));
+    return true;
+  }
+
+  // with the service, ctrl + click designates the face of the reference (point in 0 - 1 of the image)
+  if ((modifierKey & GDK_CONTROL_MASK) && service->isEnabled())
+  {
+    EditDataProvider* provider = getEditProvider();
+    int w = 0, h = 0;
+    provider->getImageSize(w, h);
+    if ((w > 0) && (h > 0))
+      setReference(true, (double) provider->posImage.x / w, (double) provider->posImage.y / h);
     return true;
   }
 
@@ -507,6 +561,340 @@ void TTSeriesExposure::setInfo(const Glib::ustring& action)
 }
 
 // ---------------------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------------------
+// external measuring service
+// ---------------------------------------------------------------------------------------
+
+// AF point of a Panasonic raw file, in 0 - 1 of the displayed image (EXIF orientation applied);
+// false when absent or invalid (ex: 4194303.999 in manual focus on the S5 II)
+bool TTSeriesExposure::readAfPoint(const Glib::ustring& file, double& x, double& y)
+{
+  try
+  {
+    auto image = Exiv2::ImageFactory::open(std::string(file));
+    image->readMetadata();
+    Exiv2::ExifData& exif = image->exifData();
+    auto af = exif.findKey(Exiv2::ExifKey("Exif.Panasonic.AFPointPosition"));
+    if ((af == exif.end()) || (af->count() < 2))
+      return false;
+    double ax = af->toFloat(0), ay = af->toFloat(1);
+    if (!(ax >= 0.0 && ax <= 1.0 && ay >= 0.0 && ay <= 1.0))
+      return false;
+    int orientation = 1;
+    auto o = exif.findKey(Exiv2::ExifKey("Exif.Image.Orientation"));
+    if (o != exif.end())
+      orientation = (int) o->toFloat(0);
+    switch (orientation)
+    {
+      case 3: x = 1.0 - ax; y = 1.0 - ay; break;  // 180 degrees
+      case 6: x = 1.0 - ay; y = ax; break;        // 90 degrees clockwise
+      case 8: x = ay; y = 1.0 - ax; break;        // 90 degrees counterclockwise
+      default: x = ax; y = ay; break;
+    }
+    return true;
+  }
+  catch (const std::exception&)
+  {
+    return false;
+  }
+}
+
+bool TTSeriesExposure::readServiceRef(ServiceRef& ref)
+{
+  ref = ServiceRef();
+  if (sequenceKey.empty())
+    return false;
+  Glib::KeyFile keys;
+  try
+  {
+    if (!Glib::file_test(targetsFile(), Glib::FILE_TEST_EXISTS) || !keys.load_from_file(targetsFile()))
+      return false;
+    if (!keys.has_group(sequenceKey) || !keys.has_key(sequenceKey, "service_raw"))
+      return false;
+    ref.raw = keys.get_string(sequenceKey, "service_raw");
+    ref.comp = keys.has_key(sequenceKey, "service_comp") ? keys.get_double(sequenceKey, "service_comp") : 0.0;
+    if (keys.has_key(sequenceKey, "service_point"))
+    {
+      std::vector<double> p = keys.get_double_list(sequenceKey, "service_point");
+      if (p.size() == 2)
+      {
+        ref.hasPoint = true;
+        ref.px = p[0];
+        ref.py = p[1];
+      }
+    }
+    ref.valid = !ref.raw.empty();
+    return ref.valid;
+  }
+  catch (const Glib::Error&)
+  {
+    return false;
+  }
+}
+
+void TTSeriesExposure::writeServiceRef(const ServiceRef& ref)
+{
+  Glib::KeyFile keys;
+  try
+  {
+    if (Glib::file_test(targetsFile(), Glib::FILE_TEST_EXISTS))
+      keys.load_from_file(targetsFile(), Glib::KEY_FILE_KEEP_COMMENTS);
+    keys.set_string(sequenceKey, "service_raw", ref.raw);
+    keys.set_double(sequenceKey, "service_comp", ref.comp);
+    if (ref.hasPoint)
+      keys.set_double_list(sequenceKey, "service_point", std::vector<double>{ref.px, ref.py});
+    else if (keys.has_key(sequenceKey, "service_point"))
+      keys.remove_key(sequenceKey, "service_point");
+    keys.set_string(sequenceKey, "reference", Glib::path_get_basename(ref.raw));
+    keys.set_string(sequenceKey, "time", Glib::DateTime::create_now_local().format("%Y-%m-%d %H:%M:%S"));
+    Glib::file_set_contents(targetsFile(), keys.to_data());
+  }
+  catch (const Glib::Error& e)
+  {
+    printf("TTSeriesExposure: unable to write %s: %s\n", targetsFile().c_str(), e.what().c_str());
+  }
+}
+
+// compensation applied by the tool to a file (an image is changed automatically only if it still has it)
+bool TTSeriesExposure::readApplied(const Glib::ustring& file, double& comp)
+{
+  Glib::KeyFile keys;
+  try
+  {
+    if (!Glib::file_test(targetsFile(), Glib::FILE_TEST_EXISTS) || !keys.load_from_file(targetsFile()))
+      return false;
+    if (!keys.has_group("applied") || !keys.has_key("applied", file))
+      return false;
+    comp = keys.get_double("applied", file);
+    return true;
+  }
+  catch (const Glib::Error&)
+  {
+    return false;
+  }
+}
+
+void TTSeriesExposure::writeApplied(const Glib::ustring& file, double comp)
+{
+  Glib::KeyFile keys;
+  try
+  {
+    if (Glib::file_test(targetsFile(), Glib::FILE_TEST_EXISTS))
+      keys.load_from_file(targetsFile(), Glib::KEY_FILE_KEEP_COMMENTS);
+    keys.set_double("applied", file, comp);
+    Glib::file_set_contents(targetsFile(), keys.to_data());
+  }
+  catch (const Glib::Error&) {}
+}
+
+// automatic exposure or histogram matching: each image gets its own exposure, the absolute
+// compensation (reference + delta) does not hold anymore
+bool TTSeriesExposure::exposureIsAutomatic()
+{
+  ProcParams pp;
+  tonecurve->write(&pp);
+  return pp.toneCurve.autoexp || pp.toneCurve.histmatching;
+}
+
+void TTSeriesExposure::setSuggestion(double comp, const Glib::ustring& text)
+{
+  suggestedComp = comp;
+  hasSuggestion = true;
+  btApply->set_sensitive(true);
+  setInfo(text);
+}
+
+// the current image becomes the reference of the sequence: its face (at the point, or near the AF
+// point, or the largest) for the service, and its exposure compensation
+void TTSeriesExposure::setReference(bool hasPoint, double px, double py)
+{
+  if (!service->isEnabled() || !sequenceReady || (tonecurve == nullptr))
+  {
+    setInfo(M(sequenceReady ? "TT_SERIESEXP_NO_SERVICE" : "TT_SERIESEXP_SEQ_WAIT"));
+    return;
+  }
+  ServiceRef ref;
+  ref.raw = originalFile();
+  ref.hasPoint = hasPoint;
+  ref.px = px;
+  ref.py = py;
+  ref.comp = currentExpComp();
+
+  cJSON* body = cJSON_CreateObject();
+  cJSON_AddStringToObject(body, "session", sequenceKey.c_str());
+  cJSON_AddStringToObject(body, "raw", ref.raw.c_str());
+  if (hasPoint)
+  {
+    cJSON* p = cJSON_AddArrayToObject(body, "point");
+    cJSON_AddItemToArray(p, cJSON_CreateNumber(px));
+    cJSON_AddItemToArray(p, cJSON_CreateNumber(py));
+  }
+  double ax, ay;
+  if (readAfPoint(env->getVarAsString("Fname"), ax, ay))
+  {
+    cJSON* p = cJSON_AddArrayToObject(body, "af_point");
+    cJSON_AddItemToArray(p, cJSON_CreateNumber(ax));
+    cJSON_AddItemToArray(p, cJSON_CreateNumber(ay));
+  }
+  setInfo(M("TT_SERIESEXP_WAITING"));
+  Glib::ustring file = originalFile();
+  service->post("/reference", body, [this, ref, file](cJSON* answer, const Glib::ustring& error) {
+    if (originalFile() != file)
+      return;
+    cJSON* status = answer ? cJSON_GetObjectItem(answer, "status") : nullptr;
+    if (!cJSON_IsString(status))
+    {
+      setInfo(Glib::ustring::compose(M("TT_SERIESEXP_SERVICE_ERROR"), error));
+      return;
+    }
+    Glib::ustring st = status->valuestring;
+    if (st != "ok")
+    {
+      setInfo(Glib::ustring::compose(M("TT_SERIESEXP_STATUS"), st));
+      return;
+    }
+    writeServiceRef(ref);
+    writeApplied(Glib::path_get_basename(file), ref.comp);
+    cJSON* choice = cJSON_GetObjectItem(answer, "choice");
+    setInfo(Glib::ustring::compose(M("TT_SERIESEXP_REFERENCE_SET"),
+                                   cJSON_IsString(choice) ? choice->valuestring : "",
+                                   Glib::ustring::format(std::showpos, std::fixed, std::setprecision(2), ref.comp)));
+  });
+}
+
+// measure of the current image by the service. manual: from the measure button (the application is
+// then proposed even for an image changed by hand)
+void TTSeriesExposure::measureCurrent(bool manual, bool retried)
+{
+  if (!service->isEnabled() || !sequenceReady || (tonecurve == nullptr))
+    return;
+  ServiceRef ref;
+  if (!readServiceRef(ref))
+  {
+    if (manual)
+      setInfo(M("TT_SERIESEXP_NO_REFERENCE"));
+    return;
+  }
+  Glib::ustring file = originalFile();
+  if (Glib::path_get_basename(file) == Glib::path_get_basename(ref.raw))
+  {
+    setInfo(M("TT_SERIESEXP_IS_REFERENCE"));
+    return;
+  }
+  if (exposureIsAutomatic())
+  {
+    setInfo(M("TT_SERIESEXP_AUTOMATIC"));
+    return;
+  }
+
+  cJSON* body = cJSON_CreateObject();
+  cJSON_AddStringToObject(body, "session", sequenceKey.c_str());
+  cJSON_AddStringToObject(body, "raw", file.c_str());
+  cJSON_AddNumberToObject(body, "min_similarity", esbySettings().SeriesExpMinSimilarity);
+  double ax, ay;
+  if (readAfPoint(env->getVarAsString("Fname"), ax, ay))
+  {
+    cJSON* p = cJSON_AddArrayToObject(body, "af_point");
+    cJSON_AddItemToArray(p, cJSON_CreateNumber(ax));
+    cJSON_AddItemToArray(p, cJSON_CreateNumber(ay));
+  }
+  setInfo(M("TT_SERIESEXP_WAITING"));
+  service->post("/measure", body, [this, ref, file, manual, retried](cJSON* answer, const Glib::ustring& error) {
+    if (originalFile() != file)
+      return; // another image was opened meanwhile
+    cJSON* status = answer ? cJSON_GetObjectItem(answer, "status") : nullptr;
+    if (!cJSON_IsString(status))
+    {
+      setInfo(Glib::ustring::compose(M("TT_SERIESEXP_SERVICE_ERROR"), error));
+      return;
+    }
+    Glib::ustring st = status->valuestring;
+    auto number = [answer](const char* name, double def) {
+      cJSON* item = cJSON_GetObjectItem(answer, name);
+      return cJSON_IsNumber(item) ? item->valuedouble : def;
+    };
+
+    // the service forgot the session (inactivity): the reference is set again silently, from the
+    // raw file and the choice kept by the fork (the fingerprint is never kept), then measured again
+    if ((st == "no_reference") && !retried)
+    {
+      cJSON* again = cJSON_CreateObject();
+      cJSON_AddStringToObject(again, "session", sequenceKey.c_str());
+      cJSON_AddStringToObject(again, "raw", ref.raw.c_str());
+      if (ref.hasPoint)
+      {
+        cJSON* p = cJSON_AddArrayToObject(again, "point");
+        cJSON_AddItemToArray(p, cJSON_CreateNumber(ref.px));
+        cJSON_AddItemToArray(p, cJSON_CreateNumber(ref.py));
+      }
+      double rx, ry;
+      if (readAfPoint(ref.raw, rx, ry))
+      {
+        cJSON* p = cJSON_AddArrayToObject(again, "af_point");
+        cJSON_AddItemToArray(p, cJSON_CreateNumber(rx));
+        cJSON_AddItemToArray(p, cJSON_CreateNumber(ry));
+      }
+      service->post("/reference", again, [this, file, manual](cJSON* a, const Glib::ustring&) {
+        cJSON* s2 = a ? cJSON_GetObjectItem(a, "status") : nullptr;
+        if ((originalFile() == file) && cJSON_IsString(s2) && (Glib::ustring(s2->valuestring) == "ok"))
+          measureCurrent(manual, true);
+        else if (originalFile() == file)
+          setInfo(M("TT_SERIESEXP_NO_REFERENCE"));
+      });
+      return;
+    }
+
+    if (st == "ok")
+    {
+      double delta = number("delta_ev", 0.0);
+      double similarity = number("similarity", 0.0);
+      double clipped = number("clipped_fraction", 0.0);
+      double comp = std::max(SERIESEXP_MIN_COMP, std::min(SERIESEXP_MAX_COMP, ref.comp + delta));
+      Glib::ustring values = Glib::ustring::compose(M("TT_SERIESEXP_MEASURED"),
+                                                    Glib::ustring::format(std::showpos, std::fixed, std::setprecision(2), delta),
+                                                    Glib::ustring::format(std::fixed, std::setprecision(2), similarity),
+                                                    Glib::ustring::format(std::fixed, std::setprecision(1), clipped * 100.0),
+                                                    Glib::ustring::format(std::showpos, std::fixed, std::setprecision(2), comp));
+      // untouched: the compensation applied by the tool, or 0 (default profile) without record
+      double applied;
+      double current = currentExpComp();
+      bool untouched = readApplied(Glib::path_get_basename(file), applied) ? (std::fabs(current - applied) < 0.005)
+                                                                           : (std::fabs(current) < 0.005);
+      const EsbySettings& s = esbySettings();
+      bool automatic = !manual && untouched && (similarity >= s.SeriesExpAutoSimilarity)
+                    && (clipped <= s.SeriesExpMaxClipped) && (std::fabs(delta) <= s.SeriesExpMaxEv);
+      if (automatic)
+      {
+        setExpComp(comp);
+        writeApplied(Glib::path_get_basename(file), comp);
+        hasSuggestion = false;
+        btApply->set_sensitive(false);
+        setInfo(M("TT_SERIESEXP_AUTO_APPLIED") + "\n" + values);
+      }
+      else
+        setSuggestion(comp, M(untouched || manual ? "TT_SERIESEXP_SUGGESTED" : "TT_SERIESEXP_SUGGESTED_MANUAL") + "\n" + values);
+      return;
+    }
+
+    // no face (person seen from the back): the AF area measure is only proposed, never applied
+    cJSON* fallback = cJSON_GetObjectItem(answer, "fallback_af");
+    if ((st == "no_face") && cJSON_IsObject(fallback))
+    {
+      cJSON* d = cJSON_GetObjectItem(fallback, "delta_ev");
+      if (cJSON_IsNumber(d))
+      {
+        double comp = std::max(SERIESEXP_MIN_COMP, std::min(SERIESEXP_MAX_COMP, ref.comp + d->valuedouble));
+        setSuggestion(comp, Glib::ustring::compose(M("TT_SERIESEXP_SUGGESTED_AF"),
+                                                   Glib::ustring::format(std::showpos, std::fixed, std::setprecision(2), d->valuedouble),
+                                                   Glib::ustring::format(std::showpos, std::fixed, std::setprecision(2), comp)));
+        return;
+      }
+    }
+    // no_match: another person is probably on the AF point, no fallback
+    setInfo(Glib::ustring::compose(M(st == "no_match" ? "TT_SERIESEXP_NO_MATCH" : "TT_SERIESEXP_STATUS"), st));
+  });
+}
 
 void TTSeriesExposure::react(FakeProcEvent ev)
 {
