@@ -25,7 +25,8 @@ static const char GLOBAL_KEY[] = "*";
 
 EsbySharedVariables::EsbySharedVariables(Environment* _env) :
     env(_env),
-    generation(0)
+    generation(0),
+    loadedOk(false)
 {
     client.reset(new EsbyWBClient());
     client->setStatusCallback([this](bool connected) {
@@ -99,6 +100,7 @@ void EsbySharedVariables::setSequence(const Glib::ustring& _file, const Glib::us
 void EsbySharedVariables::reload()
 {
     int current = ++generation;
+    loadedOk = false;
     if (folder.empty() || !isConnected())
     {
         clearLoaded();
@@ -112,6 +114,7 @@ void EsbySharedVariables::reload()
             apply(variables);
         else
             clearLoaded();
+        loadedOk = ok;
         changed.emit();
     });
 }

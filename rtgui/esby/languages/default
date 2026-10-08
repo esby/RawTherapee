@@ -87,6 +87,10 @@ TT_SERIESEXP_NO_SERVICE;No measuring service (option SeriesExpService).
 TT_SERIESEXP_NO_TARGET;No target for this sequence: ctrl + click on the reference image first.
 TT_SERIESEXP_NO_TARGET_YET;No target yet.
 TT_SERIESEXP_NO_VALUE;No value under the pipette.
+TT_SERIESEXP_OFFSET;Sequence offset (EV)
+TT_SERIESEXP_OFFSET_APPLIED;Offset of the sequence %1 EV applied: compensation %2 EV.
+TT_SERIESEXP_OFFSET_NOT_APPLIED;Offset of the sequence changed (%1 → %2 EV), not applied: the exposure of this image was changed by hand.
+TT_SERIESEXP_OFFSET_TOOLTIP;Rendering preference added to the measured compensation of every image of the sequence (shared variable exposure.offset, set on the sequence; it can also be set on a folder in the variable panel). The images still having the compensation of the tool get it, now or when opened; the measures are not changed.
 TT_SERIESEXP_PIPETTE;Pipette
 TT_SERIESEXP_PIPETTE_TOOLTIP;Ctrl + click on the reference area (a face) of the reference image: its brightness becomes the target of the sequence.\nClick on the same area of another image of the sequence: its exposure compensation is set to reach the target. A second click refines the correction.
 TT_SERIESEXP_REFERENCE;Reference: this image
@@ -103,6 +107,9 @@ TT_SERIESEXP_SUGGESTED_AF;No face: measure of the AF area, suggested only: gap %
 TT_SERIESEXP_SUGGESTED_MANUAL;Correction suggested: the exposure of this image was changed by hand.
 TT_SERIESEXP_TARGET;Target: %1 (learned on %2).
 TT_SERIESEXP_TARGET_SET;Target of the sequence set: %1.
+TT_SERIESEXP_TOGGLE_NEW;Show the new value
+TT_SERIESEXP_TOGGLE_OLD;Show the old value
+TT_SERIESEXP_TOGGLE_TOOLTIP;Switches between the compensation before and after the offset change; the value shown is kept.
 TT_SERIESEXP_WAITING;Waiting for the measuring service...
 TT_SERIESWB_ALREADY;The image already has the series white balance.
 TT_SERIESWB_APPLIED;Series white balance applied.

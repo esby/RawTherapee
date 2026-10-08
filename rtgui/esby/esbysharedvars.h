@@ -48,6 +48,8 @@ public:
     Glib::ustring getFolder() const { return folder; }
     Glib::ustring getSequence() const { return sequence; }
     bool isConnected() const { return client && client->isConnected(); }
+    // the variables of the current image and sequence are loaded (false while loading, or without server)
+    bool isLoaded() const { return loadedOk; }
 
     void set(Where where, const EsbyVarValue& value);
     void unset(Where where, const Glib::ustring& name);
@@ -81,5 +83,6 @@ private:
     Glib::ustring sequence;  // part of the folder, empty for the whole folder
     std::set<std::string> loaded; // names of the variables copied into the environment
     int generation;          // an answer for a previous image or sequence is ignored
+    bool loadedOk;
     sigc::signal<void> changed;
 };

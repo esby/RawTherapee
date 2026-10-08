@@ -46,6 +46,9 @@ TTSeriesExposure::TTSeriesExposure() :
 {
   tonecurve = nullptr;
   sequenceReady = false;
+  sharedConnected = false;
+  toggleOld = toggleNew = 0.0;
+  toggleShowsNew = true;
 
   // the pipette of the first tone curve of the exposure tool: values after the exposure
   // compensation, the brightness, the contrast and the highlight compression, before the curves
@@ -86,7 +89,7 @@ TTSeriesExposure::TTSeriesExposure() :
     if (hasSuggestion)
     {
       setExpComp(suggestedComp);
-      writeApplied(Glib::path_get_basename(originalFile()), suggestedComp);
+      writeApplied(Glib::path_get_basename(originalFile()), suggestedComp, sequenceOffset());
       hasSuggestion = false;
       btApply->set_sensitive(false);
       setInfo(Glib::ustring::compose(M("TT_SERIESEXP_APPLIED_SUGGESTION"),
@@ -94,13 +97,33 @@ TTSeriesExposure::TTSeriesExposure() :
     }
   });
 
-  adjGap = Gtk::manage(new Adjuster(M("TT_SERIESEXP_GAP"), 1.0, 30.0, 0.5, 3.0));
+  adjGap = Gtk::manage(new Adjuster(M("TT_SERIESEXP_GAP"), 1.0, 30.0, 0.5, 10.0));
   adjGap->setAdjusterListener(this);
   adjGap->set_tooltip_text(M("TT_SERIESEXP_GAP_TOOLTIP"));
   adjGap->block(true);
   adjGap->setValue(esbySettings().SeriesExpGap);
   adjGap->block(false);
   pack_start(*adjGap, Gtk::PACK_SHRINK, 0);
+
+  // offset of the sequence: set on the sequence of the image (esby server), seen by every instance
+  adjOffset = Gtk::manage(new Adjuster(M("TT_SERIESEXP_OFFSET"), -2.0, 2.0, 0.05, 0.0));
+  adjOffset->setAdjusterListener(this);
+  adjOffset->set_tooltip_text(M("TT_SERIESEXP_OFFSET_TOOLTIP"));
+  adjOffset->set_sensitive(false);
+  pack_start(*adjOffset, Gtk::PACK_SHRINK, 0);
+  btToggle = Gtk::manage(new Gtk::Button(M("TT_SERIESEXP_TOGGLE_OLD")));
+  btToggle->set_tooltip_text(M("TT_SERIESEXP_TOGGLE_TOOLTIP"));
+  btToggle->set_no_show_all(true);
+  btToggle->signal_clicked().connect([this]() {
+    toggleShowsNew = !toggleShowsNew;
+    double comp = toggleShowsNew ? toggleNew : toggleOld;
+    setExpComp(comp);
+    // the shown value is the one kept. The record stays the new value: shown, the image is untouched
+    // and follows the next offsets; the old value differs from it, as a change by hand would
+    writeApplied(Glib::path_get_basename(originalFile()), toggleNew, sequenceOffset());
+    btToggle->set_label(M(toggleShowsNew ? "TT_SERIESEXP_TOGGLE_OLD" : "TT_SERIESEXP_TOGGLE_NEW"));
+  });
+  pack_start(*btToggle, Gtk::PACK_SHRINK, 0);
 
   lbInfo = Gtk::manage(new Gtk::Label(""));
   lbInfo->set_line_wrap(true);
@@ -271,6 +294,7 @@ void TTSeriesExposure::publishSequence()
   Glib::ustring::size_type hash = sequenceKey.find('#');
   env->sharedVariables()->setSequence(originalFile(),
                                       (hash == Glib::ustring::npos) ? Glib::ustring() : sequenceKey.substr(hash + 1));
+  offsetChanged(); // the variables may already be loaded (same sequence): no reload, no signal
 }
 
 void TTSeriesExposure::startSequence()
@@ -483,6 +507,8 @@ bool TTSeriesExposure::button1Pressed(int modifierKey)
   // ctrl + click: the brightness of the reference image becomes the target of the sequence
   if (modifierKey & GDK_CONTROL_MASK)
   {
+    // the target is kept without the offset of the sequence (it is applied on top of it)
+    luminance /= std::pow(2.0, sequenceOffset());
     writeTarget(luminance, Glib::path_get_basename(originalFile()));
     setInfo(Glib::ustring::compose(M("TT_SERIESEXP_TARGET_SET"), Glib::ustring::format(std::fixed, std::setprecision(4), luminance)));
     return true;
@@ -497,9 +523,10 @@ bool TTSeriesExposure::button1Pressed(int modifierKey)
   }
   // linear values: the gap in EV is log2 of their ratio. The tone curve of the exposure tool
   // (contrast, highlight compression) makes it approximate: a second click refines it.
-  double ev = std::log2(target / luminance);
+  double ev = std::log2(target / luminance) + sequenceOffset();
   double comp = std::max(SERIESEXP_MIN_COMP, std::min(SERIESEXP_MAX_COMP, currentExpComp() + ev));
   setExpComp(comp);
+  writeApplied(Glib::path_get_basename(originalFile()), comp, sequenceOffset());
   setInfo(Glib::ustring::compose(M("TT_SERIESEXP_APPLIED"),
                                  Glib::ustring::format(std::showpos, std::fixed, std::setprecision(2), ev),
                                  Glib::ustring::format(std::showpos, std::fixed, std::setprecision(2), comp)));
@@ -669,7 +696,7 @@ void TTSeriesExposure::writeServiceRef(const ServiceRef& ref)
 }
 
 // compensation applied by the tool to a file (an image is changed automatically only if it still has it)
-bool TTSeriesExposure::readApplied(const Glib::ustring& file, double& comp)
+bool TTSeriesExposure::readApplied(const Glib::ustring& file, double& comp, double* offset)
 {
   Glib::KeyFile keys;
   try
@@ -679,6 +706,9 @@ bool TTSeriesExposure::readApplied(const Glib::ustring& file, double& comp)
     if (!keys.has_group("applied") || !keys.has_key("applied", file))
       return false;
     comp = keys.get_double("applied", file);
+    if (offset != nullptr)
+      *offset = (keys.has_group("applied_offset") && keys.has_key("applied_offset", file))
+              ? keys.get_double("applied_offset", file) : 0.0;
     return true;
   }
   catch (const Glib::Error&)
@@ -687,7 +717,7 @@ bool TTSeriesExposure::readApplied(const Glib::ustring& file, double& comp)
   }
 }
 
-void TTSeriesExposure::writeApplied(const Glib::ustring& file, double comp)
+void TTSeriesExposure::writeApplied(const Glib::ustring& file, double comp, double offset)
 {
   Glib::KeyFile keys;
   try
@@ -695,6 +725,7 @@ void TTSeriesExposure::writeApplied(const Glib::ustring& file, double comp)
     if (Glib::file_test(targetsFile(), Glib::FILE_TEST_EXISTS))
       keys.load_from_file(targetsFile(), Glib::KEY_FILE_KEEP_COMMENTS);
     keys.set_double("applied", file, comp);
+    keys.set_double("applied_offset", file, offset);
     Glib::file_set_contents(targetsFile(), keys.to_data());
   }
   catch (const Glib::Error&) {}
@@ -731,7 +762,7 @@ void TTSeriesExposure::setReference(bool hasPoint, double px, double py)
   ref.hasPoint = hasPoint;
   ref.px = px;
   ref.py = py;
-  ref.comp = currentExpComp();
+  ref.comp = currentExpComp() - sequenceOffset(); // kept without the offset of the sequence
 
   cJSON* body = cJSON_CreateObject();
   cJSON_AddStringToObject(body, "session", sequenceKey.c_str());
@@ -767,7 +798,7 @@ void TTSeriesExposure::setReference(bool hasPoint, double px, double py)
       return;
     }
     writeServiceRef(ref);
-    writeApplied(Glib::path_get_basename(file), ref.comp);
+    writeApplied(Glib::path_get_basename(file), ref.comp + sequenceOffset(), sequenceOffset());
     cJSON* choice = cJSON_GetObjectItem(answer, "choice");
     setInfo(Glib::ustring::compose(M("TT_SERIESEXP_REFERENCE_SET"),
                                    cJSON_IsString(choice) ? choice->valuestring : "",
@@ -862,7 +893,7 @@ void TTSeriesExposure::measureCurrent(bool manual, bool retried)
       double delta = number("delta_ev", 0.0);
       double similarity = number("similarity", 0.0);
       double clipped = number("clipped_fraction", 0.0);
-      double comp = std::max(SERIESEXP_MIN_COMP, std::min(SERIESEXP_MAX_COMP, ref.comp + delta));
+      double comp = std::max(SERIESEXP_MIN_COMP, std::min(SERIESEXP_MAX_COMP, ref.comp + delta + sequenceOffset()));
       Glib::ustring values = Glib::ustring::compose(M("TT_SERIESEXP_MEASURED"),
                                                     Glib::ustring::format(std::showpos, std::fixed, std::setprecision(2), delta),
                                                     Glib::ustring::format(std::fixed, std::setprecision(2), similarity),
@@ -879,7 +910,7 @@ void TTSeriesExposure::measureCurrent(bool manual, bool retried)
       if (automatic)
       {
         setExpComp(comp);
-        writeApplied(Glib::path_get_basename(file), comp);
+        writeApplied(Glib::path_get_basename(file), comp, sequenceOffset());
         hasSuggestion = false;
         btApply->set_sensitive(false);
         setInfo(M("TT_SERIESEXP_AUTO_APPLIED") + "\n" + values);
@@ -896,7 +927,7 @@ void TTSeriesExposure::measureCurrent(bool manual, bool retried)
       cJSON* d = cJSON_GetObjectItem(fallback, "delta_ev");
       if (cJSON_IsNumber(d))
       {
-        double comp = std::max(SERIESEXP_MIN_COMP, std::min(SERIESEXP_MAX_COMP, ref.comp + d->valuedouble));
+        double comp = std::max(SERIESEXP_MIN_COMP, std::min(SERIESEXP_MAX_COMP, ref.comp + d->valuedouble + sequenceOffset()));
         setSuggestion(comp, Glib::ustring::compose(M("TT_SERIESEXP_SUGGESTED_AF"),
                                                    Glib::ustring::format(std::showpos, std::fixed, std::setprecision(2), d->valuedouble),
                                                    Glib::ustring::format(std::showpos, std::fixed, std::setprecision(2), comp)));
@@ -908,14 +939,104 @@ void TTSeriesExposure::measureCurrent(bool manual, bool retried)
   });
 }
 
+// ---------------------------------------------------------------------------------------
+// offset of the sequence
+// ---------------------------------------------------------------------------------------
+
+// shared variable exposure.offset of the image (0 when not set, or without server)
+double TTSeriesExposure::sequenceOffset()
+{
+  if (env == nullptr)
+    return 0.0;
+  RtVariable* v = env->getVariableByName("exposure.offset");
+  if ((v == nullptr) || !v->isDefined() || (v->getScope() == RtVariableScope::Internal) || (v->getScope() == RtVariableScope::Exif))
+    return 0.0;
+  return v->getAsDouble();
+}
+
+// the slider was moved: the offset is set on the sequence of the image; the server sends the change
+// to every instance (this one included), offsetChanged() applies it
+void TTSeriesExposure::offsetAdjusted()
+{
+  if (!sequenceReady || (env == nullptr))
+    return;
+  EsbyVarValue value;
+  value.name = "exposure.offset";
+  value.type = RT_VARIABLE_TYPE_DOUBLE;
+  value.d = adjOffset->getValue();
+  env->sharedVariables()->set(EsbySharedVariables::Where::Sequence, value);
+}
+
+// the shared variables of the image were (re)loaded: an image still having the compensation applied by
+// the tool gets the new offset (old/new button to compare); an image changed by hand only gets a message
+void TTSeriesExposure::offsetChanged()
+{
+  if ((env == nullptr) || (tonecurve == nullptr))
+    return;
+  EsbySharedVariables* shared = env->sharedVariables();
+  adjOffset->set_sensitive(shared->isConnected() && sequenceReady);
+  double offset = sequenceOffset();
+  adjOffset->block(true);
+  adjOffset->setValue(offset);
+  adjOffset->block(false);
+  // the offset is 0 while the variables of a new image or sequence are loading: nothing is done then
+  if (!getExpander()->getEnabled() || !sequenceReady || !shared->isLoaded() || exposureIsAutomatic())
+    return;
+
+  Glib::ustring file = originalFile();
+  if (file != offsetFile)
+  {
+    offsetFile = file;
+    btToggle->hide();
+  }
+  Glib::ustring name = Glib::path_get_basename(file);
+  double applied = 0.0, appliedOffset = 0.0;
+  double current = currentExpComp();
+  // without record, an image at 0 (default profile) is taken as untouched, with no offset
+  bool known = readApplied(name, applied, &appliedOffset);
+  if (!known && (std::fabs(current) >= 0.005))
+    return; // never handled by the tool and changed by hand: left alone
+  if (std::fabs(offset - appliedOffset) < 0.005)
+    return; // nothing new
+  if (known && (std::fabs(current - applied) >= 0.005))
+  {
+    setInfo(Glib::ustring::compose(M("TT_SERIESEXP_OFFSET_NOT_APPLIED"),
+                                   Glib::ustring::format(std::showpos, std::fixed, std::setprecision(2), appliedOffset),
+                                   Glib::ustring::format(std::showpos, std::fixed, std::setprecision(2), offset)));
+    return;
+  }
+  double comp = std::max(SERIESEXP_MIN_COMP, std::min(SERIESEXP_MAX_COMP, current - appliedOffset + offset));
+  if (!btToggle->is_visible())
+    toggleOld = current; // the value before the first change seen on this image
+  toggleNew = comp;
+  toggleShowsNew = true;
+  setExpComp(comp);
+  writeApplied(name, comp, offset);
+  btToggle->set_label(M("TT_SERIESEXP_TOGGLE_OLD"));
+  btToggle->show();
+  setInfo(Glib::ustring::compose(M("TT_SERIESEXP_OFFSET_APPLIED"),
+                                 Glib::ustring::format(std::showpos, std::fixed, std::setprecision(2), offset),
+                                 Glib::ustring::format(std::showpos, std::fixed, std::setprecision(2), comp)));
+}
+
 void TTSeriesExposure::react(FakeProcEvent ev)
 {
+  if (!sharedConnected && (env != nullptr))
+  {
+    env->sharedVariables()->signalChanged().connect(sigc::mem_fun(*this, &TTSeriesExposure::offsetChanged));
+    sharedConnected = true;
+  }
   if ((ev == FakeEvExifTransmitted) && getExpander()->getEnabled())
     startSequence();
 }
 
 void TTSeriesExposure::adjusterChanged(Adjuster* a, double newval)
 {
+  if (a == adjOffset)
+  {
+    offsetAdjusted();
+    return;
+  }
   esbySettings().SeriesExpGap = adjGap->getValue();
   if (scan)
     sequenceScanned(); // the parts depend on the gap

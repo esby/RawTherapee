@@ -41,6 +41,8 @@ class TTSeriesExposure : public ToolParamBlock, public FoldableToolPanel, public
 protected:
     Gtk::ToggleButton* tbPipette;
     Adjuster* adjGap;            // time between two photos starting a new sequence (minutes)
+    Adjuster* adjOffset;         // offset of the sequence (EV): shared variable exposure.offset
+    Gtk::Button* btToggle;       // back to the compensation before an offset change, and again
     Gtk::Label* lbInfo;
 
     // external measuring service (face detection and recognition, measure in the raw data)
@@ -57,6 +59,16 @@ protected:
     Glib::ustring sequenceKey;   // folder, or folder#start time of the part
     Glib::ustring sequenceText;  // description shown in the status line
     bool sequenceReady;
+
+    // offset of the sequence (shared variable exposure.offset, nearest of sequence, folders, global):
+    // a rendering preference added to the measured compensation, kept apart from the measures
+    bool sharedConnected;
+    Glib::ustring offsetFile;    // image the old/new values below belong to
+    double toggleOld, toggleNew; // compensations before and after the last offset change
+    bool toggleShowsNew;
+    double sequenceOffset();
+    void offsetChanged();
+    void offsetAdjusted();
 
     // capture times of the photos of a folder, read in a thread (the folder may be on a network drive)
     struct Scan
@@ -97,8 +109,9 @@ protected:
     };
     bool readServiceRef(ServiceRef& ref);
     void writeServiceRef(const ServiceRef& ref);
-    bool readApplied(const Glib::ustring& file, double& comp);
-    void writeApplied(const Glib::ustring& file, double comp);
+    // compensation applied by the tool to a file, and the offset of the sequence it included
+    bool readApplied(const Glib::ustring& file, double& comp, double* offset = nullptr);
+    void writeApplied(const Glib::ustring& file, double comp, double offset);
     static bool readAfPoint(const Glib::ustring& file, double& x, double& y);
     void setReference(bool hasPoint, double px, double py);
     void measureCurrent(bool manual, bool retried = false);
