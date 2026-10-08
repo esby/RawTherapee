@@ -1,6 +1,7 @@
-# esbywb : serveur de balance des blancs par série
+# esbywb : serveur esby (balance des blancs par série, variables partagées)
 
-Étape 2 de `../SPEC_series_wb.md`. Python 3, bibliothèque standard uniquement.
+Étape 2 de `../SPEC_series_wb.md`, étendu aux variables partagées entre toutes les instances de
+RawTherapee. Python 3, bibliothèque standard uniquement.
 
 ## Démarrage
 
@@ -51,6 +52,28 @@ retouches à la main (`learn`, `…-manual`).
 ./esbywb.py observations --exif > obs.csv     # + balises lues par exiftool dans chaque fichier
 ./esbywb.py observations --exif "Model,LightValue,PanasonicRaw_CameraIFD_0x1300" > obs.csv
 ```
+
+## Variables partagées
+
+Une variable a un nom (lettres, chiffres, `. _ : -`) et une valeur (nombre, texte ou booléen).
+Elle est posée sur une **séquence** d'un dossier, sur un **dossier** (hérité par les dossiers en
+dessous) ou en **global**. Pour une image, la plus proche l'emporte : séquence, dossier de
+l'image, dossiers parents, global. Chaque changement est notifié aux instances abonnées
+(événement `variable_changed`).
+
+```bash
+./esbywb.py var-set global SeriesExpGap 10
+./esbywb.py var-set "~/photos/Lucca 2026" exposure.offset 0.3
+./esbywb.py var-set "~/photos/Lucca 2026/042" exposure.offset -0.2 --sequence 2
+./esbywb.py var-unset "~/photos/Lucca 2026/042" exposure.offset --sequence 2
+./esbywb.py vars                                      # tout ce qui est posé, et où
+./esbywb.py show "~/photos/Lucca 2026/042" --sequence 2   # ce qui s'applique, et d'où ça vient
+```
+
+Protocole : `var_set` (`path`, `sequence` optionnel, `name`, `value`), `var_unset`, `var_get`
+(`path`, `sequence` et `name` optionnels : variables résolues avec `value`, `scope`, `origin`),
+`var_list` (tout ce qui est posé). `path` vaut `global` (ou `*`) pour les variables globales ;
+une séquence est stockée sous la clé `dossier#séquence`. `move` déplace aussi les variables.
 
 ## Tests
 

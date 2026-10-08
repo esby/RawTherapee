@@ -117,6 +117,39 @@ class StateTest(unittest.TestCase):
         self.state.move(self.lucca, os.path.join(self.root, "x"))
         self.assertIn(other, self.state.rules)
 
+    def test_variables_nearest_wins(self):
+        self.state.set_variable(esbywb.GLOBAL_KEY, "SeriesExpGap", 10)
+        self.state.set_variable(self.lucca, "exposure.offset", 0.3)
+        self.state.set_variable(self.hall, "exposure.offset", 0.5)
+        self.state.set_variable(esbywb.variable_key(self.hall, "2"), "exposure.offset", -0.2)
+        v = self.state.resolve_variables(self.group)
+        self.assertEqual(v["exposure.offset"], {"value": 0.5, "scope": "ancestor", "origin": self.hall})
+        self.assertEqual(v["SeriesExpGap"], {"value": 10, "scope": "global", "origin": "*"})
+        v = self.state.resolve_variables(self.hall)
+        self.assertEqual((v["exposure.offset"]["value"], v["exposure.offset"]["scope"]), (0.5, "sequence"))
+        v = self.state.resolve_variables(self.hall, "2")
+        self.assertEqual(v["exposure.offset"]["value"], -0.2)
+        self.assertEqual(self.state.resolve_variables(self.hall, "3")["exposure.offset"]["value"], 0.5)
+
+    def test_variables_unset_saved_and_moved(self):
+        self.state.set_variable(esbywb.variable_key(self.hall, "1"), "exposure.offset", 0.3)
+        self.state.set_variable(self.hall, "note", "hall sombre")
+        self.assertEqual(esbywb.State(self.state.filename).variables, self.state.variables)
+        new_hall = os.path.join(self.lucca, "Samedi - Hall 4")
+        self.state.move(self.hall, new_hall)
+        self.assertEqual(self.state.resolve_variables(new_hall, "1")["exposure.offset"]["value"], 0.3)
+        self.state.unset_variable(new_hall, "note")
+        self.assertNotIn(new_hall, self.state.variables)
+        with self.assertRaises(KeyError):
+            self.state.unset_variable(new_hall, "note")
+
+    def test_variables_checked(self):
+        for name, value in (("", 1), ("a b", 1), ("x", [1]), ("x", None)):
+            with self.assertRaises(ValueError):
+                self.state.set_variable(self.lucca, name, value)
+        self.assertEqual([esbywb.parse_value(t) for t in ("true", "12", "-0.3", "hall 3")],
+                         [True, 12, -0.3, "hall 3"])
+
 
 class ServerTest(unittest.TestCase):
     """a real server on a temporary socket, in a thread"""
@@ -214,6 +247,31 @@ class ServerTest(unittest.TestCase):
         self.assertEqual(event, {"event": "rule_changed", "path": self.folder})
         client.request("unset", path=self.folder)
         self.assertEqual(json.loads(f.readline())["path"], self.folder)
+        f.close()
+        s.close()
+
+    def test_variables_protocol(self):
+        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        s.connect(self.socket_path)
+        f = s.makefile("rwb")
+        f.write(b'{"id": 1, "op": "subscribe"}\n')
+        f.flush()
+        self.assertTrue(json.loads(f.readline())["ok"])
+        client = self.client()
+        client.request("var_set", path=self.folder, sequence="2", name="exposure.offset", value=0.3)
+        key = self.folder + "#2"
+        self.assertEqual(json.loads(f.readline()),
+                         {"event": "variable_changed", "path": key, "name": "exposure.offset"})
+        client.request("var_set", path="global", name="SeriesExpGap", value=10)
+        self.assertEqual(json.loads(f.readline())["path"], "*")
+        v = client.request("var_get", path=self.folder, sequence="2")["variables"]
+        self.assertEqual(v["exposure.offset"]["origin"], key)
+        self.assertEqual(v["SeriesExpGap"]["value"], 10)
+        v = client.request("var_get", path=self.folder, name="SeriesExpGap")["variables"]
+        self.assertEqual(list(v), ["SeriesExpGap"])
+        self.assertIn(key, client.request("var_list")["variables"])
+        client.request("var_unset", path=self.folder, sequence="2", name="exposure.offset")
+        self.assertEqual(json.loads(f.readline())["path"], key)
         f.close()
         s.close()
 

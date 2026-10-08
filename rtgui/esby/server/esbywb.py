@@ -7,11 +7,13 @@
 #  the Free Software Foundation, either version 3 of the License, or
 #  (at your option) any later version.
 #
-"""esbywb: series white balance server and command line tool (step 2 of SPEC_series_wb.md).
+"""esbywb: esby server (series white balance, shared variables) and command line tool.
 
 The server keeps, per folder, a white balance shift (mireds, tint factor) that the folders
-below inherit. RawTherapee (TTSeriesWB) and this command line tool talk to it through a local
-Unix socket, with one JSON message per line.
+below inherit, and named variables shared by every RawTherapee instance: a variable is set on
+a sequence, on a folder (inherited by the folders below) or globally, the nearest one wins.
+RawTherapee and this command line tool talk to it through a local Unix socket, with one JSON
+message per line.
 
     esbywb serve                             start the server
     esbywb list                              rules
@@ -21,6 +23,13 @@ Unix socket, with one JSON message per line.
     esbywb move <old> <new>                  after renaming a folder
     esbywb orphans                           rules whose folder does not exist anymore
     esbywb observations [--exif [TAGS]]      corrections observed by TTSeriesWB, as CSV
+    esbywb var-set <where> <name> <value> [--sequence S]   set a variable
+    esbywb var-unset <where> <name> [--sequence S]         remove it (back to the inherited one)
+    esbywb vars                              every variable set, where it is set
+    esbywb show <folder> [--sequence S]      what applies to a folder: white balance and variables
+
+<where> is a folder, or "global" for every image. A sequence is a part of a folder (the folder
+is split by the pauses between the shots), named by RawTherapee.
 
 Only the Python standard library is used.
 """
@@ -47,6 +56,47 @@ DEFAULT_RULE = {"mired": 0.0, "green": 1.0, "equal": 1.0, "flash_only": True, "c
 
 # ranges of the TTSeriesWB tool: a value outside them is refused
 LIMITS = {"mired": (-100.0, 100.0), "green": (0.5, 2.0), "equal": (0.5, 2.0)}
+
+
+# variables: name made of letters, digits and . _ : - ; value: number, text or boolean
+GLOBAL_KEY = "*"
+SEQUENCE_SEPARATOR = "#"
+
+
+def check_variable(name, value):
+    if not name or any(not (c.isalnum() or c in "._:-") for c in name):
+        raise ValueError("invalid variable name: %r" % name)
+    if not isinstance(value, (bool, int, float, str)):
+        raise ValueError("invalid value for %s: %r" % (name, value))
+
+
+def parse_value(text):
+    """value typed on the command line: boolean, integer, real number, or text"""
+    low = text.lower()
+    if low in ("true", "false"):
+        return low == "true"
+    for kind in (int, float):
+        try:
+            return kind(text)
+        except ValueError:
+            pass
+    return text
+
+
+def variable_key(where, sequence=None):
+    """key of the variables: GLOBAL_KEY, a folder, or a folder and a sequence ("folder#sequence")"""
+    if where in (GLOBAL_KEY, "global"):
+        return GLOBAL_KEY
+    key = normalize(where)
+    if sequence:
+        key += SEQUENCE_SEPARATOR + str(sequence)
+    return key
+
+
+def split_key(key):
+    """(folder, sequence or None) of a key"""
+    folder, sep, sequence = key.partition(SEQUENCE_SEPARATOR)
+    return folder, (sequence if sep else None)
 
 
 def check_limits(**values):
@@ -105,6 +155,7 @@ class State:
         self.rules = {}   # folder -> rule
         self.files = {}   # file -> {"T": int, "G": float, "source": folder or None}
         self.observations = {}  # file -> last correction observed by TTSeriesWB (learn, save)
+        self.variables = {}  # key (see variable_key) -> {name: value}
         self.load()
 
     def load(self):
@@ -116,6 +167,7 @@ class State:
         self.rules = data.get("rules", {})
         self.files = data.get("files", {})
         self.observations = data.get("observations", {})
+        self.variables = data.get("variables", {})
 
     def save(self):
         """atomic write: temporary file in the same folder, then rename"""
@@ -125,7 +177,7 @@ class State:
         try:
             with os.fdopen(fd, "w", encoding="utf-8") as f:
                 json.dump({"version": PROTOCOL_VERSION, "rules": self.rules, "files": self.files,
-                           "observations": self.observations},
+                           "observations": self.observations, "variables": self.variables},
                           f, indent=1, sort_keys=True, ensure_ascii=False)
             os.replace(tmp, self.filename)
         except BaseException:
@@ -180,6 +232,11 @@ class State:
                 if is_below(key, old):
                     table[moved(key)] = table.pop(key)
                     count += 1
+        for key in list(self.variables):
+            folder, sequence = split_key(key)
+            if key != GLOBAL_KEY and is_below(folder, old):
+                self.variables[variable_key(moved(folder), sequence)] = self.variables.pop(key)
+                count += 1
         for info in self.files.values():
             if info.get("source") and is_below(info["source"], old):
                 info["source"] = moved(info["source"])
@@ -193,6 +250,38 @@ class State:
 
     def file_state(self, filename):
         return self.files.get(normalize(filename))
+
+    def set_variable(self, key, name, value):
+        check_variable(name, value)
+        self.variables.setdefault(key, {})[name] = value
+        self.save()
+
+    def unset_variable(self, key, name):
+        values = self.variables.get(key, {})
+        if name not in values:
+            raise KeyError("no variable %s for %s" % (name, key))
+        del values[name]
+        if not values:
+            del self.variables[key]
+        self.save()
+
+    def resolve_variables(self, folder, sequence=None):
+        """every variable applying to a folder (and a sequence of it), the nearest one wins:
+        {name: {"value", "scope", "origin"}}; scope: sequence (the sequence, or the folder itself),
+        ancestor (a parent folder) or global"""
+        folder = normalize(folder)
+        chain = []
+        if sequence:
+            chain.append((variable_key(folder, sequence), "sequence"))
+        chain.append((folder, "sequence"))
+        chain += [(p, "ancestor") for p in parents(folder) if p != folder]
+        chain.append((GLOBAL_KEY, "global"))
+        result = {}
+        for key, scope in chain:
+            for name, value in self.variables.get(key, {}).items():
+                if name not in result:
+                    result[name] = {"value": value, "scope": scope, "origin": key}
+        return result
 
     def observe(self, observation):
         """keeps the last observation of a file; the server adds the time"""
@@ -218,8 +307,8 @@ class Server:
         self.server = None
         self.stopping = None       # shutdown task, shared by the callers of stop()
 
-    async def broadcast(self, path):
-        message = (json.dumps({"event": "rule_changed", "path": path}) + "\n").encode()
+    async def broadcast(self, path, event="rule_changed", **fields):
+        message = (json.dumps(dict(fields, event=event, path=path)) + "\n").encode()
         for writer in list(self.subscribers):
             try:
                 writer.write(message)
@@ -262,6 +351,24 @@ class Server:
             return {"file": self.state.observe(fields)}
         if op == "observations":
             return {"observations": self.state.observations}
+        if op == "var_set":
+            key = variable_key(request["path"], request.get("sequence"))
+            self.state.set_variable(key, request["name"], request["value"])
+            await self.broadcast(key, "variable_changed", name=request["name"])
+            return {"path": key}
+        if op == "var_unset":
+            key = variable_key(request["path"], request.get("sequence"))
+            self.state.unset_variable(key, request["name"])
+            await self.broadcast(key, "variable_changed", name=request["name"])
+            return {"path": key}
+        if op == "var_get":
+            # every variable applying to the folder, or only the one named
+            variables = self.state.resolve_variables(request["path"], request.get("sequence"))
+            if "name" in request:
+                variables = {k: v for k, v in variables.items() if k == request["name"]}
+            return {"variables": variables}
+        if op == "var_list":
+            return {"variables": self.state.variables}
         if op == "subscribe":
             self.subscribers.add(writer)
             return {}
@@ -439,6 +546,20 @@ def main(argv=None):
     p.add_argument("--exif", nargs="?", const=DEFAULT_EXIF_TAGS, default=None, metavar="TAGS",
                    help="add tags read by exiftool in each file (comma separated, default: %s)" % DEFAULT_EXIF_TAGS)
 
+    p = sub.add_parser("var-set", help="set a variable on a folder, a sequence or globally")
+    p.add_argument("where", help='folder, or "global"')
+    p.add_argument("name")
+    p.add_argument("value", help="number, true/false, or text")
+    p.add_argument("--sequence", help="sequence of the folder")
+    p = sub.add_parser("var-unset", help="remove a variable (back to the inherited one)")
+    p.add_argument("where", help='folder, or "global"')
+    p.add_argument("name")
+    p.add_argument("--sequence", help="sequence of the folder")
+    sub.add_parser("vars", help="every variable set, where it is set")
+    p = sub.add_parser("show", help="what applies to a folder: white balance and variables")
+    p.add_argument("folder")
+    p.add_argument("--sequence", help="sequence of the folder")
+
     args = parser.parse_args(argv)
 
     if args.command == "serve":
@@ -477,7 +598,39 @@ def run_command(client, args):
                 print(rule["path"])
     elif args.command == "observations":
         write_observations_csv(client.request("observations")["observations"], args.exif, sys.stdout)
+    elif args.command in ("var-set", "var-unset"):
+        params = {"path": variable_key(args.where), "name": args.name}
+        if args.sequence:
+            params["sequence"] = args.sequence
+        if args.command == "var-set":
+            params["value"] = parse_value(args.value)
+            print("set: %s %s" % (client.request("var_set", **params)["path"], args.name))
+        else:
+            print("unset: %s %s" % (client.request("var_unset", **params)["path"], args.name))
+    elif args.command == "vars":
+        for key, values in sorted(client.request("var_list")["variables"].items()):
+            print("global" if key == GLOBAL_KEY else key)
+            for name, value in sorted(values.items()):
+                print("  %-30s %s" % (name, format_value(value)))
+    elif args.command == "show":
+        folder = normalize(args.folder)
+        print(folder + ("  (sequence %s)" % args.sequence if args.sequence else ""))
+        rule = client.request("get", path=folder)
+        print("  %-30s %s  <- %s" % ("white balance", format_rule(rule), rule["source"] or "default"))
+        params = {"path": folder}
+        if args.sequence:
+            params["sequence"] = args.sequence
+        variables = client.request("var_get", **params)["variables"]
+        for name, info in sorted(variables.items()):
+            origin = "global" if info["origin"] == GLOBAL_KEY else "%s (%s)" % (info["origin"], info["scope"])
+            print("  %-30s %-16s <- %s" % (name, format_value(info["value"]), origin))
     return 0
+
+
+def format_value(value):
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    return str(value)
 
 
 # ---------------------------------------------------------------------------------------
