@@ -31,7 +31,6 @@
 #include <fstream>
 #include <iomanip>
 #include <sstream>
-#include <thread>
 
 using namespace rtengine;
 using namespace rtengine::procparams;
@@ -101,13 +100,6 @@ TTSeriesExposure::TTSeriesExposure() :
     }
   });
 
-  adjGap = Gtk::manage(new Adjuster(M("TT_SERIESEXP_GAP"), 1.0, 30.0, 0.5, 10.0));
-  adjGap->setAdjusterListener(this);
-  adjGap->set_tooltip_text(M("TT_SERIESEXP_GAP_TOOLTIP"));
-  adjGap->block(true);
-  adjGap->setValue(esbySettings().SeriesExpGap);
-  adjGap->block(false);
-  pack_start(*adjGap, Gtk::PACK_SHRINK, 0);
 
   // offset of the sequence: set on the sequence of the image (esby server), seen by every instance
   adjOffset = Gtk::manage(new Adjuster(M("TT_SERIESEXP_OFFSET"), -2.0, 2.0, 0.05, 0.0));
@@ -144,17 +136,10 @@ TTSeriesExposure::TTSeriesExposure() :
     else if (isCurrentSubscriber())
       unsubscribe();
   });
-  scanDone.connect(sigc::mem_fun(*this, &TTSeriesExposure::sequenceScanned));
 }
 
 TTSeriesExposure::~TTSeriesExposure()
 {
-  // a scan still running must not use this object anymore
-  if (scan)
-  {
-    std::lock_guard<std::mutex> lock(scan->mutex);
-    scan->alive = false;
-  }
 }
 
 void TTSeriesExposure::deploy()
@@ -212,83 +197,6 @@ Glib::ustring TTSeriesExposure::sequenceFolder(const Glib::ustring& file)
   return dir;
 }
 
-// number of models of a sequence: the "credit_cosplayer: model: ..." lines of its fields.conf, or,
-// without fields.conf, the names of the credit field of a convention folder ("NNN - day - credits - ...").
-// -1: unknown.
-int TTSeriesExposure::countModels(const Glib::ustring& folder)
-{
-  std::ifstream fields(Glib::build_filename(folder, "fields.conf"));
-  if (fields)
-  {
-    int count = 0;
-    std::string line;
-    while (std::getline(fields, line))
-    {
-      std::string::size_type start = line.find_first_not_of(" \t");
-      if ((start == std::string::npos) || (line.compare(start, 16, "credit_cosplayer") != 0))
-        continue;
-      std::string::size_type colon = line.find(':', start);
-      if (colon == std::string::npos)
-        continue;
-      std::string value = line.substr(colon + 1);
-      value.erase(0, value.find_first_not_of(" \t"));
-      std::transform(value.begin(), value.end(), value.begin(), ::tolower);
-      if (value.compare(0, 6, "model:") == 0)
-        count++;
-    }
-    return count;
-  }
-
-  std::string name = Glib::path_get_basename(folder);
-  // an empty field ("011 - samedi - - ada wong") gives " - - ": a space is added, so that the
-  // split below keeps an empty field instead of a "- ada wong" one
-  std::string::size_type empty;
-  while ((empty = name.find(" - - ")) != std::string::npos)
-    name.insert(empty + 3, " ");
-  std::vector<std::string> fieldsOfName;
-  std::string::size_type pos = 0, next;
-  while ((next = name.find(" - ", pos)) != std::string::npos)
-  {
-    fieldsOfName.push_back(name.substr(pos, next - pos));
-    pos = next + 3;
-  }
-  fieldsOfName.push_back(name.substr(pos));
-  if (fieldsOfName.size() < 3)
-    return -1;
-  std::istringstream credits(fieldsOfName[2]);
-  std::string credit;
-  int count = 0;
-  while (credits >> credit)
-    count++;
-  return (count > 0) ? count : -1;
-}
-
-// capture time of a raw file (seconds), -1 if unknown
-double TTSeriesExposure::captureTime(const Glib::ustring& file)
-{
-  try
-  {
-    auto image = Exiv2::ImageFactory::open(std::string(file));
-    image->readMetadata();
-    Exiv2::ExifData& exif = image->exifData();
-    auto date = exif.findKey(Exiv2::ExifKey("Exif.Photo.DateTimeOriginal"));
-    if (date == exif.end())
-      return -1.0;
-    int y, mo, d, h, mi, s;
-    if (sscanf(date->toString().c_str(), "%d:%d:%d %d:%d:%d", &y, &mo, &d, &h, &mi, &s) != 6)
-      return -1.0;
-    double t = Glib::DateTime::create_utc(y, mo, d, h, mi, s).to_unix();
-    auto subsec = exif.findKey(Exiv2::ExifKey("Exif.Photo.SubSecTimeOriginal"));
-    if (subsec != exif.end())
-      t += atof(("0." + subsec->toString()).c_str());
-    return t;
-  }
-  catch (const std::exception&)
-  {
-    return -1.0;
-  }
-}
-
 // the sequence is known: ready, and given to the shared variables (a variable can be set on it)
 void TTSeriesExposure::publishSequence()
 {
@@ -301,6 +209,7 @@ void TTSeriesExposure::publishSequence()
   offsetChanged(); // the variables may already be loaded (same sequence): no reload, no signal
 }
 
+// the sequence of an image is its numbered folder
 void TTSeriesExposure::startSequence()
 {
   sequenceReady = false;
@@ -311,136 +220,8 @@ void TTSeriesExposure::startSequence()
     return;
   }
   Glib::ustring folder = sequenceFolder(file);
-  int models = countModels(folder);
-  if (models != 1)
-  {
-    // several models, or unknown: the whole folder is the sequence
-    sequenceKey = folder;
-    sequenceText = (models > 1)
-      ? Glib::ustring::compose(M("TT_SERIESEXP_SEQ_FOLDER"), Glib::path_get_basename(folder), models)
-      : Glib::ustring::compose(M("TT_SERIESEXP_SEQ_UNKNOWN"), Glib::path_get_basename(folder));
-    publishSequence();
-    setInfo("");
-    measureCurrent(false);
-    return;
-  }
-
-  // one model: the capture times of the folder split it into parts
-  if (scan && (scan->folder == folder))
-  {
-    bool done;
-    {
-      std::lock_guard<std::mutex> lock(scan->mutex);
-      done = scan->done;
-    }
-    if (done)
-      sequenceScanned();
-    return; // otherwise sequenceScanned() is called when the scan ends
-  }
-
-  if (scan)
-  {
-    std::lock_guard<std::mutex> lock(scan->mutex);
-    scan->alive = false; // a former scan, for another folder
-  }
-  scan = std::make_shared<Scan>();
-  scan->folder = folder;
-  setInfo(M("TT_SERIESEXP_SEQ_WAIT"));
-
-  std::shared_ptr<Scan> s = scan;
-  Glib::Dispatcher* done = &scanDone;
-  std::thread([s, done, folder]() {
-    static const std::vector<std::string> extensions = {".rw2", ".dng", ".cr2", ".cr3", ".nef", ".arw", ".orf", ".raf", ".pef"};
-    std::map<Glib::ustring, double> times;
-    for (const std::string& sub : {std::string(), std::string("pp"), std::string("pp/dpp")})
-    {
-      std::string dir = sub.empty() ? std::string(folder) : Glib::build_filename(std::string(folder), sub);
-      try
-      {
-        Glib::Dir entries(dir);
-        for (const std::string& name : entries)
-        {
-          std::string lower = name;
-          std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
-          std::string::size_type dot = lower.rfind('.');
-          if ((dot == std::string::npos)
-          || (std::find(extensions.begin(), extensions.end(), lower.substr(dot)) == extensions.end()))
-            continue;
-          double t = captureTime(Glib::build_filename(dir, name));
-          if (t >= 0.0)
-            times[name] = t;
-        }
-      }
-      catch (const Glib::Error&) {} // no such sub-folder
-    }
-    std::lock_guard<std::mutex> lock(s->mutex);
-    s->times = times;
-    s->done = true;
-    if (s->alive)
-      done->emit();
-  }).detach();
-}
-
-// the scan of the folder is done: the part of the current image
-void TTSeriesExposure::sequenceScanned()
-{
-  if (!scan)
-    return;
-  std::map<Glib::ustring, double> times;
-  Glib::ustring folder;
-  {
-    std::lock_guard<std::mutex> lock(scan->mutex);
-    if (!scan->done)
-      return;
-    times = scan->times;
-    folder = scan->folder;
-  }
-  Glib::ustring file = originalFile();
-  if (file.empty() || (sequenceFolder(file) != folder))
-    return; // another image was opened meanwhile
-
-  double current = -1.0;
-  auto it = times.find(Glib::path_get_basename(file));
-  if (it != times.end())
-    current = it->second;
-  else
-  {
-    current = captureTime(env->getVarAsString("Fname")); // the opened copy
-    if (current >= 0.0)
-      times[Glib::path_get_basename(file)] = current;
-  }
-
-  std::vector<double> sorted;
-  for (const auto& t : times)
-    sorted.push_back(t.second);
-  std::sort(sorted.begin(), sorted.end());
-  if (sorted.empty() || (current < 0.0))
-  {
-    sequenceKey = folder;
-    sequenceText = Glib::ustring::compose(M("TT_SERIESEXP_SEQ_UNKNOWN"), Glib::path_get_basename(folder));
-    publishSequence();
-    setInfo("");
-    measureCurrent(false);
-    return;
-  }
-
-  double gap = adjGap->getValue() * 60.0;
-  std::vector<double> starts = {sorted[0]};
-  for (size_t i = 1; i < sorted.size(); i++)
-  {
-    if (sorted[i] - sorted[i - 1] > gap)
-      starts.push_back(sorted[i]);
-  }
-  size_t part = 0;
-  for (size_t i = 0; i < starts.size(); i++)
-  {
-    if (starts[i] <= current + 0.5)
-      part = i;
-  }
-  Glib::ustring start = Glib::DateTime::create_now_utc((gint64) starts[part]).format("%Y-%m-%d %H:%M:%S");
-  sequenceKey = folder + "#" + start;
-  sequenceText = Glib::ustring::compose(M("TT_SERIESEXP_SEQ_PART"), Glib::path_get_basename(folder),
-                                        (int) part + 1, (int) starts.size(), start.substr(11));
+  sequenceKey = folder;
+  sequenceText = Glib::ustring::compose(M("TT_SERIESEXP_SEQ"), Glib::path_get_basename(folder));
   publishSequence();
   setInfo("");
   measureCurrent(false);
@@ -1074,13 +855,7 @@ void TTSeriesExposure::react(FakeProcEvent ev)
 void TTSeriesExposure::adjusterChanged(Adjuster* a, double newval)
 {
   if (a == adjOffset)
-  {
     offsetAdjusted();
-    return;
-  }
-  esbySettings().SeriesExpGap = adjGap->getValue();
-  if (scan)
-    sequenceScanned(); // the parts depend on the gap
 }
 
 Glib::ustring TTSeriesExposure::themeExport()

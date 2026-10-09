@@ -107,10 +107,6 @@ void EsbySettings::readFromFile(Glib::KeyFile& keyFile)
                     SeriesWBAuto          = keyFile.get_string ("TTP", "SeriesWBAuto");
                 }
 
-                if (keyFile.has_key ("TTP", "SeriesExpGap")) {
-                    SeriesExpGap          = keyFile.get_double ("TTP", "SeriesExpGap");
-                }
-
                 if (keyFile.has_key ("TTP", "SeriesExpService")) {
                     SeriesExpService      = keyFile.get_string ("TTP", "SeriesExpService");
                 }
@@ -167,7 +163,6 @@ void EsbySettings::saveToFile(Glib::KeyFile& keyFile) const
         keyFile.set_double  ("TTP", "SeriesWBEqual", SeriesWBEqual);
         keyFile.set_integer ("TTP", "SeriesWBMode", SeriesWBMode);
         keyFile.set_string  ("TTP", "SeriesWBAuto", SeriesWBAuto);
-        keyFile.set_double  ("TTP", "SeriesExpGap", SeriesExpGap);
         keyFile.set_string  ("TTP", "SeriesExpService", SeriesExpService);
         keyFile.set_double  ("TTP", "SeriesExpAutoSimilarity", SeriesExpAutoSimilarity);
         keyFile.set_double  ("TTP", "SeriesExpMinSimilarity", SeriesExpMinSimilarity);

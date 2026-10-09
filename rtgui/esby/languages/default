@@ -73,8 +73,6 @@ TT_SERIESEXP_APPLY;Apply the suggestion
 TT_SERIESEXP_APPLY_TOOLTIP;Apply the exposure compensation suggested by the last measure.
 TT_SERIESEXP_AUTOMATIC;Automatic exposure or histogram matching is on: no correction (each image gets its own exposure).
 TT_SERIESEXP_AUTO_APPLIED;Exposure corrected automatically.
-TT_SERIESEXP_GAP;New sequence after (min)
-TT_SERIESEXP_GAP_TOOLTIP;With one model (fields.conf of the folder), more than this time between two photos of the folder starts a new sequence.
 TT_SERIESEXP_IS_REFERENCE;This image is the reference of the sequence.
 TT_SERIESEXP_LABEL;Series Exposure
 TT_SERIESEXP_MEASURE;Measure
@@ -97,9 +95,7 @@ TT_SERIESEXP_PIPETTE_TOOLTIP;Ctrl + click on the reference area (a face) of the 
 TT_SERIESEXP_REFERENCE;Reference: this image
 TT_SERIESEXP_REFERENCE_SET;Reference of the sequence set (face: %1), compensation %2 EV.
 TT_SERIESEXP_REFERENCE_TOOLTIP;With the measuring service: this image becomes the reference of the sequence (the face near the AF point, or the largest one), with its exposure compensation.\nTo designate another face: ctrl + click on it with the pipette.
-TT_SERIESEXP_SEQ_FOLDER;Sequence: %1 (%2 models, whole folder).
-TT_SERIESEXP_SEQ_PART;Sequence: %1, part %2/%3 (from %4).
-TT_SERIESEXP_SEQ_UNKNOWN;Sequence: %1 (whole folder).
+TT_SERIESEXP_SEQ;Sequence: %1.
 TT_SERIESEXP_SEQ_WAIT;Reading the capture times of the folder...
 TT_SERIESEXP_SERVICE_ERROR;Measuring service unavailable (%1).
 TT_SERIESEXP_STATUS;Measuring service: %1.

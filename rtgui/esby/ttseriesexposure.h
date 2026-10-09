@@ -18,7 +18,6 @@
 
 #include <map>
 #include <memory>
-#include <mutex>
 #include <vector>
 #include <gtkmm.h>
 #include "toolpanel.h"
@@ -33,14 +32,12 @@ class ToneCurve;
 // sequence (ctrl + click with the pipette), then a click on the same area of the other images of the
 // sequence sets their exposure compensation to reach it.
 //
-// sequence: the numbered folder of the image (the folder holding pp/, pp/dpp/), split when there is
-// more than a given time between two photos, if its fields.conf credits one model only.
+// sequence: the numbered folder of the image (the folder holding pp/, pp/dpp/).
 // The targets are kept in a local file (one RawTherapee instance per image with rt_queue).
 class TTSeriesExposure : public ToolParamBlock, public FoldableToolPanel, public EditSubscriber, public AdjusterListener
 {
 protected:
     Gtk::ToggleButton* tbPipette;
-    Adjuster* adjGap;            // time between two photos starting a new sequence (minutes)
     Adjuster* adjOffset;         // offset of the sequence (EV): shared variable exposure.offset
     Gtk::Button* btToggle;       // back to the compensation before an offset change, and again
     Gtk::Label* lbInfo;
@@ -74,25 +71,11 @@ protected:
     void offsetChanged();
     void offsetAdjusted();
 
-    // capture times of the photos of a folder, read in a thread (the folder may be on a network drive)
-    struct Scan
-    {
-        std::mutex mutex;
-        bool alive = true;
-        bool done = false;
-        Glib::ustring folder;
-        std::map<Glib::ustring, double> times; // file name -> capture time (seconds)
-    };
-    std::shared_ptr<Scan> scan;
-    Glib::Dispatcher scanDone;
 
     Glib::ustring originalFile();                 // ESBY_ORIGIN, or the current file
     static Glib::ustring sequenceFolder(const Glib::ustring& file);
-    static int countModels(const Glib::ustring& folder);
-    static double captureTime(const Glib::ustring& file);
     void startSequence();
     void publishSequence();
-    void sequenceScanned();
 
     bool measure(double& luminance);
     double currentExpComp();

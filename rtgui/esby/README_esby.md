@@ -44,16 +44,12 @@ expliquent le *pourquoi*.
 
 - La séquence d'une photo est son **dossier numéroté** (celui qui contient `pp/`), qu'elle soit dans
   `pp/` ou déjà dans `pp/dpp/`. `ESBY_ORIGIN` (voir `rt_queue`) donne le chemin d'origine.
-- Si le `fields.conf` de ce dossier ne crédite qu'**un modèle** (une ligne `credit_cosplayer:` qui
-  commence par `model:`), un écart de plus de 10 minutes (option `SeriesExpGap`) entre deux photos
-  démarre une nouvelle séquence. Sans `fields.conf`, le nombre de modèles est lu dans le nom du
-  dossier (`NNN - jour - crédits - …`) ; crédit vide ou inconnu : le dossier entier.
 - La pipette lit la luminosité après la compensation d'exposition, la luminosité, le contraste et la
   compression des hautes lumières de l'outil Exposition, avant les courbes (`EUID_ToneCurve1`).
 - Les cibles sont dans `~/.config/RawTherapee5-esby/esby-exposure-targets.ini`.
 - **Décalage de séquence** (curseur, variable partagée `exposure.offset`) : préférence de rendu
   ajoutée à la compensation mesurée (référence + écart + décalage). Le curseur la pose sur la
-  séquence ; elle peut aussi être posée sur un dossier, hérité par ses séquences (panneau des
+  séquence (le dossier numéroté) ; elle peut aussi être posée sur un dossier, hérité par ses séquences (panneau des
   variables ou `esbywb.py var-set`). Les cibles, les références et les mesures sont gardées sans
   décalage. La compensation appliquée par l'outil et le décalage qu'elle contient sont notés par
   image (`[applied]`, `[applied_offset]`) : une image qui les a encore reçoit le nouveau décalage,
@@ -90,7 +86,7 @@ Le serveur `esbywb` garde aussi des variables nommées (nombre, texte ou boolée
 séquence, un dossier (héritées en dessous) ou en global ; la plus proche l'emporte (voir
 `server/README.md`). Pour l'image ouverte, elles sont copiées dans les variables de
 l'environnement, avec leur portée et leur provenance : un outil les lit comme les autres
-(`env->getVarAsDouble("SeriesExpGap")`). Une variable partagée ne remplace jamais une variable
+(`env->getVarAsDouble("exposure.offset")`). Une variable partagée ne remplace jamais une variable
 interne ou Exif du même nom. La séquence est celle de TTSeriesExposure (quand il est actif) ;
 sinon, le dossier numéroté de l'image.
 

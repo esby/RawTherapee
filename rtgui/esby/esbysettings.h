@@ -54,8 +54,6 @@ public:
     int SeriesWBMode = 0;              // 0: shift from the camera white balance, 1: auto (exposure model)
     Glib::ustring SeriesWBAuto;        // model of the auto mode (EsbyWBAuto::serialize())
 
-    // TTSeriesExposure: minutes between two photos of a one model folder starting a new sequence
-    double SeriesExpGap = 10.0;
     // external exposure measuring service ("host:port", empty: none; token in ESBY_EXPOSURE_TOKEN)
     Glib::ustring SeriesExpService;
     double SeriesExpAutoSimilarity = 0.6;  // automatic application from this similarity
