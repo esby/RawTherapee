@@ -28,51 +28,77 @@
 
 class ToneCurve;
 
-// series exposure: the brightness of a reference area (a face) is learned on a reference image of a
-// sequence (ctrl + click with the pipette), then a click on the same area of the other images of the
-// sequence sets their exposure compensation to reach it.
+// series exposure. A reference image is set for a series (its numbered folder) or for the parent
+// folder (inherited by the series below it): the shared variable exposure.reference (esby server).
+// Each other image follows a reference (the nearest one by default, the one of the series, the one
+// of the parent, or none: not applied), and has a gap with it (delta, EV), measured with the pipette
+// (brightness of a reference area) or by the external measuring service (face).
 //
-// sequence: the numbered folder of the image (the folder holding pp/, pp/dpp/).
-// The targets are kept in a local file (one RawTherapee instance per image with rt_queue).
+//   compensation = compensation of the reference + delta + offset of the series
+//
+// The offset (shared variable exposure.offset) is a rendering preference of the series. The state of
+// each image (followed reference, delta, last compensation applied) is kept by the server, so that
+// every instance, and the command line (esbywb.py exposure-apply), computes the same value.
+// An image changed by hand stops following its reference (not applied).
 class TTSeriesExposure : public ToolParamBlock, public FoldableToolPanel, public EditSubscriber, public AdjusterListener
 {
 protected:
+    // a reference, as kept in exposure.reference (JSON): raw file, compensation without the offset,
+    // point of the face (service), brightness target without the offset (pipette)
+    struct Reference
+    {
+        bool valid = false;
+        Glib::ustring raw;
+        double comp = 0.0;
+        bool hasPoint = false;
+        double px = 0.0, py = 0.0;
+        bool hasTarget = false;
+        double target = 0.0;
+        Glib::ustring origin; // folder where it is set
+        static Reference parse(const Glib::ustring& text, const Glib::ustring& origin);
+        Glib::ustring serialize() const;
+    };
+
     Gtk::ToggleButton* tbPipette;
-    Adjuster* adjOffset;         // offset of the sequence (EV): shared variable exposure.offset
-    Gtk::Button* btToggle;       // back to the compensation before an offset change, and again
+    MyComboBoxText* cbLevel;       // where the reference of the next button / ctrl + click is set
+    Gtk::Button* btReference;      // the current image becomes the reference (with the service)
+    Gtk::Button* btNoReference;    // the current image is not a reference anymore
+    MyComboBoxText* cbFollow;      // reference followed by the current image
+    Gtk::Button* btMeasure;        // measure the current image again (service)
+    Gtk::Button* btApply;          // apply the suggested gap
+    Adjuster* adjOffset;           // offset of the series (EV): shared variable exposure.offset
     Gtk::Label* lbInfo;
 
-    // external measuring service (face detection and recognition, measure in the raw data)
     std::unique_ptr<EsbyHttpClient> service;
-    Gtk::Button* btReference;    // the current image becomes the reference (face near the AF point)
-    Gtk::Button* btMeasure;      // measure the current image again
-    Gtk::Button* btApply;        // apply the suggested compensation
-    double suggestedComp;
-    bool hasSuggestion;
-
     ToneCurve* tonecurve;
 
-    // sequence of the current image
-    Glib::ustring sequenceKey;   // folder, or folder#start time of the part
-    Glib::ustring sequenceText;  // description shown in the status line
+    // series of the current image
+    Glib::ustring sequenceKey;     // its numbered folder
+    Glib::ustring sequenceText;
     bool sequenceReady;
 
-    // offset of the sequence (shared variable exposure.offset, nearest of sequence, folders, global):
-    // a rendering preference added to the measured compensation, kept apart from the measures
+    // state of the current image (server), and the references it can follow
+    Glib::ustring stateFile;       // image the state below belongs to
+    bool stateLoaded;
+    Glib::ustring follow;          // nearest, series, parent, none
+    bool hasDelta;
+    double delta;
+    bool hasLastComp;
+    double lastComp;               // compensation last applied by the tool (any instance)
+    bool hasShownComp;
+    double shownComp;              // compensation set by this instance on the current image
+    Reference refSeries, refParent;
+    int refsPending;
+    int generation;                // answers for a previous image are ignored
+    int refGeneration;             // answers of a previous load of the references are ignored
+    bool hasSuggestion;
+    double suggestedDelta;
+    bool recomputePending;         // a change came while the window was not active
     bool sharedConnected;
-    Glib::ustring offsetFile;    // image the old/new values below belong to
-    double toggleOld, toggleNew; // compensations before and after the last offset change
-    bool toggleShowsNew;
-    bool hasShownOffset;         // shownOffset is known for offsetFile
-    double shownOffset;          // offset included in the compensation shown by this instance
-    bool offsetPending;          // a change came while the window was not active: applied on focus
     bool focusConnected;
-    double sequenceOffset();
-    void offsetChanged();
-    void offsetAdjusted();
+    bool updatingWidgets;
 
-
-    Glib::ustring originalFile();                 // ESBY_ORIGIN, or the current file
+    Glib::ustring originalFile();  // ESBY_ORIGIN, or the current file
     static Glib::ustring sequenceFolder(const Glib::ustring& file);
     void startSequence();
     void publishSequence();
@@ -80,30 +106,26 @@ protected:
     bool measure(double& luminance);
     double currentExpComp();
     void setExpComp(double value);
-    static Glib::ustring targetsFile();
-    bool readTarget(double& luminance, Glib::ustring& reference);
-    void writeTarget(double luminance, const Glib::ustring& reference);
-    void setInfo(const Glib::ustring& action);
-
-    // service: sequence reference (kept with the target: raw, point, AF point, compensation)
-    struct ServiceRef
-    {
-        bool valid = false;
-        Glib::ustring raw;
-        bool hasPoint = false;
-        double px = 0.0, py = 0.0;
-        double comp = 0.0;
-    };
-    bool readServiceRef(ServiceRef& ref);
-    void writeServiceRef(const ServiceRef& ref);
-    // compensation applied by the tool to a file, and the offset of the sequence it included
-    bool readApplied(const Glib::ustring& file, double& comp, double* offset = nullptr);
-    void writeApplied(const Glib::ustring& file, double comp, double offset);
-    static bool readAfPoint(const Glib::ustring& file, double& x, double& y);
-    void setReference(bool hasPoint, double px, double py);
-    void measureCurrent(bool manual, bool retried = false);
-    void setSuggestion(double comp, const Glib::ustring& text);
+    double seriesOffset();
     bool exposureIsAutomatic();
+    static bool readAfPoint(const Glib::ustring& file, double& x, double& y);
+
+    void loadImageState();
+    void loadReferences();
+    const Reference& followedReference();
+    Glib::ustring sessionOf(const Reference& ref);
+    void recompute(bool fromEvent);
+    void setFollow(const Glib::ustring& f, bool save);
+    void storeDelta(double d);
+    void saveApplied(double comp);
+    void setReferenceHere(bool hasPoint, double px, double py, bool hasTarget, double target);
+    void publishReference(const Reference& ref, const Glib::ustring& folder);
+    void removeReference();
+    void measureCurrent(bool manual, bool retried = false);
+    void setSuggestion(double d, const Glib::ustring& text);
+    void sharedChanged();
+    void offsetAdjusted();
+    void setInfo(const Glib::ustring& action);
 
 public:
     TTSeriesExposure();

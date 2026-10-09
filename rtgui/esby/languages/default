@@ -1,6 +1,8 @@
 #00 esby fork translation file: keys used by the esby code (favorites, tool moves, tt* tools).
 #01 loaded after the upstream files (locale, language, default): it only provides the keys missing from them.
 #02 installed in <data dir>/esby/languages by rtgui/esby/esby.cmake.
+Changing the exposure by hand sets it to "Not applied".
+Click on the same area of another image: its gap with the reference is measured, and its exposure compensation set. A second click refines it.
 FILECHOOSER_FILTER_TTP;Tool layout profiles
 GENERAL_MOVE_DOWN;↓
 GENERAL_MOVE_LEFT;←
@@ -67,46 +69,52 @@ TT_LABELPICKER_PANEL_CLICKED;Title color of the enabled tools.
 TT_LABELPICKER_TRASH;Color of the checked trash button.
 TT_SAVER_AUTOLOAD_REPLACE;The profile loaded at startup is %1.\nReplace it with %2?
 TT_SAVER_AUTOLOAD_SETTINGS;Load this profile at startup
-TT_SERIESEXP_APPLIED;Gap %1 EV, exposure compensation %2 EV.
-TT_SERIESEXP_APPLIED_SUGGESTION;Suggested compensation applied: %1 EV.
 TT_SERIESEXP_APPLY;Apply the suggestion
-TT_SERIESEXP_APPLY_TOOLTIP;Apply the exposure compensation suggested by the last measure.
+TT_SERIESEXP_APPLY_TOOLTIP;Apply the gap suggested by the last measure: the image follows its reference again.
 TT_SERIESEXP_AUTOMATIC;Automatic exposure or histogram matching is on: no correction (each image gets its own exposure).
 TT_SERIESEXP_AUTO_APPLIED;Exposure corrected automatically.
+TT_SERIESEXP_CHANGED_BY_HAND;Exposure changed by hand (%1 EV, the tool had set %2 EV): not applied anymore. Choose a reference to follow to apply it again.
+TT_SERIESEXP_FOLLOWING;Reference %1 + gap %2 + offset %3 = compensation %4 EV.
+TT_SERIESEXP_FOLLOW_NEAREST;Follows the nearest reference
+TT_SERIESEXP_FOLLOW_NONE;Not applied
+TT_SERIESEXP_FOLLOW_PARENT;Follows the reference of the parent
+TT_SERIESEXP_FOLLOW_SERIES;Follows the reference of the series
+TT_SERIESEXP_FOLLOW_TOOLTIP;Reference followed by this image: the nearest one (of the series if it has one, otherwise of the parent folders), the one of the series, the one of the parent, or none (the tool does not change this image).
 TT_SERIESEXP_IS_REFERENCE;This image is the reference of the sequence.
 TT_SERIESEXP_LABEL;Series Exposure
+TT_SERIESEXP_LEVEL_PARENT;for the parent folder
+TT_SERIESEXP_LEVEL_SERIES;for the series
+TT_SERIESEXP_LEVEL_TOOLTIP;Where the reference set by the button or by ctrl + click with the pipette applies: the series of the image (its numbered folder), or the parent folder (inherited by the series below it which have no reference of their own).
 TT_SERIESEXP_MEASURE;Measure
 TT_SERIESEXP_MEASURED;Gap %1 EV, similarity %2, clipped %3 %, compensation %4 EV.
-TT_SERIESEXP_MEASURE_TOOLTIP;Measure this image again with the measuring service. The result is proposed, never applied automatically.
+TT_SERIESEXP_MEASURE_TOOLTIP;Measure this image again with the measuring service, against the face of its reference. The result is proposed, never applied automatically.
+TT_SERIESEXP_NOT_APPLIED;Not applied: the tool does not change this image.
+TT_SERIESEXP_NOT_A_REFERENCE;This image is not a reference.
+TT_SERIESEXP_NOT_MEASURED;Gap with the reference not measured: click on the reference area with the pipette.
 TT_SERIESEXP_NO_IMAGE;No image.
 TT_SERIESEXP_NO_MATCH;Face of the reference not found (%1). If this happens on most images, the reference is probably wrong.
-TT_SERIESEXP_NO_REFERENCE;No reference for this sequence: use "Reference: this image" on the reference image.
-TT_SERIESEXP_NO_SERVICE;No measuring service (option SeriesExpService).
-TT_SERIESEXP_NO_TARGET;No target for this sequence: ctrl + click on the reference image first.
-TT_SERIESEXP_NO_TARGET_YET;No target yet.
+TT_SERIESEXP_NO_REFERENCE;No reference to follow: set one with ctrl + click (pipette) or "Reference: this image".
+TT_SERIESEXP_NO_REFERENCE_BUTTON;Not a reference
+TT_SERIESEXP_NO_REFERENCE_TOOLTIP;This image is not the reference of its series or of the parent anymore.
+TT_SERIESEXP_NO_SERVER;esby server unavailable: the references and the state of the images are kept by it.
+TT_SERIESEXP_NO_TARGET;The reference has no brightness target: ctrl + click with the pipette on the reference area of the reference image.
 TT_SERIESEXP_NO_VALUE;No value under the pipette.
 TT_SERIESEXP_OFFSET;Sequence offset (EV)
-TT_SERIESEXP_OFFSET_APPLIED;Offset of the sequence %1 EV applied: compensation %2 EV.
-TT_SERIESEXP_OFFSET_NOT_APPLIED;Offset of the sequence changed (%1 → %2 EV), not applied: the exposure of this image was changed by hand.
-TT_SERIESEXP_OFFSET_PENDING;Offset of the sequence changed (%1 EV): applied when this window is active.
-TT_SERIESEXP_OFFSET_TOOLTIP;Rendering preference added to the measured compensation of every image of the sequence (shared variable exposure.offset, set on the sequence; it can also be set on a folder in the variable panel). The images still having the compensation of the tool get it, now or when opened; the measures are not changed.
+TT_SERIESEXP_OFFSET_TOOLTIP;Rendering preference of the series, added to the compensation of every image following a reference (shared variable exposure.offset, set on the series; it can also be set on a folder in the variable panel). The references and the measures are not changed.
+TT_SERIESEXP_PENDING;Compensation %1 EV: applied when this window is active.
 TT_SERIESEXP_PIPETTE;Pipette
-TT_SERIESEXP_PIPETTE_TOOLTIP;Ctrl + click on the reference area (a face) of the reference image: its brightness becomes the target of the sequence.\nClick on the same area of another image of the sequence: its exposure compensation is set to reach the target. A second click refines the correction.
+TT_SERIESEXP_PIPETTE_TOOLTIP;Ctrl + click on the reference area (a face) of the reference image: it becomes the reference (of the series or of the parent, see the list), its brightness the target.
 TT_SERIESEXP_REFERENCE;Reference: this image
-TT_SERIESEXP_REFERENCE_SET;Reference of the sequence set (face: %1), compensation %2 EV.
-TT_SERIESEXP_REFERENCE_TOOLTIP;With the measuring service: this image becomes the reference of the sequence (the face near the AF point, or the largest one), with its exposure compensation.\nTo designate another face: ctrl + click on it with the pipette.
+TT_SERIESEXP_REFERENCE_REMOVED;This image is not a reference anymore.
+TT_SERIESEXP_REFERENCE_SET;This image is the reference for %1, compensation %2 EV.
+TT_SERIESEXP_REFERENCE_TOOLTIP;With the measuring service: this image becomes the reference (of the series or of the parent, see the list): the face near the AF point, or the largest one, and its exposure compensation.
+TT_SERIESEXP_REF_PARENT;Reference of the parent: %1 (%2).
+TT_SERIESEXP_REF_SERIES;Reference of the series: %1.
 TT_SERIESEXP_SEQ;Sequence: %1.
-TT_SERIESEXP_SEQ_WAIT;Reading the capture times of the folder...
 TT_SERIESEXP_SERVICE_ERROR;Measuring service unavailable (%1).
 TT_SERIESEXP_STATUS;Measuring service: %1.
 TT_SERIESEXP_SUGGESTED;Correction suggested (similarity, clipping or gap outside the automatic limits).
 TT_SERIESEXP_SUGGESTED_AF;No face: measure of the AF area, suggested only: gap %1 EV, compensation %2 EV.
-TT_SERIESEXP_SUGGESTED_MANUAL;Correction suggested: the exposure of this image was changed by hand.
-TT_SERIESEXP_TARGET;Target: %1 (learned on %2).
-TT_SERIESEXP_TARGET_SET;Target of the sequence set: %1.
-TT_SERIESEXP_TOGGLE_NEW;Show the new value
-TT_SERIESEXP_TOGGLE_OLD;Show the old value
-TT_SERIESEXP_TOGGLE_TOOLTIP;Switches between the compensation before and after the offset change; the value shown is kept.
 TT_SERIESEXP_WAITING;Waiting for the measuring service...
 TT_SERIESWB_ALREADY;The image already has the series white balance.
 TT_SERIESWB_APPLIED;Series white balance applied.
@@ -186,3 +194,4 @@ TT_VAR_DISPLAYER_SHARED_UNAVAILABLE;Shared variables: esby server unavailable
 TT_VAR_DISPLAYER_SHARED_UNSET_TOOLTIP;Removes the variable where it is set: the inherited value applies again.
 TT_VAR_DISPLAYER_SHARED_VALUE;value
 TT_VAR_DISPLAYER_SHARED_VALUE_TOOLTIP;Enter: changes the value where it is set (shown on the right), for every image concerned and every opened RawTherapee.
+To designate another face: ctrl + click on it with the pipette.

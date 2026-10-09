@@ -119,6 +119,12 @@ public:
     void varUnset(const Glib::ustring& path, const Glib::ustring& sequence, const Glib::ustring& name,
                   DoneCallback callback);
 
+    // data kept by the server for a file, per namespace (ex: "exposure"); fileSet merges the fields,
+    // a field of type RT_VARIABLE_TYPE_UNDEF is removed
+    void fileGet(const Glib::ustring& file, const Glib::ustring& ns, VarsCallback callback);
+    void fileSet(const Glib::ustring& file, const Glib::ustring& ns, const std::vector<EsbyVarValue>& fields,
+                 DoneCallback callback);
+
     // rule_changed (white balance) and variable_changed events are given to different callbacks
     void setEventCallback(EventCallback callback) { onEvent = callback; }
     void setVariableEventCallback(VariableEventCallback callback) { onVariableEvent = callback; }

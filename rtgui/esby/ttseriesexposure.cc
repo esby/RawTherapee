@@ -38,6 +38,82 @@ using namespace rtengine::procparams;
 // limits of the exposure compensation adjuster (tools/tonecurve.cc)
 static const double SERIESEXP_MIN_COMP = -5.0;
 static const double SERIESEXP_MAX_COMP = 12.0;
+// two compensations closer than this are the same
+static const double SERIESEXP_EPS = 0.005;
+// values of the follow combo, in its order
+static const char* const FOLLOW_VALUES[] = {"nearest", "series", "parent", "none"};
+static const char REFERENCE_VAR[] = "exposure.reference";
+static const char OFFSET_VAR[] = "exposure.offset";
+
+static Glib::ustring ev(double value)
+{
+  return Glib::ustring::format(std::showpos, std::fixed, std::setprecision(2), value);
+}
+
+static double clampComp(double value)
+{
+  return std::max(SERIESEXP_MIN_COMP, std::min(SERIESEXP_MAX_COMP, value));
+}
+
+// ---------------------------------------------------------------------------------------
+// reference (JSON text of the exposure.reference variable)
+// ---------------------------------------------------------------------------------------
+
+TTSeriesExposure::Reference TTSeriesExposure::Reference::parse(const Glib::ustring& text, const Glib::ustring& origin)
+{
+  Reference r;
+  cJSON* json = cJSON_Parse(text.c_str());
+  if (json == nullptr)
+    return r;
+  cJSON* raw = cJSON_GetObjectItem(json, "raw");
+  cJSON* comp = cJSON_GetObjectItem(json, "comp");
+  cJSON* point = cJSON_GetObjectItem(json, "point");
+  cJSON* target = cJSON_GetObjectItem(json, "target");
+  if (cJSON_IsString(raw) && cJSON_IsNumber(comp))
+  {
+    r.valid = true;
+    r.raw = raw->valuestring;
+    r.comp = comp->valuedouble;
+    r.origin = origin;
+    if (cJSON_IsArray(point) && (cJSON_GetArraySize(point) == 2))
+    {
+      r.hasPoint = true;
+      r.px = cJSON_GetArrayItem(point, 0)->valuedouble;
+      r.py = cJSON_GetArrayItem(point, 1)->valuedouble;
+    }
+    if (cJSON_IsNumber(target) && (target->valuedouble > 0.0))
+    {
+      r.hasTarget = true;
+      r.target = target->valuedouble;
+    }
+  }
+  cJSON_Delete(json);
+  return r;
+}
+
+Glib::ustring TTSeriesExposure::Reference::serialize() const
+{
+  cJSON* json = cJSON_CreateObject();
+  cJSON_AddStringToObject(json, "raw", raw.c_str());
+  cJSON_AddNumberToObject(json, "comp", comp);
+  if (hasPoint)
+  {
+    cJSON* p = cJSON_AddArrayToObject(json, "point");
+    cJSON_AddItemToArray(p, cJSON_CreateNumber(px));
+    cJSON_AddItemToArray(p, cJSON_CreateNumber(py));
+  }
+  if (hasTarget)
+    cJSON_AddNumberToObject(json, "target", target);
+  char* text = cJSON_PrintUnformatted(json);
+  Glib::ustring result(text);
+  cJSON_free(text);
+  cJSON_Delete(json);
+  return result;
+}
+
+// ---------------------------------------------------------------------------------------
+// interface
+// ---------------------------------------------------------------------------------------
 
 TTSeriesExposure::TTSeriesExposure() :
   FoldableToolPanel(this, "TTSeriesExposure", M("TT_SERIESEXP_LABEL"), false, true),
@@ -45,81 +121,72 @@ TTSeriesExposure::TTSeriesExposure() :
 {
   tonecurve = nullptr;
   sequenceReady = false;
+  stateLoaded = false;
+  follow = "nearest";
+  hasDelta = hasLastComp = hasShownComp = false;
+  delta = lastComp = shownComp = 0.0;
+  refsPending = 0;
+  generation = 0;
+  refGeneration = 0;
+  hasSuggestion = false;
+  suggestedDelta = 0.0;
+  recomputePending = false;
   sharedConnected = false;
-  toggleOld = toggleNew = 0.0;
-  toggleShowsNew = true;
-  hasShownOffset = false;
-  shownOffset = 0.0;
-  offsetPending = false;
   focusConnected = false;
+  updatingWidgets = false;
 
   // the pipette of the first tone curve of the exposure tool: values after the exposure
   // compensation, the brightness, the contrast and the highlight compression, before the curves
   setEditID(EUID_ToneCurve1, BT_IMAGEFLOAT);
 
+  Gtk::FlowBox* refBox = Gtk::manage(new Gtk::FlowBox());
+  refBox->set_selection_mode(Gtk::SELECTION_NONE);
+  refBox->set_column_spacing(4);
+  refBox->set_row_spacing(2);
   tbPipette = Gtk::manage(new Gtk::ToggleButton(M("TT_SERIESEXP_PIPETTE")));
   tbPipette->set_tooltip_text(M("TT_SERIESEXP_PIPETTE_TOOLTIP"));
-  pack_start(*tbPipette, Gtk::PACK_SHRINK, 0);
-
-  // external measuring service: reference, measure and apply buttons
-  Gtk::FlowBox* serviceBox = Gtk::manage(new Gtk::FlowBox());
-  serviceBox->set_selection_mode(Gtk::SELECTION_NONE);
-  serviceBox->set_column_spacing(4);
-  serviceBox->set_row_spacing(2);
+  cbLevel = Gtk::manage(new MyComboBoxText());
+  cbLevel->append(M("TT_SERIESEXP_LEVEL_SERIES"));
+  cbLevel->append(M("TT_SERIESEXP_LEVEL_PARENT"));
+  cbLevel->set_active(0);
+  cbLevel->set_tooltip_text(M("TT_SERIESEXP_LEVEL_TOOLTIP"));
   btReference = Gtk::manage(new Gtk::Button(M("TT_SERIESEXP_REFERENCE")));
   btReference->set_tooltip_text(M("TT_SERIESEXP_REFERENCE_TOOLTIP"));
+  btNoReference = Gtk::manage(new Gtk::Button(M("TT_SERIESEXP_NO_REFERENCE_BUTTON")));
+  btNoReference->set_tooltip_text(M("TT_SERIESEXP_NO_REFERENCE_TOOLTIP"));
+  refBox->add(*tbPipette);
+  refBox->add(*cbLevel);
+  refBox->add(*btReference);
+  refBox->add(*btNoReference);
+  pack_start(*refBox, Gtk::PACK_SHRINK, 0);
+
+  Gtk::FlowBox* imageBox = Gtk::manage(new Gtk::FlowBox());
+  imageBox->set_selection_mode(Gtk::SELECTION_NONE);
+  imageBox->set_column_spacing(4);
+  imageBox->set_row_spacing(2);
+  cbFollow = Gtk::manage(new MyComboBoxText());
+  cbFollow->append(M("TT_SERIESEXP_FOLLOW_NEAREST"));
+  cbFollow->append(M("TT_SERIESEXP_FOLLOW_SERIES"));
+  cbFollow->append(M("TT_SERIESEXP_FOLLOW_PARENT"));
+  cbFollow->append(M("TT_SERIESEXP_FOLLOW_NONE"));
+  cbFollow->set_active(0);
+  cbFollow->set_tooltip_text(M("TT_SERIESEXP_FOLLOW_TOOLTIP"));
   btMeasure = Gtk::manage(new Gtk::Button(M("TT_SERIESEXP_MEASURE")));
   btMeasure->set_tooltip_text(M("TT_SERIESEXP_MEASURE_TOOLTIP"));
   btApply = Gtk::manage(new Gtk::Button(M("TT_SERIESEXP_APPLY")));
   btApply->set_tooltip_text(M("TT_SERIESEXP_APPLY_TOOLTIP"));
   btApply->set_sensitive(false);
-  serviceBox->add(*btReference);
-  serviceBox->add(*btMeasure);
-  serviceBox->add(*btApply);
-  pack_start(*serviceBox, Gtk::PACK_SHRINK, 0);
-  suggestedComp = 0.0;
-  hasSuggestion = false;
-  service.reset(new EsbyHttpClient());
-  service->setAddress(esbySettings().SeriesExpService);
-  const char* token = g_getenv("ESBY_EXPOSURE_TOKEN");
-  if (token != nullptr)
-    service->setToken(token);
-  btReference->set_sensitive(service->isEnabled());
-  btMeasure->set_sensitive(service->isEnabled());
-  btReference->signal_clicked().connect([this]() { setReference(false, 0.0, 0.0); });
-  btMeasure->signal_clicked().connect([this]() { measureCurrent(true); });
-  btApply->signal_clicked().connect([this]() {
-    if (hasSuggestion)
-    {
-      setExpComp(suggestedComp);
-      writeApplied(Glib::path_get_basename(originalFile()), suggestedComp, sequenceOffset());
-      hasSuggestion = false;
-      btApply->set_sensitive(false);
-      setInfo(Glib::ustring::compose(M("TT_SERIESEXP_APPLIED_SUGGESTION"),
-                                     Glib::ustring::format(std::showpos, std::fixed, std::setprecision(2), suggestedComp)));
-    }
-  });
+  imageBox->add(*cbFollow);
+  imageBox->add(*btMeasure);
+  imageBox->add(*btApply);
+  pack_start(*imageBox, Gtk::PACK_SHRINK, 0);
 
-
-  // offset of the sequence: set on the sequence of the image (esby server), seen by every instance
+  // offset of the series: set on the series of the image (esby server), seen by every instance
   adjOffset = Gtk::manage(new Adjuster(M("TT_SERIESEXP_OFFSET"), -2.0, 2.0, 0.05, 0.0));
   adjOffset->setAdjusterListener(this);
   adjOffset->set_tooltip_text(M("TT_SERIESEXP_OFFSET_TOOLTIP"));
   adjOffset->set_sensitive(false);
   pack_start(*adjOffset, Gtk::PACK_SHRINK, 0);
-  btToggle = Gtk::manage(new Gtk::Button(M("TT_SERIESEXP_TOGGLE_OLD")));
-  btToggle->set_tooltip_text(M("TT_SERIESEXP_TOGGLE_TOOLTIP"));
-  btToggle->set_no_show_all(true);
-  btToggle->signal_clicked().connect([this]() {
-    toggleShowsNew = !toggleShowsNew;
-    double comp = toggleShowsNew ? toggleNew : toggleOld;
-    setExpComp(comp);
-    // the shown value is the one kept. The record stays the new value: shown, the image is untouched
-    // and follows the next offsets; the old value differs from it, as a change by hand would
-    writeApplied(Glib::path_get_basename(originalFile()), toggleNew, sequenceOffset());
-    btToggle->set_label(M(toggleShowsNew ? "TT_SERIESEXP_TOGGLE_OLD" : "TT_SERIESEXP_TOGGLE_NEW"));
-  });
-  pack_start(*btToggle, Gtk::PACK_SHRINK, 0);
 
   lbInfo = Gtk::manage(new Gtk::Label(""));
   lbInfo->set_line_wrap(true);
@@ -127,6 +194,32 @@ TTSeriesExposure::TTSeriesExposure() :
   lbInfo->set_xalign(0.0);
   pack_start(*lbInfo, Gtk::PACK_SHRINK, 0);
 
+  service.reset(new EsbyHttpClient());
+  service->setAddress(esbySettings().SeriesExpService);
+  const char* token = g_getenv("ESBY_EXPOSURE_TOKEN");
+  if (token != nullptr)
+    service->setToken(token);
+  btReference->set_sensitive(service->isEnabled());
+  btMeasure->set_sensitive(service->isEnabled());
+
+  btReference->signal_clicked().connect([this]() { setReferenceHere(false, 0.0, 0.0, false, 0.0); });
+  btNoReference->signal_clicked().connect([this]() { removeReference(); });
+  btMeasure->signal_clicked().connect([this]() { measureCurrent(true); });
+  btApply->signal_clicked().connect([this]() {
+    if (!hasSuggestion)
+      return;
+    hasSuggestion = false;
+    btApply->set_sensitive(false);
+    storeDelta(suggestedDelta);
+    recompute(false);
+  });
+  cbFollow->signal_changed().connect([this]() {
+    if (updatingWidgets)
+      return;
+    int row = cbFollow->get_active_row_number();
+    if ((row >= 0) && (row < 4))
+      setFollow(FOLLOW_VALUES[row], true);
+  });
   tbPipette->signal_toggled().connect([this]() {
     if (tbPipette->get_active())
     {
@@ -170,46 +263,21 @@ void TTSeriesExposure::switchOffEditMode()
 }
 
 // ---------------------------------------------------------------------------------------
-// sequence
+// series
 // ---------------------------------------------------------------------------------------
 
 // ESBY_ORIGIN (see TTSeriesWB): the original file of a copy opened by a launcher such as rt_queue
 Glib::ustring TTSeriesExposure::originalFile()
 {
-  if (env == nullptr)
-    return "";
-  Glib::ustring file = env->getVarAsString("Fname");
-  const char* origin = g_getenv("ESBY_ORIGIN");
-  if ((origin != nullptr) && (*origin != '\0') && !file.empty()
-  && (Glib::path_get_basename(origin) == Glib::path_get_basename(file)))
-    return origin;
-  return file;
+  return EsbySharedVariables::originalFile(env);
 }
 
-// the numbered folder of a photo: the raw files are in <folder>/pp, then <folder>/pp/dpp once processed
 Glib::ustring TTSeriesExposure::sequenceFolder(const Glib::ustring& file)
 {
-  std::string dir = Glib::path_get_dirname(file);
-  if ((Glib::path_get_basename(dir) == "dpp") && (Glib::path_get_basename(Glib::path_get_dirname(dir)) == "pp"))
-    return Glib::path_get_dirname(Glib::path_get_dirname(dir));
-  if (Glib::path_get_basename(dir) == "pp")
-    return Glib::path_get_dirname(dir);
-  return dir;
+  return EsbySharedVariables::sequenceFolder(file);
 }
 
-// the sequence is known: ready, and given to the shared variables (a variable can be set on it)
-void TTSeriesExposure::publishSequence()
-{
-  sequenceReady = true;
-  if (env == nullptr)
-    return;
-  Glib::ustring::size_type hash = sequenceKey.find('#');
-  env->sharedVariables()->setSequence(originalFile(),
-                                      (hash == Glib::ustring::npos) ? Glib::ustring() : sequenceKey.substr(hash + 1));
-  offsetChanged(); // the variables may already be loaded (same sequence): no reload, no signal
-}
-
-// the sequence of an image is its numbered folder
+// the series of an image is its numbered folder
 void TTSeriesExposure::startSequence()
 {
   sequenceReady = false;
@@ -219,17 +287,19 @@ void TTSeriesExposure::startSequence()
     setInfo(M("TT_SERIESEXP_NO_IMAGE"));
     return;
   }
-  Glib::ustring folder = sequenceFolder(file);
-  sequenceKey = folder;
-  sequenceText = Glib::ustring::compose(M("TT_SERIESEXP_SEQ"), Glib::path_get_basename(folder));
+  sequenceKey = EsbySharedVariables::realPath(sequenceFolder(file));
+  sequenceText = Glib::ustring::compose(M("TT_SERIESEXP_SEQ"), Glib::path_get_basename(sequenceKey));
   publishSequence();
-  setInfo("");
-  measureCurrent(false);
+  loadImageState();
 }
 
-// ---------------------------------------------------------------------------------------
-// measure and exposure
-// ---------------------------------------------------------------------------------------
+// the series is known: given to the shared variables (the offset is set on it)
+void TTSeriesExposure::publishSequence()
+{
+  sequenceReady = true;
+  if (env != nullptr)
+    env->sharedVariables()->setSequence(originalFile(), Glib::ustring());
+}
 
 // relative luminance (linear) under the pipette
 bool TTSeriesExposure::measure(double& luminance)
@@ -262,13 +332,422 @@ void TTSeriesExposure::setExpComp(double value)
     listener->panelChanged(EvExpComp, Glib::ustring::format(std::setw(5), std::fixed, std::setprecision(2), value));
 }
 
+// offset of the series: shared variable exposure.offset (0 when not set, or without server)
+double TTSeriesExposure::seriesOffset()
+{
+  if (env == nullptr)
+    return 0.0;
+  RtVariable* v = env->getVariableByName(OFFSET_VAR);
+  if ((v == nullptr) || !v->isDefined() || (v->getScope() == RtVariableScope::Internal) || (v->getScope() == RtVariableScope::Exif))
+    return 0.0;
+  return v->getAsDouble();
+}
+
+// automatic exposure or histogram matching: each image gets its own exposure, the compensation
+// of the series does not hold anymore
+bool TTSeriesExposure::exposureIsAutomatic()
+{
+  ProcParams pp;
+  tonecurve->write(&pp);
+  return pp.toneCurve.autoexp || pp.toneCurve.histmatching;
+}
+
+// ---------------------------------------------------------------------------------------
+// state of the image and references (esby server)
+// ---------------------------------------------------------------------------------------
+
+void TTSeriesExposure::loadImageState()
+{
+  stateLoaded = false;
+  stateFile = originalFile();
+  follow = "nearest";
+  hasDelta = hasLastComp = hasShownComp = false;
+  hasSuggestion = false;
+  btApply->set_sensitive(false);
+  recomputePending = false;
+  int current = ++generation;
+  EsbyWBClient* client = env->sharedVariables()->getClient();
+  if (!client->isConnected())
+  {
+    setInfo(M("TT_SERIESEXP_NO_SERVER"));
+    return;
+  }
+  client->fileGet(stateFile, "exposure", [this, current](bool ok, const std::vector<EsbyVarValue>& fields) {
+    if (current != generation)
+      return;
+    for (const EsbyVarValue& f : fields)
+    {
+      double number = (f.type == RT_VARIABLE_TYPE_INT) ? f.i : f.d;
+      if (f.name == "follow")
+        follow = f.s;
+      else if (f.name == "delta")
+      {
+        hasDelta = true;
+        delta = number;
+      }
+      else if (f.name == "comp")
+      {
+        hasLastComp = true;
+        lastComp = number;
+      }
+    }
+    stateLoaded = ok;
+    updatingWidgets = true;
+    for (int i = 0; i < 4; i++)
+      if (follow == FOLLOW_VALUES[i])
+        cbFollow->set_active(i);
+    updatingWidgets = false;
+    loadReferences();
+  });
+}
+
+// the reference of the series (set on its folder) and the one of the parent (nearest above it)
+void TTSeriesExposure::loadReferences()
+{
+  EsbyWBClient* client = env->sharedVariables()->getClient();
+  if (sequenceKey.empty() || !client->isConnected())
+    return;
+  // a new load replaces one still running
+  int current = ++refGeneration;
+  refsPending = 2;
+  auto done = [this, current]() {
+    if ((current == refGeneration) && (--refsPending == 0))
+      recompute(true);
+  };
+  client->varGet(sequenceKey, "", [this, current, done](bool, const std::vector<EsbyVarValue>& vars) {
+    if (current != refGeneration)
+      return;
+    refSeries = Reference();
+    for (const EsbyVarValue& v : vars)
+      if ((v.name == REFERENCE_VAR) && (v.origin == sequenceKey))
+        refSeries = Reference::parse(v.s, v.origin);
+    done();
+  });
+  client->varGet(Glib::path_get_dirname(sequenceKey), "", [this, current, done](bool, const std::vector<EsbyVarValue>& vars) {
+    if (current != refGeneration)
+      return;
+    refParent = Reference();
+    for (const EsbyVarValue& v : vars)
+      if (v.name == REFERENCE_VAR)
+        refParent = Reference::parse(v.s, v.origin);
+    done();
+  });
+}
+
+const TTSeriesExposure::Reference& TTSeriesExposure::followedReference()
+{
+  if (follow == "series")
+    return refSeries;
+  if (follow == "parent")
+    return refParent;
+  return refSeries.valid ? refSeries : refParent; // nearest
+}
+
+// session of the measuring service: one per reference (where it is set, and its raw file)
+Glib::ustring TTSeriesExposure::sessionOf(const Reference& ref)
+{
+  return ref.origin + "|" + Glib::path_get_basename(ref.raw);
+}
+
+// the compensation of the image follows its reference: reference + delta + offset.
+// fromEvent: a change of a reference, of the offset or of the state; it is applied in the active
+// window only (N instances do not recalculate together), the others do it when they get the focus
+void TTSeriesExposure::recompute(bool fromEvent)
+{
+  if ((env == nullptr) || (tonecurve == nullptr) || !getExpander()->getEnabled() || !sequenceReady
+  || !stateLoaded || (refsPending > 0) || (stateFile != originalFile()))
+    return;
+  if (follow == "none")
+  {
+    setInfo(M("TT_SERIESEXP_NOT_APPLIED"));
+    return;
+  }
+  const Reference& ref = followedReference();
+  if (!ref.valid)
+  {
+    setInfo(M("TT_SERIESEXP_NO_REFERENCE"));
+    return;
+  }
+  if (exposureIsAutomatic())
+  {
+    setInfo(M("TT_SERIESEXP_AUTOMATIC"));
+    return;
+  }
+  double current = currentExpComp();
+  // changed by hand since the tool set it (in this instance, or in any instance for an image just
+  // opened): the image stops following its reference
+  bool known = hasShownComp || hasLastComp;
+  double expected = hasShownComp ? shownComp : lastComp;
+  if (known && (std::fabs(current - expected) >= SERIESEXP_EPS))
+  {
+    setFollow("none", true);
+    setInfo(Glib::ustring::compose(M("TT_SERIESEXP_CHANGED_BY_HAND"), ev(current), ev(expected)));
+    return;
+  }
+  if (!hasDelta)
+  {
+    if (Glib::path_get_basename(originalFile()) == Glib::path_get_basename(ref.raw))
+      storeDelta(0.0); // the reference itself
+    else
+    {
+      if (service->isEnabled())
+        measureCurrent(false);
+      else
+        setInfo(M("TT_SERIESEXP_NOT_MEASURED"));
+      return;
+    }
+  }
+  double comp = clampComp(ref.comp + delta + seriesOffset());
+  if (std::fabs(current - comp) < SERIESEXP_EPS)
+  {
+    hasShownComp = true;
+    shownComp = current;
+    if (!hasLastComp || (std::fabs(lastComp - comp) >= SERIESEXP_EPS))
+      saveApplied(comp);
+    setInfo(Glib::ustring::compose(M("TT_SERIESEXP_FOLLOWING"), ev(ref.comp), ev(delta), ev(seriesOffset()), ev(comp)));
+    return;
+  }
+
+  Gtk::Window* window = dynamic_cast<Gtk::Window*>(get_toplevel());
+  if ((window != nullptr) && !focusConnected)
+  {
+    // the window becomes active in the default handler of focus-in: the change is applied just after
+    window->signal_focus_in_event().connect([this](GdkEventFocus*) {
+      if (recomputePending)
+        Glib::signal_idle().connect_once([this]() { if (recomputePending) recompute(false); });
+      return false;
+    }, true);
+    focusConnected = true;
+  }
+  if (fromEvent && (window != nullptr) && !window->is_active())
+  {
+    recomputePending = true;
+    setInfo(Glib::ustring::compose(M("TT_SERIESEXP_PENDING"), ev(comp)));
+    return;
+  }
+  recomputePending = false;
+  setExpComp(comp);
+  hasShownComp = true;
+  shownComp = comp;
+  saveApplied(comp);
+  setInfo(Glib::ustring::compose(M("TT_SERIESEXP_FOLLOWING"), ev(ref.comp), ev(delta), ev(seriesOffset()), ev(comp)));
+}
+
+void TTSeriesExposure::setFollow(const Glib::ustring& f, bool save)
+{
+  follow = f;
+  updatingWidgets = true;
+  for (int i = 0; i < 4; i++)
+    if (follow == FOLLOW_VALUES[i])
+      cbFollow->set_active(i);
+  updatingWidgets = false;
+  if (save && !stateFile.empty())
+  {
+    EsbyVarValue v;
+    v.name = "follow";
+    v.s = follow;
+    env->sharedVariables()->getClient()->fileSet(stateFile, "exposure", {v}, nullptr);
+  }
+  if (follow != "none")
+  {
+    // following again: the current compensation is the starting point
+    hasShownComp = true;
+    shownComp = currentExpComp();
+    recompute(false);
+  }
+  else
+    setInfo(M("TT_SERIESEXP_NOT_APPLIED"));
+}
+
+// the gap of the image with its reference: following it again if it was not applied
+void TTSeriesExposure::storeDelta(double d)
+{
+  hasDelta = true;
+  delta = d;
+  EsbyVarValue v;
+  v.name = "delta";
+  v.type = RT_VARIABLE_TYPE_DOUBLE;
+  v.d = d;
+  std::vector<EsbyVarValue> fields = {v};
+  if (follow == "none")
+  {
+    follow = "nearest";
+    EsbyVarValue f;
+    f.name = "follow";
+    f.s = follow;
+    fields.push_back(f);
+    updatingWidgets = true;
+    cbFollow->set_active(0);
+    updatingWidgets = false;
+  }
+  hasShownComp = true;
+  shownComp = currentExpComp();
+  env->sharedVariables()->getClient()->fileSet(stateFile, "exposure", fields, nullptr);
+}
+
+void TTSeriesExposure::saveApplied(double comp)
+{
+  hasLastComp = true;
+  lastComp = comp;
+  EsbyVarValue v;
+  v.name = "comp";
+  v.type = RT_VARIABLE_TYPE_DOUBLE;
+  v.d = comp;
+  env->sharedVariables()->getClient()->fileSet(stateFile, "exposure", {v}, nullptr);
+}
+
+// the shared variables were reloaded (offset or reference changed, here or in another instance)
+void TTSeriesExposure::sharedChanged()
+{
+  if (env == nullptr)
+    return;
+  EsbySharedVariables* shared = env->sharedVariables();
+  adjOffset->set_sensitive(shared->isConnected() && sequenceReady);
+  adjOffset->block(true);
+  adjOffset->setValue(seriesOffset());
+  adjOffset->block(false);
+  if (!shared->isLoaded() || !getExpander()->getEnabled() || !sequenceReady)
+    return;
+  if (!stateLoaded && (stateFile == originalFile()))
+  {
+    loadImageState(); // the server was not available when the image was opened
+    return;
+  }
+  loadReferences(); // then recompute
+}
+
+// the slider was moved: the offset is set on the series; the server sends the change to every
+// instance (this one included), sharedChanged() applies it
+void TTSeriesExposure::offsetAdjusted()
+{
+  if (!sequenceReady || (env == nullptr))
+    return;
+  EsbyVarValue value;
+  value.name = OFFSET_VAR;
+  value.type = RT_VARIABLE_TYPE_DOUBLE;
+  value.d = adjOffset->getValue();
+  env->sharedVariables()->set(EsbySharedVariables::Where::Sequence, value);
+}
+
+// ---------------------------------------------------------------------------------------
+// references
+// ---------------------------------------------------------------------------------------
+
+// the current image becomes the reference of its series or of the parent folder (combo).
+// Its compensation and its target are kept without the offset of the series.
+void TTSeriesExposure::setReferenceHere(bool hasPoint, double px, double py, bool hasTarget, double target)
+{
+  if (!sequenceReady || (tonecurve == nullptr) || !env->sharedVariables()->isConnected())
+  {
+    setInfo(M(sequenceReady ? "TT_SERIESEXP_NO_SERVER" : "TT_SERIESEXP_NO_IMAGE"));
+    return;
+  }
+  Reference ref;
+  ref.valid = true;
+  ref.raw = originalFile();
+  ref.comp = currentExpComp() - seriesOffset();
+  ref.hasPoint = hasPoint;
+  ref.px = px;
+  ref.py = py;
+  ref.hasTarget = hasTarget;
+  ref.target = target;
+  Glib::ustring folder = (cbLevel->get_active_row_number() == 1) ? Glib::ustring(Glib::path_get_dirname(sequenceKey)) : sequenceKey;
+  ref.origin = folder;
+  if (!service->isEnabled())
+  {
+    if (!hasTarget)
+    {
+      setInfo(M("TT_SERIESEXP_NO_TARGET"));
+      return;
+    }
+    publishReference(ref, folder);
+    return;
+  }
+
+  // with the service: its face (at the point, or near the AF point, or the largest)
+  cJSON* body = cJSON_CreateObject();
+  cJSON_AddStringToObject(body, "session", sessionOf(ref).c_str());
+  cJSON_AddStringToObject(body, "raw", ref.raw.c_str());
+  if (hasPoint)
+  {
+    cJSON* p = cJSON_AddArrayToObject(body, "point");
+    cJSON_AddItemToArray(p, cJSON_CreateNumber(px));
+    cJSON_AddItemToArray(p, cJSON_CreateNumber(py));
+  }
+  double ax, ay;
+  if (readAfPoint(env->getVarAsString("Fname"), ax, ay))
+  {
+    cJSON* p = cJSON_AddArrayToObject(body, "af_point");
+    cJSON_AddItemToArray(p, cJSON_CreateNumber(ax));
+    cJSON_AddItemToArray(p, cJSON_CreateNumber(ay));
+  }
+  setInfo(M("TT_SERIESEXP_WAITING"));
+  Glib::ustring file = originalFile();
+  service->post("/reference", body, [this, ref, file, folder](cJSON* answer, const Glib::ustring& error) {
+    if (originalFile() != file)
+      return;
+    cJSON* status = answer ? cJSON_GetObjectItem(answer, "status") : nullptr;
+    if (!cJSON_IsString(status))
+    {
+      setInfo(Glib::ustring::compose(M("TT_SERIESEXP_SERVICE_ERROR"), error));
+      return;
+    }
+    if (Glib::ustring(status->valuestring) != "ok")
+    {
+      setInfo(Glib::ustring::compose(M("TT_SERIESEXP_STATUS"), status->valuestring));
+      return;
+    }
+    publishReference(ref, folder);
+  });
+}
+
+// the reference is set on the server (every instance follows it); the image is its own reference
+void TTSeriesExposure::publishReference(const Reference& ref, const Glib::ustring& folder)
+{
+  EsbyVarValue value;
+  value.name = REFERENCE_VAR;
+  value.s = ref.serialize();
+  env->sharedVariables()->getClient()->varSet(folder, "", value, nullptr);
+  if (folder == sequenceKey)
+    refSeries = ref;
+  else
+    refParent = ref;
+  storeDelta(0.0);
+  saveApplied(currentExpComp());
+  // a reference of the parent set from a series having its own: this image follows the parent one
+  if ((folder != sequenceKey) && refSeries.valid && (follow == "nearest"))
+    setFollow("parent", true);
+  setInfo(Glib::ustring::compose(M("TT_SERIESEXP_REFERENCE_SET"), Glib::path_get_basename(folder), ev(ref.comp)));
+}
+
+// the current image is not the reference of its series or of the parent anymore
+void TTSeriesExposure::removeReference()
+{
+  Glib::ustring name = Glib::path_get_basename(originalFile());
+  EsbyWBClient* client = env->sharedVariables()->getClient();
+  bool removed = false;
+  for (const Reference* ref : {&refSeries, &refParent})
+  {
+    if (ref->valid && (Glib::path_get_basename(ref->raw) == name))
+    {
+      client->varUnset(ref->origin, "", REFERENCE_VAR, nullptr);
+      removed = true;
+    }
+  }
+  setInfo(M(removed ? "TT_SERIESEXP_REFERENCE_REMOVED" : "TT_SERIESEXP_NOT_A_REFERENCE"));
+}
+
+// ---------------------------------------------------------------------------------------
+// pipette
+// ---------------------------------------------------------------------------------------
+
 bool TTSeriesExposure::button1Pressed(int modifierKey)
 {
   if (!getExpander()->getEnabled() || (tonecurve == nullptr))
     return false;
-  if (!sequenceReady)
+  if (!sequenceReady || !stateLoaded)
   {
-    setInfo(M("TT_SERIESEXP_SEQ_WAIT"));
+    setInfo(M("TT_SERIESEXP_NO_SERVER"));
     return true;
   }
   double luminance;
@@ -278,117 +757,228 @@ bool TTSeriesExposure::button1Pressed(int modifierKey)
     return true;
   }
 
-  // with the service, ctrl + click designates the face of the reference (point in 0 - 1 of the image)
-  if ((modifierKey & GDK_CONTROL_MASK) && service->isEnabled())
-  {
-    EditDataProvider* provider = getEditProvider();
-    int w = 0, h = 0;
-    provider->getImageSize(w, h);
-    if ((w > 0) && (h > 0))
-      setReference(true, (double) provider->posImage.x / w, (double) provider->posImage.y / h);
-    return true;
-  }
-
-  // ctrl + click: the brightness of the reference image becomes the target of the sequence
+  // ctrl + click: this image becomes the reference (combo: series or parent). The brightness is kept
+  // as the target, without the offset; with the service, the point designates the face.
   if (modifierKey & GDK_CONTROL_MASK)
   {
-    // the target is kept without the offset of the sequence (it is applied on top of it)
-    luminance /= std::pow(2.0, sequenceOffset());
-    writeTarget(luminance, Glib::path_get_basename(originalFile()));
-    setInfo(Glib::ustring::compose(M("TT_SERIESEXP_TARGET_SET"), Glib::ustring::format(std::fixed, std::setprecision(4), luminance)));
+    bool hasPoint = false;
+    double px = 0.0, py = 0.0;
+    if (service->isEnabled())
+    {
+      EditDataProvider* provider = getEditProvider();
+      int w = 0, h = 0;
+      provider->getImageSize(w, h);
+      if ((w > 0) && (h > 0))
+      {
+        hasPoint = true;
+        px = (double) provider->posImage.x / w;
+        py = (double) provider->posImage.y / h;
+      }
+    }
+    setReferenceHere(hasPoint, px, py, true, luminance / std::pow(2.0, seriesOffset()));
     return true;
   }
 
-  double target;
-  Glib::ustring reference;
-  if (!readTarget(target, reference))
+  // click: the gap with the target of the reference, measured on this image
+  const Reference& ref = followedReference();
+  if (!ref.valid || !ref.hasTarget)
   {
     setInfo(M("TT_SERIESEXP_NO_TARGET"));
     return true;
   }
   // linear values: the gap in EV is log2 of their ratio. The tone curve of the exposure tool
   // (contrast, highlight compression) makes it approximate: a second click refines it.
-  double ev = std::log2(target / luminance) + sequenceOffset();
-  double comp = std::max(SERIESEXP_MIN_COMP, std::min(SERIESEXP_MAX_COMP, currentExpComp() + ev));
+  double gap = std::log2(ref.target * std::pow(2.0, seriesOffset()) / luminance);
+  double comp = clampComp(currentExpComp() + gap);
+  storeDelta(comp - seriesOffset() - ref.comp);
   setExpComp(comp);
-  writeApplied(Glib::path_get_basename(originalFile()), comp, sequenceOffset());
-  setInfo(Glib::ustring::compose(M("TT_SERIESEXP_APPLIED"),
-                                 Glib::ustring::format(std::showpos, std::fixed, std::setprecision(2), ev),
-                                 Glib::ustring::format(std::showpos, std::fixed, std::setprecision(2), comp)));
+  hasShownComp = true;
+  shownComp = comp;
+  saveApplied(comp);
+  setInfo(Glib::ustring::compose(M("TT_SERIESEXP_FOLLOWING"), ev(ref.comp), ev(delta), ev(seriesOffset()), ev(comp)));
   return true;
 }
 
 // ---------------------------------------------------------------------------------------
-// targets, kept in a local file: one RawTherapee instance per image with rt_queue
+// external measuring service
 // ---------------------------------------------------------------------------------------
 
-Glib::ustring TTSeriesExposure::targetsFile()
+void TTSeriesExposure::setSuggestion(double d, const Glib::ustring& text)
 {
-  return Glib::build_filename(Options::rtdir, "esby-exposure-targets.ini");
+  suggestedDelta = d;
+  hasSuggestion = true;
+  btApply->set_sensitive(true);
+  setInfo(text);
 }
 
-bool TTSeriesExposure::readTarget(double& luminance, Glib::ustring& reference)
+// measure of the current image by the service, against the face of its reference.
+// manual: from the measure button (the result is then only proposed)
+void TTSeriesExposure::measureCurrent(bool manual, bool retried)
 {
-  if (sequenceKey.empty())
-    return false;
-  Glib::KeyFile keys;
-  try
-  {
-    if (!Glib::file_test(targetsFile(), Glib::FILE_TEST_EXISTS) || !keys.load_from_file(targetsFile()))
-      return false;
-    if (!keys.has_group(sequenceKey) || !keys.has_key(sequenceKey, "target"))
-      return false;
-    luminance = keys.get_double(sequenceKey, "target");
-    reference = keys.has_key(sequenceKey, "reference") ? keys.get_string(sequenceKey, "reference") : Glib::ustring();
-    return luminance > 0.0;
-  }
-  catch (const Glib::Error&)
-  {
-    return false;
-  }
-}
-
-void TTSeriesExposure::writeTarget(double luminance, const Glib::ustring& reference)
-{
-  if (sequenceKey.empty())
+  if (!service->isEnabled() || !sequenceReady || (tonecurve == nullptr) || !stateLoaded)
     return;
-  Glib::KeyFile keys;
-  try
+  Reference ref = followedReference();
+  if (!ref.valid)
   {
-    if (Glib::file_test(targetsFile(), Glib::FILE_TEST_EXISTS))
-      keys.load_from_file(targetsFile(), Glib::KEY_FILE_KEEP_COMMENTS);
-    keys.set_double(sequenceKey, "target", luminance);
-    keys.set_string(sequenceKey, "reference", reference);
-    keys.set_string(sequenceKey, "time", Glib::DateTime::create_now_local().format("%Y-%m-%d %H:%M:%S"));
-    Glib::file_set_contents(targetsFile(), keys.to_data());
+    setInfo(M("TT_SERIESEXP_NO_REFERENCE"));
+    return;
   }
-  catch (const Glib::Error& e)
+  Glib::ustring file = originalFile();
+  if (Glib::path_get_basename(file) == Glib::path_get_basename(ref.raw))
   {
-    printf("TTSeriesExposure: unable to write %s: %s\n", targetsFile().c_str(), e.what().c_str());
+    setInfo(M("TT_SERIESEXP_IS_REFERENCE"));
+    return;
   }
+  if (exposureIsAutomatic())
+  {
+    setInfo(M("TT_SERIESEXP_AUTOMATIC"));
+    return;
+  }
+
+  cJSON* body = cJSON_CreateObject();
+  cJSON_AddStringToObject(body, "session", sessionOf(ref).c_str());
+  cJSON_AddStringToObject(body, "raw", file.c_str());
+  cJSON_AddNumberToObject(body, "min_similarity", esbySettings().SeriesExpMinSimilarity);
+  double ax, ay;
+  if (readAfPoint(env->getVarAsString("Fname"), ax, ay))
+  {
+    cJSON* p = cJSON_AddArrayToObject(body, "af_point");
+    cJSON_AddItemToArray(p, cJSON_CreateNumber(ax));
+    cJSON_AddItemToArray(p, cJSON_CreateNumber(ay));
+  }
+  setInfo(M("TT_SERIESEXP_WAITING"));
+  service->post("/measure", body, [this, ref, file, manual, retried](cJSON* answer, const Glib::ustring& error) {
+    if (originalFile() != file)
+      return; // another image was opened meanwhile
+    cJSON* status = answer ? cJSON_GetObjectItem(answer, "status") : nullptr;
+    if (!cJSON_IsString(status))
+    {
+      setInfo(Glib::ustring::compose(M("TT_SERIESEXP_SERVICE_ERROR"), error));
+      return;
+    }
+    Glib::ustring st = status->valuestring;
+    auto number = [answer](const char* name, double def) {
+      cJSON* item = cJSON_GetObjectItem(answer, name);
+      return cJSON_IsNumber(item) ? item->valuedouble : def;
+    };
+
+    // the service forgot the session (inactivity): the reference is set again silently, from the
+    // raw file and the choice kept by the fork (the fingerprint is never kept), then measured again
+    if ((st == "no_reference") && !retried)
+    {
+      cJSON* again = cJSON_CreateObject();
+      cJSON_AddStringToObject(again, "session", sessionOf(ref).c_str());
+      cJSON_AddStringToObject(again, "raw", ref.raw.c_str());
+      if (ref.hasPoint)
+      {
+        cJSON* p = cJSON_AddArrayToObject(again, "point");
+        cJSON_AddItemToArray(p, cJSON_CreateNumber(ref.px));
+        cJSON_AddItemToArray(p, cJSON_CreateNumber(ref.py));
+      }
+      double rx, ry;
+      if (readAfPoint(ref.raw, rx, ry))
+      {
+        cJSON* p = cJSON_AddArrayToObject(again, "af_point");
+        cJSON_AddItemToArray(p, cJSON_CreateNumber(rx));
+        cJSON_AddItemToArray(p, cJSON_CreateNumber(ry));
+      }
+      service->post("/reference", again, [this, file, manual](cJSON* a, const Glib::ustring&) {
+        cJSON* s2 = a ? cJSON_GetObjectItem(a, "status") : nullptr;
+        if ((originalFile() == file) && cJSON_IsString(s2) && (Glib::ustring(s2->valuestring) == "ok"))
+          measureCurrent(manual, true);
+        else if (originalFile() == file)
+          setInfo(M("TT_SERIESEXP_NO_REFERENCE"));
+      });
+      return;
+    }
+
+    if (st == "ok")
+    {
+      double d = number("delta_ev", 0.0);
+      double similarity = number("similarity", 0.0);
+      double clipped = number("clipped_fraction", 0.0);
+      double comp = clampComp(ref.comp + d + seriesOffset());
+      Glib::ustring values = Glib::ustring::compose(M("TT_SERIESEXP_MEASURED"), ev(d),
+                                                    Glib::ustring::format(std::fixed, std::setprecision(2), similarity),
+                                                    Glib::ustring::format(std::fixed, std::setprecision(1), clipped * 100.0),
+                                                    ev(comp));
+      const EsbySettings& s = esbySettings();
+      bool automatic = !manual && (follow != "none") && (similarity >= s.SeriesExpAutoSimilarity)
+                    && (clipped <= s.SeriesExpMaxClipped) && (std::fabs(d) <= s.SeriesExpMaxEv);
+      if (automatic)
+      {
+        storeDelta(d);
+        recompute(false);
+        setInfo(M("TT_SERIESEXP_AUTO_APPLIED") + "\n" + values);
+      }
+      else
+        setSuggestion(d, M("TT_SERIESEXP_SUGGESTED") + "\n" + values);
+      return;
+    }
+
+    // no face (person seen from the back): the AF area measure is only proposed, never applied
+    cJSON* fallback = cJSON_GetObjectItem(answer, "fallback_af");
+    if ((st == "no_face") && cJSON_IsObject(fallback))
+    {
+      cJSON* d = cJSON_GetObjectItem(fallback, "delta_ev");
+      if (cJSON_IsNumber(d))
+      {
+        setSuggestion(d->valuedouble, Glib::ustring::compose(M("TT_SERIESEXP_SUGGESTED_AF"), ev(d->valuedouble),
+                                                             ev(clampComp(ref.comp + d->valuedouble + seriesOffset()))));
+        return;
+      }
+    }
+    // no_match: another person is probably on the AF point, no fallback
+    setInfo(Glib::ustring::compose(M(st == "no_match" ? "TT_SERIESEXP_NO_MATCH" : "TT_SERIESEXP_STATUS"), st));
+  });
 }
+
+// ---------------------------------------------------------------------------------------
 
 void TTSeriesExposure::setInfo(const Glib::ustring& action)
 {
   Glib::ustring text = action;
   if (sequenceReady)
   {
-    double target;
-    Glib::ustring reference;
-    Glib::ustring targetText = readTarget(target, reference)
-      ? Glib::ustring::compose(M("TT_SERIESEXP_TARGET"), Glib::ustring::format(std::fixed, std::setprecision(4), target), reference)
-      : M("TT_SERIESEXP_NO_TARGET_YET");
-    text += (text.empty() ? "" : "\n") + sequenceText + "\n" + targetText;
+    Glib::ustring refs;
+    if (refSeries.valid)
+      refs += Glib::ustring::compose(M("TT_SERIESEXP_REF_SERIES"), Glib::path_get_basename(refSeries.raw));
+    if (refParent.valid)
+      refs += (refs.empty() ? "" : "\n")
+            + Glib::ustring::compose(M("TT_SERIESEXP_REF_PARENT"), Glib::path_get_basename(refParent.raw),
+                                     Glib::path_get_basename(refParent.origin));
+    text += (text.empty() ? "" : "\n") + sequenceText + (refs.empty() ? "" : "\n" + refs);
   }
   lbInfo->set_text(text);
   TT_LOG("TTSeriesExposure: %s\n", text.c_str());
 }
 
-// ---------------------------------------------------------------------------------------
+void TTSeriesExposure::react(FakeProcEvent ev)
+{
+  if (!sharedConnected && (env != nullptr))
+  {
+    env->sharedVariables()->signalChanged().connect(sigc::mem_fun(*this, &TTSeriesExposure::sharedChanged));
+    sharedConnected = true;
+  }
+  if ((ev == FakeEvExifTransmitted) && getExpander()->getEnabled())
+    startSequence();
+  // changed by hand while it was shown (image closed): it stops following its reference
+  if ((ev == FakeEvImageClosed) && getExpander()->getEnabled() && stateLoaded && (follow != "none")
+  && hasShownComp && (tonecurve != nullptr) && (std::fabs(currentExpComp() - shownComp) >= SERIESEXP_EPS)
+  && (stateFile == originalFile()))
+  {
+    EsbyVarValue v;
+    v.name = "follow";
+    v.s = "none";
+    env->sharedVariables()->getClient()->fileSet(stateFile, "exposure", {v}, nullptr);
+  }
+}
 
-// ---------------------------------------------------------------------------------------
-// external measuring service
-// ---------------------------------------------------------------------------------------
+void TTSeriesExposure::adjusterChanged(Adjuster* a, double newval)
+{
+  if (a == adjOffset)
+    offsetAdjusted();
+}
 
 // AF point of a Panasonic raw file, in 0 - 1 of the displayed image (EXIF orientation applied);
 // false when absent or invalid (ex: 4194303.999 in manual focus on the S5 II)
@@ -422,440 +1012,6 @@ bool TTSeriesExposure::readAfPoint(const Glib::ustring& file, double& x, double&
   {
     return false;
   }
-}
-
-bool TTSeriesExposure::readServiceRef(ServiceRef& ref)
-{
-  ref = ServiceRef();
-  if (sequenceKey.empty())
-    return false;
-  Glib::KeyFile keys;
-  try
-  {
-    if (!Glib::file_test(targetsFile(), Glib::FILE_TEST_EXISTS) || !keys.load_from_file(targetsFile()))
-      return false;
-    if (!keys.has_group(sequenceKey) || !keys.has_key(sequenceKey, "service_raw"))
-      return false;
-    ref.raw = keys.get_string(sequenceKey, "service_raw");
-    ref.comp = keys.has_key(sequenceKey, "service_comp") ? keys.get_double(sequenceKey, "service_comp") : 0.0;
-    if (keys.has_key(sequenceKey, "service_point"))
-    {
-      std::vector<double> p = keys.get_double_list(sequenceKey, "service_point");
-      if (p.size() == 2)
-      {
-        ref.hasPoint = true;
-        ref.px = p[0];
-        ref.py = p[1];
-      }
-    }
-    ref.valid = !ref.raw.empty();
-    return ref.valid;
-  }
-  catch (const Glib::Error&)
-  {
-    return false;
-  }
-}
-
-void TTSeriesExposure::writeServiceRef(const ServiceRef& ref)
-{
-  Glib::KeyFile keys;
-  try
-  {
-    if (Glib::file_test(targetsFile(), Glib::FILE_TEST_EXISTS))
-      keys.load_from_file(targetsFile(), Glib::KEY_FILE_KEEP_COMMENTS);
-    keys.set_string(sequenceKey, "service_raw", ref.raw);
-    keys.set_double(sequenceKey, "service_comp", ref.comp);
-    if (ref.hasPoint)
-      keys.set_double_list(sequenceKey, "service_point", std::vector<double>{ref.px, ref.py});
-    else if (keys.has_key(sequenceKey, "service_point"))
-      keys.remove_key(sequenceKey, "service_point");
-    keys.set_string(sequenceKey, "reference", Glib::path_get_basename(ref.raw));
-    keys.set_string(sequenceKey, "time", Glib::DateTime::create_now_local().format("%Y-%m-%d %H:%M:%S"));
-    Glib::file_set_contents(targetsFile(), keys.to_data());
-  }
-  catch (const Glib::Error& e)
-  {
-    printf("TTSeriesExposure: unable to write %s: %s\n", targetsFile().c_str(), e.what().c_str());
-  }
-}
-
-// compensation applied by the tool to a file (an image is changed automatically only if it still has it)
-bool TTSeriesExposure::readApplied(const Glib::ustring& file, double& comp, double* offset)
-{
-  Glib::KeyFile keys;
-  try
-  {
-    if (!Glib::file_test(targetsFile(), Glib::FILE_TEST_EXISTS) || !keys.load_from_file(targetsFile()))
-      return false;
-    if (!keys.has_group("applied") || !keys.has_key("applied", file))
-      return false;
-    comp = keys.get_double("applied", file);
-    if (offset != nullptr)
-      *offset = (keys.has_group("applied_offset") && keys.has_key("applied_offset", file))
-              ? keys.get_double("applied_offset", file) : 0.0;
-    return true;
-  }
-  catch (const Glib::Error&)
-  {
-    return false;
-  }
-}
-
-void TTSeriesExposure::writeApplied(const Glib::ustring& file, double comp, double offset)
-{
-  Glib::KeyFile keys;
-  try
-  {
-    if (Glib::file_test(targetsFile(), Glib::FILE_TEST_EXISTS))
-      keys.load_from_file(targetsFile(), Glib::KEY_FILE_KEEP_COMMENTS);
-    keys.set_double("applied", file, comp);
-    keys.set_double("applied_offset", file, offset);
-    Glib::file_set_contents(targetsFile(), keys.to_data());
-  }
-  catch (const Glib::Error&) {}
-}
-
-// automatic exposure or histogram matching: each image gets its own exposure, the absolute
-// compensation (reference + delta) does not hold anymore
-bool TTSeriesExposure::exposureIsAutomatic()
-{
-  ProcParams pp;
-  tonecurve->write(&pp);
-  return pp.toneCurve.autoexp || pp.toneCurve.histmatching;
-}
-
-void TTSeriesExposure::setSuggestion(double comp, const Glib::ustring& text)
-{
-  suggestedComp = comp;
-  hasSuggestion = true;
-  btApply->set_sensitive(true);
-  setInfo(text);
-}
-
-// the current image becomes the reference of the sequence: its face (at the point, or near the AF
-// point, or the largest) for the service, and its exposure compensation
-void TTSeriesExposure::setReference(bool hasPoint, double px, double py)
-{
-  if (!service->isEnabled() || !sequenceReady || (tonecurve == nullptr))
-  {
-    setInfo(M(sequenceReady ? "TT_SERIESEXP_NO_SERVICE" : "TT_SERIESEXP_SEQ_WAIT"));
-    return;
-  }
-  ServiceRef ref;
-  ref.raw = originalFile();
-  ref.hasPoint = hasPoint;
-  ref.px = px;
-  ref.py = py;
-  ref.comp = currentExpComp() - sequenceOffset(); // kept without the offset of the sequence
-
-  cJSON* body = cJSON_CreateObject();
-  cJSON_AddStringToObject(body, "session", sequenceKey.c_str());
-  cJSON_AddStringToObject(body, "raw", ref.raw.c_str());
-  if (hasPoint)
-  {
-    cJSON* p = cJSON_AddArrayToObject(body, "point");
-    cJSON_AddItemToArray(p, cJSON_CreateNumber(px));
-    cJSON_AddItemToArray(p, cJSON_CreateNumber(py));
-  }
-  double ax, ay;
-  if (readAfPoint(env->getVarAsString("Fname"), ax, ay))
-  {
-    cJSON* p = cJSON_AddArrayToObject(body, "af_point");
-    cJSON_AddItemToArray(p, cJSON_CreateNumber(ax));
-    cJSON_AddItemToArray(p, cJSON_CreateNumber(ay));
-  }
-  setInfo(M("TT_SERIESEXP_WAITING"));
-  Glib::ustring file = originalFile();
-  service->post("/reference", body, [this, ref, file](cJSON* answer, const Glib::ustring& error) {
-    if (originalFile() != file)
-      return;
-    cJSON* status = answer ? cJSON_GetObjectItem(answer, "status") : nullptr;
-    if (!cJSON_IsString(status))
-    {
-      setInfo(Glib::ustring::compose(M("TT_SERIESEXP_SERVICE_ERROR"), error));
-      return;
-    }
-    Glib::ustring st = status->valuestring;
-    if (st != "ok")
-    {
-      setInfo(Glib::ustring::compose(M("TT_SERIESEXP_STATUS"), st));
-      return;
-    }
-    writeServiceRef(ref);
-    writeApplied(Glib::path_get_basename(file), ref.comp + sequenceOffset(), sequenceOffset());
-    cJSON* choice = cJSON_GetObjectItem(answer, "choice");
-    setInfo(Glib::ustring::compose(M("TT_SERIESEXP_REFERENCE_SET"),
-                                   cJSON_IsString(choice) ? choice->valuestring : "",
-                                   Glib::ustring::format(std::showpos, std::fixed, std::setprecision(2), ref.comp)));
-  });
-}
-
-// measure of the current image by the service. manual: from the measure button (the application is
-// then proposed even for an image changed by hand)
-void TTSeriesExposure::measureCurrent(bool manual, bool retried)
-{
-  if (!service->isEnabled() || !sequenceReady || (tonecurve == nullptr))
-    return;
-  ServiceRef ref;
-  if (!readServiceRef(ref))
-  {
-    if (manual)
-      setInfo(M("TT_SERIESEXP_NO_REFERENCE"));
-    return;
-  }
-  Glib::ustring file = originalFile();
-  if (Glib::path_get_basename(file) == Glib::path_get_basename(ref.raw))
-  {
-    setInfo(M("TT_SERIESEXP_IS_REFERENCE"));
-    return;
-  }
-  if (exposureIsAutomatic())
-  {
-    setInfo(M("TT_SERIESEXP_AUTOMATIC"));
-    return;
-  }
-
-  cJSON* body = cJSON_CreateObject();
-  cJSON_AddStringToObject(body, "session", sequenceKey.c_str());
-  cJSON_AddStringToObject(body, "raw", file.c_str());
-  cJSON_AddNumberToObject(body, "min_similarity", esbySettings().SeriesExpMinSimilarity);
-  double ax, ay;
-  if (readAfPoint(env->getVarAsString("Fname"), ax, ay))
-  {
-    cJSON* p = cJSON_AddArrayToObject(body, "af_point");
-    cJSON_AddItemToArray(p, cJSON_CreateNumber(ax));
-    cJSON_AddItemToArray(p, cJSON_CreateNumber(ay));
-  }
-  setInfo(M("TT_SERIESEXP_WAITING"));
-  service->post("/measure", body, [this, ref, file, manual, retried](cJSON* answer, const Glib::ustring& error) {
-    if (originalFile() != file)
-      return; // another image was opened meanwhile
-    cJSON* status = answer ? cJSON_GetObjectItem(answer, "status") : nullptr;
-    if (!cJSON_IsString(status))
-    {
-      setInfo(Glib::ustring::compose(M("TT_SERIESEXP_SERVICE_ERROR"), error));
-      return;
-    }
-    Glib::ustring st = status->valuestring;
-    auto number = [answer](const char* name, double def) {
-      cJSON* item = cJSON_GetObjectItem(answer, name);
-      return cJSON_IsNumber(item) ? item->valuedouble : def;
-    };
-
-    // the service forgot the session (inactivity): the reference is set again silently, from the
-    // raw file and the choice kept by the fork (the fingerprint is never kept), then measured again
-    if ((st == "no_reference") && !retried)
-    {
-      cJSON* again = cJSON_CreateObject();
-      cJSON_AddStringToObject(again, "session", sequenceKey.c_str());
-      cJSON_AddStringToObject(again, "raw", ref.raw.c_str());
-      if (ref.hasPoint)
-      {
-        cJSON* p = cJSON_AddArrayToObject(again, "point");
-        cJSON_AddItemToArray(p, cJSON_CreateNumber(ref.px));
-        cJSON_AddItemToArray(p, cJSON_CreateNumber(ref.py));
-      }
-      double rx, ry;
-      if (readAfPoint(ref.raw, rx, ry))
-      {
-        cJSON* p = cJSON_AddArrayToObject(again, "af_point");
-        cJSON_AddItemToArray(p, cJSON_CreateNumber(rx));
-        cJSON_AddItemToArray(p, cJSON_CreateNumber(ry));
-      }
-      service->post("/reference", again, [this, file, manual](cJSON* a, const Glib::ustring&) {
-        cJSON* s2 = a ? cJSON_GetObjectItem(a, "status") : nullptr;
-        if ((originalFile() == file) && cJSON_IsString(s2) && (Glib::ustring(s2->valuestring) == "ok"))
-          measureCurrent(manual, true);
-        else if (originalFile() == file)
-          setInfo(M("TT_SERIESEXP_NO_REFERENCE"));
-      });
-      return;
-    }
-
-    if (st == "ok")
-    {
-      double delta = number("delta_ev", 0.0);
-      double similarity = number("similarity", 0.0);
-      double clipped = number("clipped_fraction", 0.0);
-      double comp = std::max(SERIESEXP_MIN_COMP, std::min(SERIESEXP_MAX_COMP, ref.comp + delta + sequenceOffset()));
-      Glib::ustring values = Glib::ustring::compose(M("TT_SERIESEXP_MEASURED"),
-                                                    Glib::ustring::format(std::showpos, std::fixed, std::setprecision(2), delta),
-                                                    Glib::ustring::format(std::fixed, std::setprecision(2), similarity),
-                                                    Glib::ustring::format(std::fixed, std::setprecision(1), clipped * 100.0),
-                                                    Glib::ustring::format(std::showpos, std::fixed, std::setprecision(2), comp));
-      // untouched: the compensation applied by the tool, or 0 (default profile) without record
-      double applied;
-      double current = currentExpComp();
-      bool untouched = readApplied(Glib::path_get_basename(file), applied) ? (std::fabs(current - applied) < 0.005)
-                                                                           : (std::fabs(current) < 0.005);
-      const EsbySettings& s = esbySettings();
-      bool automatic = !manual && untouched && (similarity >= s.SeriesExpAutoSimilarity)
-                    && (clipped <= s.SeriesExpMaxClipped) && (std::fabs(delta) <= s.SeriesExpMaxEv);
-      if (automatic)
-      {
-        setExpComp(comp);
-        writeApplied(Glib::path_get_basename(file), comp, sequenceOffset());
-        hasSuggestion = false;
-        btApply->set_sensitive(false);
-        setInfo(M("TT_SERIESEXP_AUTO_APPLIED") + "\n" + values);
-      }
-      else
-        setSuggestion(comp, M(untouched || manual ? "TT_SERIESEXP_SUGGESTED" : "TT_SERIESEXP_SUGGESTED_MANUAL") + "\n" + values);
-      return;
-    }
-
-    // no face (person seen from the back): the AF area measure is only proposed, never applied
-    cJSON* fallback = cJSON_GetObjectItem(answer, "fallback_af");
-    if ((st == "no_face") && cJSON_IsObject(fallback))
-    {
-      cJSON* d = cJSON_GetObjectItem(fallback, "delta_ev");
-      if (cJSON_IsNumber(d))
-      {
-        double comp = std::max(SERIESEXP_MIN_COMP, std::min(SERIESEXP_MAX_COMP, ref.comp + d->valuedouble + sequenceOffset()));
-        setSuggestion(comp, Glib::ustring::compose(M("TT_SERIESEXP_SUGGESTED_AF"),
-                                                   Glib::ustring::format(std::showpos, std::fixed, std::setprecision(2), d->valuedouble),
-                                                   Glib::ustring::format(std::showpos, std::fixed, std::setprecision(2), comp)));
-        return;
-      }
-    }
-    // no_match: another person is probably on the AF point, no fallback
-    setInfo(Glib::ustring::compose(M(st == "no_match" ? "TT_SERIESEXP_NO_MATCH" : "TT_SERIESEXP_STATUS"), st));
-  });
-}
-
-// ---------------------------------------------------------------------------------------
-// offset of the sequence
-// ---------------------------------------------------------------------------------------
-
-// shared variable exposure.offset of the image (0 when not set, or without server)
-double TTSeriesExposure::sequenceOffset()
-{
-  if (env == nullptr)
-    return 0.0;
-  RtVariable* v = env->getVariableByName("exposure.offset");
-  if ((v == nullptr) || !v->isDefined() || (v->getScope() == RtVariableScope::Internal) || (v->getScope() == RtVariableScope::Exif))
-    return 0.0;
-  return v->getAsDouble();
-}
-
-// the slider was moved: the offset is set on the sequence of the image; the server sends the change
-// to every instance (this one included), offsetChanged() applies it
-void TTSeriesExposure::offsetAdjusted()
-{
-  if (!sequenceReady || (env == nullptr))
-    return;
-  EsbyVarValue value;
-  value.name = "exposure.offset";
-  value.type = RT_VARIABLE_TYPE_DOUBLE;
-  value.d = adjOffset->getValue();
-  env->sharedVariables()->set(EsbySharedVariables::Where::Sequence, value);
-}
-
-// the shared variables of the image were (re)loaded: an image still having the compensation applied by
-// the tool gets the new offset (old/new button to compare); an image changed by hand only gets a message
-void TTSeriesExposure::offsetChanged()
-{
-  if ((env == nullptr) || (tonecurve == nullptr))
-    return;
-  EsbySharedVariables* shared = env->sharedVariables();
-  adjOffset->set_sensitive(shared->isConnected() && sequenceReady);
-  double offset = sequenceOffset();
-  adjOffset->block(true);
-  adjOffset->setValue(offset);
-  adjOffset->block(false);
-  // the offset is 0 while the variables of a new image or sequence are loading: nothing is done then
-  if (!getExpander()->getEnabled() || !sequenceReady || !shared->isLoaded())
-    return;
-  if (exposureIsAutomatic())
-  {
-    if (std::fabs(offset - shownOffset) >= 0.005)
-      setInfo(M("TT_SERIESEXP_AUTOMATIC"));
-    return;
-  }
-
-  // the image is only recalculated in the active window: N instances would recalculate together,
-  // the others do it when they get the focus
-  Gtk::Window* window = dynamic_cast<Gtk::Window*>(get_toplevel());
-  if ((window != nullptr) && !focusConnected)
-  {
-    // the window becomes active in the default handler of focus-in: the change is applied just after
-    window->signal_focus_in_event().connect([this](GdkEventFocus*) {
-      if (offsetPending)
-        Glib::signal_idle().connect_once([this]() { if (offsetPending) offsetChanged(); });
-      return false;
-    }, true);
-    focusConnected = true;
-  }
-  if ((window != nullptr) && !window->is_active())
-  {
-    offsetPending = true;
-    setInfo(Glib::ustring::compose(M("TT_SERIESEXP_OFFSET_PENDING"),
-                                   Glib::ustring::format(std::showpos, std::fixed, std::setprecision(2), offset)));
-    return;
-  }
-  offsetPending = false;
-
-  Glib::ustring file = originalFile();
-  if (file != offsetFile)
-  {
-    offsetFile = file;
-    hasShownOffset = false;
-    btToggle->hide();
-  }
-  Glib::ustring name = Glib::path_get_basename(file);
-  double applied = 0.0, appliedOffset = 0.0;
-  double current = currentExpComp();
-  // without record, an image at 0 (default profile) is taken as untouched, with no offset
-  bool known = readApplied(name, applied, &appliedOffset);
-  if (!hasShownOffset)
-  {
-    // first look at this image: the offset it was given. The same file may be open in another
-    // instance, which records its own changes: this instance compares with what it shows
-    shownOffset = (known && (std::fabs(current - applied) < 0.005)) ? appliedOffset : 0.0;
-    hasShownOffset = true;
-  }
-  if (std::fabs(offset - shownOffset) < 0.005)
-    return; // nothing new
-  // untouched: the compensation of the tool without its offset, plus the offset shown here
-  double base = known ? applied - appliedOffset : 0.0;
-  if (std::fabs(current - (base + shownOffset)) >= 0.005)
-  {
-    setInfo(Glib::ustring::compose(M("TT_SERIESEXP_OFFSET_NOT_APPLIED"),
-                                   Glib::ustring::format(std::showpos, std::fixed, std::setprecision(2), shownOffset),
-                                   Glib::ustring::format(std::showpos, std::fixed, std::setprecision(2), offset)));
-    return;
-  }
-  double comp = std::max(SERIESEXP_MIN_COMP, std::min(SERIESEXP_MAX_COMP, current - shownOffset + offset));
-  shownOffset = offset;
-  if (!btToggle->is_visible())
-    toggleOld = current; // the value before the first change seen on this image
-  toggleNew = comp;
-  toggleShowsNew = true;
-  setExpComp(comp);
-  writeApplied(name, comp, offset);
-  btToggle->set_label(M("TT_SERIESEXP_TOGGLE_OLD"));
-  btToggle->show();
-  setInfo(Glib::ustring::compose(M("TT_SERIESEXP_OFFSET_APPLIED"),
-                                 Glib::ustring::format(std::showpos, std::fixed, std::setprecision(2), offset),
-                                 Glib::ustring::format(std::showpos, std::fixed, std::setprecision(2), comp)));
-}
-
-void TTSeriesExposure::react(FakeProcEvent ev)
-{
-  if (!sharedConnected && (env != nullptr))
-  {
-    env->sharedVariables()->signalChanged().connect(sigc::mem_fun(*this, &TTSeriesExposure::offsetChanged));
-    sharedConnected = true;
-  }
-  if ((ev == FakeEvExifTransmitted) && getExpander()->getEnabled())
-    startSequence();
-}
-
-void TTSeriesExposure::adjusterChanged(Adjuster* a, double newval)
-{
-  if (a == adjOffset)
-    offsetAdjusted();
 }
 
 Glib::ustring TTSeriesExposure::themeExport()

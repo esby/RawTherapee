@@ -50,6 +50,8 @@ public:
     bool isConnected() const { return client && client->isConnected(); }
     // the variables of the current image and sequence are loaded (false while loading, or without server)
     bool isLoaded() const { return loadedOk; }
+    // the connection to the server, for the other requests (file data, a variable of another folder)
+    EsbyWBClient* getClient() { return client.get(); }
 
     void set(Where where, const EsbyVarValue& value);
     void unset(Where where, const Glib::ustring& name);

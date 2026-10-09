@@ -275,6 +275,44 @@ class ServerTest(unittest.TestCase):
         f.close()
         s.close()
 
+    def test_exposure_apply(self):
+        import io
+        day = os.path.join(self.root, "photos", "Japan Expo", "Vendredi")
+        seq = os.path.join(day, "081 - Bowsette")
+        os.makedirs(os.path.join(seq, "pp"))
+        raws = {}
+        for name, comp in (("P1.RW2", 0.5), ("P2.RW2", 1.0), ("P3.RW2", 0.0), ("P4.RW2", 0.2)):
+            raw = os.path.join(seq, "pp", name)
+            open(raw, "w").close()
+            with open(raw + ".pp3", "w") as f:
+                f.write("[Version]\nAppVersion=5\n\n[Exposure]\nAuto=false\nCompensation=%s\nBrightness=0\n" % comp)
+            raws[name] = raw
+        client = self.client()
+        ref = json.dumps({"raw": raws["P1.RW2"], "comp": 0.5})
+        client.request("var_set", path=day, name="exposure.reference", value=ref)     # parent reference
+        client.request("var_set", path=seq, name="exposure.offset", value=0.3)
+        client.request("file_set", file=raws["P2.RW2"], namespace="exposure", fields={"delta": 0.25, "comp": 1.0})
+        client.request("file_set", file=raws["P3.RW2"], namespace="exposure", fields={"delta": 1.0, "follow": "none"})
+        client.request("file_set", file=raws["P4.RW2"], namespace="exposure", fields={"delta": 0.0, "comp": 0.9})
+        out = io.StringIO()
+        esbywb.exposure_apply(client, esbywb.normalize(seq), True, out)
+        self.assertIn("P2.RW2.pp3: +1.00 -> +1.05", out.getvalue())
+        self.assertEqual(esbywb.read_compensation(raws["P2.RW2"] + ".pp3"), 1.0)   # dry run
+        out = io.StringIO()
+        esbywb.exposure_apply(client, esbywb.normalize(seq), False, out)
+        self.assertEqual(esbywb.read_compensation(raws["P2.RW2"] + ".pp3"), 1.05)  # 0.5 + 0.25 + 0.3
+        self.assertEqual(esbywb.read_compensation(raws["P3.RW2"] + ".pp3"), 0.0)   # not applied
+        self.assertEqual(esbywb.read_compensation(raws["P4.RW2"] + ".pp3"), 0.2)   # changed by hand
+        self.assertIn("changed by hand", out.getvalue())
+        data = client.request("file_get", file=raws["P4.RW2"], namespace="exposure")["data"]
+        self.assertEqual(data["follow"], "none")
+        with open(raws["P2.RW2"] + ".pp3") as f:
+            self.assertIn("Brightness=0", f.read())
+        # a reference of the series wins over the one of the parent
+        client.request("var_set", path=seq, name="exposure.reference", value=json.dumps({"raw": raws["P2.RW2"], "comp": 0.0}))
+        esbywb.exposure_apply(client, esbywb.normalize(seq), False, io.StringIO())
+        self.assertEqual(esbywb.read_compensation(raws["P2.RW2"] + ".pp3"), 0.55)
+
     def test_second_server_refused(self):
         with self.assertRaises(SystemExit):
             esbywb.prepare_socket(self.socket_path)

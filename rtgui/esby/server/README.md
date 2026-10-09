@@ -75,6 +75,19 @@ Protocole : `var_set` (`path`, `sequence` optionnel, `name`, `value`), `var_unse
 `var_list` (tout ce qui est posé). `path` vaut `global` (ou `*`) pour les variables globales ;
 une séquence est stockée sous la clé `dossier#séquence`. `move` déplace aussi les variables.
 
+## Exposition des images fermées (TTSeriesExposure)
+
+```bash
+./esbywb.py exposure-apply "~/photos/Japan Expo 2026/Vendredi" --dry-run   # ce qui changerait
+./esbywb.py exposure-apply "~/photos/Japan Expo 2026/Vendredi"
+```
+
+Pour chaque image du dossier (et en dessous) qui suit une référence et dont l'écart est connu :
+compensation = référence suivie + écart + décalage de sa série, écrite dans la ligne
+`Compensation=` de la section `[Exposure]` de son pp3 (à côté du RAW, ou du DNG), le reste du
+fichier inchangé. Une image dont le pp3 a été retouché depuis la dernière application passe à
+« not applied » et n'est pas changée. `--dry-run` n'écrit rien (ni pp3, ni serveur).
+
 ## Tests
 
 ```bash

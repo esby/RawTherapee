@@ -383,6 +383,51 @@ void EsbyWBClient::observe(const Glib::ustring& file, const std::map<std::string
     send(request, nullptr);
 }
 
+// typed value of a JSON item; false for null, objects and arrays
+static bool readJsonValue(cJSON* value, EsbyVarValue& v)
+{
+    if (cJSON_IsBool(value))
+    {
+        v.type = RT_VARIABLE_TYPE_BOOL;
+        v.b = cJSON_IsTrue(value);
+    }
+    else if (cJSON_IsNumber(value))
+    {
+        // JSON does not tell an integer from a real number: an integral value is an integer
+        double d = value->valuedouble;
+        if ((std::floor(d) == d) && (std::fabs(d) < 1e9))
+        {
+            v.type = RT_VARIABLE_TYPE_INT;
+            v.i = (int) d;
+        }
+        else
+        {
+            v.type = RT_VARIABLE_TYPE_DOUBLE;
+            v.d = d;
+        }
+    }
+    else if (cJSON_IsString(value))
+    {
+        v.type = RT_VARIABLE_TYPE_STRING;
+        v.s = value->valuestring;
+    }
+    else
+        return false;
+    return true;
+}
+
+static void addJsonValue(cJSON* object, const char* name, const EsbyVarValue& value)
+{
+    switch (value.type)
+    {
+        case RT_VARIABLE_TYPE_INT:    cJSON_AddNumberToObject(object, name, value.i); break;
+        case RT_VARIABLE_TYPE_DOUBLE: cJSON_AddNumberToObject(object, name, value.d); break;
+        case RT_VARIABLE_TYPE_BOOL:   cJSON_AddBoolToObject(object, name, value.b); break;
+        case RT_VARIABLE_TYPE_UNDEF:  cJSON_AddNullToObject(object, name); break;
+        default:                      cJSON_AddStringToObject(object, name, value.s.c_str()); break;
+    }
+}
+
 static void addVarTarget(cJSON* request, const Glib::ustring& path, const Glib::ustring& sequence)
 {
     cJSON_AddStringToObject(request, "path", path.c_str());
@@ -403,37 +448,11 @@ void EsbyWBClient::varGet(const Glib::ustring& path, const Glib::ustring& sequen
         {
             cJSON_ArrayForEach(item, list)
             {
-                cJSON* value = cJSON_GetObjectItemCaseSensitive(item, "value");
                 EsbyVarValue v;
                 v.name = item->string;
                 v.scope = jsonString(item, "scope");
                 v.origin = jsonString(item, "origin");
-                if (cJSON_IsBool(value))
-                {
-                    v.type = RT_VARIABLE_TYPE_BOOL;
-                    v.b = cJSON_IsTrue(value);
-                }
-                else if (cJSON_IsNumber(value))
-                {
-                    // JSON does not tell an integer from a real number: an integral value is an integer
-                    double d = value->valuedouble;
-                    if ((std::floor(d) == d) && (std::fabs(d) < 1e9))
-                    {
-                        v.type = RT_VARIABLE_TYPE_INT;
-                        v.i = (int) d;
-                    }
-                    else
-                    {
-                        v.type = RT_VARIABLE_TYPE_DOUBLE;
-                        v.d = d;
-                    }
-                }
-                else if (cJSON_IsString(value))
-                {
-                    v.type = RT_VARIABLE_TYPE_STRING;
-                    v.s = value->valuestring;
-                }
-                else
+                if (!readJsonValue(cJSON_GetObjectItemCaseSensitive(item, "value"), v))
                     continue;
                 variables.push_back(v);
             }
@@ -449,13 +468,7 @@ void EsbyWBClient::varSet(const Glib::ustring& path, const Glib::ustring& sequen
     cJSON_AddStringToObject(request, "op", "var_set");
     addVarTarget(request, path, sequence);
     cJSON_AddStringToObject(request, "name", value.name.c_str());
-    switch (value.type)
-    {
-        case RT_VARIABLE_TYPE_INT:    cJSON_AddNumberToObject(request, "value", value.i); break;
-        case RT_VARIABLE_TYPE_DOUBLE: cJSON_AddNumberToObject(request, "value", value.d); break;
-        case RT_VARIABLE_TYPE_BOOL:   cJSON_AddBoolToObject(request, "value", value.b); break;
-        default:                      cJSON_AddStringToObject(request, "value", value.s.c_str()); break;
-    }
+    addJsonValue(request, "value", value);
     send(request, [callback](cJSON* answer) {
         if (callback)
             callback(answer != nullptr, answer ? Glib::ustring() : Glib::ustring("failed"));
@@ -469,6 +482,46 @@ void EsbyWBClient::varUnset(const Glib::ustring& path, const Glib::ustring& sequ
     cJSON_AddStringToObject(request, "op", "var_unset");
     addVarTarget(request, path, sequence);
     cJSON_AddStringToObject(request, "name", name.c_str());
+    send(request, [callback](cJSON* answer) {
+        if (callback)
+            callback(answer != nullptr, answer ? Glib::ustring() : Glib::ustring("failed"));
+    });
+}
+
+void EsbyWBClient::fileGet(const Glib::ustring& file, const Glib::ustring& ns, VarsCallback callback)
+{
+    cJSON* request = cJSON_CreateObject();
+    cJSON_AddStringToObject(request, "op", "file_get");
+    cJSON_AddStringToObject(request, "file", file.c_str());
+    cJSON_AddStringToObject(request, "namespace", ns.c_str());
+    send(request, [callback](cJSON* answer) {
+        std::vector<EsbyVarValue> fields;
+        cJSON* data = answer ? cJSON_GetObjectItemCaseSensitive(answer, "data") : nullptr;
+        cJSON* item = nullptr;
+        if (cJSON_IsObject(data))
+        {
+            cJSON_ArrayForEach(item, data)
+            {
+                EsbyVarValue v;
+                v.name = item->string;
+                if (readJsonValue(item, v))
+                    fields.push_back(v);
+            }
+        }
+        callback(answer != nullptr, fields);
+    });
+}
+
+void EsbyWBClient::fileSet(const Glib::ustring& file, const Glib::ustring& ns, const std::vector<EsbyVarValue>& fields,
+                           DoneCallback callback)
+{
+    cJSON* request = cJSON_CreateObject();
+    cJSON_AddStringToObject(request, "op", "file_set");
+    cJSON_AddStringToObject(request, "file", file.c_str());
+    cJSON_AddStringToObject(request, "namespace", ns.c_str());
+    cJSON* object = cJSON_AddObjectToObject(request, "fields");
+    for (const EsbyVarValue& f : fields)
+        addJsonValue(object, f.name.c_str(), f);
     send(request, [callback](cJSON* answer) {
         if (callback)
             callback(answer != nullptr, answer ? Glib::ustring() : Glib::ustring("failed"));

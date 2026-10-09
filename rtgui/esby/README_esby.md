@@ -38,23 +38,33 @@ expliquent le *pourquoi*.
 | TTTweaker | rotation automatique (Panasonic), fermeture après enregistrement… |
 | TTVarDisplayer | afficher les variables, bouton de copie dans le presse-papier |
 | TTSeriesWB | décalage de la balance des blancs au flash, en mireds (voir `SPEC_series_wb.md`) |
-| TTSeriesExposure | exposition par séquence : cible apprise à la pipette (Ctrl+clic) sur une référence, appliquée d'un clic aux autres photos |
+| TTSeriesExposure | exposition par série : chaque image suit une référence (de la série ou du dossier parent), plus un décalage de série |
 
-### TTSeriesExposure : séquences
+### TTSeriesExposure : séries et références
 
-- La séquence d'une photo est son **dossier numéroté** (celui qui contient `pp/`), qu'elle soit dans
+- La **série** d'une photo est son **dossier numéroté** (celui qui contient `pp/`), qu'elle soit dans
   `pp/` ou déjà dans `pp/dpp/`. `ESBY_ORIGIN` (voir `rt_queue`) donne le chemin d'origine.
+- Une **référence** est posée pour la série ou pour le dossier parent (hérité par les séries en
+  dessous qui n'en ont pas) : variable partagée `exposure.reference`, texte JSON `{raw, comp,
+  point?, target?}`. `comp` et `target` sont gardés **sans** le décalage de la série. Ctrl+clic avec
+  la pipette sur la zone de référence (la luminosité devient la cible ; avec le service, le point
+  désigne le visage), ou bouton « Reference: this image » avec le service ; la liste choisit
+  série ou parent. « Not a reference » la retire.
+- Chaque autre image **suit** une référence : la plus proche (par défaut : celle de la série, sinon
+  du parent), celle de la série, celle du parent, ou aucune (**not applied** : l'outil ne la touche
+  pas). Elle a un **écart** avec sa référence (`delta`, IL), mesuré par un clic de pipette ou par le
+  service : compensation = `comp` de la référence + écart + décalage de la série.
+- Une exposition **changée à la main** fait passer l'image à « not applied » (détecté au prochain
+  recalcul ou à la fermeture). Choisir à nouveau une référence à suivre la réapplique.
+- **Décalage de série** (curseur, variable partagée `exposure.offset`) : préférence de rendu, posée
+  sur la série par le curseur ou sur un dossier dans le panneau des variables. Tout changement de
+  référence ou de décalage est appliqué aux images ouvertes, dans la fenêtre active (les autres
+  instances à leur prochain focus), et aux images fermées par `esbywb.py exposure-apply`.
+- L'état de chaque image est gardé par le serveur (`file_data`, espace `exposure` : `follow`,
+  `delta`, `comp` = dernière compensation appliquée). Il faut le serveur. L'ancien fichier
+  `esby-exposure-targets.ini` n'est plus utilisé : les références sont à reposer.
 - La pipette lit la luminosité après la compensation d'exposition, la luminosité, le contraste et la
   compression des hautes lumières de l'outil Exposition, avant les courbes (`EUID_ToneCurve1`).
-- Les cibles sont dans `~/.config/RawTherapee5-esby/esby-exposure-targets.ini`.
-- **Décalage de séquence** (curseur, variable partagée `exposure.offset`) : préférence de rendu
-  ajoutée à la compensation mesurée (référence + écart + décalage). Le curseur la pose sur la
-  séquence (le dossier numéroté) ; elle peut aussi être posée sur un dossier, hérité par ses séquences (panneau des
-  variables ou `esbywb.py var-set`). Les cibles, les références et les mesures sont gardées sans
-  décalage. La compensation appliquée par l'outil et le décalage qu'elle contient sont notés par
-  image (`[applied]`, `[applied_offset]`) : une image qui les a encore reçoit le nouveau décalage,
-  tout de suite si elle est ouverte, sinon à sa réouverture, avec un bouton ancienne/nouvelle
-  valeur ; une image retouchée à la main n'est pas changée (message seulement). Il faut le serveur.
 
 ### TTSeriesExposure : service externe de mesure d'exposition (optionnel)
 
@@ -70,12 +80,12 @@ il doit répondre en JSON (POST) à :
   référence, mesurée dans le RAW linéaire), `similarity`, `clipped_fraction`, et pour `no_face`
   éventuellement `fallback_af {delta_ev}`.
 
-Positions en 0 à 1 de l'image affichée (orientation EXIF appliquée). Session : la clé de séquence.
+Positions en 0 à 1 de l'image affichée (orientation EXIF appliquée). Session : le dossier de la
+référence suivie et le nom de son RAW.
 
-Application : compensation = compensation de la référence + `delta_ev` (absolue, donc idempotente).
+Application : écart = `delta_ev`, compensation = référence + écart + décalage (absolue, donc idempotente).
 Automatique si similarité ≥ `SeriesExpAutoSimilarity` (0,6), part écrêtée ≤ `SeriesExpMaxClipped`
-(5 %), |`delta_ev`| ≤ `SeriesExpMaxEv` (2 IL) et image non retouchée (compensation appliquée par
-l'outil, ou 0 sans trace) ; sinon proposée. Le repli sur la zone AF (`no_face`) n'est jamais
+(5 %), |`delta_ev`| ≤ `SeriesExpMaxEv` (2 IL) et image suivant une référence ; sinon proposée. Le repli sur la zone AF (`no_face`) n'est jamais
 automatique ; `no_match` n'a pas de repli. `no_reference` (service redémarré ou session oubliée) :
 nouvelle référence silencieuse à partir du RAW et du choix mémorisés. Exposition automatique ou
 correspondance d'histogramme actives : aucune correction.
