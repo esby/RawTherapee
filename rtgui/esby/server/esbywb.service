@@ -2,7 +2,7 @@
 #
 # installation:
 #   mkdir -p ~/.config/systemd/user
-#   cp esbywb.service ~/.config/systemd/user/
+#   cp $HOME/rt-dev/rt_esby/rtgui/esby/server/esbywb.service ~/.config/systemd/user/
 #   (adapt ExecStart to the location of esbywb.py)
 #   systemctl --user daemon-reload
 #   systemctl --user enable --now esbywb
