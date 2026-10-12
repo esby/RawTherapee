@@ -74,7 +74,7 @@ TT_SERIESEXP_APPLY_TOOLTIP;Apply the gap suggested by the last measure.
 TT_SERIESEXP_AUTOMATIC;Automatic exposure or histogram matching is on: no correction (each image gets its own exposure).
 TT_SERIESEXP_AUTO_APPLIED;Gap measured and applied.
 TT_SERIESEXP_GAP;Gap of this image (EV)
-TT_SERIESEXP_GAP_MEASURED;Gap measured with the pipette: %1 EV (a second click refines it).
+TT_SERIESEXP_GAP_MEASURED;Gap measured with the pipette: %1 EV (a second ctrl + click refines it).
 TT_SERIESEXP_GAP_TOOLTIP;Exposure gap of this image with the reference of its series, added to its compensation, for this image only (never shared). Measured with the pipette or the service, or set here by hand.\nThe compensation of the whole series is changed with the exposure tool itself, with "Share my changes" of the shared changes tool.
 TT_SERIESEXP_IS_REFERENCE;This image is the reference of the sequence.
 TT_SERIESEXP_LABEL;Series Exposure
@@ -84,15 +84,15 @@ TT_SERIESEXP_MEASURE_TOOLTIP;Measure the gap of this image again with the measur
 TT_SERIESEXP_NOT_A_REFERENCE;This image is not a reference.
 TT_SERIESEXP_NO_IMAGE;No image.
 TT_SERIESEXP_NO_MATCH;Face of the reference not found (%1). If this happens on most images, the reference is probably wrong.
-TT_SERIESEXP_NO_REFERENCE;No reference for this series: ctrl + click with the pipette on the reference area of the reference image, or "Reference: this image".
+TT_SERIESEXP_NO_REFERENCE;No reference for this series: ctrl + shift + click with the pipette on the reference area of the reference image, or "Reference: this image".
 TT_SERIESEXP_NO_REFERENCE_BUTTON;Not a reference
 TT_SERIESEXP_NO_REFERENCE_TOOLTIP;This image is not the reference of its series anymore.
 TT_SERIESEXP_NO_SERVER;esby server unavailable: the references and the state of the images are kept by it.
-TT_SERIESEXP_NO_TARGET;The reference has no brightness target: ctrl + click with the pipette on the reference area of the reference image.
+TT_SERIESEXP_NO_TARGET;The reference has no brightness target: ctrl + shift + click with the pipette on the reference area of the reference image.
 TT_SERIESEXP_NO_VALUE;No value under the pipette.
 TT_SERIESEXP_OFF;The tool is off: turn it on to use the pipette.
 TT_SERIESEXP_PIPETTE;Pipette
-TT_SERIESEXP_PIPETTE_TOOLTIP;Ctrl + click on the reference area (a face) of the reference image: it becomes the reference of the series, its brightness the target.\nClick on the same area of another image: its gap with the reference is measured and applied. A second click refines it.
+TT_SERIESEXP_PIPETTE_TOOLTIP;Ctrl + shift + click on the reference area (a face) of the reference image: it becomes the reference of its series, its brightness the target (ctrl + click is enough while the series has no reference).\nCtrl + click on the same area of another image: its gap with the reference is measured and applied. A second ctrl + click refines it.\nA click without ctrl moves the image, as with every pipette of RawTherapee.
 TT_SERIESEXP_PIPETTE_WAIT;Pipette: active when the image is ready.
 TT_SERIESEXP_REF;Reference of the series: %1.
 TT_SERIESEXP_REFERENCE;Reference: this image

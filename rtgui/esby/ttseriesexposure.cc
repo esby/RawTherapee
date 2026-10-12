@@ -508,9 +508,11 @@ bool TTSeriesExposure::button1Pressed(int modifierKey)
     return true;
   }
 
-  // ctrl + click: this image becomes the reference of the series; its brightness is the target and,
-  // with the service, the point designates the face
-  if (modifierKey & GDK_CONTROL_MASK)
+  // RawTherapee gives the clicks to a pipette tool only with ctrl (a plain click moves the image):
+  // ctrl + shift + click, or ctrl + click while the series has no reference with a target: this image
+  // becomes the reference of the series; its brightness is the target and, with the service, the
+  // point designates the face. ctrl + click on another image: its gap is measured.
+  if ((modifierKey & GDK_SHIFT_MASK) || !reference.valid || !reference.hasTarget || isReference())
   {
     bool hasPoint = false;
     double px = 0.0, py = 0.0;

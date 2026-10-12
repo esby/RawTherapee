@@ -81,10 +81,11 @@ les autres à leur prochain focus), plus tard dans les images ouvertes ensuite.
   **computed** (mesuré) ou **manual** (curseur). « No gap » le remet à 0.
 - **Référence de la série** : variable partagée `exposure.reference` posée sur le dossier de la série,
   texte JSON `{raw, comp, gap, target?, point?}` (compensation et écart de la référence quand elle a
-  été posée). Ctrl+clic à la pipette sur la zone de référence (la luminosité devient la cible ; avec
-  le service, le point désigne le visage), ou « Reference: this image » avec le service. Elle ne sert
-  qu'à calculer les écarts.
-- **Pipette** (clic) : écart = log2(cible / luminosité) − comp. de la référence + comp. de l'image +
+  été posée). Ctrl+Maj+clic à la pipette sur la zone de référence (Ctrl+clic suffit tant que la série
+  n'a pas de référence ; la luminosité devient la cible ; avec le service, le point désigne le
+  visage), ou « Reference: this image » avec le service. Elle ne sert qu'à calculer les écarts.
+- RawTherapee ne transmet les clics à un outil pipette qu'avec Ctrl (un clic simple déplace l'image).
+- **Pipette** (Ctrl+clic sur une autre image) : écart = log2(cible / luminosité) − comp. de la référence + comp. de l'image +
   écart de la référence (la luminosité suit 2^compensation ; la courbe de l'outil Exposition rend le
   calcul approché : un deuxième clic l'affine). **Service** : écart = `delta_ev` + écart de la
   référence ; appliqué automatiquement à l'ouverture d'une image sans écart si les critères sont
