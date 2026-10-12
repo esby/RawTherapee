@@ -78,6 +78,7 @@ une séquence est stockée sous la clé `dossier#séquence`. `move` déplace aus
 ## Modifications partagées par série (TTShare)
 
 ```bash
+./esbywb.py shares                                                          # les séries concernées
 ./esbywb.py shares "~/photos/Japan Expo 2026/Vendredi/081 - Bowsette"       # décalages et valeurs
 ./esbywb.py share-zero "~/photos/Japan Expo 2026/Vendredi/081 - Bowsette"   # décalages à 0 : les images reviennent
 ./esbywb.py share-reset "~/photos/Japan Expo 2026/Vendredi/081 - Bowsette"  # tout oublier (les images gardent leurs valeurs)

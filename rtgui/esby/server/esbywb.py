@@ -28,7 +28,7 @@ message per line.
     esbywb vars                              every variable set, where it is set
     esbywb show <folder> [--sequence S]      what applies to a folder: white balance and variables
     esbywb exposure-apply <folder> [--dry-run]   exposure of the closed images (TTSeriesExposure)
-    esbywb shares <folder>                   parameters shared by the images of a series
+    esbywb shares [<folder>]                 the series having shared parameters, or those of a series
     esbywb share-zero <folder>               shifts back to 0 (the images get their own values back)
     esbywb share-reset <folder>              forget them (the images keep their current values)
     esbywb share-copy <from> <to>            the shared parameters of a folder replace the ones of another
@@ -493,6 +493,15 @@ class Server:
             return {"file": filename}
         if op == "file_list":
             return {"files": self.state.files_below(request["path"], request["namespace"])}
+        if op == "share_list":
+            images = {}
+            for filename, data in self.state.file_data.items():
+                if "share" in data:
+                    folder = sequence_folder(filename)
+                    images[folder] = images.get(folder, 0) + 1
+            series = sorted(set(self.state.shares) | set(images))
+            return {"series": [{"path": p, "keys": len(self.state.shares.get(p, {})), "images": images.get(p, 0)}
+                               for p in series]}
         if op == "share_get":
             return {"keys": self.state.shares.get(normalize(request["path"]), {})}
         if op == "share_change":
@@ -706,8 +715,9 @@ def main(argv=None):
     p.add_argument("folder")
     p.add_argument("--sequence", help="sequence of the folder")
 
-    p = sub.add_parser("shares", help="parameters shared by the images of a series")
-    p.add_argument("folder")
+    p = sub.add_parser("shares", help="the series having shared parameters (with the number of images having "
+                                      "received them), or the shared parameters of a series")
+    p.add_argument("folder", nargs="?")
     p = sub.add_parser("share-zero", help="the shifts of a series go back to 0: its images get their own values back")
     p.add_argument("folder")
     p = sub.add_parser("share-reset", help="forget the shared parameters of a series (the images keep their current values)")
@@ -773,6 +783,9 @@ def run_command(client, args):
             print("global" if key == GLOBAL_KEY else key)
             for name, value in sorted(values.items()):
                 print("  %-30s %s" % (name, format_value(value)))
+    elif args.command == "shares" and args.folder is None:
+        for entry in client.request("share_list")["series"]:
+            print("%-70s %3d keys, %3d images" % (entry["path"], entry["keys"], entry["images"]))
     elif args.command == "shares":
         keys = client.request("share_get", path=normalize(args.folder))["keys"]
         for key, entry in sorted(keys.items()):
