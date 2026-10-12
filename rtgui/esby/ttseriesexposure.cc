@@ -196,6 +196,8 @@ TTSeriesExposure::TTSeriesExposure() :
     {
       if (getEditProvider() != nullptr)
         subscribe();
+      else
+        setInfo(M("TT_SERIESEXP_PIPETTE_WAIT")); // subscribed when the image is ready (setEditProvider)
     }
     else if (isCurrentSubscriber())
       unsubscribe();
@@ -223,9 +225,13 @@ void TTSeriesExposure::deployLate()
 {
 }
 
+// the pipette pressed before the image was ready (or kept from the previous image) is subscribed now:
+// otherwise the button looked pressed but the clicks never reached the tool
 void TTSeriesExposure::setEditProvider(EditDataProvider* provider)
 {
   EditSubscriber::setEditProvider(provider);
+  if ((provider != nullptr) && tbPipette->get_active() && !isCurrentSubscriber())
+    subscribe();
 }
 
 void TTSeriesExposure::switchOffEditMode()
@@ -491,7 +497,10 @@ void TTSeriesExposure::removeReference()
 bool TTSeriesExposure::button1Pressed(int modifierKey)
 {
   if (!getExpander()->getEnabled() || (tonecurve == nullptr))
+  {
+    setInfo(M("TT_SERIESEXP_OFF"));
     return false;
+  }
   double luminance;
   if (!measure(luminance))
   {

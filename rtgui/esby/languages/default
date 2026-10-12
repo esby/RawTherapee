@@ -90,8 +90,10 @@ TT_SERIESEXP_NO_REFERENCE_TOOLTIP;This image is not the reference of its series 
 TT_SERIESEXP_NO_SERVER;esby server unavailable: the references and the state of the images are kept by it.
 TT_SERIESEXP_NO_TARGET;The reference has no brightness target: ctrl + click with the pipette on the reference area of the reference image.
 TT_SERIESEXP_NO_VALUE;No value under the pipette.
+TT_SERIESEXP_OFF;The tool is off: turn it on to use the pipette.
 TT_SERIESEXP_PIPETTE;Pipette
 TT_SERIESEXP_PIPETTE_TOOLTIP;Ctrl + click on the reference area (a face) of the reference image: it becomes the reference of the series, its brightness the target.\nClick on the same area of another image: its gap with the reference is measured and applied. A second click refines it.
+TT_SERIESEXP_PIPETTE_WAIT;Pipette: active when the image is ready.
 TT_SERIESEXP_REF;Reference of the series: %1.
 TT_SERIESEXP_REFERENCE;Reference: this image
 TT_SERIESEXP_REFERENCE_REMOVED;This image is not a reference anymore.
