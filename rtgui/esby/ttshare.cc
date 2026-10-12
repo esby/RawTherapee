@@ -73,6 +73,7 @@ TTShare::TTShare() : FoldableToolPanel(this, "ttshare", M("TT_SHARE_LABEL"), fal
 {
   hasSnapshot = false;
   stateLoaded = false;
+  seriesCount = parentCount = -1;
   generation = 0;
   connected = false;
   pending = false;
@@ -226,7 +227,10 @@ void TTShare::connectSignals()
     int current = generation;
     env->sharedVariables()->getClient()->shareGet(folder, [this, current](bool ok, const std::vector<EsbyShareEntry>& entries) {
       if (ok && (current == generation))
+      {
         catchUp(entries, true);
+        refreshCounts();
+      }
     });
   });
   // connection to the server (again): the state of the image is loaded if it was not
@@ -305,6 +309,7 @@ void TTShare::paramsChanged(const ProcParams& params, const ProcEvent& ev, bool 
         for (const EsbyShareChange& c : changes)
           text += "\n" + c.key + (c.numeric ? ": " + Glib::ustring::format(std::showpos, c.delta) : Glib::ustring());
         setInfo(M("TT_SHARE_SENT") + text);
+        refreshCounts();
       }
     }
   }
@@ -339,6 +344,7 @@ void TTShare::loadState()
 {
   stateLoaded = false;
   int current = ++generation;
+  seriesCount = parentCount = -1;
   file = EsbySharedVariables::originalFile(env);
   folder = file.empty() ? Glib::ustring() : EsbySharedVariables::seriesFolder(file);
   appliedCum.clear();
@@ -399,12 +405,15 @@ void TTShare::loadState()
         Glib::ustring parent = origin.empty() ? Glib::ustring() : Glib::ustring(Glib::path_get_basename(origin));
         Glib::ustring message;
         if (copied)
-          message = Glib::ustring::compose(M("TT_SHARE_FROM_PARENT_INIT"), parent);
+          message = Glib::ustring::compose(M(entries.empty() ? "TT_SHARE_FROM_PARENT_INIT_EMPTY" : "TT_SHARE_FROM_PARENT_INIT"), parent);
         else if (lost && !parent.empty())
           message = Glib::ustring::compose(M("TT_SHARE_FRESH_PARENT"), parent);
         else if (lost)
           message = M("TT_SHARE_FRESH");
         catchUp(entries, false, message, extra);
+        if (copied && entries.empty())
+          setInfo(message); // nothing applied: the message is shown anyway
+        refreshCounts();
       });
     };
     if (!lostCompensation)
@@ -615,16 +624,66 @@ void TTShare::copyWithParent(bool toParent)
   }
   Glib::ustring from = toParent ? folder : parent;
   Glib::ustring to = toParent ? parent : folder;
-  env->sharedVariables()->getClient()->shareCopy(from, to, [this, toParent](bool ok, const std::vector<EsbyShareEntry>&) {
+  env->sharedVariables()->getClient()->shareCopy(from, to, [this, toParent, parent](bool ok, const std::vector<EsbyShareEntry>& keys) {
     // the series changed: the event of the server brings the changes to its images
-    setInfo(M(!ok ? "TT_SHARE_NO_SERVER" : toParent ? "TT_SHARE_SENT_TO_PARENT" : "TT_SHARE_RESET_FROM_PARENT"));
+    Glib::ustring name = Glib::path_get_basename(parent);
+    if (!ok)
+      setInfo(M("TT_SHARE_NO_SERVER"));
+    else if (toParent)
+    {
+      // an empty series empties the parent: the next series start without shared change
+      int count = 0;
+      for (const EsbyShareEntry& k : keys)
+        if (!k.numeric || (std::fabs(k.cum) >= 1e-9))
+          count++;
+      setInfo(count == 0 ? Glib::ustring::compose(M("TT_SHARE_PARENT_EMPTIED"), name)
+                         : Glib::ustring::compose(M("TT_SHARE_SENT_TO_PARENT"), name, count));
+    }
+    else
+      setInfo(Glib::ustring::compose(M("TT_SHARE_RESET_FROM_PARENT"), name));
+    refreshCounts();
+  });
+}
+
+// the number of shared changes of the series and of its parent, shown in the status
+void TTShare::refreshCounts()
+{
+  EsbyWBClient* client = env->sharedVariables()->getClient();
+  if (folder.empty() || !client->isConnected())
+    return;
+  int current = generation;
+  client->shareGet(folder, [this, current](bool ok, const std::vector<EsbyShareEntry>& e) {
+    if (ok && (current == generation))
+    {
+      seriesCount = (int) e.size();
+      setInfo(lastText);
+    }
+  });
+  client->shareGet(EsbySharedVariables::parentFolder(folder), [this, current](bool ok, const std::vector<EsbyShareEntry>& e) {
+    if (ok && (current == generation))
+    {
+      parentCount = (int) e.size();
+      setInfo(lastText);
+    }
   });
 }
 
 void TTShare::setInfo(const Glib::ustring& text)
 {
-  Glib::ustring series = folder.empty() ? Glib::ustring("-") : Glib::ustring(Glib::path_get_basename(folder));
-  lbInfo->set_text(Glib::ustring::compose(M("TT_SHARE_SERIES"), series) + (text.empty() ? "" : "\n" + text));
+  lastText = text;
+  Glib::ustring status;
+  if (folder.empty())
+    status = Glib::ustring::compose(M("TT_SHARE_SERIES"), "-");
+  else
+  {
+    Glib::ustring series = Glib::path_get_basename(folder);
+    Glib::ustring parent = Glib::path_get_basename(EsbySharedVariables::parentFolder(folder));
+    status = (seriesCount < 0) ? Glib::ustring::compose(M("TT_SHARE_SERIES"), series)
+           : Glib::ustring::compose(M("TT_SHARE_SERIES_COUNT"), series, seriesCount);
+    status += "\n" + ((parentCount < 0) ? Glib::ustring::compose(M("TT_SHARE_PARENT"), parent)
+                     : Glib::ustring::compose(M("TT_SHARE_PARENT_COUNT"), parent, parentCount));
+  }
+  lbInfo->set_text(status + (text.empty() ? "" : "\n" + text));
   TT_LOG("TTShare: %s\n", text.c_str());
 }
 

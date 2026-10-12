@@ -183,19 +183,24 @@ TT_SHARE_FRESH_PARENT;Image changed since it was last seen (pp3 removed?): the c
 TT_SHARE_FROM_PARENT;Reset from the parent
 TT_SHARE_FROM_PARENT_CONFIRM;The series %1 takes again the shared changes of %2: its images are changed accordingly (shifts and values). Continue?
 TT_SHARE_FROM_PARENT_INIT;Series used for the first time, initialized from the parent folder %1:
+TT_SHARE_FROM_PARENT_INIT_EMPTY;Series used for the first time, initialized from the parent folder %1 (no shared change).
 TT_SHARE_FROM_PARENT_TOOLTIP;The series takes again the shared changes of the parent folder: the shifts of its images become the ones of the parent, its curves and choices the ones of the parent.
 TT_SHARE_HISTORY;Shared change of the series
 TT_SHARE_LABEL;Shared changes
 TT_SHARE_NOT_SENT;Change not shared: esby server unavailable.
 TT_SHARE_NO_SERVER;esby server unavailable: nothing is shared.
+TT_SHARE_PARENT;Parent: %1
+TT_SHARE_PARENT_COUNT;Parent: %1 (%2 shared changes)
+TT_SHARE_PARENT_EMPTIED;Parent %1 emptied: the next series start without shared change.
 TT_SHARE_PENDING;Changes of the series received: applied when this window is active.
 TT_SHARE_RECEIVED;Received from the series:
-TT_SHARE_RESET_FROM_PARENT;Series reset from the parent folder.
+TT_SHARE_RESET_FROM_PARENT;Series reset from the parent %1.
 TT_SHARE_SECTIONS;Shared tools:
 TT_SHARE_SECTION_EXPOSURE;Exposure
 TT_SHARE_SENT;Shared with the series:
-TT_SHARE_SENT_TO_PARENT;Shared changes of the series sent to the parent folder.
+TT_SHARE_SENT_TO_PARENT;%2 shared changes of the series sent to the parent %1.
 TT_SHARE_SERIES;Series: %1
+TT_SHARE_SERIES_COUNT;Series: %1 (%2 shared changes)
 TT_SHARE_TO_PARENT;Send to the parent
 TT_SHARE_TO_PARENT_TOOLTIP;The shared changes of this series replace the ones of the parent folder. A series used for the first time starts from the parent folder (a copy: the parent changed afterwards does not change it).
 TT_UDLR_HIDE_ARROWS;Hide the move buttons (↑ ↓ ← →)

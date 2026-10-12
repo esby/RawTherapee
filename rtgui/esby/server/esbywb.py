@@ -103,6 +103,11 @@ def split_key(key):
     return folder, (sequence if sep else None)
 
 
+def changed_keys(keys):
+    """number of shared changes: values, and shifts which are not 0"""
+    return sum(1 for e in keys.values() if "cum" not in e or abs(e["cum"]) >= 1e-9)
+
+
 def check_limits(**values):
     for name, value in values.items():
         low, high = LIMITS[name]
@@ -361,10 +366,8 @@ class State:
         for key, entry in old.items():
             if key not in copied and "cum" in entry:
                 copied[key] = {"cum": 0.0}
-        if copied:
-            self.shares[target] = copied
-        else:
-            self.shares.pop(target, None)
+        # kept even empty: an empty parent means "no shared change" for the next series
+        self.shares[target] = copied
         self.save()
         return target, copied
 
@@ -510,8 +513,8 @@ class Server:
                     key = max(holders, key=len) if holders else sequence_folder(filename)
                     images[key] = images.get(key, 0) + 1
             series = sorted(set(series) | set(images))
-            return {"series": [{"path": p, "keys": len(self.state.shares.get(p, {})), "images": images.get(p, 0)}
-                               for p in series]}
+            return {"series": [{"path": p, "keys": changed_keys(self.state.shares.get(p, {})),
+                                "images": images.get(p, 0)} for p in series]}
         if op == "share_get":
             return {"keys": self.state.shares.get(normalize(request["path"]), {})}
         if op == "share_change":
@@ -730,9 +733,10 @@ def main(argv=None):
     p.add_argument("folder")
     p.add_argument("--sequence", help="sequence of the folder")
 
-    p = sub.add_parser("shares", help="the series having shared parameters (with the number of images having "
-                                      "received them), or the shared parameters of a series")
+    p = sub.add_parser("shares", help="the series having shared changes (with the number of images followed), "
+                                      "or the shared changes of a series")
     p.add_argument("folder", nargs="?")
+    p.add_argument("--all", action="store_true", help="also the series without shared change nor image")
     p = sub.add_parser("share-zero", help="the shifts of a series go back to 0: its images get their own values back")
     p.add_argument("folder")
     p = sub.add_parser("share-reset", help="forget the shared parameters of a series (the images keep their current values)")
@@ -795,7 +799,9 @@ def run_command(client, args):
                 print("  %-30s %s" % (name, format_value(value)))
     elif args.command == "shares" and args.folder is None:
         for entry in client.request("share_list")["series"]:
-            print("%-70s %3d keys, %3d images" % (entry["path"], entry["keys"], entry["images"]))
+            if entry["keys"] == 0 and entry["images"] == 0 and not args.all:
+                continue
+            print("%-70s %3d shared changes, %3d images followed" % (entry["path"], entry["keys"], entry["images"]))
     elif args.command == "shares":
         keys = client.request("share_get", path=normalize(args.folder))["keys"]
         for key, entry in sorted(keys.items()):

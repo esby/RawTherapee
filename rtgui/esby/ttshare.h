@@ -78,6 +78,9 @@ protected:
     void saveValues(const std::map<std::string, std::string>& values, bool all);
     void copyWithParent(bool toParent);
     void setInfo(const Glib::ustring& text);
+    void refreshCounts();
+    Glib::ustring lastText;
+    int seriesCount, parentCount; // shared changes of the series and of its parent (-1: unknown)
 
 public:
     TTShare();
