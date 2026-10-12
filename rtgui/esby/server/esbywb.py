@@ -27,7 +27,6 @@ message per line.
     esbywb var-unset <where> <name> [--sequence S]         remove it (back to the inherited one)
     esbywb vars                              every variable set, where it is set
     esbywb show <folder> [--sequence S]      what applies to a folder: white balance and variables
-    esbywb exposure-apply <folder> [--dry-run]   exposure of the closed images (TTSeriesExposure)
     esbywb shares [<folder>]                 the series having shared parameters, or those of a series
     esbywb share-zero <folder>               shifts back to 0 (the images get their own values back)
     esbywb share-reset <folder>              forget them (the images keep their current values)
@@ -737,11 +736,6 @@ def main(argv=None):
                                           "(series to parent, parent to series)")
     p.add_argument("source")
     p.add_argument("target")
-    p = sub.add_parser("exposure-apply", help="sets the exposure compensation of the pp3 files of the images "
-                                              "following a reference (TTSeriesExposure), in a folder and below")
-    p.add_argument("folder")
-    p.add_argument("--dry-run", action="store_true", help="show the changes, change nothing")
-
     args = parser.parse_args(argv)
 
     if args.command == "serve":
@@ -812,8 +806,6 @@ def run_command(client, args):
     elif args.command == "share-reset":
         answer = client.request("share_reset", path=normalize(args.folder))
         print("reset: %s (%d images)" % (answer["path"], answer["images"]))
-    elif args.command == "exposure-apply":
-        exposure_apply(client, normalize(args.folder), args.dry_run, sys.stdout)
     elif args.command == "show":
         folder = normalize(args.folder)
         print(folder + ("  (sequence %s)" % args.sequence if args.sequence else ""))
@@ -830,12 +822,8 @@ def run_command(client, args):
 
 
 # ---------------------------------------------------------------------------------------
-# exposure of the closed images (TTSeriesExposure)
+# series of the images
 # ---------------------------------------------------------------------------------------
-
-# limits of the exposure compensation of RawTherapee
-EXPOSURE_MIN_COMP, EXPOSURE_MAX_COMP = -5.0, 12.0
-
 
 def sequence_folder(filename):
     """the numbered folder of a photo: <folder>/pp and <folder>/pp/dpp belong to <folder>"""
@@ -845,126 +833,6 @@ def sequence_folder(filename):
     if os.path.basename(folder) == "pp":
         return os.path.dirname(folder)
     return folder
-
-
-def parse_reference(value):
-    """the exposure.reference variable: a JSON text {raw, comp, point?, target?}, None if invalid"""
-    try:
-        ref = json.loads(value) if isinstance(value, str) else None
-    except ValueError:
-        return None
-    return ref if isinstance(ref, dict) and "comp" in ref else None
-
-
-def reference_for(client, folder, follow):
-    """reference followed by an image of a sequence folder: the nearest one (series, then parents),
-    the one of the series only, or the nearest one above the series (parent)"""
-    if follow == "series":
-        values = client.request("var_list")["variables"].get(folder, {})
-        return parse_reference(values.get("exposure.reference"))
-    where = os.path.dirname(folder) if follow == "parent" else folder
-    variables = client.request("var_get", path=where, name="exposure.reference")["variables"]
-    info = variables.get("exposure.reference")
-    return parse_reference(info["value"]) if info else None
-
-
-def pp3_files(filename):
-    """the pp3 files of an image: next to the raw file (rt_queue), or of its dng"""
-    base = os.path.splitext(filename)[0]
-    return [p for p in (filename + ".pp3", base + ".dng.pp3") if os.path.isfile(p)]
-
-
-def read_compensation(pp3):
-    section = None
-    with open(pp3, "r", encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if line.startswith("["):
-                section = line
-            elif section == "[Exposure]" and line.startswith("Compensation="):
-                try:
-                    return float(line.split("=", 1)[1])
-                except ValueError:
-                    return None
-    return None
-
-
-def write_compensation(pp3, comp):
-    """the Compensation line of the [Exposure] section, the rest of the file unchanged"""
-    with open(pp3, "r", encoding="utf-8") as f:
-        lines = f.readlines()
-    section = None
-    for i, line in enumerate(lines):
-        stripped = line.strip()
-        if stripped.startswith("["):
-            section = stripped
-        elif section == "[Exposure]" and stripped.startswith("Compensation="):
-            lines[i] = "Compensation=%s\n" % repr(round(comp, 4))
-            break
-    else:
-        raise ValueError("no Compensation in the [Exposure] section of " + pp3)
-    fd, tmp = tempfile.mkstemp(prefix=".pp3-", dir=os.path.dirname(pp3))
-    with os.fdopen(fd, "w", encoding="utf-8") as f:
-        f.writelines(lines)
-    os.replace(tmp, pp3)
-
-
-def exposure_apply(client, folder, dry_run, out):
-    """the images following a reference get reference + gap + offset of their sequence, written in
-    their pp3; an image changed by hand since (pp3 different from the last applied value) becomes
-    not applied, as in RawTherapee"""
-    files = client.request("file_list", path=folder, namespace="exposure")["files"]
-    counts = {"changed": 0, "unchanged": 0, "skipped": 0}
-    for filename in sorted(files):
-        data = files[filename]
-        name = os.path.basename(filename)
-        follow = data.get("follow", "nearest")
-        if follow == "none":
-            counts["skipped"] += 1
-            continue
-        if data.get("delta") is None:
-            print("%s: not measured" % name, file=out)
-            counts["skipped"] += 1
-            continue
-        seq = sequence_folder(filename)
-        ref = reference_for(client, seq, follow)
-        if ref is None:
-            print("%s: no reference (%s)" % (name, follow), file=out)
-            counts["skipped"] += 1
-            continue
-        offset = client.request("var_get", path=seq, name="exposure.offset")["variables"]
-        offset = float(offset["exposure.offset"]["value"]) if offset else 0.0
-        comp = max(EXPOSURE_MIN_COMP, min(EXPOSURE_MAX_COMP, float(ref["comp"]) + float(data["delta"]) + offset))
-        pp3s = pp3_files(filename)
-        if not pp3s:
-            print("%s: no pp3 file" % name, file=out)
-            counts["skipped"] += 1
-            continue
-        for pp3 in pp3s:
-            current = read_compensation(pp3)
-            if current is None:
-                print("%s: no exposure compensation" % os.path.basename(pp3), file=out)
-                continue
-            last = data.get("comp")
-            if last is not None and abs(current - float(last)) >= 0.005:
-                print("%s: changed by hand (%+.2f, applied %+.2f): not applied anymore"
-                      % (os.path.basename(pp3), current, float(last)), file=out)
-                if not dry_run:
-                    client.request("file_set", file=filename, namespace="exposure", fields={"follow": "none"})
-                counts["skipped"] += 1
-                break
-            if abs(current - comp) < 0.005:
-                counts["unchanged"] += 1
-                continue
-            print("%s: %+.2f -> %+.2f" % (os.path.basename(pp3), current, comp), file=out)
-            if not dry_run:
-                write_compensation(pp3, comp)
-            counts["changed"] += 1
-        else:
-            if not dry_run:
-                client.request("file_set", file=filename, namespace="exposure", fields={"comp": comp})
-    print("%d changed, %d unchanged, %d skipped%s" % (counts["changed"], counts["unchanged"], counts["skipped"],
-                                                     " (dry run: nothing written)" if dry_run else ""), file=out)
 
 
 def format_value(value):

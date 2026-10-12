@@ -368,6 +368,7 @@ void TTShare::loadState()
     // a key whose value is not the one last seen (pp3 removed: values of the default profile, profile
     // applied elsewhere): what the image had received for it is lost, it receives everything again
     bool lost = false;
+    bool lostCompensation = false;
     ProcParams params;
     EsbyParamsAccess* access = env->getParamsAccess();
     if ((access != nullptr) && access->esbyGetParams(params))
@@ -381,25 +382,44 @@ void TTShare::loadState()
           appliedCum.erase(kv.first);
           appliedVersion.erase(kv.first);
           lost = true;
+          if (kv.first == "Exposure/Compensation")
+            lostCompensation = true;
         }
       }
       saveValues(values, true);
     }
     stateLoaded = true;
-    // a series used for the first time starts from its parent folder
-    client->shareInit(folder, [this, current, lost](bool ok2, const std::vector<EsbyShareEntry>& entries, bool copied,
-                                                    const Glib::ustring& origin) {
-      if (!ok2 || (current != generation))
+    // a series used for the first time starts from its parent folder. A lost compensation also gets
+    // the gap of the image with the reference of its series again (TTSeriesExposure)
+    auto init = [this, current, client, lost](const std::map<std::string, double>& extra) {
+      client->shareInit(folder, [this, current, lost, extra](bool ok2, const std::vector<EsbyShareEntry>& entries, bool copied,
+                                                             const Glib::ustring& origin) {
+        if (!ok2 || (current != generation))
+          return;
+        Glib::ustring parent = origin.empty() ? Glib::ustring() : Glib::ustring(Glib::path_get_basename(origin));
+        Glib::ustring message;
+        if (copied)
+          message = Glib::ustring::compose(M("TT_SHARE_FROM_PARENT_INIT"), parent);
+        else if (lost && !parent.empty())
+          message = Glib::ustring::compose(M("TT_SHARE_FRESH_PARENT"), parent);
+        else if (lost)
+          message = M("TT_SHARE_FRESH");
+        catchUp(entries, false, message, extra);
+      });
+    };
+    if (!lostCompensation)
+    {
+      init({});
+      return;
+    }
+    client->fileGet(file, "exposure", [this, current, init](bool ok3, const std::vector<EsbyVarValue>& exposure) {
+      if (current != generation)
         return;
-      Glib::ustring parent = origin.empty() ? Glib::ustring() : Glib::ustring(Glib::path_get_basename(origin));
-      Glib::ustring message;
-      if (copied)
-        message = Glib::ustring::compose(M("TT_SHARE_FROM_PARENT_INIT"), parent);
-      else if (lost && !parent.empty())
-        message = Glib::ustring::compose(M("TT_SHARE_FRESH_PARENT"), parent);
-      else if (lost)
-        message = M("TT_SHARE_FRESH");
-      catchUp(entries, false, message);
+      std::map<std::string, double> extra;
+      for (const EsbyVarValue& f : exposure)
+        if (ok3 && (f.name == "gap"))
+          extra["Exposure/Compensation"] = (f.type == RT_VARIABLE_TYPE_INT) ? f.i : f.d;
+      init(extra);
     });
   });
 }
@@ -407,7 +427,8 @@ void TTShare::loadState()
 // what the image has not received yet: the shifts (sum of the series - sum received) and the values of
 // a newer version. fromEvent: a change of another image; applied in the active window only (N instances
 // do not recalculate together), the others do it when they get the focus
-void TTShare::catchUp(const std::vector<EsbyShareEntry>& entries, bool fromEvent, const Glib::ustring& origin)
+void TTShare::catchUp(const std::vector<EsbyShareEntry>& entries, bool fromEvent, const Glib::ustring& origin,
+                      std::map<std::string, double> extra)
 {
   EsbyParamsAccess* access = env->getParamsAccess();
   if ((access == nullptr) || !stateLoaded)
@@ -457,6 +478,11 @@ void TTShare::catchUp(const std::vector<EsbyShareEntry>& entries, bool fromEvent
     {
       double missing = e.cum - (cum.count(key) ? cum[key] : 0.0);
       double value;
+      if (extra.count(key))
+      {
+        missing += extra[key]; // the gap of the image, lost with its values
+        extra.erase(key);
+      }
       if (std::fabs(missing) < 1e-9)
         continue;
       if ((cur != current.end()) && parseNumber(cur->second, value))
@@ -487,6 +513,23 @@ void TTShare::catchUp(const std::vector<EsbyShareEntry>& entries, bool fromEvent
     if (section != "Exposure")
       exposureOnly = false;
     received.push_back(key);
+  }
+
+  // a gap of the image for a key the series does not share
+  for (const auto& x : extra)
+  {
+    auto cur = current.find(x.first);
+    double value;
+    if ((std::fabs(x.second) < 1e-9) || (cur == current.end()) || !parseNumber(cur->second, value))
+      continue;
+    value += x.second;
+    auto limits = SHARE_LIMITS.find(x.first);
+    if (limits != SHARE_LIMITS.end())
+      value = std::max(limits->second.first, std::min(limits->second.second, value));
+    changes.set_value(x.first.substr(0, x.first.find('/')), x.first.substr(x.first.find('/') + 1),
+                      isInteger(cur->second) ? std::to_string(std::lround(value)) : Glib::Ascii::dtostr(value));
+    text += "\n" + x.first + ": " + Glib::ustring::format(std::showpos, x.second);
+    count++;
   }
 
   if ((count > 0) && fromEvent && (window != nullptr) && !window->is_active())

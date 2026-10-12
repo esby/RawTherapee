@@ -38,7 +38,7 @@ expliquent le *pourquoi*.
 | TTTweaker | rotation automatique (Panasonic), fermeture après enregistrement… |
 | TTVarDisplayer | afficher les variables, bouton de copie dans le presse-papier |
 | TTSeriesWB | décalage de la balance des blancs au flash, en mireds (voir `SPEC_series_wb.md`) |
-| TTSeriesExposure | exposition par série : chaque image suit une référence (de la série ou du dossier parent), plus un décalage de série |
+| TTSeriesExposure | écart d'exposition de chaque image avec la référence de sa série (pipette ou service), pour cette image seulement |
 
 ### TTShare : modifications partagées par série
 
@@ -66,35 +66,33 @@ les autres à leur prochain focus), plus tard dans les images ouvertes ensuite.
   copie l'état dans le presse-papier.
 - « Share my changes » coupé (option `ShareChanges`) : la modification reste dans l'image. Les
   modifications des autres images sont toujours reçues tant que l'outil est actif.
-- Une valeur posée par un outil pour cette image seulement (TTSeriesExposure) n'est jamais partagée
+- Une valeur posée par un outil pour cette image seulement (l'écart de TTSeriesExposure) n'est jamais partagée
   (`Environment::shareSuppressed`). Un retour dans l'historique n'est pas partagé.
 - Accroches : `ToolPanelCoordinator::panelChanged` et `profileChange` appellent `esbyParamsChanged`
   (changement d'un outil, ou nouvelle référence de comparaison) ; `esbyApplyParams` fait lire les
   paramètres reçus par les outils puis les traite comme un changement d'outil (entrée d'historique).
 
-### TTSeriesExposure : séries et références
+### TTSeriesExposure : écart de chaque image avec la référence de sa série
 
-- La **série** d'une photo est son **dossier numéroté** (celui qui contient `pp/`), qu'elle soit dans
-  `pp/` ou déjà dans `pp/dpp/`. `ESBY_ORIGIN` (voir `rt_queue`) donne le chemin d'origine.
-- Une **référence** est posée pour la série ou pour le dossier parent (hérité par les séries en
-  dessous qui n'en ont pas) : variable partagée `exposure.reference`, texte JSON `{raw, comp,
-  point?, target?}`. `comp` et `target` sont gardés **sans** le décalage de la série. Ctrl+clic avec
-  la pipette sur la zone de référence (la luminosité devient la cible ; avec le service, le point
-  désigne le visage), ou bouton « Reference: this image » avec le service ; la liste choisit
-  série ou parent. « Not a reference » la retire.
-- Chaque autre image **suit** une référence : la plus proche (par défaut : celle de la série, sinon
-  du parent), celle de la série, celle du parent, ou aucune (**not applied** : l'outil ne la touche
-  pas). Elle a un **écart** avec sa référence (`delta`, IL), mesuré par un clic de pipette ou par le
-  service : compensation = `comp` de la référence + écart + décalage de la série.
-- Une exposition **changée à la main** fait passer l'image à « not applied » (détecté au prochain
-  recalcul ou à la fermeture). Choisir à nouveau une référence à suivre la réapplique.
-- **Décalage de série** (curseur, variable partagée `exposure.offset`) : préférence de rendu, posée
-  sur la série par le curseur ou sur un dossier dans le panneau des variables. Tout changement de
-  référence ou de décalage est appliqué aux images ouvertes, dans la fenêtre active (les autres
-  instances à leur prochain focus), et aux images fermées par `esbywb.py exposure-apply`.
-- L'état de chaque image est gardé par le serveur (`file_data`, espace `exposure` : `follow`,
-  `delta`, `comp` = dernière compensation appliquée). Il faut le serveur. L'ancien fichier
-  `esby-exposure-targets.ini` n'est plus utilisé : les références sont à reposer.
+- La **série** d'une photo est son dossier numéroté (voir TTShare). La compensation commune à la
+  série se règle avec l'outil Exposition lui-même, partagée par TTShare (« Share my changes »).
+- TTSeriesExposure n'ajoute à chaque image que **son écart** (IL) avec la référence de la série, pour
+  cette image seulement (jamais partagé) : curseur « Gap of this image », état **none** (pas d'écart),
+  **computed** (mesuré) ou **manual** (curseur). « No gap » le remet à 0.
+- **Référence de la série** : variable partagée `exposure.reference` posée sur le dossier de la série,
+  texte JSON `{raw, comp, gap, target?, point?}` (compensation et écart de la référence quand elle a
+  été posée). Ctrl+clic à la pipette sur la zone de référence (la luminosité devient la cible ; avec
+  le service, le point désigne le visage), ou « Reference: this image » avec le service. Elle ne sert
+  qu'à calculer les écarts.
+- **Pipette** (clic) : écart = log2(cible / luminosité) − comp. de la référence + comp. de l'image +
+  écart de la référence (la luminosité suit 2^compensation ; la courbe de l'outil Exposition rend le
+  calcul approché : un deuxième clic l'affine). **Service** : écart = `delta_ev` + écart de la
+  référence ; appliqué automatiquement à l'ouverture d'une image sans écart si les critères sont
+  remplis (voir ci-dessous), sinon proposé.
+- L'écart et son état sont gardés par le serveur (`file_data`, espace `exposure` : `gap`, `state`).
+  Une image dont les valeurs ont été perdues (pp3 effacé) reçoit à nouveau son écart par TTShare,
+  avec les modifications de la série. Sans serveur, le curseur fonctionne mais l'écart n'est pas
+  gardé. Outil désactivé : rien n'est fait (les écarts déjà appliqués restent dans les images).
 - La pipette lit la luminosité après la compensation d'exposition, la luminosité, le contraste et la
   compression des hautes lumières de l'outil Exposition, avant les courbes (`EUID_ToneCurve1`).
 
@@ -113,11 +111,11 @@ il doit répondre en JSON (POST) à :
   éventuellement `fallback_af {delta_ev}`.
 
 Positions en 0 à 1 de l'image affichée (orientation EXIF appliquée). Session : le dossier de la
-référence suivie et le nom de son RAW.
+série et le nom du RAW de la référence.
 
-Application : écart = `delta_ev`, compensation = référence + écart + décalage (absolue, donc idempotente).
+Application : écart = `delta_ev` + écart de la référence (absolu, donc idempotent).
 Automatique si similarité ≥ `SeriesExpAutoSimilarity` (0,6), part écrêtée ≤ `SeriesExpMaxClipped`
-(5 %), |`delta_ev`| ≤ `SeriesExpMaxEv` (2 IL) et image suivant une référence ; sinon proposée. Le repli sur la zone AF (`no_face`) n'est jamais
+(5 %), |écart| ≤ `SeriesExpMaxEv` (2 IL) et écart pas réglé à la main ; sinon proposée. Le repli sur la zone AF (`no_face`) n'est jamais
 automatique ; `no_match` n'a pas de repli. `no_reference` (service redémarré ou session oubliée) :
 nouvelle référence silencieuse à partir du RAW et du choix mémorisés. Exposition automatique ou
 correspondance d'histogramme actives : aucune correction.

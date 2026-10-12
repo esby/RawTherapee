@@ -70,7 +70,9 @@ protected:
     void paramsChanged(const rtengine::procparams::ProcParams& params, const rtengine::ProcEvent& ev, bool fromPanel);
     void loadState();
     // origin: the message of the changes received (empty: from the series)
-    void catchUp(const std::vector<EsbyShareEntry>& entries, bool fromEvent, const Glib::ustring& origin = Glib::ustring());
+    // extra: shifts added to keys lost by the image (its gap with the reference, TTSeriesExposure)
+    void catchUp(const std::vector<EsbyShareEntry>& entries, bool fromEvent, const Glib::ustring& origin = Glib::ustring(),
+                 std::map<std::string, double> extra = {});
     void saveApplied(const std::vector<std::string>& keys);
     void saveValues(const std::map<std::string, std::string>& values, bool all);
     void copyWithParent(bool toParent);
