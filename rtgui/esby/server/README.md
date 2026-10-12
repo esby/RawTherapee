@@ -33,19 +33,22 @@ refroidit le rendu.
 
 ## Observations
 
-Avec le serveur, TTSeriesWB envoie une **observation** à chaque Learn, à chaque enregistrement
+Avec le serveur, TTSeriesWB envoie une **observation** à chaque « Model from this image », à chaque enregistrement
 d'image depuis l'éditeur, et à la fermeture de chaque image (quand son profil est enregistré) :
 balance de l'image et du boîtier, décalage, exposition (ISO, ouverture, vitesse, `light_value`),
 boîtier, objectif, flash, et nature de l'observation :
 
-- `learn` : décalage appris sur une image corrigée à la main ;
-- `learn-unchanged` : Learn sur une image qui avait déjà la balance de la série (sans information) ;
-- `saved-…` ou `closed-…`, suivi de `manual` (retouche à la main), `series` (balance de la série)
-  ou `camera` (balance du boîtier).
+- `model` : « Model from this image », écart réglé à la main qui complète le modèle de la série ;
+- `saved-…` ou `closed-…`, suivi de l'état de l'écart de l'image (`none`, `computed`, `manual`)
+  ou de `camera` (balance du boîtier).
+
+Les anciennes natures (`learn`, `learn-unchanged`, `…-series`) peuvent rester dans `state.json`.
+Les champs `series_mired`, `series_green`, `series_equal` sont le décalage de la série (balance de
+l'image sans son écart), `gap` l'écart de l'image, `reference` la référence de la série (JSON).
 
 Une seule observation est gardée par fichier, la plus récente. Elles servent à vérifier si le
 décalage suit l'exposition, avant toute correction automatique ; les plus instructives sont les
-retouches à la main (`learn`, `…-manual`).
+retouches à la main (`model`, `…-manual`).
 
 ```bash
 ./esbywb.py observations > obs.csv            # CSV

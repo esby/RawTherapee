@@ -87,26 +87,6 @@ void EsbySettings::readFromFile(Glib::KeyFile& keyFile)
                     SeriesWBEnabled       = keyFile.get_boolean ("TTP", "SeriesWBEnabled");
                 }
 
-                if (keyFile.has_key ("TTP", "SeriesWBMired")) {
-                    SeriesWBMired         = keyFile.get_double ("TTP", "SeriesWBMired");
-                }
-
-                if (keyFile.has_key ("TTP", "SeriesWBGreen")) {
-                    SeriesWBGreen         = keyFile.get_double ("TTP", "SeriesWBGreen");
-                }
-
-                if (keyFile.has_key ("TTP", "SeriesWBEqual")) {
-                    SeriesWBEqual         = keyFile.get_double ("TTP", "SeriesWBEqual");
-                }
-
-                if (keyFile.has_key ("TTP", "SeriesWBMode")) {
-                    SeriesWBMode          = keyFile.get_integer ("TTP", "SeriesWBMode");
-                }
-
-                if (keyFile.has_key ("TTP", "SeriesWBAuto")) {
-                    SeriesWBAuto          = keyFile.get_string ("TTP", "SeriesWBAuto");
-                }
-
                 if (keyFile.has_key ("TTP", "ShareChanges")) {
                     ShareChanges          = keyFile.get_boolean ("TTP", "ShareChanges");
                 }
@@ -147,13 +127,6 @@ void EsbySettings::readFromFile(Glib::KeyFile& keyFile)
                     SeriesWBFlashOnly     = keyFile.get_boolean ("TTP", "SeriesWBFlashOnly");
                 }
 
-                if (keyFile.has_key ("TTP", "SeriesWBMarkers")) {
-                    SeriesWBMarkers       = keyFile.get_string ("TTP", "SeriesWBMarkers");
-                }
-
-                if (keyFile.has_key ("TTP", "SeriesWBLearnTint")) {
-                    SeriesWBLearnTint     = keyFile.get_boolean ("TTP", "SeriesWBLearnTint");
-                }
             }
 }
 
@@ -174,11 +147,6 @@ void EsbySettings::saveToFile(Glib::KeyFile& keyFile) const
         keyFile.set_boolean ("TTP", "HideUseful", TTPHideUseful);
         keyFile.set_boolean ("TTP", "HideTrash", TTPHideTrash);
         keyFile.set_boolean ("TTP", "SeriesWBEnabled", SeriesWBEnabled);
-        keyFile.set_double  ("TTP", "SeriesWBMired", SeriesWBMired);
-        keyFile.set_double  ("TTP", "SeriesWBGreen", SeriesWBGreen);
-        keyFile.set_double  ("TTP", "SeriesWBEqual", SeriesWBEqual);
-        keyFile.set_integer ("TTP", "SeriesWBMode", SeriesWBMode);
-        keyFile.set_string  ("TTP", "SeriesWBAuto", SeriesWBAuto);
         keyFile.set_boolean ("TTP", "ShareChanges", ShareChanges);
         keyFile.set_string  ("TTP", "ShareSections", ShareSections);
         keyFile.set_string  ("TTP", "SeriesMarkers", SeriesMarkers);
@@ -189,6 +157,4 @@ void EsbySettings::saveToFile(Glib::KeyFile& keyFile) const
         keyFile.set_double  ("TTP", "SeriesExpMaxClipped", SeriesExpMaxClipped);
         keyFile.set_double  ("TTP", "SeriesExpMaxEv", SeriesExpMaxEv);
         keyFile.set_boolean ("TTP", "SeriesWBFlashOnly", SeriesWBFlashOnly);
-        keyFile.set_boolean ("TTP", "SeriesWBLearnTint", SeriesWBLearnTint);
-        keyFile.set_string  ("TTP", "SeriesWBMarkers", SeriesWBMarkers);
 }

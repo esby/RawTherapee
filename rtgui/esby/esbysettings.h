@@ -48,11 +48,7 @@ public:
 
     // TTSeriesWB: kept between sessions without saving a ttp profile
     bool SeriesWBEnabled = false;
-    double SeriesWBMired = 0.0;
-    double SeriesWBGreen = 1.0;
-    double SeriesWBEqual = 1.0;
-    int SeriesWBMode = 0;              // 0: shift from the camera white balance, 1: auto (exposure model)
-    Glib::ustring SeriesWBAuto;        // model of the auto mode (EsbyWBAuto::serialize())
+    // (the shift of the series is shared by TTShare, the reference and the model by the server)
 
     // external exposure measuring service ("host:port", empty: none; token in ESBY_EXPOSURE_TOKEN)
     Glib::ustring SeriesExpService;
@@ -61,9 +57,6 @@ public:
     double SeriesExpMaxClipped = 0.05;     // automatic application up to this clipped fraction
     double SeriesExpMaxEv = 2.0;           // automatic application up to this gap with the reference
     bool SeriesWBFlashOnly = true;
-    bool SeriesWBLearnTint = false;
-    // marker files of a series root folder, separated by ';' ("Set for the series root")
-    Glib::ustring SeriesWBMarkers = "fields.conf;.esby-series";
 
     // TTShare: the changes made in an image are shared with the images of its series (other instances,
     // images opened later); pp3 sections shared, separated by ';'

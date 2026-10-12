@@ -2,6 +2,11 @@
 
 Statut : étapes 1 (`ttserieswb.*`), 2 (`server/esbywb.py`) et 3 (`esbywbclient.*`) implémentées.
 
+> **Remplacé (patch 0083)** : TTSeriesWB suit maintenant le modèle de TTSeriesExposure (décalage de
+> la série partagé par TTShare en mireds, écart de chaque image avec la référence de sa série). Voir
+> `README_esby.md`, section TTSeriesWB. Ce document décrit l'ancien fonctionnement (valeur par dossier
+> avec héritage, Learn, mode auto).
+
 ## 1. Objectif
 
 Corriger automatiquement et de façon cohérente la balance des blancs des photos prises au

@@ -37,7 +37,7 @@ expliquent le *pourquoi*.
 | TTLensCorrector | distorsion mémorisée par focale |
 | TTTweaker | rotation automatique (Panasonic), fermeture après enregistrement… |
 | TTVarDisplayer | afficher les variables, bouton de copie dans le presse-papier |
-| TTSeriesWB | décalage de la balance des blancs au flash, en mireds (voir `SPEC_series_wb.md`) |
+| TTSeriesWB | balance des blancs au flash : décalage de la série (partagé par TTShare, en mireds) et écart de chaque image avec la référence de sa série |
 | TTSeriesExposure | écart d'exposition de chaque image avec la référence de sa série (pipette ou service), pour cette image seulement |
 
 ### Série et parent (tous les outils)
@@ -79,6 +79,12 @@ les autres à leur prochain focus), plus tard dans les images ouvertes ensuite.
   modifications des autres images sont toujours reçues tant que l'outil est actif.
 - Une valeur posée par un outil pour cette image seulement (l'écart de TTSeriesExposure) n'est jamais partagée
   (`Environment::shareSuppressed`). Un retour dans l'historique n'est pas partagé.
+- **Balance des blancs** (section `White Balance`, case « White balance ») : seules `Setting`,
+  `Temperature`, `Green` et `Equal` sont partagées. La température est décalée en **mireds**
+  (1 000 000 / K), la teinte et l'égaliseur comme des **facteurs** (logarithme). Une image en balance
+  « Camera » compte avec les valeurs du boîtier : un décalage reçu la passe en « Custom » à partir
+  d'elles. Une clé que l'image ne partage pas (`Environment::shareKeyFilter`, TTSeriesWB : photo sans
+  flash) n'est ni envoyée ni reçue.
 - Accroches : `ToolPanelCoordinator::panelChanged` et `profileChange` appellent `esbyParamsChanged`
   (changement d'un outil, ou nouvelle référence de comparaison) ; `esbyApplyParams` fait lire les
   paramètres reçus par les outils puis les traite comme un changement d'outil (entrée d'historique).
@@ -110,6 +116,29 @@ les autres à leur prochain focus), plus tard dans les images ouvertes ensuite.
   gardé. Outil désactivé : rien n'est fait (les écarts déjà appliqués restent dans les images).
 - La pipette lit la luminosité après la compensation d'exposition, la luminosité, le contraste et la
   compression des hautes lumières de l'outil Exposition, avant les courbes (`EUID_ToneCurve1`).
+
+### TTSeriesWB : balance des blancs de la série et écart de chaque image
+
+- Balance de l'image = balance du boîtier + **décalage de la série** + **écart de l'image**.
+- Le décalage de la série (mireds, facteur de teinte, égaliseur bleu/rouge) est partagé par TTShare
+  (section White balance) : changer la balance dans l'outil Balance des blancs, ou les curseurs
+  « Series: » de TTSeriesWB (qui montrent la balance de l'image sans son écart), change toute la série.
+- L'**écart** de l'image (mireds, jamais partagé) : **none**, **computed** ou **manual**, gardé par le
+  serveur (`file_data`, espace `wb` : `gap`, `state`) et redonné par TTShare à une image qui a perdu ses
+  valeurs. « No gap » le remet à 0, « Compute the gap » le recalcule même s'il était manuel.
+- **Référence de la série** : variable `wb.reference` sur le dossier de la série, JSON
+  `{raw, shutter, gap, k, hss?, sync}`. Écart calculé = écart de la référence + k × (vitesse − vitesse
+  de la référence) ; en synchro haute vitesse (vitesse ≤ `sync`), écart = `hss`. « Model from this
+  image », après un écart réglé à la main : donne `hss` (image en HSS) ou `k` (vitesse nettement
+  différente de la référence). Le curseur Sync speed est gardé avec la référence.
+- « Only for the photos taken with a flash » : une photo sans flash ne prend pas part à la balance de la
+  série. L'interrupteur de l'outil l'active ; désactivé, il ne fait rien.
+- Observations envoyées au serveur à l'enregistrement et à la fermeture (`saved-…`, `closed-…` avec
+  l'état de l'écart ou `camera`) et à chaque « Model from this image » (`model`).
+- Remplace l'ancien fonctionnement (valeur par dossier avec héritage, Learn, Apply, mode auto) ; les
+  options `SeriesWBMired`, `SeriesWBGreen`, `SeriesWBEqual`, `SeriesWBMode`, `SeriesWBAuto`,
+  `SeriesWBLearnTint` et `SeriesWBMarkers` n'existent plus. Les règles par dossier du serveur
+  (`get`, `set`…) restent disponibles mais l'outil ne s'en sert plus.
 
 ### TTSeriesExposure : service externe de mesure d'exposition (optionnel)
 

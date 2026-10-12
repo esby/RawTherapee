@@ -149,6 +149,9 @@ class Environment {
      // > 0: the changes are made by a tool for this image only (TTSeriesExposure, a change received
      // by TTShare): they are not shared
      int shareSuppressed = 0;
+     // a shared key ("Section/Key") the current image does not take part in (TTSeriesWB: white balance
+     // of a photo without flash): its changes are neither sent nor received. Not set: every key
+     std::function<bool(const std::string&)> shareKeyFilter;
      ToolVBox* getTrashPanel() { return trashPanel; }
 
      //variables related code follow

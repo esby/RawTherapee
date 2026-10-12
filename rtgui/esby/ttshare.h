@@ -65,6 +65,7 @@ protected:
     std::set<std::string> sharedSections();
     bool isShared(const std::string& key);
     std::map<std::string, std::string> extract(const rtengine::procparams::ProcParams& params);
+    void cameraValues(std::map<std::string, std::string>& keys, rtengine::StandardObserver observer);
     static Glib::ustring tempFile(const char* name);
 
     void connectSignals();

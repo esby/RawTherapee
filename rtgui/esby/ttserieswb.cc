@@ -17,11 +17,14 @@
 #include "ttserieswb.h"
 #include "ttlog.h"
 #include "esbyoptions.h"
+#include "esbysharedvars.h"
 #include "multilangmgr.h"
 #include "variable.h"
 #include "wbprovider.h"
 #include "tools/whitebalance.h"
 #include "rtengine/colortemp.h"
+#include <cjson/cJSON.h>
+#include <algorithm>
 #include <cmath>
 #include <iomanip>
 #include <fstream>
@@ -36,36 +39,119 @@ static const int SERIESWB_MINTEMP = 1500;
 static const int SERIESWB_MAXTEMP = 60000;
 static const double SERIESWB_MINGREEN = 0.02;
 static const double SERIESWB_MAXGREEN = 100.0;
-
-// ranges of the adjusters (a learned value outside them is refused, it was silently clamped)
-static const double SERIESWB_MIN_MIRED = -100.0;
-static const double SERIESWB_MAX_MIRED = 100.0;
-static const double SERIESWB_MIN_GREEN_FACTOR = 0.5;
-static const double SERIESWB_MAX_GREEN_FACTOR = 2.0;
 // blue/red equalizer: limits of the white balance tool (MINEQUAL, MAXEQUAL), 1.0 for the camera
 static const double SERIESWB_MIN_EQUAL = 0.5;
 static const double SERIESWB_MAX_EQUAL = 2.0;
 
+// ranges of the adjusters
+static const double SERIESWB_MIN_MIRED = -100.0;
+static const double SERIESWB_MAX_MIRED = 100.0;
+static const double SERIESWB_MIN_GREEN_FACTOR = 0.5;
+static const double SERIESWB_MAX_GREEN_FACTOR = 2.0;
+
+static const char REFERENCE_VAR[] = "wb.reference";
+
+static Glib::ustring mireds(double value)
+{
+  if (std::fabs(value) < 0.05) // -0.0
+    value = 0.0;
+  return Glib::ustring::format(std::showpos, std::fixed, std::setprecision(1), value);
+}
+
+static Glib::ustring factor(double value)
+{
+  return Glib::ustring::format(std::fixed, std::setprecision(3), value);
+}
+
+static Glib::ustring speed(double t)
+{
+  return (t > 0.0) ? Glib::ustring::compose("1/%1", std::lround(1.0 / t)) : Glib::ustring("?");
+}
+
+// ---------------------------------------------------------------------------------------
+// reference (JSON text of the wb.reference variable)
+// ---------------------------------------------------------------------------------------
+
+TTSeriesWB::Reference TTSeriesWB::Reference::parse(const Glib::ustring& text)
+{
+  Reference r;
+  cJSON* json = cJSON_Parse(text.c_str());
+  if (json == nullptr)
+    return r;
+  auto number = [json](const char* name, double def) {
+    cJSON* item = cJSON_GetObjectItem(json, name);
+    return cJSON_IsNumber(item) ? item->valuedouble : def;
+  };
+  cJSON* raw = cJSON_GetObjectItem(json, "raw");
+  if (cJSON_IsString(raw))
+  {
+    r.valid = true;
+    r.raw = raw->valuestring;
+    r.shutter = number("shutter", 0.0);
+    r.gap = number("gap", 0.0);
+    r.k = number("k", 0.0);
+    cJSON* hss = cJSON_GetObjectItem(json, "hss");
+    r.hasHss = cJSON_IsNumber(hss);
+    r.hss = r.hasHss ? hss->valuedouble : 0.0;
+    double sync = number("sync", r.sync);
+    if (sync > 0.0)
+      r.sync = sync;
+  }
+  cJSON_Delete(json);
+  return r;
+}
+
+Glib::ustring TTSeriesWB::Reference::serialize() const
+{
+  cJSON* json = cJSON_CreateObject();
+  cJSON_AddStringToObject(json, "raw", raw.c_str());
+  cJSON_AddNumberToObject(json, "shutter", shutter);
+  cJSON_AddNumberToObject(json, "gap", gap);
+  cJSON_AddNumberToObject(json, "k", k);
+  if (hasHss)
+    cJSON_AddNumberToObject(json, "hss", hss);
+  cJSON_AddNumberToObject(json, "sync", sync);
+  char* text = cJSON_PrintUnformatted(json);
+  Glib::ustring result(text);
+  cJSON_free(text);
+  cJSON_Delete(json);
+  return result;
+}
+
+// ---------------------------------------------------------------------------------------
+// interface
+// ---------------------------------------------------------------------------------------
+
 TTSeriesWB::TTSeriesWB() : FoldableToolPanel(this, "TTSeriesWB", M("TT_SERIESWB_LABEL"), false, true)
 {
   whitebalance = nullptr;
+  stateLoaded = false;
+  gap = 0.0;
+  state = "none";
+  generation = 0;
+  sharedConnected = false;
+  updatingWidgets = false;
+  loading = false;
 
-  // mode: shift from the camera white balance, or auto (fixed white balance, exposure model)
-  Gtk::HBox* modeBox = Gtk::manage(new Gtk::HBox());
-  modeBox->set_spacing(4);
-  modeBox->pack_start(*Gtk::manage(new Gtk::Label(M("TT_SERIESWB_MODE"))), Gtk::PACK_SHRINK, 0);
-  cbMode = Gtk::manage(new MyComboBoxText());
-  cbMode->append(M("TT_SERIESWB_MODE_SHIFT"));
-  cbMode->append(M("TT_SERIESWB_MODE_AUTO"));
-  cbMode->set_active(0);
-  cbMode->set_tooltip_text(M("TT_SERIESWB_MODE_TOOLTIP"));
-  modeBox->pack_start(*cbMode, Gtk::PACK_EXPAND_WIDGET, 0);
-  pack_start(*modeBox, Gtk::PACK_SHRINK, 0);
-  mode = MODE_SHIFT;
+  // reference of the series
+  Gtk::FlowBox* refBox = Gtk::manage(new Gtk::FlowBox());
+  refBox->set_selection_mode(Gtk::SELECTION_NONE);
+  refBox->set_column_spacing(4);
+  refBox->set_row_spacing(2);
+  btReference = Gtk::manage(new Gtk::Button(M("TT_SERIESWB_REFERENCE")));
+  btReference->set_tooltip_text(M("TT_SERIESWB_REFERENCE_TOOLTIP"));
+  btNoReference = Gtk::manage(new Gtk::Button(M("TT_SERIESWB_NO_REFERENCE_BUTTON")));
+  btNoReference->set_tooltip_text(M("TT_SERIESWB_NO_REFERENCE_TOOLTIP"));
+  btModel = Gtk::manage(new Gtk::Button(M("TT_SERIESWB_MODEL")));
+  btModel->set_tooltip_text(M("TT_SERIESWB_MODEL_TOOLTIP"));
+  refBox->add(*btReference);
+  refBox->add(*btNoReference);
+  refBox->add(*btModel);
+  pack_start(*refBox, Gtk::PACK_SHRINK, 0);
 
+  // shift of the series: changed here like in the white balance tool, shared by TTShare
   // positive shift: lower temperature, cooler rendering (ex: 5044 K + 15.4 mireds = 4679 K)
 //  adjMired = Gtk::manage(new Adjuster(M("TT_SERIESWB_MIRED"), SERIESWB_MIN_MIRED, SERIESWB_MAX_MIRED, 0.5, 0.0));
-  // step 0.1: with 0.5, a learned shift was rounded enough to change the reference image itself
   adjMired = Gtk::manage(new Adjuster(M("TT_SERIESWB_MIRED"), SERIESWB_MIN_MIRED, SERIESWB_MAX_MIRED, 0.1, 0.0));
   adjMired->setAdjusterListener(this);
   adjMired->set_tooltip_text(M("TT_SERIESWB_MIRED_TOOLTIP"));
@@ -82,75 +168,37 @@ TTSeriesWB::TTSeriesWB() : FoldableToolPanel(this, "TTSeriesWB", M("TT_SERIESWB_
   adjEqual->set_tooltip_text(M("TT_SERIESWB_EQUAL_TOOLTIP"));
   pack_start(*adjEqual, Gtk::PACK_SHRINK, 0);
 
-  // auto mode: synchronization speed and description of the model
+  // gap of the image
+  adjGap = Gtk::manage(new Adjuster(M("TT_SERIESWB_GAP"), SERIESWB_MIN_MIRED, SERIESWB_MAX_MIRED, 0.1, 0.0));
+  adjGap->setAdjusterListener(this);
+  adjGap->set_tooltip_text(M("TT_SERIESWB_GAP_TOOLTIP"));
+  pack_start(*adjGap, Gtk::PACK_SHRINK, 0);
+
+//  Gtk::HBox* buttonBox = Gtk::manage(new Gtk::HBox());
+  // flow box: the buttons go to the next line when the side panel is narrow
+  Gtk::FlowBox* imageBox = Gtk::manage(new Gtk::FlowBox());
+  imageBox->set_selection_mode(Gtk::SELECTION_NONE);
+  imageBox->set_column_spacing(4);
+  imageBox->set_row_spacing(2);
+  lbState = Gtk::manage(new Gtk::Label(""));
+  btCompute = Gtk::manage(new Gtk::Button(M("TT_SERIESWB_COMPUTE")));
+  btCompute->set_tooltip_text(M("TT_SERIESWB_COMPUTE_TOOLTIP"));
+  btReset = Gtk::manage(new Gtk::Button(M("TT_SERIESWB_RESET")));
+  btReset->set_tooltip_text(M("TT_SERIESWB_RESET_TOOLTIP"));
+  imageBox->add(*lbState);
+  imageBox->add(*btCompute);
+  imageBox->add(*btReset);
+  pack_start(*imageBox, Gtk::PACK_SHRINK, 0);
+
+  // high speed sync: from this shutter speed up (kept with the reference of the series)
   adjSync = Gtk::manage(new Adjuster(M("TT_SERIESWB_SYNC"), 30.0, 1000.0, 10.0, 250.0));
   adjSync->setAdjusterListener(this);
   adjSync->set_tooltip_text(M("TT_SERIESWB_SYNC_TOOLTIP"));
   pack_start(*adjSync, Gtk::PACK_SHRINK, 0);
-  lbAuto = Gtk::manage(new Gtk::Label(""));
-  lbAuto->set_line_wrap(true);
-  lbAuto->set_line_wrap_mode(Pango::WRAP_WORD_CHAR);
-  lbAuto->set_xalign(0.0);
-  pack_start(*lbAuto, Gtk::PACK_SHRINK, 0);
 
-  Gtk::HBox* flashBox = Gtk::manage(new Gtk::HBox());
-  flashBox->set_spacing(4);
-  lbFlashOnly = Gtk::manage(new Gtk::Label(M("TT_SERIESWB_FLASH_ONLY")));
-  cbFlashOnly = Gtk::manage(new Gtk::CheckButton());
-  cbFlashOnly->set_active(true);
-  flashBox->pack_start(*lbFlashOnly, Gtk::PACK_SHRINK, 0);
-  flashBox->pack_end(*cbFlashOnly, Gtk::PACK_SHRINK, 0);
-  pack_start(*flashBox, Gtk::PACK_SHRINK, 0);
-
-  // the tint is learned only on demand: a flash mixed with ambient light shifts the temperature,
-  // a tint correction (green / magenta) is only needed for some fluorescent or LED lights
-  Gtk::HBox* learnTintBox = Gtk::manage(new Gtk::HBox());
-  learnTintBox->set_spacing(4);
-  lbLearnTint = Gtk::manage(new Gtk::Label(M("TT_SERIESWB_LEARN_TINT")));
-  cbLearnTint = Gtk::manage(new Gtk::CheckButton());
-  cbLearnTint->set_active(false);
-  learnTintBox->pack_start(*lbLearnTint, Gtk::PACK_SHRINK, 0);
-  learnTintBox->pack_end(*cbLearnTint, Gtk::PACK_SHRINK, 0);
-  pack_start(*learnTintBox, Gtk::PACK_SHRINK, 0);
-
-//  Gtk::HBox* buttonBox = Gtk::manage(new Gtk::HBox());
-  // flow box: the buttons go to the next line when the side panel is narrow
-  Gtk::FlowBox* buttonBox = Gtk::manage(new Gtk::FlowBox());
-  buttonBox->set_selection_mode(Gtk::SELECTION_NONE);
-  buttonBox->set_column_spacing(4);
-  buttonBox->set_row_spacing(2);
-  btApply = Gtk::manage(new Gtk::Button(M("TT_SERIESWB_APPLY")));
-  btApply->set_tooltip_text(M("TT_SERIESWB_APPLY_TOOLTIP"));
-  btLearn = Gtk::manage(new Gtk::Button(M("TT_SERIESWB_LEARN")));
-  btLearn->set_tooltip_text(M("TT_SERIESWB_LEARN_TOOLTIP"));
-  buttonBox->add(*btApply);
-  buttonBox->add(*btLearn);
-  pack_start(*buttonBox, Gtk::PACK_SHRINK, 0);
-
-  // esbywb server: the value is declared per folder, the folders below inherit it
-//  Gtk::HBox* serverBox = Gtk::manage(new Gtk::HBox());
-  Gtk::FlowBox* serverBox = Gtk::manage(new Gtk::FlowBox());
-  serverBox->set_selection_mode(Gtk::SELECTION_NONE);
-  serverBox->set_column_spacing(4);
-  serverBox->set_row_spacing(2);
-  btSetFolder = Gtk::manage(new Gtk::Button(M("TT_SERIESWB_SET_FOLDER")));
-  btSetFolder->set_tooltip_text(M("TT_SERIESWB_SET_FOLDER_TOOLTIP"));
-//  btSetParent = Gtk::manage(new Gtk::Button(M("TT_SERIESWB_SET_PARENT")));
-//  btSetParent->set_tooltip_text(M("TT_SERIESWB_SET_PARENT_TOOLTIP"));
-  // series root: the first folder above the image containing a marker file (SeriesWBMarkers)
-  btSetParent = Gtk::manage(new Gtk::Button(M("TT_SERIESWB_SET_ROOT")));
-  btSetParent->set_tooltip_text(Glib::ustring::compose(M("TT_SERIESWB_SET_ROOT_TOOLTIP"), esbySettings().SeriesWBMarkers));
-  btUnset = Gtk::manage(new Gtk::Button(M("TT_SERIESWB_UNSET")));
-  btUnset->set_tooltip_text(M("TT_SERIESWB_UNSET_TOOLTIP"));
-  serverBox->add(*btSetFolder);
-  serverBox->add(*btSetParent);
-  serverBox->add(*btUnset);
-  pack_start(*serverBox, Gtk::PACK_SHRINK, 0);
-
-  lbServer = Gtk::manage(new Gtk::Label(""));
-  lbServer->set_xalign(0.0);
-  lbServer->set_line_wrap(true);
-  pack_start(*lbServer, Gtk::PACK_SHRINK, 0);
+  cbFlashOnly = Gtk::manage(new Gtk::CheckButton(M("TT_SERIESWB_FLASH_ONLY")));
+  cbFlashOnly->set_tooltip_text(M("TT_SERIESWB_FLASH_ONLY_TOOLTIP"));
+  pack_start(*cbFlashOnly, Gtk::PACK_SHRINK, 0);
 
   lbInfo = Gtk::manage(new Gtk::Label(""));
   lbInfo->set_line_wrap(true);
@@ -178,282 +226,32 @@ TTSeriesWB::TTSeriesWB() : FoldableToolPanel(this, "TTSeriesWB", M("TT_SERIESWB_
   });
   pack_start(*ebInfo, Gtk::PACK_SHRINK, 0);
 
-  btApply->signal_clicked().connect([this]() { applyToCurrentImage(true); });
-  btLearn->signal_clicked().connect([this]() { learnFromCurrentImage(); });
-  btSetFolder->signal_clicked().connect([this]() { setFolderValue(false); });
-  btSetParent->signal_clicked().connect([this]() { setFolderValue(true); });
-  btUnset->signal_clicked().connect([this]() { unsetFolderValue(); });
-  cbFlashOnly->signal_toggled().connect([this]() { saveSettings(); });
-  cbMode->signal_changed().connect([this]() { modeChanged(); });
-  cbLearnTint->signal_toggled().connect([this]() { saveSettings(); });
-
-  exactMired = 0.0;
-  exactGreen = 1.0;
-  exactEqual = 1.0;
+  btReference->signal_clicked().connect([this]() { setReferenceHere(); });
+  btNoReference->signal_clicked().connect([this]() { removeReference(); });
+  btModel->signal_clicked().connect([this]() { modelFromImage(); });
+  btCompute->signal_clicked().connect([this]() { computeAndApply(true); });
+  btReset->signal_clicked().connect([this]() { setGap(0.0, "none", true); setInfo(M("TT_SERIESWB_GAP_RESET")); });
+  cbFlashOnly->signal_toggled().connect([this]() {
+    if (loading)
+      return;
+    esbySettings().SeriesWBFlashOnly = cbFlashOnly->get_active();
+    showState();
+    setInfo("");
+  });
 
   // the values of the last session; a ttp profile loaded afterwards has the priority
-  loading = false;
-  loadSettings();
-
-  modified = false;
-  client.reset(new EsbyWBClient());
-  client->setStatusCallback([this](bool connected) {
-    updateServerStatus();
-    if (connected)
-      requestForCurrentImage();
-  });
-  client->setEventCallback([this](const Glib::ustring& path) {
-    // a value changed: the current image is concerned if its folder is the changed one or below it
-    Glib::ustring folder = currentFolder();
-    if (!folder.empty() && isBelow(folder, path))
-      requestForCurrentImage();
-  });
-  updateServerStatus();
-  client->start();
-}
-
-void TTSeriesWB::updateServerStatus()
-{
-  bool connected = client && client->isConnected();
-  lbServer->set_text(connected ? M("TT_SERIESWB_SERVER_CONNECTED") : M("TT_SERIESWB_SERVER_UNAVAILABLE"));
-  btSetFolder->set_sensitive(connected);
-  btSetParent->set_sensitive(connected);
-  btUnset->set_sensitive(connected);
-}
-
-// realpath: the server keys are absolute paths with the symbolic links resolved
-Glib::ustring TTSeriesWB::realPath(const Glib::ustring& path)
-{
-  char* resolved = realpath(path.c_str(), nullptr);
-  if (resolved == nullptr)
-    return path;
-  Glib::ustring result(resolved);
-  free(resolved);
-  return result;
-}
-
-bool TTSeriesWB::isBelow(const Glib::ustring& path, const Glib::ustring& folder)
-{
-  return (path == folder) || (folder == "/") || (path.compare(0, folder.size() + 1, folder + "/") == 0);
-}
-
-// ESBY_ORIGIN: full path of the original file, set by a launcher script (ex: rt_queue) that copies the
-// raw file to a local cache folder before opening it: the folder of the series is the original one.
-// It is used only if the current image has the same file name, so another image opened in the same
-// instance does not get the folder of another series.
-bool TTSeriesWB::fromOrigin()
-{
-  const char* origin = g_getenv("ESBY_ORIGIN");
-  Glib::ustring file = currentFile();
-  return (origin != nullptr) && (*origin != '\0') && !file.empty()
-      && (Glib::path_get_basename(origin) == Glib::path_get_basename(file));
-}
-
-Glib::ustring TTSeriesWB::seriesFile()
-{
-  if (env == nullptr)
-    return "";
-  Glib::ustring file = currentFile();
-  if (file.empty())
-    return "";
-  if (fromOrigin())
-  {
-    Glib::ustring origin = g_getenv("ESBY_ORIGIN");
-    return Glib::build_filename(realPath(Glib::path_get_dirname(origin)), Glib::path_get_basename(origin));
-  }
-  return Glib::build_filename(realPath(Glib::path_get_dirname(file)), Glib::path_get_basename(file));
-}
-
-Glib::ustring TTSeriesWB::currentFolder()
-{
-//  if (env == nullptr)
-//    return "";
-//  Glib::ustring file = currentFile();
-//  return file.empty() ? Glib::ustring() : realPath(Glib::path_get_dirname(file));
-  Glib::ustring file = seriesFile();
-  return file.empty() ? Glib::ustring() : Glib::ustring(Glib::path_get_dirname(file));
-}
-
-// asks the server the value of the folder of the current image, then the white balance it applied
-// to the file, then applies (the answers come later, in the main loop)
-void TTSeriesWB::requestForCurrentImage()
-{
-  if ((env == nullptr) || !getExpander()->getEnabled())
-    return;
-  Glib::ustring file = currentFile();
-  if (file.empty())
-    return;
-  if (!client || !client->isConnected())
-  {
-    applyToCurrentImage(false);
-    return;
-  }
-
-  Glib::ustring folder = currentFolder();
-  client->get(folder, [this, file](bool ok, const EsbyWBRule& rule) {
-    if (currentFile() != file) // another image was opened meanwhile
-      return;
-    if (!ok)
-    {
-      applyToCurrentImage(false);
-      return;
-    }
-    // the tool shows the value of the folder (the local settings are kept for the cases without server).
-    // no folder declares a value (empty source): the default value of the server only means that, the
-    // values of the tool (last learned or set) are kept, they are the default value of the user.
-    if (!rule.source.empty())
-    {
-      loading = true;
-      adjMired->block(true);
-      adjGreen->block(true);
-      adjEqual->block(true);
-      exactMired = rule.mired;
-      exactGreen = rule.green;
-      exactEqual = rule.equal;
-      adjMired->setValue(rule.mired);
-      adjGreen->setValue(rule.green);
-      adjEqual->setValue(rule.equal);
-      adjMired->block(false);
-      adjGreen->block(false);
-      adjEqual->block(false);
-      cbFlashOnly->set_active(rule.flashOnly);
-      mode = (rule.mode == "auto") ? MODE_AUTO : MODE_SHIFT;
-      autoModel = EsbyWBAuto::parse(rule.autoModel);
-      cbMode->set_active(mode);
-      adjSync->block(true);
-      adjSync->setValue(std::lround(1.0 / autoModel.sync));
-      adjSync->block(false);
-      updateModeWidgets();
-      loading = false;
-    }
-    currentSource = rule.source;
-    modified = false;
-
-    client->fileState(seriesFile(), [this, file](bool ok, const EsbyWBFileState& state) {
-      if (currentFile() != file)
-        return;
-      applyToCurrentImage(false, ok ? &state : nullptr);
-    });
-  });
-}
-
-// sends the values of the tool to the server, for the folder of the image or its parent.
-// the server then notifies the change, and the image is updated by the event.
-// the first folder, from the folder of the image upwards, containing one of the marker files
-// (SeriesWBMarkers, separated by ';'), or an empty string when there is none
-Glib::ustring TTSeriesWB::findSeriesRoot(const Glib::ustring& folder)
-{
-  std::vector<Glib::ustring> markers;
-  std::istringstream list(esbySettings().SeriesWBMarkers);
-  std::string marker;
-  while (std::getline(list, marker, ';'))
-  {
-    if (!marker.empty())
-      markers.push_back(marker);
-  }
-
-  Glib::ustring dir = folder;
-  while (!dir.empty())
-  {
-    for (const auto& m : markers)
-    {
-      if (Glib::file_test(Glib::build_filename(dir, m), Glib::FILE_TEST_EXISTS))
-        return dir;
-    }
-    Glib::ustring parent = Glib::path_get_dirname(dir);
-    if (parent == dir) // root reached
-      break;
-    dir = parent;
-  }
-  return "";
-}
-
-// sends the values of the tool to the server, for the folder of the image or the series root.
-// the server then notifies the change, and the image is updated by the event.
-void TTSeriesWB::setFolderValue(bool seriesRoot)
-{
-  Glib::ustring folder = currentFolder();
-  if (folder.empty() || !client || !client->isConnected())
-    return;
-  Glib::ustring note;
-  if (seriesRoot)
-  {
-//    folder = Glib::path_get_dirname(folder);
-    Glib::ustring root = findSeriesRoot(folder);
-    if (root.empty())
-    {
-      // no marker file: the parent folder, as before
-      folder = Glib::path_get_dirname(folder);
-      note = Glib::ustring::compose(M("TT_SERIESWB_NO_MARKER"), esbySettings().SeriesWBMarkers);
-    }
-    else
-      folder = root;
-  }
-  pendingAction = Glib::ustring::compose(M("TT_SERIESWB_SET_DONE"), folder) + (note.empty() ? Glib::ustring() : " " + note);
-  client->set(folder, exactMired, exactGreen, exactEqual, cbFlashOnly->get_active(),
-              (mode == MODE_AUTO) ? "auto" : "shift", autoModel.serialize(),
-    [this, folder](bool ok, const Glib::ustring&) {
-      if (!ok)
-      {
-        pendingAction.clear();
-        setInfo(Glib::ustring::compose(M("TT_SERIESWB_SERVER_ERROR"), folder));
-      }
-    });
-}
-
-void TTSeriesWB::unsetFolderValue()
-{
-  Glib::ustring folder = currentFolder();
-  if (folder.empty() || !client || !client->isConnected())
-    return;
-  client->unset(folder, [this, folder](bool ok, const Glib::ustring&) {
-    setInfo(Glib::ustring::compose(M(ok ? "TT_SERIESWB_UNSET_DONE" : "TT_SERIESWB_UNSET_NONE"), folder));
-  });
-}
-
-void TTSeriesWB::loadSettings()
-{
   loading = true;
-  const EsbySettings& s = esbySettings();
-  adjMired->block(true);
-  adjGreen->block(true);
-  adjEqual->block(true);
-  exactMired = s.SeriesWBMired;
-  exactGreen = s.SeriesWBGreen;
-  exactEqual = s.SeriesWBEqual;
-  adjMired->setValue(s.SeriesWBMired);
-  adjGreen->setValue(s.SeriesWBGreen);
-  adjEqual->setValue(s.SeriesWBEqual);
-  adjMired->block(false);
-  adjGreen->block(false);
-  adjEqual->block(false);
-  cbFlashOnly->set_active(s.SeriesWBFlashOnly);
-  cbLearnTint->set_active(s.SeriesWBLearnTint);
-  mode = (s.SeriesWBMode == MODE_AUTO) ? MODE_AUTO : MODE_SHIFT;
-  autoModel = EsbyWBAuto::parse(s.SeriesWBAuto);
-  cbMode->set_active(mode);
-  adjSync->block(true);
-  adjSync->setValue(std::lround(1.0 / autoModel.sync));
-  adjSync->block(false);
-  updateModeWidgets();
-  getExpander()->setEnabled(s.SeriesWBEnabled);
+  cbFlashOnly->set_active(esbySettings().SeriesWBFlashOnly);
+  getExpander()->setEnabled(esbySettings().SeriesWBEnabled);
   loading = false;
+  showState();
 }
 
-// kept in the options (written when RawTherapee is closed, or right away by "learn")
-void TTSeriesWB::saveSettings()
+TTSeriesWB::~TTSeriesWB()
 {
-  if (loading)
-    return;
-  EsbySettings& s = esbySettings();
-  s.SeriesWBEnabled = getExpander()->getEnabled();
-  s.SeriesWBMired = exactMired;
-  s.SeriesWBGreen = exactGreen;
-  s.SeriesWBEqual = exactEqual;
-  s.SeriesWBMode = mode;
-  s.SeriesWBAuto = autoModel.serialize();
-  s.SeriesWBFlashOnly = cbFlashOnly->get_active();
-  s.SeriesWBLearnTint = cbLearnTint->get_active();
+  paramsConnection.disconnect();
+  if (env != nullptr)
+    env->shareKeyFilter = nullptr;
 }
 
 void TTSeriesWB::deploy()
@@ -466,24 +264,23 @@ void TTSeriesWB::deploy()
     if ((p != nullptr) && (p->getToolName() == "whitebalance"))
       whitebalance = static_cast<WhiteBalance*>(p);
   }
+
+  // a photo without flash takes no part in the white balance of the series (TTShare)
+  env->shareKeyFilter = [this](const std::string& key) {
+    if (key.compare(0, 14, "White Balance/") != 0)
+      return true;
+    return !getExpander()->getEnabled() || takesPart();
+  };
 }
 
 void TTSeriesWB::deployLate()
 {
 }
 
-void TTSeriesWB::enabledChanged()
+// ESBY_ORIGIN: the original file of a copy opened by a launcher such as rt_queue
+Glib::ustring TTSeriesWB::originalFile()
 {
-  saveSettings();
-  if (env == nullptr) // the tool is not deployed yet (settings loaded in the constructor)
-    return;
-  if (getExpander()->getEnabled())
-    requestForCurrentImage();
-}
-
-Glib::ustring TTSeriesWB::currentFile()
-{
-  return env->getVarAsString("Fname");
+  return EsbySharedVariables::originalFile(env);
 }
 
 // Exif.Photo.Flash, as printed by Exiv2: "Fired", "Fired, return light detected", "Yes, compulsory",
@@ -498,6 +295,16 @@ bool TTSeriesWB::flashFired()
 
   Glib::ustring fired = env->getExifVariable("Exif:MakerNote:FlashFired");
   return (fired == "Yes");
+}
+
+bool TTSeriesWB::takesPart()
+{
+  return !cbFlashOnly->get_active() || ((env != nullptr) && flashFired());
+}
+
+double TTSeriesWB::shutter()
+{
+  return (env != nullptr) ? env->getVarAsDouble("SpeedValue") : 0.0;
 }
 
 bool TTSeriesWB::getCurrentWB(WBParams& wb)
@@ -522,426 +329,441 @@ bool TTSeriesWB::getCameraWB(const WBParams& wb, double& temp, double& green)
   return (temp > 0.0) && (green > 0.0); // nothing is returned when no image is loaded
 }
 
-// target white balance of the current image. false in auto mode when the model has no value for the
-// regime of the image (normal flash or high speed sync): the image is not changed then.
-bool TTSeriesWB::computeTarget(double camTemp, double camGreen, int& temp, double& green, double& equal)
+// "Camera" method: the engine applies the camera multipliers, the temperature and tint shown by the white
+// balance tool may still be the values of the profile: the image has the camera white balance then.
+// The automatic methods are not handled (false).
+bool TTSeriesWB::relativeWB(double& mired, double& green, double& equal)
 {
-  if (mode == MODE_AUTO)
+  WBParams wb;
+  double camTemp, camGreen;
+  if ((env == nullptr) || !getCurrentWB(wb) || !getCameraWB(wb, camTemp, camGreen))
+    return false;
+  if (!wb.enabled || (wb.method == "Camera"))
   {
-    double t = shutter();
-    double mired, g, e;
-    if (autoModel.isHss(t))
-    {
-      if (!autoModel.hasHss)
-        return false;
-      mired = 1000000.0 / autoModel.hssT;
-      g = (autoModel.hssG > 0.0) ? autoModel.hssG : camGreen;
-      e = autoModel.hssE;
-    }
-    else
-    {
-      if (!autoModel.hasRef)
-        return false;
-      // the ambient light adds up with the shutter time: k mireds per second of exposure
-      mired = 1000000.0 / autoModel.refT;
-      if ((t > 0.0) && (autoModel.refShutter > 0.0))
-        mired += autoModel.k * (t - autoModel.refShutter);
-      g = (autoModel.refG > 0.0) ? autoModel.refG : camGreen;
-      e = autoModel.refE;
-    }
-    double tk = (mired > 0.0) ? 1000000.0 / mired : SERIESWB_MAXTEMP;
-    temp = (int) std::lround(std::max<double>(SERIESWB_MINTEMP, std::min<double>(SERIESWB_MAXTEMP, tk)));
-    green = std::max(SERIESWB_MINGREEN, std::min(SERIESWB_MAXGREEN, g));
-    equal = std::max(SERIESWB_MIN_EQUAL, std::min(SERIESWB_MAX_EQUAL, e));
+    mired = 0.0;
+    green = 1.0;
+    equal = 1.0;
     return true;
   }
-
-  double mired = 1000000.0 / camTemp + exactMired;
-  double t = (mired > 0.0) ? 1000000.0 / mired : SERIESWB_MAXTEMP;
-  temp = (int) std::lround(std::max<double>(SERIESWB_MINTEMP, std::min<double>(SERIESWB_MAXTEMP, t)));
-  green = std::max(SERIESWB_MINGREEN, std::min(SERIESWB_MAXGREEN, camGreen * exactGreen));
-  equal = std::max(SERIESWB_MIN_EQUAL, std::min(SERIESWB_MAX_EQUAL, 1.0 * exactEqual)); // camera: 1.0
+  if ((wb.method != "Custom") || (wb.temperature <= 0))
+    return false;
+  mired = 1000000.0 / wb.temperature - 1000000.0 / camTemp;
+  green = wb.green / camGreen;
+  equal = wb.equal;
   return true;
-}
-
-double TTSeriesWB::shutter()
-{
-  return (env != nullptr) ? env->getVarAsDouble("SpeedValue") : 0.0;
-}
-
-Glib::ustring TTSeriesWB::describeAuto()
-{
-  Glib::ustring normal = autoModel.hasRef
-    ? Glib::ustring::compose(M("TT_SERIESWB_AUTO_REF"), std::lround(autoModel.refT),
-                             (autoModel.refShutter > 0.0) ? std::lround(1.0 / autoModel.refShutter) : 0,
-                             Glib::ustring::format(std::fixed, std::setprecision(1), autoModel.k))
-    : M("TT_SERIESWB_AUTO_NO_REF");
-  Glib::ustring hss = autoModel.hasHss
-    ? Glib::ustring::compose(M("TT_SERIESWB_AUTO_HSS"), std::lround(autoModel.hssT), std::lround(1.0 / autoModel.sync))
-    : Glib::ustring::compose(M("TT_SERIESWB_AUTO_NO_HSS"), std::lround(1.0 / autoModel.sync));
-  return normal + "\n" + hss;
-}
-
-void TTSeriesWB::updateModeWidgets()
-{
-  bool autoMode = (mode == MODE_AUTO);
-  adjMired->set_visible(!autoMode);
-  adjGreen->set_visible(!autoMode);
-  adjEqual->set_visible(!autoMode);
-  adjSync->set_visible(autoMode);
-  lbAuto->set_visible(autoMode);
-  lbAuto->set_text(autoMode ? describeAuto() : Glib::ustring());
-}
-
-void TTSeriesWB::modeChanged()
-{
-  if (loading)
-    return;
-  mode = (cbMode->get_active_row_number() == MODE_AUTO) ? MODE_AUTO : MODE_SHIFT;
-  updateModeWidgets();
-  saveSettings();
-  modified = client && client->isConnected(); // to send with "set for this folder"
-  applyToCurrentImage(false);
-}
-
-// the rounding of RawTherapee must not make an image, for instance the reference of a learned
-// shift, look different from its series
-bool TTSeriesWB::sameWB(int t1, double g1, double e1, int t2, double g2, double e2)
-{
-//  return (std::abs(t1 - t2) <= 1) && (std::fabs(g1 - g2) <= 0.001);
-  if ((t1 <= 0) || (t2 <= 0) || (g2 <= 0.0))
-    return false;
-//  return (std::fabs(1000000.0 / t1 - 1000000.0 / t2) <= 0.15) && (std::fabs(g1 / g2 - 1.0) <= 0.002);
-  // the exact shift is kept: only the rounding of RawTherapee remains, the temperature in integer
-  // kelvins (1 K covers it at any temperature, a tolerance in mireds does not at low temperatures)
-  // and the tint shown with 3 decimals
-//  return (std::abs(t1 - t2) <= 1) && (std::fabs(g1 / g2 - 1.0) <= 0.001);
-  // the blue/red equalizer is compared too (3 decimals, like the tint)
-  if (e2 <= 0.0)
-    return false;
-  return (std::abs(t1 - t2) <= 1) && (std::fabs(g1 / g2 - 1.0) <= 0.001) && (std::fabs(e1 / e2 - 1.0) <= 0.001);
-}
-
-void TTSeriesWB::setStatus(const Glib::ustring& action, const WBParams& wb, double camTemp, double camGreen,
-                           const Glib::ustring& origin)
-{
-  // a shift like -0.00001 (rounding of the integer kelvins) was shown "-0.0"
-  double shownMired = (std::fabs(exactMired) < 0.05) ? 0.0 : exactMired;
-  Glib::ustring series = Glib::ustring::compose(M("TT_SERIESWB_SHIFT"),
-                                                Glib::ustring::format(std::fixed, std::setprecision(1), shownMired),
-                                                Glib::ustring::format(std::fixed, std::setprecision(3), exactGreen),
-                                                Glib::ustring::format(std::fixed, std::setprecision(3), exactEqual));
-  Glib::ustring values = Glib::ustring::compose(M("TT_SERIESWB_VALUES"),
-                                                wb.temperature, Glib::ustring::format(std::fixed, std::setprecision(3), wb.green),
-                                                (int) std::lround(camTemp), Glib::ustring::format(std::fixed, std::setprecision(3), camGreen),
-                                                wb.method,
-                                                (wb.observer == rtengine::StandardObserver::TEN_DEGREES) ? "10" : "2",
-                                                Glib::ustring::format(std::fixed, std::setprecision(3), wb.equal));
-  Glib::ustring folder;
-  if (fromOrigin())
-    folder = "\n" + Glib::ustring::compose(M("TT_SERIESWB_ORIGIN"), currentFolder());
-  Glib::ustring shownAction = action;
-  if (!pendingAction.empty()) // action of a learn or a "set", kept over the refresh it causes
-  {
-    shownAction = pendingAction;
-    pendingAction.clear();
-  }
-  if (mode == MODE_AUTO)
-    series = M("TT_SERIESWB_MODE_AUTO") + ": " + describeAuto();
-  setInfo(shownAction + "\n" + series + "\n" + values + (origin.empty() ? Glib::ustring() : "\n" + origin) + folder);
-}
-
-void TTSeriesWB::setInfo(const Glib::ustring& text)
-{
-  lbInfo->set_text(text);
-  TT_LOG("TTSeriesWB: %s\n", text.c_str());
 }
 
 // sets the white balance of the image: "Custom" method, temperature, tint and blue/red equalizer.
 // WhiteBalance::setWB() only takes the temperature and the tint: the parameters (equalizer included)
 // are read by the tool first, then setWB() keeps the equalizer and notifies the change.
-void TTSeriesWB::setWhiteBalance(int temp, double green, double equal)
+// share: a change of the series (TTShare shares it); otherwise the gap of this image only
+void TTSeriesWB::setRelativeWB(double mired, double green, double equal, bool share)
 {
+  WBParams wb;
+  double camTemp, camGreen;
+  if (!getCurrentWB(wb) || !getCameraWB(wb, camTemp, camGreen))
+    return;
+  double m = 1000000.0 / camTemp + mired;
+  double t = (m > 0.0) ? 1000000.0 / m : SERIESWB_MAXTEMP;
+  int temp = (int) std::lround(std::max<double>(SERIESWB_MINTEMP, std::min<double>(SERIESWB_MAXTEMP, t)));
+  double g = std::max(SERIESWB_MINGREEN, std::min(SERIESWB_MAXGREEN, camGreen * green));
+  double e = std::max(SERIESWB_MIN_EQUAL, std::min(SERIESWB_MAX_EQUAL, equal));
+
   ProcParams pp;
   whitebalance->write(&pp);
+  pp.wb.enabled = true;
   pp.wb.method = "Custom";
   pp.wb.temperature = temp;
-  pp.wb.green = green;
-  pp.wb.equal = equal;
+  pp.wb.green = g;
+  pp.wb.equal = e;
   whitebalance->read(&pp);
-  whitebalance->setWB(temp, green);
+  if (!share)
+    env->shareSuppressed++;
+  whitebalance->setWB(temp, g);
+  if (!share)
+    env->shareSuppressed--;
 }
 
-// force: "apply to this image" button, the image follows the series again whatever its white balance
-// serverState: white balance applied to the file according to the server (the image follows the
-// series if it still has it), nullptr without server
-void TTSeriesWB::applyToCurrentImage(bool force, const EsbyWBFileState* serverState)
-{
-  if (!getExpander()->getEnabled() && !force)
-    return;
+// ---------------------------------------------------------------------------------------
+// state of the image (esby server)
+// ---------------------------------------------------------------------------------------
 
-  Glib::ustring file = currentFile();
-  WBParams wb;
-  if (file.empty() || !getCurrentWB(wb))
+// an image is opened: its gap and state (server), then the reference of its series; an image without
+// a manual gap gets the gap computed from the reference
+void TTSeriesWB::imageOpened()
+{
+  stateFile = originalFile();
+  if (stateFile.empty())
   {
     setInfo(M("TT_SERIESWB_NO_IMAGE"));
     return;
   }
-
-  double camTemp, camGreen;
-  if (!getCameraWB(wb, camTemp, camGreen))
+  series = EsbySharedVariables::seriesFolder(stateFile);
+  int current = ++generation;
+  gap = 0.0;
+  state = "none";
+  stateLoaded = false;
+  reference = Reference();
+  showState();
+  EsbyWBClient* client = env->sharedVariables()->getClient();
+  if (!client->isConnected())
   {
-    setInfo(M("TT_SERIESWB_NO_CAMERA_WB"));
+    // the gap can be set by hand, it is not kept
+    stateLoaded = true;
+    setInfo(M("TT_SERIESWB_NO_SERVER"));
     return;
   }
-
-  if (!force && cbFlashOnly->get_active() && !flashFired())
-  {
-    setStatus(M("TT_SERIESWB_NO_FLASH"), wb, camTemp, camGreen);
-    return;
-  }
-
-  int temp;
-  double green, equal;
-  if (!computeTarget(camTemp, camGreen, temp, green, equal))
-  {
-    setStatus(M(autoModel.isHss(shutter()) ? "TT_SERIESWB_AUTO_NEED_HSS" : "TT_SERIESWB_AUTO_NEED_REF"), wb, camTemp, camGreen);
-    return;
-  }
-
-  auto it = applied.find(file);
-  bool follows = force
-              || (wb.method == "Camera")
-              || ((it != applied.end()) && sameWB(wb.temperature, wb.green, wb.equal,
-                                                  it->second.temperature, it->second.green, it->second.equal))
-              || ((serverState != nullptr) && serverState->known
-                  && sameWB(wb.temperature, wb.green, wb.equal, serverState->temperature, serverState->green, serverState->equal))
-              || ((wb.method == "Custom") && sameWB(wb.temperature, wb.green, wb.equal, temp, green, equal));
-
-  if (!wb.enabled || !follows)
-  {
-    setStatus(M("TT_SERIESWB_MANUAL"), wb, camTemp, camGreen);
-    return;
-  }
-
-  // the action says whether the image was changed now or already had the series white balance
-  bool alreadyApplied = (wb.method == "Custom") && sameWB(wb.temperature, wb.green, wb.equal, temp, green, equal);
-  if (!alreadyApplied)
-    setWhiteBalance(temp, green, equal);
-
-  applied[file] = AppliedWB{temp, green, equal};
-  Glib::ustring origin;
-  if (client && client->isConnected())
-  {
-    client->applied(seriesFile(), temp, green, equal, currentSource);
-    origin = modified ? M("TT_SERIESWB_MODIFIED")
-           : currentSource.empty() ? M("TT_SERIESWB_SOURCE_TOOL")
-           : Glib::ustring::compose(M("TT_SERIESWB_SOURCE"), currentSource);
-  }
-//  setInfo(Glib::ustring::compose(M("TT_SERIESWB_APPLIED"),
-//                                 (int) std::lround(camTemp), temp,
-//                                 Glib::ustring::format(std::fixed, std::setprecision(1), exactMired))
-//          + (origin.empty() ? Glib::ustring() : "\n" + origin));
-  if (!alreadyApplied)
-  {
-    // the values of the image after the change
-    wb.method = "Custom";
-    wb.temperature = temp;
-    wb.green = green;
-    wb.equal = equal;
-  }
-  setStatus(M(alreadyApplied ? "TT_SERIESWB_ALREADY" : "TT_SERIESWB_APPLIED"), wb, camTemp, camGreen, origin);
-}
-
-// mired = mired(current white balance) - mired(camera); green = current green / camera green
-void TTSeriesWB::learnFromCurrentImage()
-{
-  Glib::ustring file = currentFile();
-  WBParams wb;
-  double camTemp, camGreen;
-  if (file.empty() || !getCurrentWB(wb) || !getCameraWB(wb, camTemp, camGreen) || (wb.temperature <= 0))
-  {
-    setInfo(M("TT_SERIESWB_NO_IMAGE"));
-    return;
-  }
-
-  // "Camera" method: the engine applies the camera multipliers, the temperature and tint shown by
-  // the white balance tool may still be the values of the profile (ex: a profile applied before the
-  // image data was available). The current white balance is then the camera one.
-  if (wb.method == "Camera")
-  {
-    wb.temperature = (int) std::lround(camTemp);
-    wb.green = camGreen;
-    wb.equal = 1.0;
-  }
-
-  double mired = 1000000.0 / wb.temperature - 1000000.0 / camTemp;
-//  double green = wb.green / camGreen;
-  double green = cbLearnTint->get_active() ? wb.green / camGreen : 1.0;
-  // learned with the tint: the blue/red equalizer of the camera white balance is 1.0
-  double equal = cbLearnTint->get_active() ? wb.equal / 1.0 : 1.0;
-
-  // rounded to the precision of the adjusters: the tool, the server and the reference image use the
-  // same value (the reference keeps its white balance, see sameWB)
-//  mired = std::round(mired * 10.0) / 10.0;
-//  green = std::round(green * 1000.0) / 1000.0;
-  // no rounding anymore: the exact values are kept (exactMired, exactGreen), the adjusters show them
-
-  // the values of the current and camera white balances are shown, so the result can be checked
-  Glib::ustring values = Glib::ustring::compose(M("TT_SERIESWB_VALUES"),
-                                                wb.temperature, Glib::ustring::format(std::fixed, std::setprecision(3), wb.green),
-                                                (int) std::lround(camTemp), Glib::ustring::format(std::fixed, std::setprecision(3), camGreen),
-                                                wb.method,
-                                                (wb.observer == rtengine::StandardObserver::TEN_DEGREES) ? "10" : "2",
-                                                Glib::ustring::format(std::fixed, std::setprecision(3), wb.equal));
-
-  // auto mode: the learn chooses what it updates, from the shutter time of the image
-  if (mode == MODE_AUTO)
-  {
-    int seriesTemp = 0;
-    double seriesGreen = 1.0, seriesEqual = 1.0;
-    bool learnedAgain = computeTarget(camTemp, camGreen, seriesTemp, seriesGreen, seriesEqual)
-                     && (wb.method == "Custom") && sameWB(wb.temperature, wb.green, wb.equal, seriesTemp, seriesGreen, seriesEqual);
-    double t = shutter();
-    double g = cbLearnTint->get_active() ? wb.green : 0.0; // 0: the tint of the camera white balance
-    double e = cbLearnTint->get_active() ? wb.equal : 1.0;
-    Glib::ustring what;
-    if (autoModel.isHss(t))
+  client->fileGet(stateFile, "wb", [this, current](bool ok, const std::vector<EsbyVarValue>& fields) {
+    if (current != generation)
+      return;
+    for (const EsbyVarValue& f : fields)
     {
-      // high speed sync: its own white balance, the same at every shutter speed
-      autoModel.hssT = wb.temperature;
-      autoModel.hssG = g;
-      autoModel.hssE = e;
-      autoModel.hasHss = true;
-      what = Glib::ustring::compose(M("TT_SERIESWB_AUTO_LEARNED_HSS"), wb.temperature);
+      if (f.name == "gap")
+        gap = (f.type == RT_VARIABLE_TYPE_INT) ? f.i : f.d;
+      else if ((f.name == "state") && ((f.s == "computed") || (f.s == "manual") || (f.s == "none")))
+        state = f.s;
     }
+    stateLoaded = true;
+    showState();
+    loadReference(ok);
+  });
+}
+
+// the reference of the series (set on its folder); computeAfter: the gap of the image follows it
+void TTSeriesWB::loadReference(bool computeAfter)
+{
+  EsbyWBClient* client = env->sharedVariables()->getClient();
+  if (series.empty() || !client->isConnected())
+    return;
+  int current = generation;
+  client->varGet(series, "", [this, current, computeAfter](bool, const std::vector<EsbyVarValue>& vars) {
+    if (current != generation)
+      return;
+    reference = Reference();
+    for (const EsbyVarValue& v : vars)
+      if ((v.name == REFERENCE_VAR) && (v.origin == series))
+        reference = Reference::parse(v.s);
+    showState();
+    setInfo("");
+    if (computeAfter && getExpander()->getEnabled() && (state != "manual"))
+      computeAndApply(false);
+  });
+}
+
+bool TTSeriesWB::isReference()
+{
+  return reference.valid && (Glib::path_get_basename(reference.raw) == Glib::path_get_basename(originalFile()));
+}
+
+// gap of the image from the reference: its own gap in high speed sync, otherwise the gap of the reference
+// plus the ambient light, proportional to the difference of shutter time
+bool TTSeriesWB::computeGap(double& g, Glib::ustring& why)
+{
+  if (!reference.valid)
+  {
+    why = M("TT_SERIESWB_NO_REFERENCE");
+    return false;
+  }
+  if (isReference())
+  {
+    why = M("TT_SERIESWB_IS_REFERENCE");
+    return false;
+  }
+  double t = shutter();
+  if (reference.isHss(t))
+  {
+    if (!reference.hasHss)
+    {
+      why = M("TT_SERIESWB_NEED_HSS");
+      return false;
+    }
+    g = reference.hss;
+    why = Glib::ustring::compose(M("TT_SERIESWB_COMPUTED_HSS"), mireds(g));
+    return true;
+  }
+  g = reference.gap;
+  if ((t > 0.0) && (reference.shutter > 0.0))
+    g += reference.k * (t - reference.shutter);
+  g = std::max(SERIESWB_MIN_MIRED, std::min(SERIESWB_MAX_MIRED, g));
+  why = Glib::ustring::compose(M("TT_SERIESWB_COMPUTED"), mireds(g), speed(t), speed(reference.shutter));
+  return true;
+}
+
+// explicitly: the button (a manual gap is replaced); otherwise the image opened or the reference changed
+void TTSeriesWB::computeAndApply(bool explicitly)
+{
+  if (!getExpander()->getEnabled() || !stateLoaded)
+  {
+    if (explicitly)
+      setInfo(M("TT_SERIESWB_OFF"));
+    return;
+  }
+  if (!takesPart())
+  {
+    setInfo(M("TT_SERIESWB_NO_FLASH"));
+    return;
+  }
+  if (!explicitly && (state == "manual"))
+    return;
+  double g;
+  Glib::ustring why;
+  if (!computeGap(g, why))
+  {
+    setInfo(why);
+    return;
+  }
+  if ((state != "computed") || (std::fabs(g - gap) >= 0.05))
+    setGap(g, "computed", true);
+  setInfo(why);
+}
+
+// the gap of the image becomes g: its white balance moves by the difference (for this image only)
+void TTSeriesWB::setGap(double g, const Glib::ustring& newState, bool apply)
+{
+  if (apply && (stateFile == originalFile()) && (std::fabs(g - gap) >= 0.01))
+  {
+    double m, gr, e;
+    if (relativeWB(m, gr, e))
+      setRelativeWB(m + g - gap, gr, e, false);
     else
     {
-      // a second reference at a clearly different shutter time gives the exposure coefficient
-      if (autoModel.hasRef && (t > 0.0) && (autoModel.refShutter > 0.0)
-      && (std::fabs(t - autoModel.refShutter) > std::max(0.002, 0.2 * autoModel.refShutter)))
-      {
-        double k = (1000000.0 / wb.temperature - 1000000.0 / autoModel.refT) / (t - autoModel.refShutter);
-        autoModel.k = std::max(-2000.0, std::min(2000.0, k));
-        what = Glib::ustring::compose(M("TT_SERIESWB_AUTO_LEARNED_COEF"),
-                                      Glib::ustring::format(std::fixed, std::setprecision(1), autoModel.k));
-      }
-      else
-        what = Glib::ustring::compose(M("TT_SERIESWB_AUTO_LEARNED_REF"), wb.temperature,
-                                      (t > 0.0) ? std::lround(1.0 / t) : 0);
-      autoModel.refT = wb.temperature;
-      autoModel.refG = g;
-      autoModel.refE = e;
-      autoModel.refShutter = t;
-      autoModel.hasRef = true;
-    }
-    updateModeWidgets();
-    applied[file] = AppliedWB{wb.temperature, wb.green, wb.equal};
-    saveSettings();
-    Options::save();
-    modified = false;
-    if (client && client->isConnected())
-    {
-      Glib::ustring folder = findSeriesRoot(currentFolder());
-      if (folder.empty())
-        folder = currentFolder();
-      client->set(folder, exactMired, exactGreen, exactEqual, cbFlashOnly->get_active(), "auto", autoModel.serialize(), nullptr);
-      client->applied(seriesFile(), wb.temperature, wb.green, wb.equal, folder);
-      observe(learnedAgain ? "learn-unchanged" : "learn");
-      currentSource = folder;
-      setStatus(what, wb, camTemp, camGreen, Glib::ustring::compose(M("TT_SERIESWB_SET_DONE"), folder));
-      pendingAction = what + " " + Glib::ustring::compose(M("TT_SERIESWB_SET_DONE"), folder);
+      setInfo(M("TT_SERIESWB_NOT_HANDLED"));
       return;
     }
-    setStatus(what, wb, camTemp, camGreen, M("TT_SERIESWB_LEARNED_LOCAL"));
-    return;
   }
+  gap = g;
+  state = newState;
+  saveState();
+  showState();
+}
 
-  if ((mired < SERIESWB_MIN_MIRED) || (mired > SERIESWB_MAX_MIRED)
-  || (green < SERIESWB_MIN_GREEN_FACTOR) || (green > SERIESWB_MAX_GREEN_FACTOR)
-  || (equal < SERIESWB_MIN_EQUAL) || (equal > SERIESWB_MAX_EQUAL))
-  {
-    setInfo(Glib::ustring::compose(M("TT_SERIESWB_OUT_OF_RANGE"),
-                                   Glib::ustring::format(std::fixed, std::setprecision(1), mired),
-                                   Glib::ustring::format(std::fixed, std::setprecision(3), green),
-                                   Glib::ustring::format(std::fixed, std::setprecision(3), equal))
-            + "\n" + values);
+void TTSeriesWB::saveState()
+{
+  EsbyWBClient* client = env->sharedVariables()->getClient();
+  if (stateFile.empty() || !client->isConnected())
     return;
-  }
+  EsbyVarValue g;
+  g.name = "gap";
+  g.type = RT_VARIABLE_TYPE_DOUBLE;
+  g.d = gap;
+  EsbyVarValue s;
+  s.name = "state";
+  s.s = state;
+  client->fileSet(stateFile, "wb", {g, s}, nullptr);
+}
 
-  // the adjusters are set without re-applying: the current image already has this white balance
+// the sliders show the shift of the series (the white balance of the image without its gap) and the gap
+void TTSeriesWB::showState()
+{
+  updatingWidgets = true;
+  adjGap->block(true);
+  adjGap->setValue(gap);
+  adjGap->block(false);
+  double m, gr, e;
+  bool known = relativeWB(m, gr, e);
   adjMired->block(true);
   adjGreen->block(true);
   adjEqual->block(true);
-  // the image already had the series white balance (the values of the tool, before this learn)
-  int seriesTemp = 0;
-  double seriesGreen = 1.0, seriesEqual = 1.0;
-  computeTarget(camTemp, camGreen, seriesTemp, seriesGreen, seriesEqual);
-  bool learnedAgain = (wb.method == "Custom") && sameWB(wb.temperature, wb.green, wb.equal, seriesTemp, seriesGreen, seriesEqual);
-
-  exactMired = mired;
-  exactGreen = green;
-  exactEqual = equal;
-  adjMired->setValue(mired);
-  adjGreen->setValue(green);
-  adjEqual->setValue(equal);
+  adjMired->setValue(known ? m - gap : 0.0);
+  adjGreen->setValue(known ? gr : 1.0);
+  adjEqual->setValue(known ? e : 1.0);
   adjMired->block(false);
   adjGreen->block(false);
   adjEqual->block(false);
+  adjSync->block(true);
+  adjSync->setValue(std::lround(1.0 / reference.sync));
+  adjSync->block(false);
+  updatingWidgets = false;
+  bool part = takesPart();
+  adjMired->set_sensitive(known && part);
+  adjGreen->set_sensitive(known && part);
+  adjEqual->set_sensitive(known && part);
+  adjGap->set_sensitive(part);
+  lbState->set_text(M(state == "computed" ? "TT_SERIESWB_STATE_COMPUTED"
+                      : state == "manual" ? "TT_SERIESWB_STATE_MANUAL" : "TT_SERIESWB_STATE_NONE"));
+}
 
-  applied[file] = AppliedWB{wb.temperature, wb.green, wb.equal};
+// ---------------------------------------------------------------------------------------
+// reference of the series
+// ---------------------------------------------------------------------------------------
 
-  // an explicit action: written right away, it must not be lost if RawTherapee is not closed properly
-  saveSettings();
-  Options::save();
-  // with the server, the learned value becomes the value of the folder of the image (the shift of
-  // a series is what is learned), and the image follows it. It was only a preview before, and the
-  // value of the folder replaced it when the image was opened again.
-  modified = false;
-  if (client && client->isConnected())
+// the current image becomes the reference of its series (normal flash): the model (coefficient, high
+// speed sync) is kept
+void TTSeriesWB::setReferenceHere()
+{
+  if (series.empty() || !env->sharedVariables()->isConnected())
   {
-//    Glib::ustring folder = currentFolder();
-    // the learned value is the one of the series: it is set for the series root (marker file),
-    // or for the folder of the image when there is no marker file. A learn used to create a rule
-    // on the folder of the image (ex: .../shooting/pp), hiding the value of the convention.
-    Glib::ustring folder = findSeriesRoot(currentFolder());
-    if (folder.empty())
-      folder = currentFolder();
-    client->set(folder, mired, green, equal, cbFlashOnly->get_active(), "shift", autoModel.serialize(), nullptr);
-    client->applied(seriesFile(), wb.temperature, wb.green, wb.equal, folder);
-    // a learn on an image that already had the series white balance learns the same value again:
-    // no new information for the analysis
-    observe(learnedAgain ? "learn-unchanged" : "learn");
-    currentSource = folder;
-    setStatus(M("TT_SERIESWB_LEARNED"), wb, camTemp, camGreen, Glib::ustring::compose(M("TT_SERIESWB_SET_DONE"), folder));
-    // the server notifies the change, and the refresh of the image would replace this action.
-    // set after setStatus(), which uses and clears it.
-    pendingAction = M("TT_SERIESWB_LEARNED") + " " + Glib::ustring::compose(M("TT_SERIESWB_SET_DONE"), folder);
+    setInfo(M("TT_SERIESWB_NO_SERVER"));
     return;
   }
+  double t = shutter();
+  if (reference.isHss(t))
+  {
+    setInfo(M("TT_SERIESWB_REFERENCE_HSS"));
+    return;
+  }
+  Reference ref = reference;
+  ref.valid = true;
+  ref.raw = originalFile();
+  ref.shutter = t;
+  ref.gap = gap;
+  publishReference(ref, Glib::ustring::compose(M("TT_SERIESWB_REFERENCE_SET"), speed(t), mireds(gap)));
+}
 
-  setStatus(M("TT_SERIESWB_LEARNED"), wb, camTemp, camGreen, M("TT_SERIESWB_LEARNED_LOCAL"));
+void TTSeriesWB::publishReference(const Reference& ref, const Glib::ustring& message)
+{
+  EsbyVarValue value;
+  value.name = REFERENCE_VAR;
+  value.s = ref.serialize();
+  env->sharedVariables()->getClient()->varSet(series, "", value, nullptr);
+  reference = ref;
+  showState();
+  setInfo(message);
+}
+
+void TTSeriesWB::removeReference()
+{
+  if (!isReference())
+  {
+    setInfo(M("TT_SERIESWB_NOT_A_REFERENCE"));
+    return;
+  }
+  env->sharedVariables()->getClient()->varUnset(series, "", REFERENCE_VAR, nullptr);
+  reference = Reference();
+  showState();
+  setInfo(M("TT_SERIESWB_REFERENCE_REMOVED"));
+}
+
+// the gap set by hand on this image completes the model of the series: in high speed sync, it becomes the
+// gap of the high speed sync; otherwise, with a shutter time clearly different from the reference, it
+// gives the coefficient of the exposure (ambient light)
+void TTSeriesWB::modelFromImage()
+{
+  if (!reference.valid)
+  {
+    setInfo(M("TT_SERIESWB_NO_REFERENCE"));
+    return;
+  }
+  if (isReference())
+  {
+    setInfo(M("TT_SERIESWB_IS_REFERENCE"));
+    return;
+  }
+  Reference ref = reference;
+  double t = shutter();
+  Glib::ustring message;
+  if (ref.isHss(t))
+  {
+    ref.hasHss = true;
+    ref.hss = gap;
+    message = Glib::ustring::compose(M("TT_SERIESWB_MODEL_HSS"), mireds(gap));
+  }
+  else if ((t > 0.0) && (ref.shutter > 0.0) && (std::fabs(t - ref.shutter) > std::max(0.002, 0.2 * ref.shutter)))
+  {
+    ref.k = std::max(-2000.0, std::min(2000.0, (gap - ref.gap) / (t - ref.shutter)));
+    message = Glib::ustring::compose(M("TT_SERIESWB_MODEL_COEF"), mireds(ref.k), speed(t), speed(ref.shutter));
+  }
+  else
+  {
+    setInfo(Glib::ustring::compose(M("TT_SERIESWB_MODEL_SAME_SPEED"), speed(t), speed(ref.shutter)));
+    return;
+  }
+  // the gap of this image is the one of the model now
+  state = "computed";
+  saveState();
+  publishReference(ref, message);
+  observe("model");
+}
+
+// ---------------------------------------------------------------------------------------
+
+void TTSeriesWB::setInfo(const Glib::ustring& action)
+{
+  Glib::ustring text = action;
+  if (!series.empty())
+  {
+    Glib::ustring ref;
+    if (!reference.valid)
+      ref = M("TT_SERIESWB_REF_NONE");
+    else
+    {
+      ref = isReference() ? M("TT_SERIESWB_REF_THIS")
+          : Glib::ustring::compose(M("TT_SERIESWB_REF"), Glib::path_get_basename(reference.raw));
+      ref += " " + Glib::ustring::compose(M("TT_SERIESWB_REF_MODEL"), speed(reference.shutter), mireds(reference.gap),
+                                          mireds(reference.k),
+                                          reference.hasHss ? mireds(reference.hss) : Glib::ustring("?"),
+                                          speed(reference.sync));
+    }
+    text += (text.empty() ? "" : "\n") + Glib::ustring::compose(M("TT_SERIESWB_SEQ"), Glib::path_get_basename(series)) + "\n" + ref;
+  }
+  WBParams wb;
+  double camTemp, camGreen;
+  if ((env != nullptr) && getCurrentWB(wb) && getCameraWB(wb, camTemp, camGreen))
+  {
+    text += "\n" + Glib::ustring::compose(M("TT_SERIESWB_VALUES"),
+                                          wb.temperature, factor(wb.green),
+                                          (int) std::lround(camTemp), factor(camGreen),
+                                          wb.method,
+                                          (wb.observer == rtengine::StandardObserver::TEN_DEGREES) ? "10" : "2",
+                                          factor(wb.equal));
+    if (!takesPart())
+      text += "\n" + M("TT_SERIESWB_NO_FLASH");
+  }
+  lbInfo->set_text(text);
+  TT_LOG("TTSeriesWB: %s\n", text.c_str());
+}
+
+// turned on with an image already opened: it is handled from now on
+void TTSeriesWB::enabledChanged()
+{
+  if (loading)
+    return;
+  esbySettings().SeriesWBEnabled = getExpander()->getEnabled();
+  if (env == nullptr) // the tool is not deployed yet (settings loaded in the constructor)
+    return;
+  if (getExpander()->getEnabled() && !originalFile().empty())
+    imageOpened();
 }
 
 void TTSeriesWB::adjusterChanged(Adjuster* a, double newval)
 {
-  // a value chosen with the adjuster: its rounding is wanted
-  if (a == adjMired)
-    exactMired = adjMired->getValue();
-  else if (a == adjGreen)
-    exactGreen = adjGreen->getValue();
-  else if (a == adjEqual)
-    exactEqual = adjEqual->getValue();
-  else if (a == adjSync)
+  if (updatingWidgets)
+    return;
+  if ((a == adjMired) || (a == adjGreen) || (a == adjEqual))
   {
-    autoModel.sync = 1.0 / std::max(1.0, adjSync->getValue());
-    updateModeWidgets();
+    // a change of the white balance of the image, not of its gap: not suppressed, TTShare shares it
+    double m, gr, e;
+    if (!relativeWB(m, gr, e))
+    {
+      setInfo(M("TT_SERIESWB_NOT_HANDLED"));
+      return;
+    }
+    setRelativeWB(adjMired->getValue() + gap, adjGreen->getValue(), adjEqual->getValue(), true);
+    return;
   }
-  saveSettings();
-  // with the server, the change is a preview until it is sent with "set for this folder"
-  modified = client && client->isConnected();
-  // the current image is updated only if it follows the series (see applyToCurrentImage)
-  applyToCurrentImage(false);
+  if (a == adjGap)
+  {
+    if (!getExpander()->getEnabled())
+    {
+      // the tool is off: it does nothing
+      showState();
+      return;
+    }
+    setGap(newval, "manual", true);
+    return;
+  }
+  if (a == adjSync)
+  {
+    double sync = 1.0 / std::max(1.0, newval);
+    if (reference.valid && env->sharedVariables()->isConnected())
+    {
+      Reference ref = reference;
+      ref.sync = sync;
+      publishReference(ref, Glib::ustring::compose(M("TT_SERIESWB_SYNC_SET"), speed(sync)));
+    }
+    else
+      reference.sync = sync; // without reference: only for this image
+  }
 }
 
 // the lens names of some cameras end with many spaces
@@ -951,16 +773,18 @@ static Glib::ustring trimmed(const Glib::ustring& text)
   return (end == Glib::ustring::npos) ? Glib::ustring() : text.substr(0, end + 1);
 }
 
+// sends to the server the white balance of the current image (kind: model, saved-..., closed-...) with
+// its exposure, for the analysis of the link between the white balance and the exposure
 void TTSeriesWB::observe(const Glib::ustring& kind)
 {
-  if (!client || !client->isConnected())
-    return;
-  Glib::ustring file = seriesFile();
+  EsbyWBClient* client = env->sharedVariables()->getClient();
+  Glib::ustring file = originalFile();
   WBParams wb;
   double camTemp, camGreen;
-  if (file.empty() || !getCurrentWB(wb) || !getCameraWB(wb, camTemp, camGreen) || !wb.enabled)
+  if (!client->isConnected() || file.empty() || !getCurrentWB(wb) || !getCameraWB(wb, camTemp, camGreen) || !wb.enabled)
     return;
-  if (wb.method == "Camera") // the engine applies the camera white balance (see learnFromCurrentImage)
+  file = Glib::build_filename(EsbySharedVariables::realPath(Glib::path_get_dirname(file)), Glib::path_get_basename(file));
+  if (wb.method == "Camera") // the engine applies the camera white balance (see relativeWB)
   {
     wb.temperature = (int) std::lround(camTemp);
     wb.green = camGreen;
@@ -974,76 +798,70 @@ void TTSeriesWB::observe(const Glib::ustring& kind)
   double iso = env->getVarAsInt("Iso");
   double fnumber = env->getVarAsDouble("FnumValue");
   double shutter = env->getVarAsDouble("SpeedValue");
+  double mired = 1000000.0 / wb.temperature - 1000000.0 / camTemp;
   std::map<std::string, double> numbers = {
-    {"mired", 1000000.0 / wb.temperature - 1000000.0 / camTemp},
+    {"mired", mired},
     {"green", wb.green / camGreen},
     {"equal", wb.equal},
     {"image_T", (double) wb.temperature}, {"image_G", wb.green},
     {"camera_T", camTemp}, {"camera_G", camGreen},
-    {"series_mired", exactMired}, {"series_green", exactGreen}, {"series_equal", exactEqual},
+    {"series_mired", mired - gap}, {"series_green", wb.green / camGreen}, {"series_equal", wb.equal},
+    {"gap", gap},
     {"iso", iso}, {"fnumber", fnumber}, {"shutter", shutter}};
   // light value of the settings (as exiftool computes it): log2(N^2 / t) - log2(ISO / 100)
   if ((iso > 0.0) && (fnumber > 0.0) && (shutter > 0.0))
     numbers["light_value"] = std::log2(fnumber * fnumber / shutter) - std::log2(iso / 100.0);
   std::map<std::string, Glib::ustring> texts = {
-    {"kind", kind}, {"method", wb.method}, {"mode", (mode == MODE_AUTO) ? "auto" : "shift"}, {"auto", autoModel.serialize()}, {"source", currentSource}, {"series_root", findSeriesRoot(currentFolder())},
+    {"kind", kind}, {"method", wb.method}, {"state", state},
+    {"reference", reference.valid ? reference.serialize() : Glib::ustring()},
+    {"source", series}, {"series_root", series},
     {"camera", env->getVarAsString("Camera")}, {"lens", trimmed(env->getVarAsString("Lens"))},
     {"flash", env->getExifVariable("Exif:Flash")}};
   client->observe(file, numbers, texts);
 }
 
-// final white balance of the image (saved or closed): kind = <event>-camera, -series or -manual
-void TTSeriesWB::observeFinal(const Glib::ustring& event)
-{
-  WBParams wb;
-  if (getCurrentWB(wb))
-  {
-    Glib::ustring kind = event + "-manual";
-    auto it = applied.find(currentFile());
-    // the series white balance, to recognize an image corrected by the series in a former session
-    double camTemp, camGreen;
-    int temp = 0;
-    double green = 1.0, equal = 1.0;
-    if (getCameraWB(wb, camTemp, camGreen))
-      computeTarget(camTemp, camGreen, temp, green, equal);
-    if (wb.method == "Camera")
-      kind = event + "-camera";
-    else if (((it != applied.end()) && sameWB(wb.temperature, wb.green, wb.equal,
-                                              it->second.temperature, it->second.green, it->second.equal))
-          || ((temp > 0) && sameWB(wb.temperature, wb.green, wb.equal, temp, green, equal)))
-      kind = event + "-series";
-    observe(kind);
-  }
-}
-
 void TTSeriesWB::react(FakeProcEvent ev)
 {
+  if (!sharedConnected && (env != nullptr))
+  {
+    // the white balance changed (white balance tool, change received from the series): the sliders follow
+    paramsConnection = env->paramsChangedSignal.connect([this](const ProcParams&, const ProcEvent&, bool) {
+      if (!updatingWidgets)
+        showState();
+    });
+    // the reference changed (another instance, or the variable panel)
+    env->sharedVariables()->signalChanged().connect([this]() {
+      if (stateLoaded && getExpander()->getEnabled())
+        loadReference(true);
+    });
+    sharedConnected = true;
+  }
   // FakeEvExifTransmitted: the exif data (flash) and the file name are known, TTTweaker has
   // already reacted (it is registered before this tool).
-  if ((ev == FakeEvExifTransmitted) || (ev == FakeEvProfileChanged))
-    requestForCurrentImage(); // without server, applies the values of the tool
+  if ((ev == FakeEvExifTransmitted) && getExpander()->getEnabled())
+    imageOpened();
 
   // the image is saved, or closed (the profile is saved then, ex: rt_queue, one instance per image):
   // its white balance is the final one, observed for the analysis
-  if ((ev == FakeEvFileSaved) && getExpander()->getEnabled())
-    observeFinal("saved");
-  if ((ev == FakeEvImageClosed) && getExpander()->getEnabled())
-    observeFinal("closed");
+  if (((ev == FakeEvFileSaved) || (ev == FakeEvImageClosed)) && getExpander()->getEnabled() && takesPart())
+  {
+    WBParams wb;
+    if (getCurrentWB(wb))
+    {
+      Glib::ustring event = (ev == FakeEvFileSaved) ? "saved" : "closed";
+      observe(event + "-" + ((wb.method == "Camera") ? Glib::ustring("camera") : state));
+    }
+  }
 }
 
 Glib::ustring TTSeriesWB::themeExport()
 {
   Glib::ustring s_active = getToolName() + ":" + "active " + std::string(getExpander()->getEnabled() ? "1" : "0");
-  Glib::ustring s_mired = getToolName() + ":" + "mired " + Glib::Ascii::dtostr(exactMired);
-  Glib::ustring s_green = getToolName() + ":" + "green " + Glib::Ascii::dtostr(exactGreen);
   Glib::ustring s_flash = getToolName() + ":" + "flash_only " + std::string(cbFlashOnly->get_active() ? "1" : "0");
-  Glib::ustring s_learn_tint = getToolName() + ":" + "learn_tint " + std::string(cbLearnTint->get_active() ? "1" : "0");
 
 //  return s_active + "\n" + s_mired + "\n" + s_green + "\n" + s_flash + "\n" + s_learn_tint + "\n";
-  // the shift and tint factor are working values (they change with the series), not a layout:
-  // they are kept in the options and on the server, not in the ttp profiles. A profile loaded at
-  // startup reset the learned shift to the value it was saved with.
-  return s_active + "\n" + s_flash + "\n" + s_learn_tint + "\n";
+  // the shift of the series and the gaps are working values, shared by the server: not in the ttp profiles
+  return s_active + "\n" + s_flash + "\n";
 }
 
 void TTSeriesWB::themeImport(std::ifstream& myfile)
@@ -1066,7 +884,7 @@ void TTSeriesWB::themeImport(std::ifstream& myfile)
         {
           if (key == "active")
             getExpander()->setEnabled(value == "1");
-          // ignored: the "mired" and "green" lines of the older profiles must not reset the working values
+          // ignored: the "mired", "green" and "learn_tint" lines of the older profiles
 /*
           else if (key == "mired")
           {
@@ -1085,8 +903,6 @@ void TTSeriesWB::themeImport(std::ifstream& myfile)
 */
           else if (key == "flash_only")
             cbFlashOnly->set_active(value == "1");
-          else if (key == "learn_tint")
-            cbLearnTint->set_active(value == "1");
         }
       }
       else
@@ -1097,5 +913,40 @@ void TTSeriesWB::themeImport(std::ifstream& myfile)
       }
     }
   }
-  saveSettings();
 }
+
+// ---------------------------------------------------------------------------------------
+// commented lines of the former implementation (shift per folder with inheritance, learn, auto mode),
+// kept as they were
+// ---------------------------------------------------------------------------------------
+//
+// constructor:
+//  Gtk::HBox* serverBox = Gtk::manage(new Gtk::HBox());
+//  btSetParent = Gtk::manage(new Gtk::Button(M("TT_SERIESWB_SET_PARENT")));
+//  btSetParent->set_tooltip_text(M("TT_SERIESWB_SET_PARENT_TOOLTIP"));
+//
+// currentFolder():
+//  if (env == nullptr)
+//    return "";
+//  Glib::ustring file = currentFile();
+//  return file.empty() ? Glib::ustring() : realPath(Glib::path_get_dirname(file));
+//
+// setFolderValue():
+//    folder = Glib::path_get_dirname(folder);
+//
+// sameWB():
+//  return (std::abs(t1 - t2) <= 1) && (std::fabs(g1 - g2) <= 0.001);
+//  return (std::fabs(1000000.0 / t1 - 1000000.0 / t2) <= 0.15) && (std::fabs(g1 / g2 - 1.0) <= 0.002);
+//  return (std::abs(t1 - t2) <= 1) && (std::fabs(g1 / g2 - 1.0) <= 0.001);
+//
+// applyToCurrentImage():
+//  setInfo(Glib::ustring::compose(M("TT_SERIESWB_APPLIED"),
+//                                 (int) std::lround(camTemp), temp,
+//                                 Glib::ustring::format(std::fixed, std::setprecision(1), exactMired))
+//          + (origin.empty() ? Glib::ustring() : "\n" + origin));
+//
+// learnFromCurrentImage():
+//  double green = wb.green / camGreen;
+//  mired = std::round(mired * 10.0) / 10.0;
+//  green = std::round(green * 1000.0) / 1000.0;
+//    Glib::ustring folder = currentFolder();

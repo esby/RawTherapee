@@ -115,65 +115,57 @@ TT_SERIESEXP_STATUS;Measuring service: %1.
 TT_SERIESEXP_SUGGESTED;Gap suggested (similarity, clipping or gap outside the automatic limits, or set by hand before).
 TT_SERIESEXP_SUGGESTED_AF;No face: measure of the AF area, suggested only: gap %1 EV.
 TT_SERIESEXP_WAITING;Waiting for the measuring service...
-TT_SERIESWB_ALREADY;The image already has the series white balance.
-TT_SERIESWB_APPLIED;Series white balance applied.
-TT_SERIESWB_APPLY;Apply to this image
-TT_SERIESWB_APPLY_TOOLTIP;Applies the series white balance to the current image, even if its white balance was changed by hand or if no flash was fired.
-TT_SERIESWB_AUTO_HSS;High speed sync (1/%2 s and faster): %1 K.
-TT_SERIESWB_AUTO_LEARNED_COEF;Exposure coefficient learned: %1 mireds per second; this image is the new reference.
-TT_SERIESWB_AUTO_LEARNED_HSS;High speed sync reference learned: %1 K.
-TT_SERIESWB_AUTO_LEARNED_REF;Normal flash reference learned: %1 K at 1/%2 s.
-TT_SERIESWB_AUTO_NEED_HSS;Auto mode: no reference for the high speed sync yet, image left untouched.
-TT_SERIESWB_AUTO_NEED_REF;Auto mode: no reference for the normal flash yet, image left untouched.
-TT_SERIESWB_AUTO_NO_HSS;High speed sync (1/%1 s and faster): no reference.
-TT_SERIESWB_AUTO_NO_REF;Normal flash: no reference (learn on an image).
-TT_SERIESWB_AUTO_REF;Normal flash: %1 K at 1/%2 s, %3 mireds per second of exposure.
+TT_SERIESWB_COMPUTE;Compute the gap
+TT_SERIESWB_COMPUTED;Gap computed: %1 mireds (%2 s, reference %3 s).
+TT_SERIESWB_COMPUTED_HSS;Gap computed: %1 mireds (high speed sync).
+TT_SERIESWB_COMPUTE_TOOLTIP;Computes the gap of this image from the reference of its series (shutter time, high speed sync), even if it was set by hand.
 TT_SERIESWB_COPY_TOOLTIP;Click to copy this text to the clipboard.
-TT_SERIESWB_EQUAL;Blue/red equalizer factor
-TT_SERIESWB_EQUAL_TOOLTIP;Factor applied to the blue/red equalizer of the white balance (1.0 for the camera white balance).
+TT_SERIESWB_EQUAL;Series: blue/red equalizer
+TT_SERIESWB_EQUAL_TOOLTIP;Blue/red equalizer of the series (1.0 for the camera white balance). Changed here or in the white balance tool, it is shared with the series by "Share changes".
 TT_SERIESWB_FLASH_ONLY;Only for the photos taken with a flash
-TT_SERIESWB_GREEN;Tint factor
-TT_SERIESWB_GREEN_TOOLTIP;Factor applied to the tint of the camera white balance.
+TT_SERIESWB_FLASH_ONLY_TOOLTIP;A photo without flash takes no part in the white balance of the series: its changes are not shared, it receives none.
+TT_SERIESWB_GAP;Gap of this image (mireds)
+TT_SERIESWB_GAP_RESET;No gap for this image.
+TT_SERIESWB_GAP_TOOLTIP;Gap of the white balance of this image with its series, in mireds (positive: cooler). Never shared. Moved by hand, the gap is manual: it is not computed anymore when the image is opened.
+TT_SERIESWB_GREEN;Series: tint factor
+TT_SERIESWB_GREEN_TOOLTIP;Factor of the series applied to the tint of the camera white balance. Shared with the series by "Share changes".
+TT_SERIESWB_IS_REFERENCE;This image is the reference of its series.
 TT_SERIESWB_LABEL;Series White Balance
-TT_SERIESWB_LEARN;Learn from this image
-TT_SERIESWB_LEARNED;Shift learned from this image.
-TT_SERIESWB_LEARNED_LOCAL;Server unavailable: kept in the tool, not sent.
-TT_SERIESWB_LEARN_TINT;Learn the tint and the blue/red equalizer too
-TT_SERIESWB_LEARN_TOOLTIP;Sets the shift from the white balance of the current image, compared to the camera white balance. With the server, it becomes the value of the series root (marker file), or of the folder of the image without marker file.
-TT_SERIESWB_MANUAL;White balance changed by hand: left untouched.
-TT_SERIESWB_MIRED;Shift (mireds)
-TT_SERIESWB_MIRED_TOOLTIP;Shift applied to the camera white balance, in mireds (1000000 / kelvins). A positive value lowers the temperature, for a cooler rendering.
-TT_SERIESWB_MODE;Mode
-TT_SERIESWB_MODE_AUTO;Auto (exposure)
-TT_SERIESWB_MODE_SHIFT;Shift from the camera
-TT_SERIESWB_MODE_TOOLTIP;Shift from the camera: a shift is applied to the camera white balance.\nAuto: fixed white balance of the series, warmer when the shutter time is longer (ambient light), with its own value in high speed sync. The learn chooses what it updates from the shutter speed of the image.
-TT_SERIESWB_MODIFIED;Value changed in the tool, not sent to the server.
-TT_SERIESWB_NO_CAMERA_WB;Camera white balance not available.
-TT_SERIESWB_NO_FLASH;No flash fired: not concerned.
+TT_SERIESWB_MIRED;Series: shift (mireds)
+TT_SERIESWB_MIRED_TOOLTIP;Shift of the series from the camera white balance, in mireds (1000000 / kelvins): the white balance of the image without its gap. A positive value lowers the temperature, for a cooler rendering. Changed here or in the white balance tool, it is shared with the series by "Share changes" (section White balance).
+TT_SERIESWB_MODEL;Model from this image
+TT_SERIESWB_MODEL_COEF;Model: %1 mireds per second of exposure (%2 s against %3 s).
+TT_SERIESWB_MODEL_HSS;Model: gap of the high speed sync %1 mireds.
+TT_SERIESWB_MODEL_SAME_SPEED;Nothing learned: shutter time %1 s too close to the reference (%2 s).
+TT_SERIESWB_MODEL_TOOLTIP;The gap set by hand on this image completes the model of the series: in high speed sync, it becomes the gap of the high speed sync; otherwise it gives the coefficient of the exposure (the ambient light adds up with the shutter time).
+TT_SERIESWB_NEED_HSS;High speed sync: no gap known for the series yet (set it by hand, then "Model from this image").
+TT_SERIESWB_NOT_A_REFERENCE;This image is not the reference of its series.
+TT_SERIESWB_NOT_HANDLED;White balance method not handled (only Camera and Custom).
+TT_SERIESWB_NO_FLASH;No flash fired: not part of the white balance of the series.
 TT_SERIESWB_NO_IMAGE;No image.
-TT_SERIESWB_NO_MARKER;(no marker file found: %1, parent folder used)
-TT_SERIESWB_ORIGIN;Folder of the original image (ESBY_ORIGIN): %1.
-TT_SERIESWB_OUT_OF_RANGE;Not learned: shift %1 mireds, tint factor %2, blue/red factor %3, out of the ranges of the tool.
-TT_SERIESWB_SERVER_CONNECTED;Server: connected, value per folder.
-TT_SERIESWB_SERVER_ERROR;Server error for %1.
-TT_SERIESWB_SERVER_UNAVAILABLE;Server unavailable: values of the tool.
-TT_SERIESWB_SET_DONE;Value set for %1.
-TT_SERIESWB_SET_FOLDER;Set for this folder
-TT_SERIESWB_SET_FOLDER_TOOLTIP;Sends the values of the tool to the server, for the folder of the image. The folders below inherit them.
-TT_SERIESWB_SET_PARENT;Set for the parent folder
-TT_SERIESWB_SET_PARENT_TOOLTIP;Sends the values of the tool to the server, for the parent folder (ex: the folder of a whole convention).
-TT_SERIESWB_SET_ROOT;Set for the series root
-TT_SERIESWB_SET_ROOT_TOOLTIP;Sends the values of the tool to the server, for the series root: the first folder, from the folder of the image upwards, containing a marker file (%1, option SeriesWBMarkers). Without marker file, the parent folder is used.
-TT_SERIESWB_SHIFT;Series: shift %1 mireds, tint factor %2, blue/red factor %3.
-TT_SERIESWB_SOURCE;Value of %1.
-TT_SERIESWB_SOURCE_DEFAULT;Default value (no folder declares one).
-TT_SERIESWB_SOURCE_TOOL;Values of the tool (no folder declares one).
+TT_SERIESWB_NO_REFERENCE;No reference for this series.
+TT_SERIESWB_NO_REFERENCE_BUTTON;No reference
+TT_SERIESWB_NO_REFERENCE_TOOLTIP;This image is not the reference of its series anymore.
+TT_SERIESWB_NO_SERVER;Server unavailable: the gap is not kept.
+TT_SERIESWB_OFF;The tool is off.
+TT_SERIESWB_REF;Reference: %1.
+TT_SERIESWB_REFERENCE;Reference
+TT_SERIESWB_REFERENCE_HSS;A photo in high speed sync cannot be the reference.
+TT_SERIESWB_REFERENCE_REMOVED;Reference removed.
+TT_SERIESWB_REFERENCE_SET;This image is the reference of its series (%1 s, gap %2 mireds).
+TT_SERIESWB_REFERENCE_TOOLTIP;This image (normal flash) becomes the reference of its series: the gaps of the other images are computed from its shutter time and its gap. The model (coefficient, high speed sync) is kept.
+TT_SERIESWB_REF_MODEL;(%1 s, gap %2; %3 mireds/s; HSS %4 from %5 s)
+TT_SERIESWB_REF_NONE;Reference: none.
+TT_SERIESWB_REF_THIS;Reference: this image.
+TT_SERIESWB_RESET;No gap
+TT_SERIESWB_RESET_TOOLTIP;This image goes back to the white balance of its series, without gap.
+TT_SERIESWB_SEQ;Series: %1.
+TT_SERIESWB_STATE_COMPUTED;Gap: computed
+TT_SERIESWB_STATE_MANUAL;Gap: manual
+TT_SERIESWB_STATE_NONE;Gap: none
 TT_SERIESWB_SYNC;Sync speed (1/x s)
-TT_SERIESWB_SYNC_TOOLTIP;Shutter speeds from this one up are taken as high speed sync (HSS): their white balance is constant.
-TT_SERIESWB_UNSET;Back to inheritance
-TT_SERIESWB_UNSET_DONE;%1 inherits its value again.
-TT_SERIESWB_UNSET_NONE;%1 has no value of its own.
-TT_SERIESWB_UNSET_TOOLTIP;Removes the value of the folder of the image: it inherits the value of its parent folders again.
+TT_SERIESWB_SYNC_SET;High speed sync from %1 s.
+TT_SERIESWB_SYNC_TOOLTIP;Shutter speeds from this one up are taken as high speed sync (HSS): their gap is the one of the high speed sync. Kept with the reference of the series.
 TT_SERIESWB_VALUES;Image: %1 K, tint %2, blue/red %7 (%5). Camera: %3 K, tint %4 (observer %6°).
 TT_SHARE_CHANGES;Share my changes with the series
 TT_SHARE_CHANGES_TOOLTIP;On: a change made in this image (in a shared section) is applied to the other images of its series (numbered folder): now in the other instances showing one, later in the images opened afterwards. A number (compensation, contrast...) is shared as a shift, each image keeping its own value; a curve or a choice as a value.\nOff: the change stays in this image. The changes of the other images are still received while the tool is on.
@@ -197,6 +189,7 @@ TT_SHARE_RECEIVED;Received from the series:
 TT_SHARE_RESET_FROM_PARENT;Series reset from the parent %1.
 TT_SHARE_SECTIONS;Shared tools:
 TT_SHARE_SECTION_EXPOSURE;Exposure
+TT_SHARE_SECTION_WB;White balance
 TT_SHARE_SENT;Shared with the series:
 TT_SHARE_SENT_TO_PARENT;%2 shared changes of the series sent to the parent %1.
 TT_SHARE_SERIES;Series: %1

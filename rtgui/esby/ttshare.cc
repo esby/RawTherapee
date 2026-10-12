@@ -23,9 +23,13 @@
 #include "options.h"
 #include "rtimage.h"
 #include "ppversion.h"
+#include "wbprovider.h"
+#include <iomanip>
 #include "rtengine/procparams.h"
 #include "rtengine/procevents.h"
 #include <cmath>
+#include <functional>
+#include <memory>
 #include <cstdio>
 #include <fstream>
 #include <sstream>
@@ -38,6 +42,53 @@ using namespace rtengine::procparams;
 // sections of the pp3 that can be shared: name in the pp3, label
 static const std::vector<std::pair<std::string, const char*>> SHARE_SECTIONS = {
   {"Exposure", "TT_SHARE_SECTION_EXPOSURE"},
+  {"White Balance", "TT_SHARE_SECTION_WB"},
+};
+
+// keys shared in a section (a section not listed: all its keys). White balance: its method, temperature,
+// tint and blue/red equalizer (not the settings of the automatic methods)
+static const std::map<std::string, std::set<std::string>> SHARE_KEYS = {
+  {"White Balance", {"Setting", "Temperature", "Green", "Equal"}},
+};
+
+// scale of the shift of a number: the temperature in mireds (1000000 / K, the same shift looks the same
+// at any temperature), the tint and the equalizer as factors (logarithm), the others as they are
+enum class ShareScale { Linear, Mired, Factor };
+static ShareScale scaleOf(const std::string& key)
+{
+  if (key == "White Balance/Temperature")
+    return ShareScale::Mired;
+  if ((key == "White Balance/Green") || (key == "White Balance/Equal"))
+    return ShareScale::Factor;
+  return ShareScale::Linear;
+}
+
+// a value in the scale of its shifts, and back; false for a value out of the scale (0 K)
+static bool toScale(const std::string& key, double value, double& scaled)
+{
+  switch (scaleOf(key))
+  {
+    case ShareScale::Mired:  if (value <= 0.0) return false; scaled = 1000000.0 / value; return true;
+    case ShareScale::Factor: if (value <= 0.0) return false; scaled = std::log(value); return true;
+    default:                 scaled = value; return true;
+  }
+}
+
+static double fromScale(const std::string& key, double scaled)
+{
+  switch (scaleOf(key))
+  {
+    case ShareScale::Mired:  return (scaled > 0.0) ? 1000000.0 / scaled : 60000.0;
+    case ShareScale::Factor: return std::exp(scaled);
+    default:                 return scaled;
+  }
+}
+
+// the gap of an image (its own part, never shared), kept by its tool in the file data of the server:
+// given back with the key when the image lost its values (pp3 removed)
+static const std::map<std::string, std::string> GAP_NAMESPACES = {
+  {"Exposure/Compensation", "exposure"},
+  {"White Balance/Temperature", "wb"},
 };
 
 // limits of the sliders: a shifted value is kept inside them
@@ -51,7 +102,34 @@ static const std::map<std::string, std::pair<double, double>> SHARE_LIMITS = {
   {"Exposure/HighlightComprThreshold", {0.0, 100.0}},
   {"Exposure/ShadowCompr", {0.0, 100.0}},
   {"Exposure/Clip", {0.0, 1.0}},
+  {"White Balance/Temperature", {1500.0, 60000.0}},
+  {"White Balance/Green", {0.02, 100.0}},
+  {"White Balance/Equal", {0.5, 2.0}},
 };
+
+// a shift as shown: in mireds for the temperature, as a factor for the tint and the equalizer
+static Glib::ustring shiftText(const std::string& key, double shift)
+{
+  switch (scaleOf(key))
+  {
+    case ShareScale::Mired:  return Glib::ustring::format(std::showpos, std::fixed, std::setprecision(1), shift) + " mired";
+    case ShareScale::Factor: return "x" + Glib::ustring::format(std::fixed, std::setprecision(3), std::exp(shift));
+    default:                 return Glib::ustring::format(std::showpos, shift);
+  }
+}
+
+// a shifted value, in the scale of the key, kept inside the limits of its slider
+static double shifted(const std::string& key, double value, double shift)
+{
+  double scaled;
+  if (!toScale(key, value, scaled))
+    return value;
+  value = fromScale(key, scaled + shift);
+  auto limits = SHARE_LIMITS.find(key);
+  if (limits != SHARE_LIMITS.end())
+    value = std::max(limits->second.first, std::min(limits->second.second, value));
+  return value;
+}
 
 // a value of the pp3 read as a number (the whole text); true/false and lists are not numbers
 static bool parseNumber(const std::string& text, double& value)
@@ -175,7 +253,10 @@ std::set<std::string> TTShare::sharedSections()
 bool TTShare::isShared(const std::string& key)
 {
   std::set<std::string> sections = sharedSections();
-  return sections.count(key.substr(0, key.find('/'))) > 0;
+  if (sections.count(key.substr(0, key.find('/'))) == 0)
+    return false;
+  // a key the image does not take part in (TTSeriesWB: photo without flash)
+  return !env->shareKeyFilter || env->shareKeyFilter(key);
 }
 
 Glib::ustring TTShare::tempFile(const char* name)
@@ -200,9 +281,15 @@ std::map<std::string, std::string> TTShare::extract(const ProcParams& params)
     {
       if (!kf.has_group(section))
         continue;
+      auto only = SHARE_KEYS.find(section);
       for (const Glib::ustring& key : kf.get_keys(section))
-        keys[section + "/" + key.raw()] = kf.get_value(section, key).raw();
+        if ((only == SHARE_KEYS.end()) || (only->second.count(key.raw()) > 0))
+          keys[section + "/" + key.raw()] = kf.get_value(section, key).raw();
     }
+    // "Camera" white balance: the engine applies the camera multipliers, the temperature and tint of
+    // the pp3 may be the ones of a profile. The values of the camera are the values of the image: a
+    // shift received is applied to them, and a change to "Custom" from them is not a shift
+    cameraValues(keys, params.wb.observer);
   }
   catch (const Glib::Error& e)
   {
@@ -210,6 +297,22 @@ std::map<std::string, std::string> TTShare::extract(const ProcParams& params)
   }
   g_unlink(tmp.c_str());
   return keys;
+}
+
+// "Camera" white balance: the values of the camera replace the ones of the pp3 (see extract)
+void TTShare::cameraValues(std::map<std::string, std::string>& keys, rtengine::StandardObserver observer)
+{
+  auto method = keys.find("White Balance/Setting");
+  WBProvider* provider = env->getWBProvider();
+  if ((method == keys.end()) || (method->second != "Camera") || (provider == nullptr))
+    return;
+  double camTemp = -1.0, camGreen = -1.0;
+  provider->getCamWB(camTemp, camGreen, observer);
+  if ((camTemp <= 0.0) || (camGreen <= 0.0)) // no image data yet
+    return;
+  keys["White Balance/Temperature"] = std::to_string(std::lround(camTemp));
+  keys["White Balance/Green"] = Glib::Ascii::dtostr(camGreen);
+  keys["White Balance/Equal"] = "1";
 }
 
 void TTShare::connectSignals()
@@ -254,6 +357,8 @@ void TTShare::paramsChanged(const ProcParams& params, const ProcEvent& ev, bool 
             && (ev != EvPhotoLoaded);
   if (share)
   {
+    // the camera values were maybe not known yet when the reference was taken
+    cameraValues(snapshot, params.wb.observer);
     std::vector<EsbyShareChange> changes;
     for (const auto& kv : current)
     {
@@ -263,9 +368,13 @@ void TTShare::paramsChanged(const ProcParams& params, const ProcEvent& ev, bool 
       EsbyShareChange change;
       change.key = kv.first;
       double a, b;
-      if (parseNumber(before->second, a) && parseNumber(kv.second, b))
+      if (!isShared(kv.first))
+        continue;
+      double sa, sb;
+      if (parseNumber(before->second, a) && parseNumber(kv.second, b)
+      && toScale(kv.first, a, sa) && toScale(kv.first, b, sb))
       {
-        change.delta = b - a;
+        change.delta = sb - sa;
         if (std::fabs(change.delta) < 1e-9)
           continue;
       }
@@ -307,7 +416,7 @@ void TTShare::paramsChanged(const ProcParams& params, const ProcEvent& ev, bool 
           });
         Glib::ustring text;
         for (const EsbyShareChange& c : changes)
-          text += "\n" + c.key + (c.numeric ? ": " + Glib::ustring::format(std::showpos, c.delta) : Glib::ustring());
+          text += "\n" + c.key + (c.numeric ? ": " + shiftText(c.key.raw(), c.delta) : Glib::ustring());
         setInfo(M("TT_SHARE_SENT") + text);
         refreshCounts();
       }
@@ -374,29 +483,37 @@ void TTShare::loadState()
     // a key whose value is not the one last seen (pp3 removed: values of the default profile, profile
     // applied elsewhere): what the image had received for it is lost, it receives everything again
     bool lost = false;
-    bool lostCompensation = false;
+    std::vector<std::string> lostGaps; // keys lost whose tool keeps a gap of the image
     ProcParams params;
     EsbyParamsAccess* access = env->getParamsAccess();
     if ((access != nullptr) && access->esbyGetParams(params))
     {
       std::map<std::string, std::string> values = extract(params);
+      // "Camera" white balance, now and when last seen: its values are the ones of the camera, maybe
+      // not known yet (see extract), they are not compared
+      auto method = values.find("White Balance/Setting");
+      auto knownMethod = savedValues.find("White Balance/Setting");
+      bool cameraBoth = (method != values.end()) && (method->second == "Camera")
+                     && (knownMethod != savedValues.end()) && (knownMethod->second == "Camera");
       for (const auto& kv : values)
       {
         auto known = savedValues.find(kv.first);
+        if (cameraBoth && (kv.first != "White Balance/Setting") && (kv.first.compare(0, 14, "White Balance/") == 0))
+          continue;
         if ((known != savedValues.end()) && (known->second != kv.second))
         {
           appliedCum.erase(kv.first);
           appliedVersion.erase(kv.first);
           lost = true;
-          if (kv.first == "Exposure/Compensation")
-            lostCompensation = true;
+          if (GAP_NAMESPACES.count(kv.first))
+            lostGaps.push_back(kv.first);
         }
       }
       saveValues(values, true);
     }
     stateLoaded = true;
-    // a series used for the first time starts from its parent folder. A lost compensation also gets
-    // the gap of the image with the reference of its series again (TTSeriesExposure)
+    // a series used for the first time starts from its parent folder. A lost compensation (temperature)
+    // also gets the gap of the image with the reference of its series again (TTSeriesExposure, TTSeriesWB)
     auto init = [this, current, client, lost](const std::map<std::string, double>& extra) {
       client->shareInit(folder, EsbySharedVariables::parentFolder(folder), [this, current, lost, extra](bool ok2, const std::vector<EsbyShareEntry>& entries, bool copied,
                                                              const Glib::ustring& origin) {
@@ -416,20 +533,28 @@ void TTShare::loadState()
         refreshCounts();
       });
     };
-    if (!lostCompensation)
-    {
-      init({});
-      return;
-    }
-    client->fileGet(file, "exposure", [this, current, init](bool ok3, const std::vector<EsbyVarValue>& exposure) {
-      if (current != generation)
+    // the gaps are read one after the other, then the series is applied
+    auto extra = std::make_shared<std::map<std::string, double>>();
+    auto next = std::make_shared<std::function<void(size_t)>>();
+    std::weak_ptr<std::function<void(size_t)>> weak = next; // a pending request holds it, not itself
+    *next = [this, current, client, init, lostGaps, extra, weak](size_t i) {
+      if (i >= lostGaps.size())
+      {
+        init(*extra);
         return;
-      std::map<std::string, double> extra;
-      for (const EsbyVarValue& f : exposure)
-        if (ok3 && (f.name == "gap"))
-          extra["Exposure/Compensation"] = (f.type == RT_VARIABLE_TYPE_INT) ? f.i : f.d;
-      init(extra);
-    });
+      }
+      std::string key = lostGaps[i];
+      std::shared_ptr<std::function<void(size_t)>> self = weak.lock();
+      client->fileGet(file, GAP_NAMESPACES.at(key), [this, current, key, extra, self, i](bool ok3, const std::vector<EsbyVarValue>& data) {
+        if (current != generation)
+          return;
+        for (const EsbyVarValue& f : data)
+          if (ok3 && (f.name == "gap"))
+            (*extra)[key] = (f.type == RT_VARIABLE_TYPE_INT) ? f.i : f.d;
+        (*self)(i + 1);
+      });
+    };
+    (*next)(0);
   });
 }
 
@@ -496,13 +621,10 @@ void TTShare::catchUp(const std::vector<EsbyShareEntry>& entries, bool fromEvent
         continue;
       if ((cur != current.end()) && parseNumber(cur->second, value))
       {
-        value += missing;
-        auto limits = SHARE_LIMITS.find(key);
-        if (limits != SHARE_LIMITS.end())
-          value = std::max(limits->second.first, std::min(limits->second.second, value));
+        value = shifted(key, value, missing);
         changes.set_value(section, name, isInteger(cur->second) ? std::to_string(std::lround(value))
                                                                  : Glib::Ascii::dtostr(value));
-        text += "\n" + key + ": " + Glib::ustring::format(std::showpos, missing);
+        text += "\n" + key + ": " + shiftText(key, missing);
         count++;
       }
       cum[key] = e.cum;
@@ -531,14 +653,26 @@ void TTShare::catchUp(const std::vector<EsbyShareEntry>& entries, bool fromEvent
     double value;
     if ((std::fabs(x.second) < 1e-9) || (cur == current.end()) || !parseNumber(cur->second, value))
       continue;
-    value += x.second;
-    auto limits = SHARE_LIMITS.find(x.first);
-    if (limits != SHARE_LIMITS.end())
-      value = std::max(limits->second.first, std::min(limits->second.second, value));
+    value = shifted(x.first, value, x.second);
     changes.set_value(x.first.substr(0, x.first.find('/')), x.first.substr(x.first.find('/') + 1),
                       isInteger(cur->second) ? std::to_string(std::lround(value)) : Glib::Ascii::dtostr(value));
-    text += "\n" + x.first + ": " + Glib::ustring::format(std::showpos, x.second);
+    text += "\n" + x.first + ": " + shiftText(x.first, x.second);
+    if (x.first.compare(0, 14, "White Balance/") == 0)
+      exposureOnly = false;
     count++;
+  }
+
+  // a white balance changed while the image has the "Camera" one: it becomes "Custom", from the values
+  // of the camera (see extract), and a change of the method alone does not keep values of a profile
+  auto method = current.find("White Balance/Setting");
+  if ((count > 0) && changes.has_group("White Balance") && (method != current.end()) && (method->second == "Camera"))
+  {
+    if (!changes.has_key("White Balance", "Setting"))
+      changes.set_value("White Balance", "Setting", "Custom");
+    if (changes.get_value("White Balance", "Setting") == "Custom")
+      for (const char* k : {"Temperature", "Green", "Equal"})
+        if (!changes.has_key("White Balance", k) && current.count(std::string("White Balance/") + k))
+          changes.set_value("White Balance", k, current[std::string("White Balance/") + k]);
   }
 
   if ((count > 0) && fromEvent && (window != nullptr) && !window->is_active())

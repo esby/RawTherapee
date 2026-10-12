@@ -16,108 +16,104 @@
  */
 #pragma once
 
-#include <map>
-#include <utility>
 #include <gtkmm.h>
 #include "toolpanel.h"
 #include "guiutils.h"
 #include "widgets/basic/adjuster.h"
 #include "rtengine/procparams.h"
-#include "esbywbclient.h"
 
 class WhiteBalance;
 
-// series white balance, step 1 of SPEC_series_wb.md (without server):
-// applies a shift (in mireds, plus a tint factor) to the white balance of the camera,
-// for the photos taken with a flash. The images whose white balance was changed by hand
-// are left untouched.
+// series white balance, on the model of TTSeriesExposure:
+//   white balance of an image = white balance of the camera + shift of the series + gap of the image
+// - the shift of the series (mireds, tint factor, blue/red equalizer) is shared by TTShare (section
+//   "White Balance", temperature shifted in mireds): a change of the white balance of an image, or of the
+//   series sliders here, is shared live with the images of the series;
+// - the gap of the image (mireds) is never shared: none, computed from the reference of the series (shutter
+//   time: the ambient light adds up with the exposure; its own value in high speed sync), or manual.
+// The reference of the series (shared variable wb.reference on the series folder) holds the shutter time
+// and the gap of the reference image, the coefficient of the exposure and the gap of the high speed sync.
+// The gap and its state are kept by the server (file data, namespace wb): TTShare gives the gap back to
+// an image which lost its values. "Flash only": a photo without flash takes no part in the white balance
+// of the series (its changes are not shared, it receives none).
+// The switch of the tool turns it on; turned off, it does nothing (the gaps applied stay in the images).
 class TTSeriesWB : public ToolParamBlock, public AdjusterListener, public FoldableToolPanel
 {
 protected:
-    Adjuster* adjMired;
-    Adjuster* adjGreen;
-    Adjuster* adjEqual; // factor of the blue/red equalizer
+    // the reference of the series, as kept in wb.reference (JSON)
+    struct Reference
+    {
+        bool valid = false;
+        Glib::ustring raw;
+        double shutter = 0.0;      // shutter time of the reference image (s), 0 if unknown
+        double gap = 0.0;          // its own gap (mireds) when it was set
+        double k = 0.0;            // mireds per second of exposure (ambient light)
+        bool hasHss = false;
+        double hss = 0.0;          // gap of the images in high speed sync (mireds)
+        double sync = 1.0 / 250.0; // shutter times up to this one are high speed sync
+        bool isHss(double t) const { return (t > 0.0) && (t <= sync * 1.05); }
+        static Reference parse(const Glib::ustring& text);
+        Glib::ustring serialize() const;
+    };
+
+    Adjuster* adjMired;  // shift of the series (mireds): image - camera - gap
+    Adjuster* adjGreen;  // tint factor of the series
+    Adjuster* adjEqual;  // blue/red equalizer of the series
+    Adjuster* adjGap;    // gap of the image (mireds)
+    Gtk::Label* lbState; // none, computed, manual
+    Gtk::Button* btCompute;
+    Gtk::Button* btReset;
+    Gtk::Button* btReference;
+    Gtk::Button* btNoReference;
+    Gtk::Button* btModel;
+    Adjuster* adjSync;
     Gtk::CheckButton* cbFlashOnly;
-    Gtk::Label* lbLearnTint;
-    Gtk::CheckButton* cbLearnTint;
-    Gtk::Label* lbFlashOnly;
-    Gtk::Button* btApply;
-    Gtk::Button* btLearn;
     Gtk::Label* lbInfo;
     Gtk::EventBox* ebInfo; // clicking on the status line copies it to the clipboard
 
-    // esbywb server (step 3): value per folder, with inheritance
-    std::unique_ptr<EsbyWBClient> client;
-    Gtk::Button* btSetFolder;
-    Gtk::Button* btSetParent;
-    Gtk::Button* btUnset;
-    Gtk::Label* lbServer;
-    Glib::ustring currentSource; // folder defining the value of the current image (empty: default)
-    bool modified;               // the shift was changed in the tool and not sent to the server
-
     WhiteBalance* whitebalance;
 
-    // exact values of the shift and tint factor: the adjusters round their value to their
-    // precision, they only show these values (moving an adjuster sets them to its value)
-    double exactMired;
-    double exactGreen;
-    double exactEqual;
-
-    // modes: shift from the camera white balance, or auto (fixed white balance, exposure model)
-    enum { MODE_SHIFT = 0, MODE_AUTO = 1 };
-    int mode;
-    EsbyWBAuto autoModel;
-    MyComboBoxText* cbMode;
-    Adjuster* adjSync;          // synchronization speed (1/x s): high speed sync above
-    Gtk::Label* lbAuto;         // description of the auto model
-    void modeChanged();
-    void updateModeWidgets();
-    double shutter();           // shutter time of the current image (s), 0 if unknown
-    Glib::ustring describeAuto();
-
-    // white balance applied by this tool, per file (session only, the server will keep it later)
-    struct AppliedWB
-    {
-        int temperature;
-        double green;
-        double equal;
-    };
-    std::map<Glib::ustring, AppliedWB> applied;
-
-    bool getCameraWB(const rtengine::procparams::WBParams& wb, double& temp, double& green);
-    bool getCurrentWB(rtengine::procparams::WBParams& wb);
-    bool flashFired();
-    Glib::ustring currentFile();
-    bool computeTarget(double camTemp, double camGreen, int& temp, double& green, double& equal);
-    bool sameWB(int t1, double g1, double e1, int t2, double g2, double e2);
-    void setWhiteBalance(int temp, double green, double equal);
-    void applyToCurrentImage(bool force, const EsbyWBFileState* serverState = nullptr);
-    void requestForCurrentImage();
-    void setFolderValue(bool seriesRoot);
-    Glib::ustring findSeriesRoot(const Glib::ustring& folder);
-    Glib::ustring pendingAction; // action shown by the next status (ex: kept after a learn)
-    void unsetFolderValue();
-    void updateServerStatus();
-    Glib::ustring currentFolder();
-    Glib::ustring seriesFile();   // the original file (ESBY_ORIGIN) or the current one, links resolved
-    bool fromOrigin();            // the original file given by ESBY_ORIGIN is used
-    static Glib::ustring realPath(const Glib::ustring& path);
-    static bool isBelow(const Glib::ustring& path, const Glib::ustring& folder);
-    void learnFromCurrentImage();
-    // sends to the server the correction of the current image (kind: learn, saved-manual, saved-series,
-    // saved-camera) with its exposure, for the analysis of the link between the shift and the exposure
-    void observe(const Glib::ustring& kind);
-    void observeFinal(const Glib::ustring& event); // saved or closed: kind from the white balance
-    void setInfo(const Glib::ustring& text);
-    // status line, always the same structure: what happened, the series values, the image and camera values
-    void setStatus(const Glib::ustring& action, const rtengine::procparams::WBParams& wb, double camTemp, double camGreen,
-                   const Glib::ustring& origin = Glib::ustring());
-    void loadSettings();
-    void saveSettings();
+    Glib::ustring series;     // series folder of the current image
+    Glib::ustring stateFile;  // image the state below belongs to
+    bool stateLoaded;
+    double gap;
+    Glib::ustring state;      // none, computed, manual
+    Reference reference;
+    int generation;
+    bool sharedConnected;
+    sigc::connection paramsConnection;
+    bool updatingWidgets;
     bool loading;
+
+    Glib::ustring originalFile();
+    bool flashFired();
+    bool takesPart();         // the image takes part in the white balance of the series (flash only)
+    double shutter();
+    bool getCurrentWB(rtengine::procparams::WBParams& wb);
+    bool getCameraWB(const rtengine::procparams::WBParams& wb, double& temp, double& green);
+    // the white balance of the image relative to the camera: mireds, tint factor, equalizer
+    bool relativeWB(double& mired, double& green, double& equal);
+    // sets the white balance from the camera: shared (shift of the series) or not (gap of the image)
+    void setRelativeWB(double mired, double green, double equal, bool share);
+
+    void imageOpened();
+    void loadReference(bool computeAfter);
+    bool isReference();
+    bool computeGap(double& g, Glib::ustring& why);
+    void computeAndApply(bool explicitly);
+    void setGap(double g, const Glib::ustring& newState, bool apply);
+    void saveState();
+    void showState();
+    void setReferenceHere();
+    void publishReference(const Reference& ref, const Glib::ustring& message);
+    void removeReference();
+    void modelFromImage();
+    void observe(const Glib::ustring& kind);
+    void setInfo(const Glib::ustring& action);
 
 public:
     TTSeriesWB();
+    ~TTSeriesWB() override;
     void deploy();
     void deployLate();
     void react(FakeProcEvent ev);
