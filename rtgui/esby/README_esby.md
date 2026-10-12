@@ -40,10 +40,21 @@ expliquent le *pourquoi*.
 | TTSeriesWB | décalage de la balance des blancs au flash, en mireds (voir `SPEC_series_wb.md`) |
 | TTSeriesExposure | écart d'exposition de chaque image avec la référence de sa série (pipette ou service), pour cette image seulement |
 
+### Série et parent (tous les outils)
+
+- **Série** d'une photo : en remontant depuis le dossier du RAW (5 niveaux au plus), le premier
+  dossier qui contient un des fichiers de `SeriesMarkers` (`conf/fields.txt;.esby-series` : le
+  `conf/fields.txt` d'un dossier numéroté, ou un `.esby-series` posé pour regrouper plusieurs
+  dossiers) ; sinon le dossier numéroté (le dossier du RAW sans `pp/`, `pp/dpp/`).
+- **Parent** d'une série (TTShare) : au-dessus d'elle (3 niveaux au plus), le premier dossier qui
+  contient un des fichiers de `ParentMarkers` (`fields.conf` : la convention, ex. `sorted/`) ; sinon
+  le dossier au-dessus de la série.
+- `EsbySharedVariables::seriesFolder()` et `parentFolder()`, utilisés par TTShare, TTSeriesExposure
+  et les variables partagées (TTSeriesWB ensuite).
+
 ### TTShare : modifications partagées par série
 
-Une modification faite dans une image est partagée avec les images de sa série (son dossier
-numéroté) : tout de suite dans les autres instances qui en affichent une (dans la fenêtre active ;
+Une modification faite dans une image est partagée avec les images de sa série (voir ci-dessus) : tout de suite dans les autres instances qui en affichent une (dans la fenêtre active ;
 les autres à leur prochain focus), plus tard dans les images ouvertes ensuite.
 
 - Les paramètres sont comparés comme les clés du pp3 (`Section/Clé`), pour les sections partagées

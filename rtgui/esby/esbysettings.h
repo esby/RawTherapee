@@ -68,6 +68,10 @@ public:
     // TTShare: the changes made in an image are shared with the images of its series (other instances,
     // images opened later); pp3 sections shared, separated by ';'
     bool ShareChanges = false;
+    // series of an image: the first folder above the raw file holding one of these files; parent of a
+    // series (TTShare): the first folder above it holding one of these files. Separated by ';'
+    Glib::ustring SeriesMarkers = "conf/fields.txt;.esby-series";
+    Glib::ustring ParentMarkers = "fields.conf";
     Glib::ustring ShareSections = "Exposure";
 
     void readFromFile(Glib::KeyFile& keyFile);

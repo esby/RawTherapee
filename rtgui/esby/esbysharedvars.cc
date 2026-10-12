@@ -17,6 +17,8 @@
 #include "esbysharedvars.h"
 #include "variable.h"
 #include "ttlog.h"
+#include "esbyoptions.h"
+#include <sstream>
 
 #include <cstdlib>
 #include <cmath>
@@ -77,12 +79,63 @@ Glib::ustring EsbySharedVariables::sequenceFolder(const Glib::ustring& file)
     return dir;
 }
 
+static std::vector<std::string> markerList(const Glib::ustring& list)
+{
+    std::vector<std::string> markers;
+    std::stringstream stream(list.raw());
+    std::string marker;
+    while (std::getline(stream, marker, ';'))
+        if (!marker.empty())
+            markers.push_back(marker);
+    return markers;
+}
+
+static bool hasMarker(const std::string& folder, const std::vector<std::string>& markers)
+{
+    for (const std::string& m : markers)
+        if (Glib::file_test(Glib::build_filename(folder, m), Glib::FILE_TEST_EXISTS))
+            return true;
+    return false;
+}
+
+Glib::ustring EsbySharedVariables::seriesFolder(const Glib::ustring& file)
+{
+    std::vector<std::string> markers = markerList(esbySettings().SeriesMarkers);
+    std::string dir = Glib::path_get_dirname(file);
+    for (int i = 0; i < 5; i++)
+    {
+        if (hasMarker(dir, markers))
+            return realPath(dir);
+        std::string up = Glib::path_get_dirname(dir);
+        if (up == dir)
+            break;
+        dir = up;
+    }
+    return realPath(sequenceFolder(file));
+}
+
+Glib::ustring EsbySharedVariables::parentFolder(const Glib::ustring& series)
+{
+    std::vector<std::string> markers = markerList(esbySettings().ParentMarkers);
+    std::string dir = Glib::path_get_dirname(series);
+    for (int i = 0; i < 3; i++)
+    {
+        if (hasMarker(dir, markers))
+            return dir;
+        std::string up = Glib::path_get_dirname(dir);
+        if (up == dir)
+            break;
+        dir = up;
+    }
+    return Glib::path_get_dirname(series);
+}
+
 void EsbySharedVariables::setImage(const Glib::ustring& _file)
 {
     if (_file == file)
         return;
     file = _file;
-    folder = file.empty() ? Glib::ustring() : realPath(sequenceFolder(file));
+    folder = file.empty() ? Glib::ustring() : seriesFolder(file);
     sequence.clear();
     clearLoaded(); // the values of the previous image must not be seen with this one
     reload();
@@ -209,7 +262,7 @@ void EsbySharedVariables::target(Where where, Glib::ustring& path, Glib::ustring
             path = folder;
             break;
         case Where::Parent:
-            path = Glib::path_get_dirname(folder);
+            path = parentFolder(folder);
             break;
         case Where::Global:
             path = "global";

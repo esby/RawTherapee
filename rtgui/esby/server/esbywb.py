@@ -376,7 +376,7 @@ class State:
         self.share_origins.pop(folder, None)
         count = 0
         for filename in list(self.file_data):
-            if sequence_folder(filename) == folder and "share" in self.file_data[filename]:
+            if is_below(filename, folder) and "share" in self.file_data[filename]:
                 del self.file_data[filename]["share"]
                 if not self.file_data[filename]:
                     del self.file_data[filename]
@@ -395,13 +395,15 @@ class State:
         self.save()
         return folder, keys
 
-    def share_init(self, folder):
-        """first use of a series: it starts from the shared parameters of its parent folder"""
+    def share_init(self, folder, parent=None):
+        """first use of a series: it starts from the shared parameters of its parent folder (given by
+        RawTherapee: the folder of the convention; by default the folder above the series)"""
         folder = normalize(folder)
-        if folder in self.shares or os.path.dirname(folder) not in self.shares:
+        parent = normalize(parent) if parent else os.path.dirname(folder)
+        if folder in self.shares or parent not in self.shares:
             return folder, self.shares.get(folder, {}), False
-        target, keys = self.share_copy(os.path.dirname(folder), folder)
-        self.share_origins[target] = os.path.dirname(folder)
+        target, keys = self.share_copy(parent, folder)
+        self.share_origins[target] = parent
         self.save()
         return target, keys, True
 
@@ -499,12 +501,15 @@ class Server:
         if op == "file_list":
             return {"files": self.state.files_below(request["path"], request["namespace"])}
         if op == "share_list":
+            # the images having received something, counted in the deepest series holding them
+            series = sorted(self.state.shares)
             images = {}
             for filename, data in self.state.file_data.items():
                 if "share" in data:
-                    folder = sequence_folder(filename)
-                    images[folder] = images.get(folder, 0) + 1
-            series = sorted(set(self.state.shares) | set(images))
+                    holders = [p for p in series if is_below(filename, p)]
+                    key = max(holders, key=len) if holders else sequence_folder(filename)
+                    images[key] = images.get(key, 0) + 1
+            series = sorted(set(series) | set(images))
             return {"series": [{"path": p, "keys": len(self.state.shares.get(p, {})), "images": images.get(p, 0)}
                                for p in series]}
         if op == "share_get":
@@ -514,7 +519,7 @@ class Server:
             await self.broadcast(folder, "share_changed")
             return {"path": folder, "keys": updated}
         if op == "share_init":
-            folder, keys, copied = self.state.share_init(request["path"])
+            folder, keys, copied = self.state.share_init(request["path"], request.get("parent"))
             if copied:
                 await self.broadcast(folder, "share_changed")
             return {"path": folder, "keys": keys, "copied": copied,
@@ -522,7 +527,7 @@ class Server:
         if op == "share_copy":
             target, keys = self.state.share_copy(request["from"], request["to"])
             source = normalize(request["from"])
-            if os.path.dirname(target) == source:
+            if target != source and is_below(target, source):
                 self.state.share_origins[target] = source   # reset from the parent
                 self.state.save()
             await self.broadcast(target, "share_changed")

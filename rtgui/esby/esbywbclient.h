@@ -153,7 +153,7 @@ public:
     // copied: initialized now from the parent; origin: parent folder it was initialized or reset from
     using ShareInitCallback = std::function<void(bool ok, const std::vector<EsbyShareEntry>& entries, bool copied,
                                                  const Glib::ustring& origin)>;
-    void shareInit(const Glib::ustring& folder, ShareInitCallback callback);
+    void shareInit(const Glib::ustring& folder, const Glib::ustring& parent, ShareInitCallback callback);
     // the shared parameters of from replace the ones of to (series <-> parent folder)
     void shareCopy(const Glib::ustring& from, const Glib::ustring& to, ShareCallback callback);
     void setShareEventCallback(EventCallback callback) { onShareEvent = callback; }

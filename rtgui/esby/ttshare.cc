@@ -340,7 +340,7 @@ void TTShare::loadState()
   stateLoaded = false;
   int current = ++generation;
   file = EsbySharedVariables::originalFile(env);
-  folder = file.empty() ? Glib::ustring() : EsbySharedVariables::realPath(EsbySharedVariables::sequenceFolder(file));
+  folder = file.empty() ? Glib::ustring() : EsbySharedVariables::seriesFolder(file);
   appliedCum.clear();
   appliedVersion.clear();
   pending = false;
@@ -392,7 +392,7 @@ void TTShare::loadState()
     // a series used for the first time starts from its parent folder. A lost compensation also gets
     // the gap of the image with the reference of its series again (TTSeriesExposure)
     auto init = [this, current, client, lost](const std::map<std::string, double>& extra) {
-      client->shareInit(folder, [this, current, lost, extra](bool ok2, const std::vector<EsbyShareEntry>& entries, bool copied,
+      client->shareInit(folder, EsbySharedVariables::parentFolder(folder), [this, current, lost, extra](bool ok2, const std::vector<EsbyShareEntry>& entries, bool copied,
                                                              const Glib::ustring& origin) {
         if (!ok2 || (current != generation))
           return;
@@ -601,7 +601,7 @@ void TTShare::copyWithParent(bool toParent)
     setInfo(M("TT_SHARE_NO_SERVER"));
     return;
   }
-  Glib::ustring parent = Glib::path_get_dirname(folder);
+  Glib::ustring parent = EsbySharedVariables::parentFolder(folder);
   if (!toParent)
   {
     Gtk::Window* window = dynamic_cast<Gtk::Window*>(get_toplevel());

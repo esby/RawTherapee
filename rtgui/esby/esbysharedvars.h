@@ -69,6 +69,14 @@ public:
     static Glib::ustring originalFile(Environment* env);
     // the numbered folder of a photo: <folder>/pp and <folder>/pp/dpp belong to <folder>
     static Glib::ustring sequenceFolder(const Glib::ustring& file);
+    // the series of a photo (links resolved): the first folder above the raw file holding one of the
+    // SeriesMarkers files (conf/fields.txt of a numbered folder, .esby-series), within 5 levels;
+    // otherwise its numbered folder. Every tool uses it (TTShare, TTSeriesExposure, TTSeriesWB).
+    static Glib::ustring seriesFolder(const Glib::ustring& file);
+    // the parent of a series (TTShare: initialization, send to the parent): the first folder above it
+    // holding one of the ParentMarkers files (fields.conf of a convention), within 3 levels; otherwise
+    // the folder above it
+    static Glib::ustring parentFolder(const Glib::ustring& series);
     static Glib::ustring realPath(const Glib::ustring& path);
 
 private:

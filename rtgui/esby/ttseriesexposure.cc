@@ -326,7 +326,7 @@ void TTSeriesExposure::imageOpened()
     setInfo(M("TT_SERIESEXP_NO_IMAGE"));
     return;
   }
-  series = EsbySharedVariables::realPath(EsbySharedVariables::sequenceFolder(stateFile));
+  series = EsbySharedVariables::seriesFolder(stateFile);
   env->sharedVariables()->setSequence(stateFile, Glib::ustring());
   int current = ++generation;
   gap = 0.0;

@@ -330,6 +330,12 @@ class ServerTest(unittest.TestCase):
         self.assertEqual(keys["Exposure/Black"], {"cum": 0.0})
         self.assertEqual(keys["Exposure/Curve"]["value"], "1;")
         self.assertGreater(keys["Exposure/Curve"]["version"], 2)
+        # a parent given by RawTherapee (convention folder, above the folder above the series)
+        deep = os.path.join(self.folder, "Samedi", "084")
+        os.makedirs(deep)
+        answer = client.request("share_init", path=deep, parent=self.folder)
+        self.assertTrue(answer["copied"])
+        self.assertEqual(answer["origin"], self.folder)
 
     def test_second_server_refused(self):
         with self.assertRaises(SystemExit):

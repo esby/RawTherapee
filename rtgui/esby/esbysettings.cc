@@ -111,6 +111,14 @@ void EsbySettings::readFromFile(Glib::KeyFile& keyFile)
                     ShareChanges          = keyFile.get_boolean ("TTP", "ShareChanges");
                 }
 
+                if (keyFile.has_key ("TTP", "SeriesMarkers")) {
+                    SeriesMarkers         = keyFile.get_string ("TTP", "SeriesMarkers");
+                }
+
+                if (keyFile.has_key ("TTP", "ParentMarkers")) {
+                    ParentMarkers         = keyFile.get_string ("TTP", "ParentMarkers");
+                }
+
                 if (keyFile.has_key ("TTP", "ShareSections")) {
                     ShareSections         = keyFile.get_string ("TTP", "ShareSections");
                 }
@@ -173,6 +181,8 @@ void EsbySettings::saveToFile(Glib::KeyFile& keyFile) const
         keyFile.set_string  ("TTP", "SeriesWBAuto", SeriesWBAuto);
         keyFile.set_boolean ("TTP", "ShareChanges", ShareChanges);
         keyFile.set_string  ("TTP", "ShareSections", ShareSections);
+        keyFile.set_string  ("TTP", "SeriesMarkers", SeriesMarkers);
+        keyFile.set_string  ("TTP", "ParentMarkers", ParentMarkers);
         keyFile.set_string  ("TTP", "SeriesExpService", SeriesExpService);
         keyFile.set_double  ("TTP", "SeriesExpAutoSimilarity", SeriesExpAutoSimilarity);
         keyFile.set_double  ("TTP", "SeriesExpMinSimilarity", SeriesExpMinSimilarity);
