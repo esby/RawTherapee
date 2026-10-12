@@ -41,6 +41,8 @@ class TTShare : public ToolParamBlock, public FoldableToolPanel
 protected:
     Gtk::CheckButton* cbShare;
     std::map<std::string, Gtk::CheckButton*> cbSections;
+    Gtk::Button* btToParent;
+    Gtk::Button* btFromParent;
     Gtk::Label* lbInfo;
 
     std::map<std::string, std::string> snapshot; // shared keys of the parameters before the next change
@@ -68,6 +70,7 @@ protected:
     void loadState();
     void catchUp(const std::vector<EsbyShareEntry>& entries, bool fromEvent);
     void saveApplied(const std::vector<std::string>& keys);
+    void copyWithParent(bool toParent);
     void setInfo(const Glib::ustring& text);
 
 public:

@@ -30,6 +30,7 @@ message per line.
     esbywb exposure-apply <folder> [--dry-run]   exposure of the closed images (TTSeriesExposure)
     esbywb shares <folder>                   parameters shared by the images of a series
     esbywb share-reset <folder>              forget them (the images keep their values)
+    esbywb share-copy <from> <to>            the shared parameters of a folder replace the ones of another
 
 <where> is a folder, or "global" for every image. A sequence is a part of a folder (the folder
 is split by the pauses between the shots), named by RawTherapee.
@@ -341,6 +342,37 @@ class State:
         self.save()
         return folder, updated
 
+    def share_copy(self, source, target):
+        """the shared parameters of source replace the ones of target (series <-> parent folder); a value
+        gets a version above both, so that the images of target which had another one take it"""
+        source, target = normalize(source), normalize(target)
+        old = self.shares.get(target, {})
+        copied = {}
+        for key, entry in self.shares.get(source, {}).items():
+            if "cum" in entry:
+                copied[key] = {"cum": entry["cum"]}
+            else:
+                version = max(entry["version"], old.get(key, {}).get("version", 0)) + 1
+                copied[key] = {"value": entry["value"], "version": version}
+        # a shift of target that source does not have goes back to 0
+        for key, entry in old.items():
+            if key not in copied and "cum" in entry:
+                copied[key] = {"cum": 0.0}
+        if copied:
+            self.shares[target] = copied
+        else:
+            self.shares.pop(target, None)
+        self.save()
+        return target, copied
+
+    def share_init(self, folder):
+        """first use of a series: it starts from the shared parameters of its parent folder"""
+        folder = normalize(folder)
+        if folder in self.shares or os.path.dirname(folder) not in self.shares:
+            return folder, self.shares.get(folder, {}), False
+        target, keys = self.share_copy(os.path.dirname(folder), folder)
+        return target, keys, True
+
     def observe(self, observation):
         """keeps the last observation of a file; the server adds the time"""
         observation = dict(observation)
@@ -440,6 +472,15 @@ class Server:
             folder, updated = self.state.share_change(request["path"], request["changes"])
             await self.broadcast(folder, "share_changed")
             return {"path": folder, "keys": updated}
+        if op == "share_init":
+            folder, keys, copied = self.state.share_init(request["path"])
+            if copied:
+                await self.broadcast(folder, "share_changed")
+            return {"path": folder, "keys": keys, "copied": copied}
+        if op == "share_copy":
+            target, keys = self.state.share_copy(request["from"], request["to"])
+            await self.broadcast(target, "share_changed")
+            return {"path": target, "keys": keys}
         if op == "share_reset":
             folder = normalize(request["path"])
             self.state.shares.pop(folder, None)
@@ -640,6 +681,10 @@ def main(argv=None):
     p.add_argument("folder")
     p = sub.add_parser("share-reset", help="forget the shared parameters of a series (the images keep their values)")
     p.add_argument("folder")
+    p = sub.add_parser("share-copy", help="the shared parameters of a folder replace the ones of another "
+                                          "(series to parent, parent to series)")
+    p.add_argument("source")
+    p.add_argument("target")
     p = sub.add_parser("exposure-apply", help="sets the exposure compensation of the pp3 files of the images "
                                               "following a reference (TTSeriesExposure), in a folder and below")
     p.add_argument("folder")
@@ -704,6 +749,9 @@ def run_command(client, args):
                 print("%-45s %+g" % (key, entry["cum"]))
             else:
                 print("%-45s %s  (version %d)" % (key, entry["value"], entry["version"]))
+    elif args.command == "share-copy":
+        answer = client.request("share_copy", **{"from": normalize(args.source), "to": normalize(args.target)})
+        print("copied to %s: %d keys" % (answer["path"], len(answer["keys"])))
     elif args.command == "share-reset":
         print("reset: " + client.request("share_reset", path=normalize(args.folder))["path"])
     elif args.command == "exposure-apply":

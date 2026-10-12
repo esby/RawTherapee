@@ -55,6 +55,10 @@ les autres à leur prochain focus), plus tard dans les images ouvertes ensuite.
   version), et par image ce qu'elle a déjà reçu (`file_data`, espace `share`) : une image ouverte
   plus tard reçoit ce qui lui manque. `esbywb.py shares <dossier>` les affiche, `share-reset` les
   oublie.
+- **Dossier parent** : une série utilisée pour la première fois part des modifications partagées
+  de son dossier parent (une copie : le parent changé ensuite ne la change pas). « Send to the
+  parent » remplace celles du parent par celles de la série ; « Reset from the parent » (avec
+  confirmation) fait reprendre à la série celles du parent, ses images changent en conséquence.
 - « Share my changes » coupé (option `ShareChanges`) : la modification reste dans l'image. Les
   modifications des autres images sont toujours reçues tant que l'outil est actif.
 - Une valeur posée par un outil pour cette image seulement (TTSeriesExposure) n'est jamais partagée

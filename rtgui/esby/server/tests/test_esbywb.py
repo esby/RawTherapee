@@ -337,6 +337,29 @@ class ServerTest(unittest.TestCase):
         f.close()
         s.close()
 
+    def test_share_parent(self):
+        client = self.client()
+        series = os.path.join(self.folder, "081")
+        other = os.path.join(self.folder, "082")
+        os.makedirs(series)
+        os.makedirs(other)
+        client.request("share_change", path=series, changes=[
+            {"key": "Exposure/Contrast", "delta": 5}, {"key": "Exposure/Curve", "value": "1;"}])
+        # nothing on the parent: no initialization
+        self.assertFalse(client.request("share_init", path=other)["copied"])
+        client.request("share_copy", **{"from": series, "to": self.folder})       # send to the parent
+        answer = client.request("share_init", path=other)                         # new series
+        self.assertTrue(answer["copied"])
+        self.assertEqual(answer["keys"]["Exposure/Contrast"], {"cum": 5.0})
+        self.assertFalse(client.request("share_init", path=other)["copied"])     # once only
+        # reset of a series from the parent: its own shift goes back, its value gets a newer version
+        client.request("share_change", path=other, changes=[
+            {"key": "Exposure/Black", "delta": 100}, {"key": "Exposure/Curve", "value": "2;"}])
+        keys = client.request("share_copy", **{"from": self.folder, "to": other})["keys"]
+        self.assertEqual(keys["Exposure/Black"], {"cum": 0.0})
+        self.assertEqual(keys["Exposure/Curve"]["value"], "1;")
+        self.assertGreater(keys["Exposure/Curve"]["version"], 2)
+
     def test_second_server_refused(self):
         with self.assertRaises(SystemExit):
             esbywb.prepare_socket(self.socket_path)

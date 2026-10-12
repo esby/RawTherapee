@@ -101,6 +101,21 @@ TTShare::TTShare() : FoldableToolPanel(this, "ttshare", M("TT_SHARE_LABEL"), fal
     pack_start(*cb, Gtk::PACK_SHRINK, 0);
   }
 
+  // parent folder: it initializes the series used for the first time
+  Gtk::FlowBox* parentBox = Gtk::manage(new Gtk::FlowBox());
+  parentBox->set_selection_mode(Gtk::SELECTION_NONE);
+  parentBox->set_column_spacing(4);
+  parentBox->set_row_spacing(2);
+  btToParent = Gtk::manage(new Gtk::Button(M("TT_SHARE_TO_PARENT")));
+  btToParent->set_tooltip_text(M("TT_SHARE_TO_PARENT_TOOLTIP"));
+  btFromParent = Gtk::manage(new Gtk::Button(M("TT_SHARE_FROM_PARENT")));
+  btFromParent->set_tooltip_text(M("TT_SHARE_FROM_PARENT_TOOLTIP"));
+  parentBox->add(*btToParent);
+  parentBox->add(*btFromParent);
+  pack_start(*parentBox, Gtk::PACK_SHRINK, 0);
+  btToParent->signal_clicked().connect([this]() { copyWithParent(true); });
+  btFromParent->signal_clicked().connect([this]() { copyWithParent(false); });
+
   lbInfo = Gtk::manage(new Gtk::Label(""));
   lbInfo->set_line_wrap(true);
   lbInfo->set_line_wrap_mode(Pango::WRAP_WORD_CHAR);
@@ -307,7 +322,8 @@ void TTShare::loadState()
         appliedVersion[name.substr(2)] = (int) number;
     }
     stateLoaded = true;
-    client->shareGet(folder, [this, current](bool ok2, const std::vector<EsbyShareEntry>& entries) {
+    // a series used for the first time starts from its parent folder
+    client->shareInit(folder, [this, current](bool ok2, const std::vector<EsbyShareEntry>& entries) {
       if (ok2 && (current == generation))
         catchUp(entries, false);
     });
@@ -456,6 +472,36 @@ void TTShare::saveApplied(const std::vector<std::string>& keys)
     fields.push_back(v);
   }
   env->sharedVariables()->getClient()->fileSet(file, "share", fields, nullptr);
+}
+
+// toParent: the shared parameters of the series replace the ones of the parent folder (the series used
+// for the first time afterwards start from them); otherwise the series takes again the ones of the parent
+// (its images are changed), after a confirmation
+void TTShare::copyWithParent(bool toParent)
+{
+  if (!stateLoaded || folder.empty() || !env->sharedVariables()->isConnected())
+  {
+    setInfo(M("TT_SHARE_NO_SERVER"));
+    return;
+  }
+  Glib::ustring parent = Glib::path_get_dirname(folder);
+  if (!toParent)
+  {
+    Gtk::Window* window = dynamic_cast<Gtk::Window*>(get_toplevel());
+    Gtk::MessageDialog dialog(Glib::ustring::compose(M("TT_SHARE_FROM_PARENT_CONFIRM"), Glib::path_get_basename(folder),
+                                                     Glib::path_get_basename(parent)),
+                              false, Gtk::MESSAGE_QUESTION, Gtk::BUTTONS_OK_CANCEL, true);
+    if (window != nullptr)
+      dialog.set_transient_for(*window);
+    if (dialog.run() != Gtk::RESPONSE_OK)
+      return;
+  }
+  Glib::ustring from = toParent ? folder : parent;
+  Glib::ustring to = toParent ? parent : folder;
+  env->sharedVariables()->getClient()->shareCopy(from, to, [this, toParent](bool ok, const std::vector<EsbyShareEntry>&) {
+    // the series changed: the event of the server brings the changes to its images
+    setInfo(M(!ok ? "TT_SHARE_NO_SERVER" : toParent ? "TT_SHARE_SENT_TO_PARENT" : "TT_SHARE_RESET_FROM_PARENT"));
+  });
 }
 
 void TTShare::setInfo(const Glib::ustring& text)

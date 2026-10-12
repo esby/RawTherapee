@@ -80,9 +80,14 @@ une séquence est stockée sous la clé `dossier#séquence`. `move` déplace aus
 ```bash
 ./esbywb.py shares "~/photos/Japan Expo 2026/Vendredi/081 - Bowsette"       # décalages et valeurs
 ./esbywb.py share-reset "~/photos/Japan Expo 2026/Vendredi/081 - Bowsette"  # tout oublier
+./esbywb.py share-copy "~/photos/Japan Expo 2026/Vendredi/081 - Bowsette" "~/photos/Japan Expo 2026/Vendredi"
 ```
 
-Protocole : `share_change` (`path`, `changes` : `[{key, delta}]` ou `[{key, value}]`, événement
+Une série sans modification partagée part de celles de son dossier parent à sa première
+utilisation (`share_init`, copie). `share_copy` remplace celles d'un dossier par celles d'un autre :
+un décalage absent de la source revient à 0, une valeur prend une version plus récente.
+
+Protocole : `share_init`, `share_copy` (`from`, `to`), `share_change` (`path`, `changes` : `[{key, delta}]` ou `[{key, value}]`, événement
 `share_changed`), `share_get`, `share_reset`. Par image, ce qui a été reçu est dans `file_data`,
 espace `share` (`c:Section/Clé` : somme des décalages, `v:Section/Clé` : version).
 

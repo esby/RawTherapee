@@ -571,6 +571,28 @@ void EsbyWBClient::shareGet(const Glib::ustring& folder, ShareCallback callback)
     });
 }
 
+void EsbyWBClient::shareInit(const Glib::ustring& folder, ShareCallback callback)
+{
+    cJSON* request = cJSON_CreateObject();
+    cJSON_AddStringToObject(request, "op", "share_init");
+    cJSON_AddStringToObject(request, "path", folder.c_str());
+    send(request, [callback](cJSON* answer) {
+        callback(answer != nullptr, readShareEntries(answer));
+    });
+}
+
+void EsbyWBClient::shareCopy(const Glib::ustring& from, const Glib::ustring& to, ShareCallback callback)
+{
+    cJSON* request = cJSON_CreateObject();
+    cJSON_AddStringToObject(request, "op", "share_copy");
+    cJSON_AddStringToObject(request, "from", from.c_str());
+    cJSON_AddStringToObject(request, "to", to.c_str());
+    send(request, [callback](cJSON* answer) {
+        if (callback)
+            callback(answer != nullptr, readShareEntries(answer));
+    });
+}
+
 void EsbyWBClient::shareChange(const Glib::ustring& folder, const std::vector<EsbyShareChange>& changes, ShareCallback callback)
 {
     cJSON* request = cJSON_CreateObject();

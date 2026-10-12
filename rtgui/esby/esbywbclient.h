@@ -149,6 +149,10 @@ public:
     // parameters shared by the images of a series (shareChange answers the updated entries)
     void shareGet(const Glib::ustring& folder, ShareCallback callback);
     void shareChange(const Glib::ustring& folder, const std::vector<EsbyShareChange>& changes, ShareCallback callback);
+    // first use of a series: it starts from the parent folder (answers the entries of the series)
+    void shareInit(const Glib::ustring& folder, ShareCallback callback);
+    // the shared parameters of from replace the ones of to (series <-> parent folder)
+    void shareCopy(const Glib::ustring& from, const Glib::ustring& to, ShareCallback callback);
     void setShareEventCallback(EventCallback callback) { onShareEvent = callback; }
 
     // rule_changed (white balance) and variable_changed events are given to different callbacks
