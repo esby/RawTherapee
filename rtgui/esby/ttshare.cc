@@ -130,9 +130,12 @@ TTShare::TTShare() : FoldableToolPanel(this, "ttshare", M("TT_SHARE_LABEL"), fal
     Gtk::Clipboard::get()->set_text(lbInfo->get_text());
     return true;
   });
-  Gtk::Button* btCopy = Gtk::manage(new Gtk::Button(M("TT_SHARE_COPY")));
-  btCopy->set_image(*Gtk::manage(new RTImage("copy")));
-  btCopy->set_always_show_image(true);
+  // small button with an icon, on the left: a labelled button took the whole width
+  Gtk::Button* btCopy = Gtk::manage(new Gtk::Button());
+  btCopy->set_image(*Gtk::manage(new RTImage("copy", Gtk::ICON_SIZE_MENU)));
+  btCopy->set_relief(Gtk::RELIEF_NONE);
+  btCopy->set_halign(Gtk::ALIGN_START);
+  btCopy->set_valign(Gtk::ALIGN_START);
   btCopy->set_tooltip_text(M("TT_SHARE_COPY_TOOLTIP"));
   btCopy->signal_clicked().connect([this]() { Gtk::Clipboard::get()->set_text(lbInfo->get_text()); });
   pack_start(*btCopy, Gtk::PACK_SHRINK, 0);
@@ -384,9 +387,19 @@ void TTShare::loadState()
     }
     stateLoaded = true;
     // a series used for the first time starts from its parent folder
-    client->shareInit(folder, [this, current, lost](bool ok2, const std::vector<EsbyShareEntry>& entries, bool copied) {
-      if (ok2 && (current == generation))
-        catchUp(entries, false, copied ? M("TT_SHARE_FROM_PARENT_INIT") : lost ? M("TT_SHARE_FRESH") : Glib::ustring());
+    client->shareInit(folder, [this, current, lost](bool ok2, const std::vector<EsbyShareEntry>& entries, bool copied,
+                                                    const Glib::ustring& origin) {
+      if (!ok2 || (current != generation))
+        return;
+      Glib::ustring parent = origin.empty() ? Glib::ustring() : Glib::ustring(Glib::path_get_basename(origin));
+      Glib::ustring message;
+      if (copied)
+        message = Glib::ustring::compose(M("TT_SHARE_FROM_PARENT_INIT"), parent);
+      else if (lost && !parent.empty())
+        message = Glib::ustring::compose(M("TT_SHARE_FRESH_PARENT"), parent);
+      else if (lost)
+        message = M("TT_SHARE_FRESH");
+      catchUp(entries, false, message);
     });
   });
 }

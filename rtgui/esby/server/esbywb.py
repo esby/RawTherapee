@@ -165,6 +165,7 @@ class State:
         # parameters shared by the images of a series: series folder -> {"Section/Key": entry};
         # entry {"cum": sum of the shifts} (numbers) or {"value": text, "version": n} (curves, choices)
         self.shares = {}
+        self.share_origins = {}  # series folder -> parent folder it was initialized or reset from
         self.load()
 
     def load(self):
@@ -179,6 +180,7 @@ class State:
         self.variables = data.get("variables", {})
         self.file_data = data.get("file_data", {})
         self.shares = data.get("shares", {})
+        self.share_origins = data.get("share_origins", {})
 
     def save(self):
         """atomic write: temporary file in the same folder, then rename"""
@@ -189,7 +191,8 @@ class State:
             with os.fdopen(fd, "w", encoding="utf-8") as f:
                 json.dump({"version": PROTOCOL_VERSION, "rules": self.rules, "files": self.files,
                            "observations": self.observations, "variables": self.variables,
-                           "file_data": self.file_data, "shares": self.shares},
+                           "file_data": self.file_data, "shares": self.shares,
+                           "share_origins": self.share_origins},
                           f, indent=1, sort_keys=True, ensure_ascii=False)
             os.replace(tmp, self.filename)
         except BaseException:
@@ -371,6 +374,7 @@ class State:
         next shifts would be computed from the old sums); the images keep their values"""
         folder = normalize(folder)
         self.shares.pop(folder, None)
+        self.share_origins.pop(folder, None)
         count = 0
         for filename in list(self.file_data):
             if sequence_folder(filename) == folder and "share" in self.file_data[filename]:
@@ -398,6 +402,8 @@ class State:
         if folder in self.shares or os.path.dirname(folder) not in self.shares:
             return folder, self.shares.get(folder, {}), False
         target, keys = self.share_copy(os.path.dirname(folder), folder)
+        self.share_origins[target] = os.path.dirname(folder)
+        self.save()
         return target, keys, True
 
     def observe(self, observation):
@@ -512,9 +518,14 @@ class Server:
             folder, keys, copied = self.state.share_init(request["path"])
             if copied:
                 await self.broadcast(folder, "share_changed")
-            return {"path": folder, "keys": keys, "copied": copied}
+            return {"path": folder, "keys": keys, "copied": copied,
+                    "origin": self.state.share_origins.get(folder)}
         if op == "share_copy":
             target, keys = self.state.share_copy(request["from"], request["to"])
+            source = normalize(request["from"])
+            if os.path.dirname(target) == source:
+                self.state.share_origins[target] = source   # reset from the parent
+                self.state.save()
             await self.broadcast(target, "share_changed")
             return {"path": target, "keys": keys}
         if op == "share_reset":

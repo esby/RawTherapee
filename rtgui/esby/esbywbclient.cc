@@ -577,7 +577,8 @@ void EsbyWBClient::shareInit(const Glib::ustring& folder, ShareInitCallback call
     cJSON_AddStringToObject(request, "op", "share_init");
     cJSON_AddStringToObject(request, "path", folder.c_str());
     send(request, [callback](cJSON* answer) {
-        callback(answer != nullptr, readShareEntries(answer), answer && jsonBool(answer, "copied", false));
+        callback(answer != nullptr, readShareEntries(answer), answer && jsonBool(answer, "copied", false),
+                 answer ? jsonString(answer, "origin") : Glib::ustring());
     });
 }
 

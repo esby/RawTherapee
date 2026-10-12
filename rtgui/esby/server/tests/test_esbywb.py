@@ -357,7 +357,10 @@ class ServerTest(unittest.TestCase):
         answer = client.request("share_init", path=other)                         # new series
         self.assertTrue(answer["copied"])
         self.assertEqual(answer["keys"]["Exposure/Contrast"], {"cum": 5.0})
-        self.assertFalse(client.request("share_init", path=other)["copied"])     # once only
+        self.assertEqual(answer["origin"], self.folder)
+        again = client.request("share_init", path=other)
+        self.assertFalse(again["copied"])                                       # once only
+        self.assertEqual(again["origin"], self.folder)
         # reset of a series from the parent: its own shift goes back, its value gets a newer version
         client.request("share_change", path=other, changes=[
             {"key": "Exposure/Black", "delta": 100}, {"key": "Exposure/Curve", "value": "2;"}])
