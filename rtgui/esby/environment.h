@@ -140,11 +140,11 @@ class Environment {
      EsbyParamsAccess* paramsAccess = nullptr;
      void setParamsAccess(EsbyParamsAccess* p) { paramsAccess = p; }
      EsbyParamsAccess* getParamsAccess() { return paramsAccess; }
-     std::function<void(const rtengine::procparams::ProcParams&, const rtengine::ProcEvent&, bool)> paramsListener;
+     // several tools listen (TTShare, TTSeriesExposure)
+     sigc::signal<void, const rtengine::procparams::ProcParams&, const rtengine::ProcEvent&, bool> paramsChangedSignal;
      void notifyParamsChanged(const rtengine::procparams::ProcParams& params, const rtengine::ProcEvent& ev, bool fromPanel)
      {
-       if (paramsListener)
-         paramsListener(params, ev, fromPanel);
+       paramsChangedSignal.emit(params, ev, fromPanel);
      }
      // > 0: the changes are made by a tool for this image only (TTSeriesExposure, a change received
      // by TTShare): they are not shared

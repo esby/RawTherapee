@@ -145,6 +145,13 @@ TTSeriesExposure::TTSeriesExposure() :
   refBox->add(*btNoReference);
   pack_start(*refBox, Gtk::PACK_SHRINK, 0);
 
+  // compensation of the series: the compensation of the image without its gap. Moved here, it is changed
+  // like in the exposure tool: shared with the series by TTShare ("Share my changes")
+  adjSeries = Gtk::manage(new Adjuster(M("TT_SERIESEXP_SERIES_COMP"), -5.0, 12.0, 0.05, 0.0));
+  adjSeries->setAdjusterListener(this);
+  adjSeries->set_tooltip_text(M("TT_SERIESEXP_SERIES_COMP_TOOLTIP"));
+  pack_start(*adjSeries, Gtk::PACK_SHRINK, 0);
+
   // gap of the image
   adjGap = Gtk::manage(new Adjuster(M("TT_SERIESEXP_GAP"), -3.0, 3.0, 0.05, 0.0));
   adjGap->setAdjusterListener(this);
@@ -173,7 +180,22 @@ TTSeriesExposure::TTSeriesExposure() :
   lbInfo->set_line_wrap(true);
   lbInfo->set_line_wrap_mode(Pango::WRAP_WORD_CHAR);
   lbInfo->set_xalign(0.0);
-  pack_start(*lbInfo, Gtk::PACK_SHRINK, 0);
+  // a click on the status copies it to the clipboard (a label does not receive the clicks)
+  Gtk::EventBox* ebInfo = Gtk::manage(new Gtk::EventBox());
+  ebInfo->add(*lbInfo);
+  ebInfo->set_tooltip_text(M("TT_SERIESEXP_COPY_TOOLTIP"));
+  ebInfo->add_events(Gdk::BUTTON_PRESS_MASK);
+  ebInfo->signal_button_press_event().connect([this](GdkEventButton* event) {
+    if ((event->type == GDK_BUTTON_PRESS) && (event->button == 1) && !lbInfo->get_text().empty())
+      Gtk::Clipboard::get()->set_text(lbInfo->get_text());
+    return true;
+  });
+  ebInfo->signal_realize().connect([ebInfo]() {
+    Glib::RefPtr<Gdk::Window> window = ebInfo->get_window();
+    if (window)
+      window->set_cursor(Gdk::Cursor::create(ebInfo->get_display(), "pointer"));
+  });
+  pack_start(*ebInfo, Gtk::PACK_SHRINK, 0);
 
   service.reset(new EsbyHttpClient());
   service->setAddress(esbySettings().SeriesExpService);
@@ -207,6 +229,7 @@ TTSeriesExposure::TTSeriesExposure() :
 
 TTSeriesExposure::~TTSeriesExposure()
 {
+  paramsConnection.disconnect();
 }
 
 void TTSeriesExposure::deploy()
@@ -397,6 +420,12 @@ void TTSeriesExposure::showState()
   adjGap->block(true);
   adjGap->setValue(gap);
   adjGap->block(false);
+  if (tonecurve != nullptr)
+  {
+    adjSeries->block(true);
+    adjSeries->setValue(currentExpComp() - gap);
+    adjSeries->block(false);
+  }
   updatingWidgets = false;
   lbState->set_text(M(state == "computed" ? "TT_SERIESEXP_STATE_COMPUTED"
                       : state == "manual" ? "TT_SERIESEXP_STATE_MANUAL" : "TT_SERIESEXP_STATE_DEFAULT"));
@@ -710,6 +739,14 @@ void TTSeriesExposure::react(FakeProcEvent ev)
 {
   if (!sharedConnected && (env != nullptr))
   {
+    // the compensation changed (exposure tool, change received from the series): the series slider follows
+    paramsConnection = env->paramsChangedSignal.connect([this](const ProcParams& pp, const ProcEvent&, bool) {
+      updatingWidgets = true;
+      adjSeries->block(true);
+      adjSeries->setValue(pp.toneCurve.expcomp - gap);
+      adjSeries->block(false);
+      updatingWidgets = false;
+    });
     // the reference changed (another instance, or the variable panel)
     env->sharedVariables()->signalChanged().connect([this]() {
       if (stateLoaded && getExpander()->getEnabled())
@@ -723,6 +760,17 @@ void TTSeriesExposure::react(FakeProcEvent ev)
 
 void TTSeriesExposure::adjusterChanged(Adjuster* a, double newval)
 {
+  if ((a == adjSeries) && !updatingWidgets && (tonecurve != nullptr))
+  {
+    // a change of the compensation of the image, not of its gap: not suppressed, TTShare shares it
+    ProcParams pp;
+    tonecurve->write(&pp);
+    pp.toneCurve.expcomp = clampComp(newval + gap);
+    tonecurve->read(&pp);
+    if (listener)
+      listener->panelChanged(EvExpComp, Glib::ustring::format(std::setw(5), std::fixed, std::setprecision(2), pp.toneCurve.expcomp));
+    return;
+  }
   if ((a == adjGap) && !updatingWidgets)
   {
     if (!getExpander()->getEnabled())

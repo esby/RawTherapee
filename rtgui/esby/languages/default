@@ -73,9 +73,10 @@ TT_SERIESEXP_APPLY;Apply the suggestion
 TT_SERIESEXP_APPLY_TOOLTIP;Apply the gap suggested by the last measure.
 TT_SERIESEXP_AUTOMATIC;Automatic exposure or histogram matching is on: no correction (each image gets its own exposure).
 TT_SERIESEXP_AUTO_APPLIED;Gap measured and applied.
+TT_SERIESEXP_COPY_TOOLTIP;Click: copies this text to the clipboard.
 TT_SERIESEXP_GAP;Gap of this image (EV)
 TT_SERIESEXP_GAP_MEASURED;Gap measured with the pipette: %1 EV (a second ctrl + click refines it).
-TT_SERIESEXP_GAP_TOOLTIP;Exposure gap of this image with the reference of its series, added to its compensation, for this image only (never shared). Measured with the pipette or the service, or set here by hand.\nThe compensation of the whole series is changed with the exposure tool itself, with "Share my changes" of the shared changes tool.
+TT_SERIESEXP_GAP_TOOLTIP;Exposure gap of this image with the reference of its series, added to its compensation, for this image only (never shared). Measured with the pipette or the service, or set here by hand.
 TT_SERIESEXP_IS_REFERENCE;This image is the reference of the sequence.
 TT_SERIESEXP_LABEL;Series Exposure
 TT_SERIESEXP_MEASURE;Measure
@@ -104,6 +105,8 @@ TT_SERIESEXP_REF_THIS;This image is the reference of its series.
 TT_SERIESEXP_RESET;No gap
 TT_SERIESEXP_RESET_TOOLTIP;Removes the gap of this image: its compensation goes back to the one of the series.
 TT_SERIESEXP_SEQ;Series: %1.
+TT_SERIESEXP_SERIES_COMP;Compensation of the series (EV)
+TT_SERIESEXP_SERIES_COMP_TOOLTIP;Compensation of this image without its gap: changed here as in the exposure tool. With "Share my changes" (shared changes tool), the shift is applied to every image of the series.
 TT_SERIESEXP_SERVICE_ERROR;Measuring service unavailable (%1).
 TT_SERIESEXP_STATE_COMPUTED;Gap: computed
 TT_SERIESEXP_STATE_DEFAULT;Gap: none

@@ -76,6 +76,9 @@ les autres à leur prochain focus), plus tard dans les images ouvertes ensuite.
 
 - La **série** d'une photo est son dossier numéroté (voir TTShare). La compensation commune à la
   série se règle avec l'outil Exposition lui-même, partagée par TTShare (« Share my changes »).
+- Le curseur « Compensation of the series » montre la compensation de l'image sans son écart ; le
+  bouger revient à bouger la compensation dans l'outil Exposition (partagé avec la série par
+  TTShare si « Share my changes » est coché). Un clic sur le texte d'état le copie.
 - TTSeriesExposure n'ajoute à chaque image que **son écart** (IL) avec la référence de la série, pour
   cette image seulement (jamais partagé) : curseur « Gap of this image », état **none** (pas d'écart),
   **computed** (mesuré) ou **manual** (curseur). « No gap » le remet à 0.

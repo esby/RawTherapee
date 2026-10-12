@@ -146,7 +146,7 @@ TTShare::~TTShare()
 {
   if ((env != nullptr) && connected)
   {
-    env->paramsListener = nullptr;
+    paramsConnection.disconnect();
     env->sharedVariables()->getClient()->setShareEventCallback(nullptr);
   }
 }
@@ -216,9 +216,9 @@ void TTShare::connectSignals()
   if (connected || (env == nullptr))
     return;
   connected = true;
-  env->paramsListener = [this](const ProcParams& params, const ProcEvent& ev, bool fromPanel) {
+  paramsConnection = env->paramsChangedSignal.connect([this](const ProcParams& params, const ProcEvent& ev, bool fromPanel) {
     paramsChanged(params, ev, fromPanel);
-  };
+  });
   // a change in the series, from another instance (or this one): what this image missed
   env->sharedVariables()->getClient()->setShareEventCallback([this](const Glib::ustring& path) {
     if (!stateLoaded || (path != folder) || !getExpander()->getEnabled())

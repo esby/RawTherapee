@@ -58,6 +58,7 @@ protected:
     std::map<std::string, std::string> savedValues; // values of the shared keys as last seen (server)
 
     bool connected;
+    sigc::connection paramsConnection;
     bool pending;          // changes received while the window was not active
     bool focusConnected;
 

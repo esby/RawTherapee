@@ -63,6 +63,7 @@ protected:
     Gtk::ToggleButton* tbPipette;
     Gtk::Button* btReference;      // the current image becomes the reference (with the service)
     Gtk::Button* btNoReference;    // the current image is not the reference anymore
+    Adjuster* adjSeries;           // compensation of the series: compensation of the image without its gap
     Adjuster* adjGap;              // gap of the current image (EV)
     Gtk::Label* lbState;           // default, computed, manual
     Gtk::Button* btMeasure;        // measure the current image again (service)
@@ -83,6 +84,7 @@ protected:
     bool hasSuggestion;
     double suggestedGap;
     bool sharedConnected;
+    sigc::connection paramsConnection;
     bool updatingWidgets;
 
     Glib::ustring originalFile();  // ESBY_ORIGIN, or the current file
