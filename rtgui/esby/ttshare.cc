@@ -20,6 +20,8 @@
 #include "multilangmgr.h"
 #include "variable.h"
 #include "esbysharedvars.h"
+#include "options.h"
+#include "rtengine/rtapp.h"
 #include "ppversion.h"
 #include "rtengine/procparams.h"
 #include "rtengine/procevents.h"
@@ -120,7 +122,15 @@ TTShare::TTShare() : FoldableToolPanel(this, "ttshare", M("TT_SHARE_LABEL"), fal
   lbInfo->set_line_wrap(true);
   lbInfo->set_line_wrap_mode(Pango::WRAP_WORD_CHAR);
   lbInfo->set_xalign(0.0);
-  pack_start(*lbInfo, Gtk::PACK_SHRINK, 0);
+  lbInfo->set_tooltip_text(M("TT_SHARE_COPY_TOOLTIP"));
+  // a click on the status copies it to the clipboard
+  Gtk::EventBox* infoBox = Gtk::manage(new Gtk::EventBox());
+  infoBox->add(*lbInfo);
+  infoBox->signal_button_press_event().connect([this](GdkEventButton*) {
+    Gtk::Clipboard::get()->set_text(lbInfo->get_text());
+    return true;
+  });
+  pack_start(*infoBox, Gtk::PACK_SHRINK, 0);
 }
 
 TTShare::~TTShare()
@@ -309,11 +319,19 @@ void TTShare::loadState()
     setInfo(M("TT_SHARE_NO_SERVER"));
     return;
   }
-  client->fileGet(file, "share", [this, current, client](bool ok, const std::vector<EsbyVarValue>& fields) {
+  // an image without pp3 (never processed, or pp3 removed) has the values of the default profile:
+  // what it had received is lost, it receives everything again. Only when the pp3 files are kept next
+  // to the images (otherwise there is never one there).
+  Glib::ustring opened = env->getVarAsString("Fname");
+  const auto& options = App::get().options();
+  bool fresh = options.saveParamsFile && !opened.empty() && !Glib::file_test(opened + ".pp3", Glib::FILE_TEST_EXISTS);
+  client->fileGet(file, "share", [this, current, client, fresh](bool ok, const std::vector<EsbyVarValue>& fields) {
     if (!ok || (current != generation))
       return;
     for (const EsbyVarValue& f : fields)
     {
+      if (fresh)
+        break;
       std::string name = f.name.raw();
       double number = (f.type == RT_VARIABLE_TYPE_INT) ? f.i : f.d;
       if (name.compare(0, 2, "c:") == 0)
@@ -323,9 +341,9 @@ void TTShare::loadState()
     }
     stateLoaded = true;
     // a series used for the first time starts from its parent folder
-    client->shareInit(folder, [this, current](bool ok2, const std::vector<EsbyShareEntry>& entries) {
+    client->shareInit(folder, [this, current, fresh](bool ok2, const std::vector<EsbyShareEntry>& entries, bool copied) {
       if (ok2 && (current == generation))
-        catchUp(entries, false);
+        catchUp(entries, false, copied ? M("TT_SHARE_FROM_PARENT_INIT") : fresh ? M("TT_SHARE_FRESH") : Glib::ustring());
     });
   });
 }
@@ -333,7 +351,7 @@ void TTShare::loadState()
 // what the image has not received yet: the shifts (sum of the series - sum received) and the values of
 // a newer version. fromEvent: a change of another image; applied in the active window only (N instances
 // do not recalculate together), the others do it when they get the focus
-void TTShare::catchUp(const std::vector<EsbyShareEntry>& entries, bool fromEvent)
+void TTShare::catchUp(const std::vector<EsbyShareEntry>& entries, bool fromEvent, const Glib::ustring& origin)
 {
   EsbyParamsAccess* access = env->getParamsAccess();
   if ((access == nullptr) || !stateLoaded)
@@ -441,7 +459,7 @@ void TTShare::catchUp(const std::vector<EsbyShareEntry>& entries, bool fromEvent
     env->shareSuppressed++;
     access->esbyApplyParams(params, exposureOnly ? ProcEvent(EvExpComp) : ProcEvent(EvProfileChanged), M("TT_SHARE_HISTORY"));
     env->shareSuppressed--;
-    setInfo(M("TT_SHARE_RECEIVED") + text);
+    setInfo((origin.empty() ? M("TT_SHARE_RECEIVED") : origin) + text);
   }
   else if (!fromEvent)
     setInfo("");

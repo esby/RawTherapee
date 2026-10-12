@@ -68,7 +68,8 @@ protected:
     void connectSignals();
     void paramsChanged(const rtengine::procparams::ProcParams& params, const rtengine::ProcEvent& ev, bool fromPanel);
     void loadState();
-    void catchUp(const std::vector<EsbyShareEntry>& entries, bool fromEvent);
+    // origin: the message of the changes received (empty: from the series)
+    void catchUp(const std::vector<EsbyShareEntry>& entries, bool fromEvent, const Glib::ustring& origin = Glib::ustring());
     void saveApplied(const std::vector<std::string>& keys);
     void copyWithParent(bool toParent);
     void setInfo(const Glib::ustring& text);

@@ -178,8 +178,11 @@ TT_SERIESWB_UNSET_TOOLTIP;Removes the value of the folder of the image: it inher
 TT_SERIESWB_VALUES;Image: %1 K, tint %2, blue/red %7 (%5). Camera: %3 K, tint %4 (observer %6°).
 TT_SHARE_CHANGES;Share my changes with the series
 TT_SHARE_CHANGES_TOOLTIP;On: a change made in this image (in a shared section) is applied to the other images of its series (numbered folder): now in the other instances showing one, later in the images opened afterwards. A number (compensation, contrast...) is shared as a shift, each image keeping its own value; a curve or a choice as a value.\nOff: the change stays in this image. The changes of the other images are still received while the tool is on.
+TT_SHARE_COPY_TOOLTIP;Click: copies this text to the clipboard.
+TT_SHARE_FRESH;Image without pp3: the changes of the series are applied again:
 TT_SHARE_FROM_PARENT;Reset from the parent
 TT_SHARE_FROM_PARENT_CONFIRM;The series %1 takes again the shared changes of %2: its images are changed accordingly (shifts and values). Continue?
+TT_SHARE_FROM_PARENT_INIT;Series used for the first time, initialized from the parent folder:
 TT_SHARE_FROM_PARENT_TOOLTIP;The series takes again the shared changes of the parent folder: the shifts of its images become the ones of the parent, its curves and choices the ones of the parent.
 TT_SHARE_HISTORY;Shared change of the series
 TT_SHARE_LABEL;Shared changes

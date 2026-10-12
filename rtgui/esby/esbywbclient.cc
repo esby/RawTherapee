@@ -571,13 +571,13 @@ void EsbyWBClient::shareGet(const Glib::ustring& folder, ShareCallback callback)
     });
 }
 
-void EsbyWBClient::shareInit(const Glib::ustring& folder, ShareCallback callback)
+void EsbyWBClient::shareInit(const Glib::ustring& folder, ShareInitCallback callback)
 {
     cJSON* request = cJSON_CreateObject();
     cJSON_AddStringToObject(request, "op", "share_init");
     cJSON_AddStringToObject(request, "path", folder.c_str());
     send(request, [callback](cJSON* answer) {
-        callback(answer != nullptr, readShareEntries(answer));
+        callback(answer != nullptr, readShareEntries(answer), answer && jsonBool(answer, "copied", false));
     });
 }
 
