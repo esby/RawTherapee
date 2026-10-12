@@ -113,6 +113,7 @@ public:
     void deploy();
     void deployLate();
     void react(FakeProcEvent ev);
+    void enabledChanged() override;
     bool canBeEnabled() {return true;}
 
     // EditSubscriber

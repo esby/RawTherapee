@@ -419,11 +419,11 @@ void TTSeriesExposure::setReferenceHere(bool hasPoint, double px, double py, boo
   ref.py = py;
   ref.hasTarget = hasTarget;
   ref.target = target;
-  if (!service->isEnabled())
-  {
+  // with a brightness target (pipette), the reference is usable at once, whatever the service says
+  if (hasTarget || !service->isEnabled())
     publishReference(ref);
+  if (!service->isEnabled())
     return;
-  }
 
   cJSON* body = cJSON_CreateObject();
   cJSON_AddStringToObject(body, "session", (series + "|" + Glib::path_get_basename(ref.raw)).c_str());
@@ -457,7 +457,8 @@ void TTSeriesExposure::setReferenceHere(bool hasPoint, double px, double py, boo
       setInfo(Glib::ustring::compose(M("TT_SERIESEXP_STATUS"), status->valuestring));
       return;
     }
-    publishReference(ref);
+    if (!ref.hasTarget)
+      publishReference(ref);
   });
 }
 
@@ -685,6 +686,13 @@ void TTSeriesExposure::setInfo(const Glib::ustring& action)
   }
   lbInfo->set_text(text);
   TT_LOG("TTSeriesExposure: %s\n", text.c_str());
+}
+
+// turned on with an image already opened: it is handled from now on
+void TTSeriesExposure::enabledChanged()
+{
+  if (getExpander()->getEnabled() && (env != nullptr) && !originalFile().empty())
+    imageOpened();
 }
 
 void TTSeriesExposure::react(FakeProcEvent ev)
