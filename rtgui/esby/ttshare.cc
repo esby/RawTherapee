@@ -21,7 +21,7 @@
 #include "variable.h"
 #include "esbysharedvars.h"
 #include "options.h"
-#include "rtengine/rtapp.h"
+#include "rtimage.h"
 #include "ppversion.h"
 #include "rtengine/procparams.h"
 #include "rtengine/procevents.h"
@@ -130,6 +130,12 @@ TTShare::TTShare() : FoldableToolPanel(this, "ttshare", M("TT_SHARE_LABEL"), fal
     Gtk::Clipboard::get()->set_text(lbInfo->get_text());
     return true;
   });
+  Gtk::Button* btCopy = Gtk::manage(new Gtk::Button(M("TT_SHARE_COPY")));
+  btCopy->set_image(*Gtk::manage(new RTImage("copy")));
+  btCopy->set_always_show_image(true);
+  btCopy->set_tooltip_text(M("TT_SHARE_COPY_TOOLTIP"));
+  btCopy->signal_clicked().connect([this]() { Gtk::Clipboard::get()->set_text(lbInfo->get_text()); });
+  pack_start(*btCopy, Gtk::PACK_SHRINK, 0);
   pack_start(*infoBox, Gtk::PACK_SHRINK, 0);
 }
 
@@ -299,8 +305,30 @@ void TTShare::paramsChanged(const ProcParams& params, const ProcEvent& ev, bool 
       }
     }
   }
+  if (stateLoaded && (file == EsbySharedVariables::originalFile(env)))
+    saveValues(current, false);
   snapshot = current;
   hasSnapshot = true;
+}
+
+// the values of the shared keys of the image, as last seen (s:key): an image whose values differ when it
+// is opened again (pp3 removed, profile applied elsewhere) has lost what it had received for these keys
+void TTShare::saveValues(const std::map<std::string, std::string>& values, bool all)
+{
+  std::vector<EsbyVarValue> fields;
+  for (const auto& kv : values)
+  {
+    auto known = savedValues.find(kv.first);
+    if (!all && (known != savedValues.end()) && (known->second == kv.second))
+      continue;
+    EsbyVarValue v;
+    v.name = "s:" + kv.first;
+    v.s = kv.second;
+    fields.push_back(v);
+    savedValues[kv.first] = kv.second;
+  }
+  if (!fields.empty() && !file.empty())
+    env->sharedVariables()->getClient()->fileSet(file, "share", fields, nullptr);
 }
 
 // the state of the image opened: what it has already received, then what it missed
@@ -319,31 +347,46 @@ void TTShare::loadState()
     setInfo(M("TT_SHARE_NO_SERVER"));
     return;
   }
-  // an image without pp3 (never processed, or pp3 removed) has the values of the default profile:
-  // what it had received is lost, it receives everything again. Only when the pp3 files are kept next
-  // to the images (otherwise there is never one there).
-  Glib::ustring opened = env->getVarAsString("Fname");
-  const auto& options = App::get().options();
-  bool fresh = options.saveParamsFile && !opened.empty() && !Glib::file_test(opened + ".pp3", Glib::FILE_TEST_EXISTS);
-  client->fileGet(file, "share", [this, current, client, fresh](bool ok, const std::vector<EsbyVarValue>& fields) {
+  client->fileGet(file, "share", [this, current, client](bool ok, const std::vector<EsbyVarValue>& fields) {
     if (!ok || (current != generation))
       return;
+    savedValues.clear();
     for (const EsbyVarValue& f : fields)
     {
-      if (fresh)
-        break;
       std::string name = f.name.raw();
       double number = (f.type == RT_VARIABLE_TYPE_INT) ? f.i : f.d;
       if (name.compare(0, 2, "c:") == 0)
         appliedCum[name.substr(2)] = number;
       else if (name.compare(0, 2, "v:") == 0)
         appliedVersion[name.substr(2)] = (int) number;
+      else if (name.compare(0, 2, "s:") == 0)
+        savedValues[name.substr(2)] = f.s.raw();
+    }
+    // a key whose value is not the one last seen (pp3 removed: values of the default profile, profile
+    // applied elsewhere): what the image had received for it is lost, it receives everything again
+    bool lost = false;
+    ProcParams params;
+    EsbyParamsAccess* access = env->getParamsAccess();
+    if ((access != nullptr) && access->esbyGetParams(params))
+    {
+      std::map<std::string, std::string> values = extract(params);
+      for (const auto& kv : values)
+      {
+        auto known = savedValues.find(kv.first);
+        if ((known != savedValues.end()) && (known->second != kv.second))
+        {
+          appliedCum.erase(kv.first);
+          appliedVersion.erase(kv.first);
+          lost = true;
+        }
+      }
+      saveValues(values, true);
     }
     stateLoaded = true;
     // a series used for the first time starts from its parent folder
-    client->shareInit(folder, [this, current, fresh](bool ok2, const std::vector<EsbyShareEntry>& entries, bool copied) {
+    client->shareInit(folder, [this, current, lost](bool ok2, const std::vector<EsbyShareEntry>& entries, bool copied) {
       if (ok2 && (current == generation))
-        catchUp(entries, false, copied ? M("TT_SHARE_FROM_PARENT_INIT") : fresh ? M("TT_SHARE_FRESH") : Glib::ustring());
+        catchUp(entries, false, copied ? M("TT_SHARE_FROM_PARENT_INIT") : lost ? M("TT_SHARE_FRESH") : Glib::ustring());
     });
   });
 }

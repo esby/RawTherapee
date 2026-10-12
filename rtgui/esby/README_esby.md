@@ -59,10 +59,11 @@ les autres à leur prochain focus), plus tard dans les images ouvertes ensuite.
   de son dossier parent (une copie : le parent changé ensuite ne la change pas). « Send to the
   parent » remplace celles du parent par celles de la série ; « Reset from the parent » (avec
   confirmation) fait reprendre à la série celles du parent, ses images changent en conséquence.
-- Une image ouverte **sans pp3** à côté d'elle (jamais traitée, ou pp3 effacé) a les valeurs du profil
-  par défaut : ce qu'elle avait reçu est oublié, elle reçoit à nouveau toutes les modifications de
-  la série (seulement si les pp3 sont enregistrés à côté des images, option `saveParamsFile`).
-  Un clic sur le texte d'état le copie dans le presse-papier.
+- Le serveur garde aussi, par image, les valeurs de ses clés partagées telles que vues en dernier
+  (`s:Section/Clé`). Une image rouverte avec d'autres valeurs (pp3 effacé : profil par défaut ;
+  profil appliqué ailleurs) a perdu ce qu'elle avait reçu pour ces clés : elle reçoit à nouveau
+  toutes les modifications de la série. Le bouton « Copy the status » (ou un clic sur le texte)
+  copie l'état dans le presse-papier.
 - « Share my changes » coupé (option `ShareChanges`) : la modification reste dans l'image. Les
   modifications des autres images sont toujours reçues tant que l'outil est actif.
 - Une valeur posée par un outil pour cette image seulement (TTSeriesExposure) n'est jamais partagée

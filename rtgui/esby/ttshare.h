@@ -55,6 +55,7 @@ protected:
     int generation;
     std::map<std::string, double> appliedCum;
     std::map<std::string, int> appliedVersion;
+    std::map<std::string, std::string> savedValues; // values of the shared keys as last seen (server)
 
     bool connected;
     bool pending;          // changes received while the window was not active
@@ -71,6 +72,7 @@ protected:
     // origin: the message of the changes received (empty: from the series)
     void catchUp(const std::vector<EsbyShareEntry>& entries, bool fromEvent, const Glib::ustring& origin = Glib::ustring());
     void saveApplied(const std::vector<std::string>& keys);
+    void saveValues(const std::map<std::string, std::string>& values, bool all);
     void copyWithParent(bool toParent);
     void setInfo(const Glib::ustring& text);
 
