@@ -29,7 +29,8 @@ message per line.
     esbywb show <folder> [--sequence S]      what applies to a folder: white balance and variables
     esbywb exposure-apply <folder> [--dry-run]   exposure of the closed images (TTSeriesExposure)
     esbywb shares <folder>                   parameters shared by the images of a series
-    esbywb share-reset <folder>              forget them (the images keep their values)
+    esbywb share-zero <folder>               shifts back to 0 (the images get their own values back)
+    esbywb share-reset <folder>              forget them (the images keep their current values)
     esbywb share-copy <from> <to>            the shared parameters of a folder replace the ones of another
 
 <where> is a folder, or "global" for every image. A sequence is a part of a folder (the folder
@@ -365,6 +366,32 @@ class State:
         self.save()
         return target, copied
 
+    def share_reset(self, folder):
+        """forgets the shared parameters of a series, and what its images received (otherwise the
+        next shifts would be computed from the old sums); the images keep their values"""
+        folder = normalize(folder)
+        self.shares.pop(folder, None)
+        count = 0
+        for filename in list(self.file_data):
+            if sequence_folder(filename) == folder and "share" in self.file_data[filename]:
+                del self.file_data[filename]["share"]
+                if not self.file_data[filename]:
+                    del self.file_data[filename]
+                count += 1
+        self.save()
+        return folder, count
+
+    def share_zero(self, folder):
+        """the shifts of a series go back to 0: its images get their own values back (the images
+        opened afterwards receive the opposite shifts); the values (curves, choices) are kept"""
+        folder = normalize(folder)
+        keys = self.shares.get(folder, {})
+        for entry in keys.values():
+            if "cum" in entry:
+                entry["cum"] = 0.0
+        self.save()
+        return folder, keys
+
     def share_init(self, folder):
         """first use of a series: it starts from the shared parameters of its parent folder"""
         folder = normalize(folder)
@@ -482,10 +509,12 @@ class Server:
             await self.broadcast(target, "share_changed")
             return {"path": target, "keys": keys}
         if op == "share_reset":
-            folder = normalize(request["path"])
-            self.state.shares.pop(folder, None)
-            self.state.save()
-            return {"path": folder}
+            folder, count = self.state.share_reset(request["path"])
+            return {"path": folder, "images": count}
+        if op == "share_zero":
+            folder, keys = self.state.share_zero(request["path"])
+            await self.broadcast(folder, "share_changed")
+            return {"path": folder, "keys": keys}
         if op == "subscribe":
             self.subscribers.add(writer)
             return {}
@@ -679,7 +708,9 @@ def main(argv=None):
 
     p = sub.add_parser("shares", help="parameters shared by the images of a series")
     p.add_argument("folder")
-    p = sub.add_parser("share-reset", help="forget the shared parameters of a series (the images keep their values)")
+    p = sub.add_parser("share-zero", help="the shifts of a series go back to 0: its images get their own values back")
+    p.add_argument("folder")
+    p = sub.add_parser("share-reset", help="forget the shared parameters of a series (the images keep their current values)")
     p.add_argument("folder")
     p = sub.add_parser("share-copy", help="the shared parameters of a folder replace the ones of another "
                                           "(series to parent, parent to series)")
@@ -752,8 +783,11 @@ def run_command(client, args):
     elif args.command == "share-copy":
         answer = client.request("share_copy", **{"from": normalize(args.source), "to": normalize(args.target)})
         print("copied to %s: %d keys" % (answer["path"], len(answer["keys"])))
+    elif args.command == "share-zero":
+        print("shifts back to 0: " + client.request("share_zero", path=normalize(args.folder))["path"])
     elif args.command == "share-reset":
-        print("reset: " + client.request("share_reset", path=normalize(args.folder))["path"])
+        answer = client.request("share_reset", path=normalize(args.folder))
+        print("reset: %s (%d images)" % (answer["path"], answer["images"]))
     elif args.command == "exposure-apply":
         exposure_apply(client, normalize(args.folder), args.dry_run, sys.stdout)
     elif args.command == "show":

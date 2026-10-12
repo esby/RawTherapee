@@ -79,7 +79,8 @@ une séquence est stockée sous la clé `dossier#séquence`. `move` déplace aus
 
 ```bash
 ./esbywb.py shares "~/photos/Japan Expo 2026/Vendredi/081 - Bowsette"       # décalages et valeurs
-./esbywb.py share-reset "~/photos/Japan Expo 2026/Vendredi/081 - Bowsette"  # tout oublier
+./esbywb.py share-zero "~/photos/Japan Expo 2026/Vendredi/081 - Bowsette"   # décalages à 0 : les images reviennent
+./esbywb.py share-reset "~/photos/Japan Expo 2026/Vendredi/081 - Bowsette"  # tout oublier (les images gardent leurs valeurs)
 ./esbywb.py share-copy "~/photos/Japan Expo 2026/Vendredi/081 - Bowsette" "~/photos/Japan Expo 2026/Vendredi"
 ```
 

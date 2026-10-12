@@ -332,8 +332,13 @@ class ServerTest(unittest.TestCase):
         self.assertEqual(keys["Exposure/Curve"], {"value": "0;", "version": 2})
         with self.assertRaises(SystemExit):
             client.request("share_change", path=self.folder, changes=[{"key": "nokey", "delta": 1}])
-        client.request("share_reset", path=self.folder)
+        raw = os.path.join(self.folder, "pp", "P1.RW2")
+        client.request("file_set", file=raw, namespace="share", fields={"c:Exposure/Contrast": 3.0})
+        client.request("share_zero", path=self.folder)
+        self.assertEqual(client.request("share_get", path=self.folder)["keys"]["Exposure/Contrast"]["cum"], 0.0)
+        self.assertEqual(client.request("share_reset", path=self.folder)["images"], 1)
         self.assertEqual(client.request("share_get", path=self.folder)["keys"], {})
+        self.assertEqual(client.request("file_get", file=raw, namespace="share")["data"], {})
         f.close()
         s.close()
 
