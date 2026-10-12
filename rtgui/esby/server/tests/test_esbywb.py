@@ -313,6 +313,30 @@ class ServerTest(unittest.TestCase):
         esbywb.exposure_apply(client, esbywb.normalize(seq), False, io.StringIO())
         self.assertEqual(esbywb.read_compensation(raws["P2.RW2"] + ".pp3"), 0.55)
 
+    def test_shares(self):
+        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        s.connect(self.socket_path)
+        f = s.makefile("rwb")
+        f.write(b'{"id": 1, "op": "subscribe"}\n')
+        f.flush()
+        self.assertTrue(json.loads(f.readline())["ok"])
+        client = self.client()
+        answer = client.request("share_change", path=self.folder, changes=[
+            {"key": "Exposure/Contrast", "delta": 5}, {"key": "Exposure/Curve", "value": "1;0;0;1;1;"}])
+        self.assertEqual(answer["keys"]["Exposure/Contrast"], {"cum": 5.0})
+        self.assertEqual(json.loads(f.readline()), {"event": "share_changed", "path": self.folder})
+        client.request("share_change", path=self.folder, changes=[
+            {"key": "Exposure/Contrast", "delta": -2}, {"key": "Exposure/Curve", "value": "0;"}])
+        keys = client.request("share_get", path=self.folder)["keys"]
+        self.assertEqual(keys["Exposure/Contrast"]["cum"], 3.0)
+        self.assertEqual(keys["Exposure/Curve"], {"value": "0;", "version": 2})
+        with self.assertRaises(SystemExit):
+            client.request("share_change", path=self.folder, changes=[{"key": "nokey", "delta": 1}])
+        client.request("share_reset", path=self.folder)
+        self.assertEqual(client.request("share_get", path=self.folder)["keys"], {})
+        f.close()
+        s.close()
+
     def test_second_server_refused(self):
         with self.assertRaises(SystemExit):
             esbywb.prepare_socket(self.socket_path)

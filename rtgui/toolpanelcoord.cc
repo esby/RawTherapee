@@ -1205,6 +1205,8 @@ void ToolPanelCoordinator::panelChanged(const rtengine::ProcEvent& event, const 
 
     hasChanged = true;
 
+    esbyParamsChanged(*params, event, true); // esby-hook: changes shared by TTShare
+
     for (auto paramcListener : paramcListeners) {
         paramcListener->procParamsChanged(params, event, descr);
     }
@@ -1318,6 +1320,8 @@ void ToolPanelCoordinator::profileChange(
     }
 
     hasChanged = event != rtengine::EvProfileChangeNotification;
+
+    esbyParamsChanged(*params, event, false); // esby-hook: reference of the next change for TTShare
 
     for (auto paramcListener : paramcListeners) {
         paramcListener->procParamsChanged(params, event, descr);

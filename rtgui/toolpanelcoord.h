@@ -124,6 +124,7 @@ class ToolPanelCoordinator :
     public ToolBarListener,
     public ProfileChangeListener,
     public WBProvider,
+    public EsbyParamsAccess, // esby-hook: parameters for TTShare
     public DFProvider,
     public FFProvider,
     public LensGeomListener,
@@ -550,6 +551,10 @@ public:
     void esbyTransmitImageData(const rtengine::FramesMetaData* pMetaData);
     void esbyImageOpened(int pp3versionFromThumbnail);
     void esbyEventReceived(const rtengine::ProcEvent& ev);
+    void esbyParamsChanged(const rtengine::procparams::ProcParams& params, const rtengine::ProcEvent& ev, bool fromPanel);
+    bool esbyGetParams(rtengine::procparams::ProcParams& params) override;
+    void esbyApplyParams(const rtengine::procparams::ProcParams& params, const rtengine::ProcEvent& event,
+                         const Glib::ustring& descr) override;
     void esbySetFileName(const Glib::ustring& fileName);
     void esbySetRawToolsSensitive(bool sensitive);
     void esbyCreatePanels(bool benchmark);

@@ -28,6 +28,8 @@ message per line.
     esbywb vars                              every variable set, where it is set
     esbywb show <folder> [--sequence S]      what applies to a folder: white balance and variables
     esbywb exposure-apply <folder> [--dry-run]   exposure of the closed images (TTSeriesExposure)
+    esbywb shares <folder>                   parameters shared by the images of a series
+    esbywb share-reset <folder>              forget them (the images keep their values)
 
 <where> is a folder, or "global" for every image. A sequence is a part of a folder (the folder
 is split by the pauses between the shots), named by RawTherapee.
@@ -158,6 +160,9 @@ class State:
         self.observations = {}  # file -> last correction observed by TTSeriesWB (learn, save)
         self.variables = {}  # key (see variable_key) -> {name: value}
         self.file_data = {}  # file -> {namespace: {field: value}} (ex: exposure state of an image)
+        # parameters shared by the images of a series: series folder -> {"Section/Key": entry};
+        # entry {"cum": sum of the shifts} (numbers) or {"value": text, "version": n} (curves, choices)
+        self.shares = {}
         self.load()
 
     def load(self):
@@ -171,6 +176,7 @@ class State:
         self.observations = data.get("observations", {})
         self.variables = data.get("variables", {})
         self.file_data = data.get("file_data", {})
+        self.shares = data.get("shares", {})
 
     def save(self):
         """atomic write: temporary file in the same folder, then rename"""
@@ -181,7 +187,7 @@ class State:
             with os.fdopen(fd, "w", encoding="utf-8") as f:
                 json.dump({"version": PROTOCOL_VERSION, "rules": self.rules, "files": self.files,
                            "observations": self.observations, "variables": self.variables,
-                           "file_data": self.file_data},
+                           "file_data": self.file_data, "shares": self.shares},
                           f, indent=1, sort_keys=True, ensure_ascii=False)
             os.replace(tmp, self.filename)
         except BaseException:
@@ -231,7 +237,7 @@ class State:
             return new + path[len(old):] if is_below(path, old) else path
 
         count = 0
-        for table in (self.rules, self.files, self.file_data):
+        for table in (self.rules, self.files, self.file_data, self.shares):
             for key in list(table):
                 if is_below(key, old):
                     table[moved(key)] = table.pop(key)
@@ -311,6 +317,29 @@ class State:
         folder = normalize(folder)
         return {f: d[namespace] for f, d in self.file_data.items()
                 if is_below(f, folder) and namespace in d}
+
+    def share_change(self, folder, changes):
+        """a change of shared parameters in an image of the series: a shift (number) is added to the
+        sum of the shifts of the key, a value (curve, choice) replaces the previous one; returns the
+        updated entries"""
+        folder = normalize(folder)
+        keys = self.shares.setdefault(folder, {})
+        updated = {}
+        for change in changes:
+            key = change["key"]
+            if not isinstance(key, str) or "/" not in key:
+                raise ValueError("invalid key: %r" % key)
+            if "delta" in change:
+                entry = keys.get(key) if "cum" in keys.get(key, {}) else {"cum": 0.0}
+                entry["cum"] = entry["cum"] + float(change["delta"])
+            elif "value" in change:
+                entry = {"value": str(change["value"]), "version": keys.get(key, {}).get("version", 0) + 1}
+            else:
+                raise ValueError("change without delta or value: %r" % key)
+            keys[key] = entry
+            updated[key] = entry
+        self.save()
+        return folder, updated
 
     def observe(self, observation):
         """keeps the last observation of a file; the server adds the time"""
@@ -405,6 +434,17 @@ class Server:
             return {"file": filename}
         if op == "file_list":
             return {"files": self.state.files_below(request["path"], request["namespace"])}
+        if op == "share_get":
+            return {"keys": self.state.shares.get(normalize(request["path"]), {})}
+        if op == "share_change":
+            folder, updated = self.state.share_change(request["path"], request["changes"])
+            await self.broadcast(folder, "share_changed")
+            return {"path": folder, "keys": updated}
+        if op == "share_reset":
+            folder = normalize(request["path"])
+            self.state.shares.pop(folder, None)
+            self.state.save()
+            return {"path": folder}
         if op == "subscribe":
             self.subscribers.add(writer)
             return {}
@@ -596,6 +636,10 @@ def main(argv=None):
     p.add_argument("folder")
     p.add_argument("--sequence", help="sequence of the folder")
 
+    p = sub.add_parser("shares", help="parameters shared by the images of a series")
+    p.add_argument("folder")
+    p = sub.add_parser("share-reset", help="forget the shared parameters of a series (the images keep their values)")
+    p.add_argument("folder")
     p = sub.add_parser("exposure-apply", help="sets the exposure compensation of the pp3 files of the images "
                                               "following a reference (TTSeriesExposure), in a folder and below")
     p.add_argument("folder")
@@ -653,6 +697,15 @@ def run_command(client, args):
             print("global" if key == GLOBAL_KEY else key)
             for name, value in sorted(values.items()):
                 print("  %-30s %s" % (name, format_value(value)))
+    elif args.command == "shares":
+        keys = client.request("share_get", path=normalize(args.folder))["keys"]
+        for key, entry in sorted(keys.items()):
+            if "cum" in entry:
+                print("%-45s %+g" % (key, entry["cum"]))
+            else:
+                print("%-45s %s  (version %d)" % (key, entry["value"], entry["version"]))
+    elif args.command == "share-reset":
+        print("reset: " + client.request("share_reset", path=normalize(args.folder))["path"])
     elif args.command == "exposure-apply":
         exposure_apply(client, normalize(args.folder), args.dry_run, sys.stdout)
     elif args.command == "show":

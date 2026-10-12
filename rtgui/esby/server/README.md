@@ -75,6 +75,17 @@ Protocole : `var_set` (`path`, `sequence` optionnel, `name`, `value`), `var_unse
 `var_list` (tout ce qui est posé). `path` vaut `global` (ou `*`) pour les variables globales ;
 une séquence est stockée sous la clé `dossier#séquence`. `move` déplace aussi les variables.
 
+## Modifications partagées par série (TTShare)
+
+```bash
+./esbywb.py shares "~/photos/Japan Expo 2026/Vendredi/081 - Bowsette"       # décalages et valeurs
+./esbywb.py share-reset "~/photos/Japan Expo 2026/Vendredi/081 - Bowsette"  # tout oublier
+```
+
+Protocole : `share_change` (`path`, `changes` : `[{key, delta}]` ou `[{key, value}]`, événement
+`share_changed`), `share_get`, `share_reset`. Par image, ce qui a été reçu est dans `file_data`,
+espace `share` (`c:Section/Clé` : somme des décalages, `v:Section/Clé` : version).
+
 ## Exposition des images fermées (TTSeriesExposure)
 
 ```bash

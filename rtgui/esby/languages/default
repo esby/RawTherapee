@@ -176,6 +176,18 @@ TT_SERIESWB_UNSET_DONE;%1 inherits its value again.
 TT_SERIESWB_UNSET_NONE;%1 has no value of its own.
 TT_SERIESWB_UNSET_TOOLTIP;Removes the value of the folder of the image: it inherits the value of its parent folders again.
 TT_SERIESWB_VALUES;Image: %1 K, tint %2, blue/red %7 (%5). Camera: %3 K, tint %4 (observer %6°).
+TT_SHARE_CHANGES;Share my changes with the series
+TT_SHARE_CHANGES_TOOLTIP;On: a change made in this image (in a shared section) is applied to the other images of its series (numbered folder): now in the other instances showing one, later in the images opened afterwards. A number (compensation, contrast...) is shared as a shift, each image keeping its own value; a curve or a choice as a value.\nOff: the change stays in this image. The changes of the other images are still received while the tool is on.
+TT_SHARE_HISTORY;Shared change of the series
+TT_SHARE_LABEL;Shared changes
+TT_SHARE_NOT_SENT;Change not shared: esby server unavailable.
+TT_SHARE_NO_SERVER;esby server unavailable: nothing is shared.
+TT_SHARE_PENDING;Changes of the series received: applied when this window is active.
+TT_SHARE_RECEIVED;Received from the series:
+TT_SHARE_SECTIONS;Shared tools:
+TT_SHARE_SECTION_EXPOSURE;Exposure
+TT_SHARE_SENT;Shared with the series:
+TT_SHARE_SERIES;Series: %1
 TT_UDLR_HIDE_ARROWS;Hide the move buttons (↑ ↓ ← →)
 TT_UDLR_LOCK_FAV;Lock the favorite and trash buttons
 TT_VAR_DISPLAYER_COPY;Copy to clipboard

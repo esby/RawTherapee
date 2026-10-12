@@ -201,7 +201,12 @@ void EsbyWBClient::handleLine(const std::string& line)
         cJSON* path = cJSON_GetObjectItemCaseSensitive(message, "path");
         if (cJSON_IsString(path))
         {
-            if (Glib::ustring(event->valuestring) == "variable_changed")
+            if (Glib::ustring(event->valuestring) == "share_changed")
+            {
+                if (onShareEvent)
+                    onShareEvent(path->valuestring);
+            }
+            else if (Glib::ustring(event->valuestring) == "variable_changed")
             {
                 cJSON* name = cJSON_GetObjectItemCaseSensitive(message, "name");
                 if (onVariableEvent)
@@ -525,6 +530,66 @@ void EsbyWBClient::fileSet(const Glib::ustring& file, const Glib::ustring& ns, c
     send(request, [callback](cJSON* answer) {
         if (callback)
             callback(answer != nullptr, answer ? Glib::ustring() : Glib::ustring("failed"));
+    });
+}
+
+static std::vector<EsbyShareEntry> readShareEntries(cJSON* answer)
+{
+    std::vector<EsbyShareEntry> entries;
+    cJSON* keys = answer ? cJSON_GetObjectItemCaseSensitive(answer, "keys") : nullptr;
+    cJSON* item = nullptr;
+    if (!cJSON_IsObject(keys))
+        return entries;
+    cJSON_ArrayForEach(item, keys)
+    {
+        EsbyShareEntry e;
+        e.key = item->string;
+        cJSON* cum = cJSON_GetObjectItemCaseSensitive(item, "cum");
+        cJSON* value = cJSON_GetObjectItemCaseSensitive(item, "value");
+        if (cJSON_IsNumber(cum))
+            e.cum = cum->valuedouble;
+        else if (cJSON_IsString(value))
+        {
+            e.numeric = false;
+            e.value = value->valuestring;
+            e.version = (int) jsonNumber(item, "version", 0);
+        }
+        else
+            continue;
+        entries.push_back(e);
+    }
+    return entries;
+}
+
+void EsbyWBClient::shareGet(const Glib::ustring& folder, ShareCallback callback)
+{
+    cJSON* request = cJSON_CreateObject();
+    cJSON_AddStringToObject(request, "op", "share_get");
+    cJSON_AddStringToObject(request, "path", folder.c_str());
+    send(request, [callback](cJSON* answer) {
+        callback(answer != nullptr, readShareEntries(answer));
+    });
+}
+
+void EsbyWBClient::shareChange(const Glib::ustring& folder, const std::vector<EsbyShareChange>& changes, ShareCallback callback)
+{
+    cJSON* request = cJSON_CreateObject();
+    cJSON_AddStringToObject(request, "op", "share_change");
+    cJSON_AddStringToObject(request, "path", folder.c_str());
+    cJSON* list = cJSON_AddArrayToObject(request, "changes");
+    for (const EsbyShareChange& c : changes)
+    {
+        cJSON* item = cJSON_CreateObject();
+        cJSON_AddStringToObject(item, "key", c.key.c_str());
+        if (c.numeric)
+            cJSON_AddNumberToObject(item, "delta", c.delta);
+        else
+            cJSON_AddStringToObject(item, "value", c.value.c_str());
+        cJSON_AddItemToArray(list, item);
+    }
+    send(request, [callback](cJSON* answer) {
+        if (callback)
+            callback(answer != nullptr, readShareEntries(answer));
     });
 }
 

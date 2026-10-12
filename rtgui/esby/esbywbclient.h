@@ -81,6 +81,26 @@ struct EsbyVarValue
     Glib::ustring origin; // key where it is set: folder, folder#sequence, or * (global)
 };
 
+// shared parameter of a series ("Section/Key" of the pp3): sum of the shifts for a number, or the
+// last value (curve, choice) with its version
+struct EsbyShareEntry
+{
+    Glib::ustring key;
+    bool numeric = true;
+    double cum = 0.0;
+    Glib::ustring value;
+    int version = 0;
+};
+
+// a change made in an image: a shift (numeric) or a new value
+struct EsbyShareChange
+{
+    Glib::ustring key;
+    bool numeric = true;
+    double delta = 0.0;
+    Glib::ustring value;
+};
+
 // client of the esbywb server (rtgui/esby/server/esbywb.py, step 3 of SPEC_series_wb.md).
 // One connection on the local Unix socket, JSON lines. Everything is asynchronous and runs in
 // the GLib main loop (the callbacks are called there): the interface never waits for the server.
@@ -94,6 +114,7 @@ public:
     using EventCallback = std::function<void(const Glib::ustring& path)>;
     using StatusCallback = std::function<void(bool connected)>;
     using VarsCallback = std::function<void(bool ok, const std::vector<EsbyVarValue>& variables)>;
+    using ShareCallback = std::function<void(bool ok, const std::vector<EsbyShareEntry>& entries)>;
     using VariableEventCallback = std::function<void(const Glib::ustring& path, const Glib::ustring& name)>;
 
     EsbyWBClient();
@@ -124,6 +145,11 @@ public:
     void fileGet(const Glib::ustring& file, const Glib::ustring& ns, VarsCallback callback);
     void fileSet(const Glib::ustring& file, const Glib::ustring& ns, const std::vector<EsbyVarValue>& fields,
                  DoneCallback callback);
+
+    // parameters shared by the images of a series (shareChange answers the updated entries)
+    void shareGet(const Glib::ustring& folder, ShareCallback callback);
+    void shareChange(const Glib::ustring& folder, const std::vector<EsbyShareChange>& changes, ShareCallback callback);
+    void setShareEventCallback(EventCallback callback) { onShareEvent = callback; }
 
     // rule_changed (white balance) and variable_changed events are given to different callbacks
     void setEventCallback(EventCallback callback) { onEvent = callback; }
@@ -161,5 +187,6 @@ private:
 
     EventCallback onEvent;
     VariableEventCallback onVariableEvent;
+    EventCallback onShareEvent;
     StatusCallback onStatus;
 };

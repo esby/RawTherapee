@@ -328,8 +328,11 @@ void TTSeriesExposure::setExpComp(double value)
   tonecurve->write(&pp);
   pp.toneCurve.expcomp = value;
   tonecurve->read(&pp);
+  // a value for this image only (its gap with the reference): not shared by TTShare
+  env->shareSuppressed++;
   if (listener)
     listener->panelChanged(EvExpComp, Glib::ustring::format(std::setw(5), std::fixed, std::setprecision(2), value));
+  env->shareSuppressed--;
 }
 
 // offset of the series: shared variable exposure.offset (0 when not set, or without server)

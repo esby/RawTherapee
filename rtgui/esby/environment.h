@@ -58,6 +58,17 @@
 // there are several instances of Environement inside the application, usually one per editor window and one for the main application.
 
 class WBProvider;
+
+// access to the processing parameters of the editor, for TTShare (implemented by ToolPanelCoordinator)
+class EsbyParamsAccess
+{
+  public:
+    virtual ~EsbyParamsAccess() = default;
+    virtual bool esbyGetParams(rtengine::procparams::ProcParams& params) = 0;
+    // the tools read the parameters, then the change is processed as a change of a tool (history entry)
+    virtual void esbyApplyParams(const rtengine::procparams::ProcParams& params, const rtengine::ProcEvent& event,
+                                 const Glib::ustring& descr) = 0;
+};
 class EsbySharedVariables;
 
 class Environment {
@@ -123,6 +134,21 @@ class Environment {
      WBProvider* wbProvider = nullptr;
      void setWBProvider(WBProvider* p) { wbProvider = p; }
      WBProvider* getWBProvider() { return wbProvider; }
+
+     // parameters of the editor (TTShare): access, and the changes, from a tool (fromPanel) or
+     // from a profile (image opened, history, paste...)
+     EsbyParamsAccess* paramsAccess = nullptr;
+     void setParamsAccess(EsbyParamsAccess* p) { paramsAccess = p; }
+     EsbyParamsAccess* getParamsAccess() { return paramsAccess; }
+     std::function<void(const rtengine::procparams::ProcParams&, const rtengine::ProcEvent&, bool)> paramsListener;
+     void notifyParamsChanged(const rtengine::procparams::ProcParams& params, const rtengine::ProcEvent& ev, bool fromPanel)
+     {
+       if (paramsListener)
+         paramsListener(params, ev, fromPanel);
+     }
+     // > 0: the changes are made by a tool for this image only (TTSeriesExposure, a change received
+     // by TTShare): they are not shared
+     int shareSuppressed = 0;
      ToolVBox* getTrashPanel() { return trashPanel; }
 
      //variables related code follow

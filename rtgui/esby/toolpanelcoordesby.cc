@@ -40,6 +40,7 @@
 #include "ttdep.h"
 #include "ttserieswb.h"
 #include "ttseriesexposure.h"
+#include "ttshare.h"
 #include "esbywidgets.h"
 #include "../rtengine/metadata.h"
 
@@ -641,6 +642,7 @@ void ToolPanelCoordinator::esbyCreatePanels(bool benchmark)
     });
     env->setTrashPanel(trashPanel);
     env->setWBProvider(this); // camera white balance, used by TTSeriesWB
+    env->setParamsAccess(this); // parameters, used by TTShare
 }
 
 // constructor: registration of the tools in their tabs
@@ -743,6 +745,7 @@ void ToolPanelCoordinator::esbyCreateUsefulTools()
     addPanel(usefulPanel, Gtk::manage(new TTTweaker()));
     addPanel(usefulPanel, Gtk::manage(new TTSeriesWB())); // after TTTweaker: it may reset the white balance first
     addPanel(usefulPanel, Gtk::manage(new TTSeriesExposure()));
+    addPanel(usefulPanel, Gtk::manage(new TTShare()));
     addPanel(usefulPanel, Gtk::manage(new TTVarDisplayer()));
 
     // the long labels of the useful tools wrap: the widest tab sets the width of the whole panel
@@ -907,6 +910,32 @@ void ToolPanelCoordinator::esbyEventReceived(const rtengine::ProcEvent& ev)
       doReact(FakeEvPhotoLoaded);
     if (ev == rtengine::EvProfileChanged)
       doReact(FakeEvProfileChanged);
+}
+
+// panelChanged() (a tool changed, fromPanel) and profileChange() (image opened, history, paste...)
+void ToolPanelCoordinator::esbyParamsChanged(const rtengine::procparams::ProcParams& params, const rtengine::ProcEvent& ev, bool fromPanel)
+{
+    env->notifyParamsChanged(params, ev, fromPanel);
+}
+
+bool ToolPanelCoordinator::esbyGetParams(rtengine::procparams::ProcParams& params)
+{
+    if (!ipc)
+        return false;
+    ipc->getParams(&params);
+    return true;
+}
+
+// the tools read the parameters (a change received by TTShare), then it is processed like a change
+// of a tool: history entry, processing of the steps concerned by the event only
+void ToolPanelCoordinator::esbyApplyParams(const rtengine::procparams::ProcParams& params, const rtengine::ProcEvent& event,
+                                           const Glib::ustring& descr)
+{
+    if (!ipc)
+        return;
+    for (auto toolPanel : toolPanels)
+        toolPanel->read(&params);
+    panelChanged(event, descr);
 }
 
 // EditorPanel::info_toggled()

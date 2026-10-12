@@ -18,6 +18,7 @@ set(ESBYSOURCEFILES
     esby/ttlenscorrector.cc
     esby/ttserieswb.cc
     esby/ttseriesexposure.cc
+    esby/ttshare.cc
     esby/ttpanelcolorer.cc
     esby/ttsaver.cc
     esby/tttabhider.cc

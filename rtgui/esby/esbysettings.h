@@ -65,6 +65,11 @@ public:
     // marker files of a series root folder, separated by ';' ("Set for the series root")
     Glib::ustring SeriesWBMarkers = "fields.conf;.esby-series";
 
+    // TTShare: the changes made in an image are shared with the images of its series (other instances,
+    // images opened later); pp3 sections shared, separated by ';'
+    bool ShareChanges = false;
+    Glib::ustring ShareSections = "Exposure";
+
     void readFromFile(Glib::KeyFile& keyFile);
     void saveToFile(Glib::KeyFile& keyFile) const;
 };

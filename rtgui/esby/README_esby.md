@@ -40,6 +40,29 @@ expliquent le *pourquoi*.
 | TTSeriesWB | décalage de la balance des blancs au flash, en mireds (voir `SPEC_series_wb.md`) |
 | TTSeriesExposure | exposition par série : chaque image suit une référence (de la série ou du dossier parent), plus un décalage de série |
 
+### TTShare : modifications partagées par série
+
+Une modification faite dans une image est partagée avec les images de sa série (son dossier
+numéroté) : tout de suite dans les autres instances qui en affichent une (dans la fenêtre active ;
+les autres à leur prochain focus), plus tard dans les images ouvertes ensuite.
+
+- Les paramètres sont comparés comme les clés du pp3 (`Section/Clé`), pour les sections partagées
+  seulement (option `ShareSections`, `Exposure` par défaut ; cases à cocher de l'outil).
+- Un nombre (compensation, contraste, noir...) est partagé comme un **décalage** : chaque image garde
+  sa valeur, plus les décalages de la série, bornés aux limites du curseur. Le reste (courbe, choix,
+  case à cocher) est partagé comme une **valeur**, qui remplace la précédente.
+- Le serveur garde par série la somme des décalages de chaque clé (ou sa dernière valeur et sa
+  version), et par image ce qu'elle a déjà reçu (`file_data`, espace `share`) : une image ouverte
+  plus tard reçoit ce qui lui manque. `esbywb.py shares <dossier>` les affiche, `share-reset` les
+  oublie.
+- « Share my changes » coupé (option `ShareChanges`) : la modification reste dans l'image. Les
+  modifications des autres images sont toujours reçues tant que l'outil est actif.
+- Une valeur posée par un outil pour cette image seulement (TTSeriesExposure) n'est jamais partagée
+  (`Environment::shareSuppressed`). Un retour dans l'historique n'est pas partagé.
+- Accroches : `ToolPanelCoordinator::panelChanged` et `profileChange` appellent `esbyParamsChanged`
+  (changement d'un outil, ou nouvelle référence de comparaison) ; `esbyApplyParams` fait lire les
+  paramètres reçus par les outils puis les traite comme un changement d'outil (entrée d'historique).
+
 ### TTSeriesExposure : séries et références
 
 - La **série** d'une photo est son **dossier numéroté** (celui qui contient `pp/`), qu'elle soit dans
@@ -119,6 +142,7 @@ commande est vu aussitôt par toutes les instances ouvertes.
 | `esbypreferences.*` | onglet *Tools* des Préférences, membre `Preferences::esbyPanel` |
 | `variable.*` | variables d'environnement (`RtVariable`) : valeur typée, portée, provenance |
 | `esbysharedvars.*` | variables partagées de l'image ouverte, chargées depuis le serveur `esbywb` |
+| `ttshare.*` | TTShare : modifications partagées par série (décalages et valeurs des clés du pp3) |
 | `rtdef.h` | constantes : noms des boîtes, états, nombre d'onglets |
 | `ttlog.h` | `TT_LOG()` / `TT_VERBOSE` : traces affichées seulement avec `Verbose=true` |
 | `ttdep.*` | fonctions de tri des panneaux |
