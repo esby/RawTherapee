@@ -79,6 +79,9 @@ les autres à leur prochain focus), plus tard dans les images ouvertes ensuite.
   modifications des autres images sont toujours reçues tant que l'outil est actif.
 - Une valeur posée par un outil pour cette image seulement (l'écart de TTSeriesExposure) n'est jamais partagée
   (`Environment::shareSuppressed`). Un retour dans l'historique n'est pas partagé.
+- Autres sections partageables : `RGB Curves` (courbes R, V, B et mode luminosité, en valeur) et
+  `Shadows & Highlights` (ombres, hautes lumières, largeurs tonales et rayon en décalage, bornés ;
+  activation et mode Lab en valeur). Les courbes de l'outil Exposition sont dans `Exposure`.
 - **Balance des blancs** (section `White Balance`, case « White balance ») : seules `Setting`,
   `Temperature`, `Green` et `Equal` sont partagées. La température est décalée en **mireds**
   (1 000 000 / K), la teinte et l'égaliseur comme des **facteurs** (logarithme). Une image en balance

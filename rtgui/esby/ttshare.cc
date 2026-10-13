@@ -43,6 +43,8 @@ using namespace rtengine::procparams;
 static const std::vector<std::pair<std::string, const char*>> SHARE_SECTIONS = {
   {"Exposure", "TT_SHARE_SECTION_EXPOSURE"},
   {"White Balance", "TT_SHARE_SECTION_WB"},
+  {"RGB Curves", "TT_SHARE_SECTION_RGB_CURVES"},
+  {"Shadows & Highlights", "TT_SHARE_SECTION_SH"},
 };
 
 // keys shared in a section (a section not listed: all its keys). White balance: its method, temperature,
@@ -105,6 +107,11 @@ static const std::map<std::string, std::pair<double, double>> SHARE_LIMITS = {
   {"White Balance/Temperature", {1500.0, 60000.0}},
   {"White Balance/Green", {0.02, 100.0}},
   {"White Balance/Equal", {0.5, 2.0}},
+  {"Shadows & Highlights/Highlights", {0.0, 100.0}},
+  {"Shadows & Highlights/HighlightTonalWidth", {10.0, 100.0}},
+  {"Shadows & Highlights/Shadows", {0.0, 100.0}},
+  {"Shadows & Highlights/ShadowTonalWidth", {10.0, 100.0}},
+  {"Shadows & Highlights/Radius", {1.0, 100.0}},
 };
 
 // a shift as shown: in mireds for the temperature, as a factor for the tint and the equalizer

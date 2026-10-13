@@ -190,6 +190,8 @@ TT_SHARE_RECEIVED;Received from the series:
 TT_SHARE_RESET_FROM_PARENT;Series reset from the parent %1.
 TT_SHARE_SECTIONS;Shared tools:
 TT_SHARE_SECTION_EXPOSURE;Exposure
+TT_SHARE_SECTION_RGB_CURVES;RGB curves
+TT_SHARE_SECTION_SH;Shadows/Highlights
 TT_SHARE_SECTION_WB;White balance
 TT_SHARE_SENT;Shared with the series:
 TT_SHARE_SENT_TO_PARENT;%2 shared changes of the series sent to the parent %1.
