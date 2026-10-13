@@ -117,6 +117,10 @@ les autres à leur prochain focus), plus tard dans les images ouvertes ensuite.
 - La pipette lit la luminosité après la compensation d'exposition, la luminosité, le contraste et la
   compression des hautes lumières de l'outil Exposition, avant les courbes (`EUID_ToneCurve1`).
 
+- **Images fermées** : rien n'est écrit dans leurs pp3 ; une image reçoit ce qu'elle a manqué à sa
+  réouverture (son pp3 peut avoir été déplacé, ex. cache de rt_queue : la clé est son fichier d'origine).
+- Une clé réelle (compensation, clip, teinte, égaliseur) reste réelle même écrite « 0 » dans le pp3.
+
 ### Information sur l'image partagée (`ui.showInfo`)
 
 - Le bouton « i » de l'éditeur (informations de prise de vue sur l'image) est partagé par les instances :

@@ -142,8 +142,16 @@ static bool parseNumber(const std::string& text, double& value)
   return (end != begin) && (*end == '\0') && std::isfinite(value);
 }
 
-static bool isInteger(const std::string& text)
+// keys whose value is a real number: "0" in a pp3 is not an integer for them (a shift of 0.5 received by
+// a compensation of 0 was rounded to 0 or 1)
+static const std::set<std::string> REAL_KEYS = {
+  "Exposure/Compensation", "Exposure/Clip", "White Balance/Green", "White Balance/Equal",
+};
+
+static bool isInteger(const std::string& key, const std::string& text)
 {
+  if (REAL_KEYS.count(key) > 0)
+    return false;
   return text.find_first_of(".eE") == std::string::npos;
 }
 
@@ -622,8 +630,8 @@ void TTShare::catchUp(const std::vector<EsbyShareEntry>& entries, bool fromEvent
       if ((cur != current.end()) && parseNumber(cur->second, value))
       {
         value = shifted(key, value, missing);
-        changes.set_value(section, name, isInteger(cur->second) ? std::to_string(std::lround(value))
-                                                                 : Glib::Ascii::dtostr(value));
+        changes.set_value(section, name, isInteger(key, cur->second) ? std::to_string(std::lround(value))
+                                                                      : Glib::Ascii::dtostr(value));
         text += "\n" + key + ": " + shiftText(key, missing);
         count++;
       }
@@ -655,7 +663,7 @@ void TTShare::catchUp(const std::vector<EsbyShareEntry>& entries, bool fromEvent
       continue;
     value = shifted(x.first, value, x.second);
     changes.set_value(x.first.substr(0, x.first.find('/')), x.first.substr(x.first.find('/') + 1),
-                      isInteger(cur->second) ? std::to_string(std::lround(value)) : Glib::Ascii::dtostr(value));
+                      isInteger(x.first, cur->second) ? std::to_string(std::lround(value)) : Glib::Ascii::dtostr(value));
     text += "\n" + x.first + ": " + shiftText(x.first, x.second);
     if (x.first.compare(0, 14, "White Balance/") == 0)
       exposureOnly = false;
