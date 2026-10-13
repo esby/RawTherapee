@@ -639,9 +639,13 @@ void TTSeriesWB::removeReference()
 // gives the coefficient of the exposure (ambient light)
 void TTSeriesWB::modelFromImage()
 {
+  // no reference yet: this image (normal flash) becomes it, the starting point of the model
   if (!reference.valid)
   {
-    setInfo(M("TT_SERIESWB_NO_REFERENCE"));
+    if (reference.isHss(shutter()))
+      setInfo(M("TT_SERIESWB_MODEL_NEED_REFERENCE"));
+    else
+      setReferenceHere();
     return;
   }
   if (isReference())

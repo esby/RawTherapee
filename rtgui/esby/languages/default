@@ -136,8 +136,9 @@ TT_SERIESWB_MIRED_TOOLTIP;Shift of the series from the camera white balance, in 
 TT_SERIESWB_MODEL;Model from this image
 TT_SERIESWB_MODEL_COEF;Model: %1 mireds per second of exposure (%2 s against %3 s).
 TT_SERIESWB_MODEL_HSS;Model: gap of the high speed sync %1 mireds.
+TT_SERIESWB_MODEL_NEED_REFERENCE;No reference: set it first on a photo with a normal flash (not in high speed sync).
 TT_SERIESWB_MODEL_SAME_SPEED;Nothing learned: shutter time %1 s too close to the reference (%2 s).
-TT_SERIESWB_MODEL_TOOLTIP;The gap set by hand on this image completes the model of the series: in high speed sync, it becomes the gap of the high speed sync; otherwise it gives the coefficient of the exposure (the ambient light adds up with the shutter time).
+TT_SERIESWB_MODEL_TOOLTIP;The gap set by hand on this image completes the model of the series (without reference, this image becomes the reference): in high speed sync, it becomes the gap of the high speed sync; otherwise it gives the coefficient of the exposure (the ambient light adds up with the shutter time).
 TT_SERIESWB_NEED_HSS;High speed sync: no gap known for the series yet (set it by hand, then "Model from this image").
 TT_SERIESWB_NOT_A_REFERENCE;This image is not the reference of its series.
 TT_SERIESWB_NOT_HANDLED;White balance method not handled (only Camera and Custom).
