@@ -91,6 +91,10 @@ void EsbySettings::readFromFile(Glib::KeyFile& keyFile)
                     ShareChanges          = keyFile.get_boolean ("TTP", "ShareChanges");
                 }
 
+                if (keyFile.has_key ("TTP", "ShareShowInfo")) {
+                    ShareShowInfo         = keyFile.get_boolean ("TTP", "ShareShowInfo");
+                }
+
                 if (keyFile.has_key ("TTP", "SeriesMarkers")) {
                     SeriesMarkers         = keyFile.get_string ("TTP", "SeriesMarkers");
                 }
@@ -148,6 +152,7 @@ void EsbySettings::saveToFile(Glib::KeyFile& keyFile) const
         keyFile.set_boolean ("TTP", "HideTrash", TTPHideTrash);
         keyFile.set_boolean ("TTP", "SeriesWBEnabled", SeriesWBEnabled);
         keyFile.set_boolean ("TTP", "ShareChanges", ShareChanges);
+        keyFile.set_boolean ("TTP", "ShareShowInfo", ShareShowInfo);
         keyFile.set_string  ("TTP", "ShareSections", ShareSections);
         keyFile.set_string  ("TTP", "SeriesMarkers", SeriesMarkers);
         keyFile.set_string  ("TTP", "ParentMarkers", ParentMarkers);

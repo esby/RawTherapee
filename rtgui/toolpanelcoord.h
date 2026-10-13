@@ -565,6 +565,10 @@ public:
     void esbyAppendPages();
     void esbyDeploy();
     void esbyConnectSignals();
+    // the information on the image (button "i" of the editor) is shared by the instances (ui.showInfo)
+    void esbyInfoToggled(bool active);
+    void esbySetInfoListener(std::function<void(bool)> listener) { esbyInfoListener = listener; }
+    std::function<void(bool)> esbyInfoListener;
     Gtk::Widget* getToolPage(FoldableToolPanel* tool);
     void scrollToTool(FoldableToolPanel* tool, FoldableToolPanel* fallback = nullptr);
 

@@ -117,6 +117,13 @@ les autres à leur prochain focus), plus tard dans les images ouvertes ensuite.
 - La pipette lit la luminosité après la compensation d'exposition, la luminosité, le contraste et la
   compression des hautes lumières de l'outil Exposition, avant les courbes (`EUID_ToneCurve1`).
 
+### Information sur l'image partagée (`ui.showInfo`)
+
+- Le bouton « i » de l'éditeur (informations de prise de vue sur l'image) est partagé par les instances :
+  variable partagée globale `ui.showInfo` (booléen). L'activer dans une instance l'active dans les autres.
+- Option `ShareShowInfo` (vraie par défaut). Sans serveur, chaque instance garde son bouton.
+- Accroches : `EditorPanel` appelle `esbyInfoToggled` au clic et reçoit la valeur par `esbySetInfoListener`.
+
 ### TTSeriesWB : balance des blancs de la série et écart de chaque image
 
 - Balance de l'image = balance du boîtier + **décalage de la série** + **écart de l'image**.

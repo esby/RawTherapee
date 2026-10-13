@@ -42,6 +42,7 @@
 #include "ttseriesexposure.h"
 #include "ttshare.h"
 #include "esbywidgets.h"
+#include "esbysharedvars.h"
 #include "../rtengine/metadata.h"
 
 using namespace rtengine::procparams;
@@ -877,9 +878,36 @@ void ToolPanelCoordinator::esbyDeploy()
 }
 
 // constructor: tab switch: layout of the favorite and trash panels
+static const char SHOW_INFO_VAR[] = "ui.showInfo";
+
 void ToolPanelCoordinator::esbyConnectSignals()
 {
     toolPanelNotebook->signal_switch_page().connect(sigc::mem_fun(*this,  &ToolPanelCoordinator::on_notebook_switch_page) );
+
+    // ui.showInfo changed (another instance, the variable panel): the button of this editor follows
+    env->sharedVariables()->signalChanged().connect([this]() {
+        if (!esbySettings().ShareShowInfo || !esbyInfoListener)
+            return;
+        RtVariable* var = env->getVariableByName(SHOW_INFO_VAR);
+        if ((var != nullptr) && var->isDefined())
+            esbyInfoListener(var->getAsBool());
+    });
+}
+
+// the button "i" of the editor: the global shared variable ui.showInfo, followed by the other instances
+// (option ShareShowInfo). Nothing is sent when the variable already has this value (the change came from it)
+void ToolPanelCoordinator::esbyInfoToggled(bool active)
+{
+    if (!esbySettings().ShareShowInfo || !env->sharedVariables()->isConnected())
+        return;
+    RtVariable* var = env->getVariableByName(SHOW_INFO_VAR);
+    if ((var != nullptr) && var->isDefined() && (var->getAsBool() == active))
+        return;
+    EsbyVarValue value;
+    value.name = SHOW_INFO_VAR;
+    value.type = RT_VARIABLE_TYPE_BOOL;
+    value.b = active;
+    env->sharedVariables()->set(EsbySharedVariables::Where::Global, value);
 }
 
 // ---------------------------------------------------------------------------------------

@@ -61,6 +61,8 @@ public:
     // TTShare: the changes made in an image are shared with the images of its series (other instances,
     // images opened later); pp3 sections shared, separated by ';'
     bool ShareChanges = false;
+    // the information on the image (button "i") is shared by the instances (global variable ui.showInfo)
+    bool ShareShowInfo = true;
     // series of an image: the first folder above the raw file holding one of these files; parent of a
     // series (TTShare): the first folder above it holding one of these files. Separated by ';'
     Glib::ustring SeriesMarkers = "conf/fields.txt;.esby-series";

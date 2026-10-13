@@ -1081,6 +1081,12 @@ EditorPanel::EditorPanel (FilePanel* filePanel, bool benchmark)
 
     // connect event handlers
     info->signal_toggled().connect ( sigc::mem_fun (*this, &EditorPanel::info_toggled) );
+    // esby-hook: the information on the image is shared by the instances (ui.showInfo)
+    info->signal_toggled().connect ( [this]() { tpc->esbyInfoToggled(info->get_active()); } );
+    tpc->esbySetInfoListener([this](bool active) {
+        if (info->get_active() != active)
+            info->set_active(active);
+    });
     beforeAfter->signal_toggled().connect ( sigc::mem_fun (*this, &EditorPanel::beforeAfterToggled) );
     hidehp->signal_toggled().connect ( sigc::mem_fun (*this, &EditorPanel::hideHistoryActivated) );
     tbRightPanel_1->signal_toggled().connect ( sigc::mem_fun (*this, &EditorPanel::tbRightPanel_1_toggled) );
